@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+frontend/node_modules/
+backend/__pycache__/
+data/output/
+.claude/
+*.log
+.DS_Store
+Thumbs.db
