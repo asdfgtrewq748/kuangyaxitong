@@ -1516,24 +1516,24 @@ defineExpose({ resetView })
    ============================================ */
 
 :root {
-  /* Color Palette - Modern & Clean */
-  --bg-primary: #F1F5F9;
+  /* Color Palette - Engineering / Scientific */
+  --bg-primary: #F3F4F6;
   --bg-secondary: #FFFFFF;
-  --bg-tertiary: #F8FAFC;
+  --bg-tertiary: #F9FAFB;
   --bg-elevated: #FFFFFF;
 
-  --text-primary: #1E293B;
-  --text-secondary: #64748B;
-  --text-muted: #94A3B8;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
 
-  --border-subtle: #E2E8F0;
-  --border-medium: #CBD5E1;
+  --border-subtle: #E5E7EB;
+  --border-medium: #D1D5DB;
 
-  /* Brand Colors */
-  --primary: #2563EB;
-  --primary-light: #3B82F6;
-  --primary-faint: #EFF6FF;
-  --primary-gradient: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%);
+  /* Brand Colors (Prussian Blue + Orange Accent) */
+  --primary: #0F4C81;
+  --primary-light: #1F6AA5;
+  --primary-faint: #E8F1F8;
+  --primary-gradient: linear-gradient(135deg, #0F4C81 0%, #1F6AA5 100%);
 
   --success: #10B981;
   --success-faint: #ECFDF5;
@@ -1546,10 +1546,10 @@ defineExpose({ resetView })
 
   /* Shadows */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 14px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 32px rgba(0, 0, 0, 0.12);
 
   /* Radius */
   --radius-sm: 6px;
@@ -1579,11 +1579,11 @@ defineExpose({ resetView })
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 28px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-subtle);
-  height: 60px;
-  box-shadow: var(--shadow-xs);
+  padding: 0 24px;
+  background: #1F2937;
+  border-bottom: 1px solid #111827;
+  height: 56px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
   z-index: 100;
   flex-shrink: 0;
 }
@@ -1606,9 +1606,10 @@ defineExpose({ resetView })
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--primary-faint);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   font-size: 20px;
+  color: #F9FAFB;
 }
 
 .project-info {
@@ -1621,50 +1622,50 @@ defineExpose({ resetView })
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #F9FAFB;
   line-height: 1.3;
 }
 
 .project-subtitle {
   font-size: 11px;
-  color: var(--text-muted);
+  color: #9CA3AF;
   font-weight: 500;
   letter-spacing: 0.03em;
 }
 
 .header-stats {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  background: var(--bg-tertiary);
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   transition: all 0.15s ease;
 }
 
 .stat-item:hover {
-  background: var(--bg-secondary);
-  border-color: var(--border-medium);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .stat-item.primary {
-  background: var(--primary-faint);
-  border-color: rgba(37, 99, 235, 0.15);
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
 }
 
 .stat-item.primary .stat-value {
-  color: var(--primary);
+  color: #F59E0B;
 }
 
 .stat-label {
   font-size: 10px;
-  color: var(--text-muted);
+  color: #9CA3AF;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1674,11 +1675,14 @@ defineExpose({ resetView })
   font-size: 14px;
   font-weight: 600;
   font-family: 'SF Mono', 'JetBrains Mono', monospace;
-  color: var(--text-primary);
+  color: #E5E7EB;
 }
 
 .stat-unit {
-  display: none;
+  display: inline-block;
+  font-size: 10px;
+  color: #9CA3AF;
+  margin-left: 2px;
 }
 
 /* ============================================
@@ -1687,9 +1691,9 @@ defineExpose({ resetView })
 
 .dashboard-main {
   display: grid;
-  grid-template-columns: 300px 1fr 280px;
-  gap: 20px;
-  padding: 20px;
+  grid-template-columns: 280px 1fr 320px;
+  gap: 16px;
+  padding: 16px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -1724,8 +1728,8 @@ defineExpose({ resetView })
 
 .sidebar-section {
   background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: 18px;
+  border-radius: 12px;
+  padding: 16px;
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
 }
@@ -1737,6 +1741,8 @@ defineExpose({ resetView })
   color: var(--text-primary);
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  border-left: 3px solid var(--primary);
+  padding-left: 8px;
 }
 
 .section-icon {
@@ -1766,20 +1772,21 @@ defineExpose({ resetView })
 .segmented-control {
   display: flex;
   background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   padding: 4px;
-  gap: 3px;
+  gap: 4px;
+  border: 1px solid var(--border-subtle);
 }
 
 .segment-btn {
   flex: 1;
-  padding: 9px 12px;
+  padding: 8px 10px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -1789,8 +1796,8 @@ defineExpose({ resetView })
 }
 
 .segment-btn.active {
-  background: var(--bg-secondary);
-  color: var(--primary);
+  background: #111827;
+  color: #F9FAFB;
   box-shadow: var(--shadow-xs);
 }
 
@@ -1799,7 +1806,7 @@ defineExpose({ resetView })
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .slider-value {
@@ -1819,7 +1826,7 @@ defineExpose({ resetView })
   background: var(--border-subtle);
   outline: none;
   -webkit-appearance: none;
-  margin: 10px 0;
+  margin: 8px 0;
   cursor: pointer;
 }
 
@@ -1856,7 +1863,7 @@ defineExpose({ resetView })
 .action-buttons {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn {
@@ -1877,11 +1884,11 @@ defineExpose({ resetView })
 .btn.primary {
   background: var(--primary-gradient);
   color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.35);
 }
 
 .btn.primary:hover:not(:disabled) {
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 6px 16px rgba(15, 76, 129, 0.45);
   transform: translateY(-1px);
 }
 
@@ -1940,7 +1947,7 @@ defineExpose({ resetView })
 .toggle-btn input[type="radio"] {
   width: 16px;
   height: 16px;
-  accent-color: var(--primary);
+  accent-color: var(--warning);
   cursor: pointer;
 }
 
@@ -1975,7 +1982,7 @@ defineExpose({ resetView })
 .center-stage {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 2px 6px 6px 2px;
@@ -1994,12 +2001,12 @@ defineExpose({ resetView })
 .maps-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 16px;
 }
 
 .map-card {
   background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   border: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
@@ -2017,7 +2024,7 @@ defineExpose({ resetView })
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 18px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-secondary);
 }
@@ -2050,8 +2057,8 @@ defineExpose({ resetView })
 .map-container {
   flex: 1;
   position: relative;
-  min-height: 420px;
-  background: var(--bg-primary);
+  min-height: 440px;
+  background: var(--bg-secondary);
 }
 
 .map-container.loading {
@@ -2087,9 +2094,9 @@ defineExpose({ resetView })
 
 .cross-section-container {
   background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   border: 1px solid var(--border-subtle);
-  padding: 18px;
+  padding: 16px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -2115,8 +2122,8 @@ defineExpose({ resetView })
 .section-distance {
   margin-left: 8px;
   padding: 4px 10px;
-  background: var(--primary-faint);
-  color: var(--primary);
+  background: var(--warning-faint);
+  color: var(--warning);
   font-size: 12px;
   font-weight: 600;
   font-family: 'SF Mono', 'JetBrains Mono', monospace;
@@ -2130,7 +2137,7 @@ defineExpose({ resetView })
 
 .cross-section-view {
   position: relative;
-  height: 280px;
+  height: 300px;
   background: var(--bg-primary);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
@@ -2205,9 +2212,9 @@ defineExpose({ resetView })
 
 /* Legend */
 .lithology-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
   margin-top: 16px;
 }
 
@@ -2218,15 +2225,15 @@ defineExpose({ resetView })
 }
 
 .legend-color {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 4px;
   border: 1px solid var(--border-medium);
   flex-shrink: 0;
 }
 
 .legend-name {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -2240,7 +2247,7 @@ defineExpose({ resetView })
 
 .table-header {
   background: var(--bg-tertiary);
-  padding: 10px 14px;
+  padding: 8px 12px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2259,7 +2266,7 @@ defineExpose({ resetView })
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-subtle);
   font-size: 12px;
   transition: background 0.15s ease;
@@ -2293,7 +2300,7 @@ defineExpose({ resetView })
 
 .histogram-canvas {
   width: 100%;
-  height: 180px;
+  height: 200px;
 }
 
 /* ============================================
@@ -2406,7 +2413,7 @@ defineExpose({ resetView })
 
 @media (max-width: 1400px) {
   .dashboard-main {
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 260px 1fr;
     grid-template-rows: auto auto;
   }
 
@@ -2435,7 +2442,7 @@ defineExpose({ resetView })
   }
 
   .dashboard-header {
-    padding: 0 20px;
+    padding: 0 16px;
   }
 
   .header-stats {
