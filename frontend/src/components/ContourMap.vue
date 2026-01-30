@@ -590,14 +590,11 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #F8FAFC;
-  border-radius: 10px;
+  background: #ffffff;
   overflow: hidden;
-  border: 1px solid #E2E8F0;
 }
 
 .contour-map-wrapper.cross-section-mode {
@@ -612,7 +609,6 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -625,13 +621,10 @@ defineExpose({
 }
 
 .contour-image {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
   display: block;
 }
 

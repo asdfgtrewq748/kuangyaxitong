@@ -9,11 +9,11 @@
       <div v-if="selectedSeam && seamStats" class="header-stats">
         <div class="stat-badge">
           <span class="stat-label">厚度范围</span>
-          <strong>{{ seamStats?.thickness_min?.toFixed(2) || '-' }} - {{ seamStats?.thickness_max?.toFixed(2) || '-' }} m</strong>
+          <strong>{{ seamStats?.thickness?.min?.toFixed(2) || '-' }} - {{ seamStats?.thickness?.max?.toFixed(2) || '-' }} m</strong>
         </div>
         <div class="stat-badge primary">
           <span class="stat-label">平均厚度</span>
-          <strong>{{ seamStats?.thickness_mean?.toFixed(2) || '-' }} m</strong>
+          <strong>{{ seamStats?.thickness?.mean?.toFixed(2) || '-' }} m</strong>
         </div>
         <div class="stat-badge">
           <span class="stat-label">钻孔数量</span>
@@ -62,7 +62,7 @@
     <!-- Main Dashboard -->
     <div v-else class="grid">
       <!-- Card 1: Interpolation Parameters -->
-      <div class="card params-card">
+      <div class="card params-card compact-card">
         <h3 class="section-title">
           <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
@@ -131,7 +131,7 @@
       </div>
 
       <!-- Card 2: Data Distribution -->
-      <div class="card">
+      <div class="card compact-card">
         <h3 class="section-title">
           <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -146,10 +146,37 @@
         <div v-else class="empty-state">
           <p>暂无数据分布</p>
         </div>
+        <!-- 统计信息 -->
+        <div v-if="seamPoints.length > 0" class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">样本数</span>
+            <span class="stat-value">{{ seamPoints.length }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">均值</span>
+            <span class="stat-value">{{ calculateMean().toFixed(2) }}m</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">标准差</span>
+            <span class="stat-value">{{ calculateStdDev().toFixed(2) }}m</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">变异系数</span>
+            <span class="stat-value">{{ calculateCV().toFixed(2) }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">最小值</span>
+            <span class="stat-value">{{ calculateMinMax().min.toFixed(2) }}m</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">最大值</span>
+            <span class="stat-value">{{ calculateMinMax().max.toFixed(2) }}m</span>
+          </div>
+        </div>
       </div>
 
       <!-- Card 4: Lithology Column -->
-      <div class="card">
+      <div class="card compact-card">
         <h3 class="section-title">
           <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
@@ -170,65 +197,67 @@
       </div>
 
       <!-- Card 5-6: Contour Maps -->
-      <div class="card map-card-large" v-if="thicknessResult">
-        <div class="map-header">
-          <div>
-            <h3 class="section-title">
-              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
-              </svg>
-              煤层厚度分布
-            </h3>
-            <p class="section-desc">{{ methodName(method) }} · {{ thicknessResult?.valueRange?.min?.toFixed(1) }} - {{ thicknessResult?.valueRange?.max?.toFixed(1) }} m</p>
+      <div class="map-row" v-if="thicknessResult || depthResult">
+        <div class="card map-card-large" v-if="thicknessResult">
+          <div class="map-header">
+            <div>
+              <h3 class="section-title">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                </svg>
+                煤层厚度分布
+              </h3>
+              <p class="section-desc">{{ methodName(method) }} · {{ thicknessResult?.valueRange?.min?.toFixed(1) }} - {{ thicknessResult?.valueRange?.max?.toFixed(1) }} m</p>
+            </div>
+          </div>
+          <div class="map-wrapper">
+            <ContourMap
+              v-if="thicknessResult"
+              :image-url="thicknessResult.imageUrl"
+              :boreholes="seamPoints"
+              :bounds="thicknessResult.bounds"
+              property="thickness"
+              property-label="厚度"
+              :value-range="thicknessResult.valueRange"
+              colormap="YlOrBr"
+              :cross-section-mode="crossSectionMode"
+              @cross-section-complete="handleCrossSectionComplete"
+            />
+            <div v-else class="empty-state">
+              <p>设置参数后点击"生成等值线图"</p>
+            </div>
           </div>
         </div>
-        <div class="map-wrapper">
-          <ContourMap
-            v-if="thicknessResult"
-            :image-url="thicknessResult.imageUrl"
-            :boreholes="seamPoints"
-            :bounds="thicknessResult.bounds"
-            property="thickness"
-            property-label="厚度"
-            :value-range="thicknessResult.valueRange"
-            colormap="YlOrBr"
-            :cross-section-mode="crossSectionMode"
-            @cross-section-complete="handleCrossSectionComplete"
-          />
-          <div v-else class="empty-state">
-            <p>设置参数后点击"生成等值线图"</p>
-          </div>
-        </div>
-      </div>
 
-      <div class="card map-card-large" v-if="depthResult">
-        <div class="map-header">
-          <div>
-            <h3 class="section-title">
-              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                <path d="m2 17 10 5 10-5"></path>
-              </svg>
-              煤层埋深分布
-            </h3>
-            <p class="section-desc">{{ methodName(method) }} · {{ depthResult?.valueRange?.min?.toFixed(1) }} - {{ depthResult?.valueRange?.max?.toFixed(1) }} m</p>
+        <div class="card map-card-large" v-if="depthResult">
+          <div class="map-header">
+            <div>
+              <h3 class="section-title">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                  <path d="m2 17 10 5 10-5"></path>
+                </svg>
+                煤层埋深分布
+              </h3>
+              <p class="section-desc">{{ methodName(method) }} · {{ depthResult?.valueRange?.min?.toFixed(1) }} - {{ depthResult?.valueRange?.max?.toFixed(1) }} m</p>
+            </div>
           </div>
-        </div>
-        <div class="map-wrapper">
-          <ContourMap
-            v-if="depthResult"
-            :image-url="depthResult.imageUrl"
-            :boreholes="seamPoints"
-            :bounds="depthResult.bounds"
-            property="burial_depth"
-            property-label="埋深"
-            :value-range="depthResult.valueRange"
-            colormap="viridis"
-            :cross-section-mode="crossSectionMode"
-            @cross-section-complete="handleCrossSectionComplete"
-          />
-          <div v-else class="empty-state">
-            <p>设置参数后点击"生成等值线图"</p>
+          <div class="map-wrapper">
+            <ContourMap
+              v-if="depthResult"
+              :image-url="depthResult.imageUrl"
+              :boreholes="seamPoints"
+              :bounds="depthResult.bounds"
+              property="burial_depth"
+              property-label="埋深"
+              :value-range="depthResult.valueRange"
+              colormap="viridis"
+              :cross-section-mode="crossSectionMode"
+              @cross-section-complete="handleCrossSectionComplete"
+            />
+            <div v-else class="empty-state">
+              <p>设置参数后点击"生成等值线图"</p>
+            </div>
           </div>
         </div>
       </div>
@@ -281,7 +310,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useToast } from '../composables/useToast'
 import ContourMap from '../components/ContourMap.vue'
-import { getCoalSeams, getSeamStats, getSeamContourImages } from '../api'
+import { getCoalSeams, getSeamStats, getSeamOverburden, getSeamContourImages } from '../api'
 
 const toast = useToast()
 
@@ -353,6 +382,33 @@ const methodName = (key) => {
   return names[key] || key
 }
 
+// Statistics calculation functions
+const calculateMean = () => {
+  const values = seamPoints.value.map(p => p.thickness).filter(v => v != null)
+  if (values.length === 0) return 0
+  return values.reduce((a, b) => a + b, 0) / values.length
+}
+
+const calculateStdDev = () => {
+  const values = seamPoints.value.map(p => p.thickness).filter(v => v != null)
+  if (values.length === 0) return 0
+  const mean = calculateMean()
+  const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length
+  return Math.sqrt(variance)
+}
+
+const calculateCV = () => {
+  const mean = calculateMean()
+  if (mean === 0) return 0
+  return (calculateStdDev() / mean) * 100
+}
+
+const calculateMinMax = () => {
+  const values = seamPoints.value.map(p => p.thickness).filter(v => v != null)
+  if (values.length === 0) return { min: 0, max: 0 }
+  return { min: Math.min(...values), max: Math.max(...values) }
+}
+
 // Load seams
 const loadSeams = async () => {
   loadingSeams.value = true
@@ -367,6 +423,36 @@ const loadSeams = async () => {
 }
 
 // Select seam
+const normalizeLayers = (layers = []) => {
+  let cursor = 0
+  return layers.map((layer) => {
+    const thickness = Number(layer.thickness ?? 0) || 0
+    let zTop = Number(layer.z_top)
+    let zBottom = Number(layer.z_bottom)
+
+    if (!Number.isFinite(zTop)) {
+      zTop = cursor
+    }
+    if (!Number.isFinite(zBottom)) {
+      zBottom = zTop + thickness
+    }
+    if (!Number.isFinite(thickness) || thickness === 0) {
+      const computed = Math.max((zBottom || 0) - (zTop || 0), 0)
+      if (computed > 0) {
+        layer.thickness = computed
+      }
+    }
+
+    cursor = zBottom
+    return {
+      ...layer,
+      thickness: Number(layer.thickness ?? thickness) || 0,
+      z_top: zTop,
+      z_bottom: zBottom
+    }
+  })
+}
+
 const selectSeam = async (seam) => {
   selectedSeam.value = seam
   thicknessResult.value = null
@@ -378,7 +464,19 @@ const selectSeam = async (seam) => {
     seamPoints.value = data.points || []
 
     // Extract layers for stratigraphic column
-    sortedLayers.value = data.layers?.sort((a, b) => (b.z_top || 0) - (a.z_top || 0)) || []
+    try {
+      const overburden = await getSeamOverburden(seam.name)
+      const boreholes = overburden?.data?.boreholes || []
+      const best = boreholes.reduce((acc, cur) => {
+        const accLen = acc?.layers?.length || 0
+        const curLen = cur?.layers?.length || 0
+        return curLen > accLen ? cur : acc
+      }, boreholes[0])
+      const layers = normalizeLayers(best?.layers || [])
+      sortedLayers.value = layers.sort((a, b) => (a.z_top || 0) - (b.z_top || 0))
+    } catch (e) {
+      sortedLayers.value = []
+    }
 
     // Auto-run interpolation
     await handleInterpolate()
@@ -752,7 +850,7 @@ const calculateUncertainty = () => {
   console.log('✓ Uncertainty map绘制完成')
 }
 
-// Draw histogram - Modern gradient style
+// Draw histogram - Nature journal style
 const drawHistogram = () => {
   console.log('drawHistogram called')
   console.log('histogramCanvas.value:', histogramCanvas.value)
@@ -771,8 +869,17 @@ const drawHistogram = () => {
   console.log('✓ Starting histogram drawing...')
 
   const ctx = canvas.getContext('2d')
-  const w = canvas.width = 320
-  const h = canvas.height = 280
+  const dpr = window.devicePixelRatio || 1
+  const container = canvas.parentElement
+  const cssW = container?.clientWidth || canvas.clientWidth || 500
+  const cssH = container?.clientHeight || canvas.clientHeight || 350
+  canvas.width = Math.round(cssW * dpr)
+  canvas.height = Math.round(cssH * dpr)
+  canvas.style.width = `${cssW}px`
+  canvas.style.height = `${cssH}px`
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const w = cssW
+  const h = cssH
 
   const values = seamPoints.value.map(p => p.thickness).filter(v => v != null)
   if (values.length === 0) return
@@ -784,10 +891,10 @@ const drawHistogram = () => {
   const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length
   const stdDev = Math.sqrt(variance)
 
-  const numBins = 15
+  const numBins = 20
   const binWidthVal = (maxVal - minVal) / numBins
 
-  // Calculate histogram
+  // Calculate histogram bins
   const bins = Array(numBins).fill(0)
   for (const v of values) {
     const bin = Math.min(Math.floor((v - minVal) / binWidthVal), numBins - 1)
@@ -796,159 +903,184 @@ const drawHistogram = () => {
 
   const maxCount = Math.max(...bins)
 
-  // Modern gradient colors
-  const gradientColors = {
-    start: { r: 99, g: 102, b: 241 },   // Indigo-500
-    end: { r: 168, g: 85, b: 247 }      // Purple-500
-  }
+  // Nature style colors
+  const histColor = '#5D8AA8'  // Slate blue - Nature style
+  const curveColor = '#C8523C' // Red-orange contrast for density fit
+  const histAlpha = 0.85
 
-  // Draw gradient background
-  const bgGradient = ctx.createLinearGradient(0, 0, 0, h)
-  bgGradient.addColorStop(0, '#f8fafc')
-  bgGradient.addColorStop(1, '#f1f5f9')
-  ctx.fillStyle = bgGradient
+  // Clear canvas - white background (Nature style)
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, w, h)
 
-  const padding = { left: 45, right: 20, top: 40, bottom: 40 }
+  const padding = { left: 50, right: 25, top: 45, bottom: 45 }
   const drawW = w - padding.left - padding.right
   const drawH = h - padding.top - padding.bottom
-  const barWidth = drawW / numBins - 4  // Add gap between bars
-  const gap = 4
-  const scaleY = drawH / (maxCount * 1.2)
 
-  // Draw grid lines (subtle)
-  ctx.strokeStyle = '#e2e8f0'
-  ctx.lineWidth = 1
-  for (let i = 0; i <= 4; i++) {
-    const y = padding.top + (i / 4) * drawH
-    ctx.beginPath()
-    ctx.setLineDash([4, 4])
-    ctx.moveTo(padding.left, y)
-    ctx.lineTo(w - padding.right, y)
-    ctx.stroke()
-  }
-  ctx.setLineDash([])
+  // Calculate bar width
+  const barWidth = drawW / numBins
+  const scaleY = drawH / (maxCount * 1.1)
 
-  // Draw bars with gradient
+  // Draw histogram bars - Nature style
+  ctx.fillStyle = histColor
+  ctx.globalAlpha = histAlpha
+
   for (let i = 0; i < numBins; i++) {
     const height = bins[i] * scaleY
-    const x = padding.left + i * (barWidth + gap)
+    const x = padding.left + i * barWidth
     const y = h - padding.bottom - height
 
     if (height > 0) {
-      // Create gradient for each bar
-      const barGradient = ctx.createLinearGradient(x, y, x, h - padding.bottom)
-      const ratio = i / numBins
-      const r = Math.round(gradientColors.start.r + (gradientColors.end.r - gradientColors.start.r) * ratio)
-      const g = Math.round(gradientColors.start.g + (gradientColors.end.g - gradientColors.start.g) * ratio)
-      const b = Math.round(gradientColors.start.b + (gradientColors.end.b - gradientColors.start.b) * ratio)
+      // Draw bar
+      ctx.fillRect(x, y, barWidth - 1, height)
 
-      barGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.9)`)
-      barGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.6)`)
-
-      // Draw bar with rounded top corners
-      ctx.fillStyle = barGradient
-      ctx.beginPath()
-      const radius = Math.min(6, barWidth / 2)
-      ctx.moveTo(x + radius, y)
-      ctx.lineTo(x + barWidth - radius, y)
-      ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius)
-      ctx.lineTo(x + barWidth, h - padding.bottom)
-      ctx.lineTo(x, h - padding.bottom)
-      ctx.lineTo(x, y + radius)
-      ctx.quadraticCurveTo(x, y, x + radius, y)
-      ctx.closePath()
-      ctx.fill()
-
-      // Add value label on top of bar
-      if (bins[i] > 0) {
-        ctx.fillStyle = '#475569'
-        ctx.font = 'bold 10px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText(bins[i].toString(), x + barWidth / 2, y - 6)
-      }
+      // White edge between bars (Nature style)
+      ctx.strokeStyle = 'white'
+      ctx.lineWidth = 0.8
+      ctx.strokeRect(x, y, barWidth - 1, height)
     }
   }
+  ctx.globalAlpha = 1.0
 
-  // Draw axes
-  ctx.strokeStyle = '#94a3b8'
+  // Draw density fit curve (Normal distribution) - Nature style
+  ctx.strokeStyle = curveColor
   ctx.lineWidth = 2
+  ctx.beginPath()
+
+  for (let i = 0; i <= 100; i++) {
+    const x = padding.left + (i / 100) * drawW
+    const val = minVal + (i / 100) * (maxVal - minVal)
+
+    // Normal distribution PDF
+    const pdf = (1 / (stdDev * Math.sqrt(2 * Math.PI))) *
+                Math.exp(-0.5 * ((val - mean) / stdDev) ** 2)
+
+    // Convert PDF to count scale
+    const curveCount = pdf * values.length * binWidthVal
+    const y = h - padding.bottom - curveCount * scaleY
+
+    if (i === 0) {
+      ctx.moveTo(x, y)
+    } else {
+      ctx.lineTo(x, y)
+    }
+  }
+  ctx.stroke()
+
+  // Draw axes - Nature style (only left and bottom, no top/right spines)
+  ctx.strokeStyle = '#000000'
+  ctx.lineWidth = 1.0
+
+  // Left spine (Y-axis)
   ctx.beginPath()
   ctx.moveTo(padding.left, padding.top)
   ctx.lineTo(padding.left, h - padding.bottom)
+  ctx.stroke()
+
+  // Bottom spine (X-axis)
+  ctx.beginPath()
+  ctx.moveTo(padding.left, h - padding.bottom)
   ctx.lineTo(w - padding.right, h - padding.bottom)
   ctx.stroke()
 
-  // X-axis labels
-  ctx.fillStyle = '#64748b'
-  ctx.font = '11px sans-serif'
-  ctx.textAlign = 'center'
+  // Draw ticks - Nature style (outward facing)
+  const tickLength = 4
+
+  // X-axis ticks
+  ctx.strokeStyle = '#000000'
+  ctx.lineWidth = 1.0
+  for (let i = 0; i <= 6; i++) {
+    const x = padding.left + (i / 6) * drawW
+    ctx.beginPath()
+    ctx.moveTo(x, h - padding.bottom)
+    ctx.lineTo(x, h - padding.bottom + tickLength)
+    ctx.stroke()
+  }
+
+  // Y-axis ticks
   for (let i = 0; i <= 5; i++) {
-    const val = minVal + (i / 5) * (maxVal - minVal)
-    const x = padding.left + (i / 5) * drawW
-    ctx.fillText(val.toFixed(1) + '米', x, h - padding.bottom + 18)
+    const y = h - padding.bottom - (i / 5) * drawH
+    ctx.beginPath()
+    ctx.moveTo(padding.left, y)
+    ctx.lineTo(padding.left - tickLength, y)
+    ctx.stroke()
   }
 
-  // Y-axis labels
-  ctx.textAlign = 'right'
-  ctx.font = '10px sans-serif'
-  for (let i = 0; i <= 4; i++) {
-    const count = Math.round((i / 4) * maxCount)
-    const y = h - padding.bottom - (i / 4) * drawH
-    ctx.fillText(count.toString(), padding.left - 8, y + 3)
-  }
-
-  // Title
-  ctx.fillStyle = '#1e293b'
-  ctx.font = 'bold 13px sans-serif'
+  // X-axis labels - Nature style
+  ctx.fillStyle = '#000000'
+  ctx.font = '10px Arial, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('钻孔厚度分布', padding.left + drawW / 2, 22)
+  for (let i = 0; i <= 6; i++) {
+    const val = minVal + (i / 6) * (maxVal - minVal)
+    const x = padding.left + (i / 6) * drawW
+    ctx.fillText(val.toFixed(1), x, h - padding.bottom + 15)
+  }
 
-  // Statistics box (modern card style)
-  const statsLines = [
-    `数量: ${values.length}`,
-    `均值: ${mean.toFixed(2)} 米`,
-    `标准差: ${stdDev.toFixed(2)} 米`
-  ]
+  // Y-axis labels - Nature style
+  ctx.textAlign = 'right'
+  for (let i = 0; i <= 5; i++) {
+    const count = Math.round((i / 5) * (maxCount * 1.1))
+    const y = h - padding.bottom - (i / 5) * drawH
+    ctx.fillText(count.toString(), padding.left - 6, y + 3)
+  }
 
-  const boxWidth = 120
-  const boxHeight = 70
-  const boxX = w - padding.right - boxWidth - 5
-  const boxY = padding.top + 5
+  // Axis labels - Nature style (normal weight, not bold)
+  ctx.fillStyle = '#000000'
+  ctx.font = '11px Arial, sans-serif'
 
-  // Shadow
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
-  ctx.shadowBlur = 10
-  ctx.shadowOffsetY = 2
+  // X-axis label
+  ctx.textAlign = 'center'
+  ctx.fillText('厚度 (m)', padding.left + drawW / 2, h - 8)
 
-  // White background with gradient
-  const boxGradient = ctx.createLinearGradient(boxX, boxY, boxX, boxY + boxHeight)
-  boxGradient.addColorStop(0, '#ffffff')
-  boxGradient.addColorStop(1, '#f8fafc')
-  ctx.fillStyle = boxGradient
+  // Y-axis label
+  ctx.save()
+  ctx.translate(12, padding.top + drawH / 2)
+  ctx.rotate(-Math.PI / 2)
+  ctx.fillText('频数', 0, 0)
+  ctx.restore()
+
+  // Title - Nature style (left aligned, bold "Figure" format)
+  ctx.fillStyle = '#000000'
+  ctx.font = 'bold 12px Arial, sans-serif'
+  ctx.textAlign = 'left'
+  ctx.fillText('Figure 1 | 钻孔厚度分布 (n=' + values.length + ')', padding.left, 18)
+
+  // Legend - Nature style (no frame)
+  ctx.fillStyle = '#000000'
+  ctx.font = '10px Arial, sans-serif'
+  ctx.textAlign = 'left'
+
+  // Histogram legend
+  const legendX = w - padding.right - 120
+  const legendY = padding.top + 10
+
+  // Histogram bar in legend
+  ctx.fillStyle = histColor
+  ctx.globalAlpha = histAlpha
+  ctx.fillRect(legendX, legendY - 4, 12, 10)
+  ctx.globalAlpha = 1.0
+  ctx.strokeStyle = 'white'
+  ctx.lineWidth = 0.8
+  ctx.strokeRect(legendX, legendY - 4, 12, 10)
+
+  ctx.fillText('观测值', legendX + 16, legendY + 4)
+
+  // Density fit legend
+  ctx.strokeStyle = curveColor
+  ctx.lineWidth = 2
   ctx.beginPath()
-  ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 8)
-  ctx.fill()
-
-  // Border
-  ctx.shadowColor = 'transparent'
-  ctx.strokeStyle = '#e2e8f0'
-  ctx.lineWidth = 1
+  ctx.moveTo(legendX, legendY + 20)
+  ctx.lineTo(legendX + 12, legendY + 20)
   ctx.stroke()
 
-  // Statistics text
-  ctx.fillStyle = '#475569'
-  ctx.font = '11px sans-serif'
+  ctx.fillStyle = '#000000'
+  ctx.fillText('密度拟合', legendX + 16, legendY + 24)
+
+  // Statistics annotation (small text below legend)
+  ctx.fillStyle = '#666666'
+  ctx.font = '9px Arial, sans-serif'
   ctx.textAlign = 'left'
-  statsLines.forEach((line, i) => {
-    const parts = line.split(': ')
-    ctx.fillStyle = '#94a3b8'
-    ctx.fillText(parts[0] + ':', boxX + 10, boxY + 18 + i * 16)
-    ctx.fillStyle = '#1e293b'
-    ctx.font = 'bold 11px sans-serif'
-    ctx.fillText(parts[1], boxX + 55, boxY + 18 + i * 16)
-    ctx.font = '11px sans-serif'
-  })
+  const statsText = `μ=${mean.toFixed(2)}  σ=${stdDev.toFixed(2)}`
+  ctx.fillText(statsText, legendX, legendY + 42)
 
   console.log('✓ Histogram绘制完成')
 }
@@ -974,30 +1106,50 @@ const drawStratigraphicColumn = () => {
   if (!canvas || sortedLayers.value.length === 0) return
 
   const ctx = canvas.getContext('2d')
-  const w = canvas.width = 280
-  const h = canvas.height = 500
+  const dpr = window.devicePixelRatio || 1
+  const container = canvas.parentElement
+  const cssW = container?.clientWidth || canvas.clientWidth || 280
+  const cssH = container?.clientHeight || canvas.clientHeight || 500
+  canvas.width = Math.round(cssW * dpr)
+  canvas.height = Math.round(cssH * dpr)
+  canvas.style.width = `${cssW}px`
+  canvas.style.height = `${cssH}px`
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const w = cssW
+  const h = cssH
 
   // Background - Light theme
   ctx.fillStyle = '#FFFFFF'
   ctx.fillRect(0, 0, w, h)
 
   const layers = sortedLayers.value
-  const totalDepth = Math.max(...layers.map(l => l.z_bottom || 0))
-  const scale = (h - 55) / totalDepth
-  const topMargin = 30
-  const columnX = 25
-  const columnWidth = 50
-  const labelX = columnX + columnWidth + 12
+  let totalDepth = Math.max(...layers.map(l => l.z_bottom || 0))
+  if (!Number.isFinite(totalDepth) || totalDepth <= 0) {
+    totalDepth = layers.reduce((sum, l) => sum + (Number(l.thickness) || 0), 0)
+  }
+  if (!Number.isFinite(totalDepth) || totalDepth <= 0) return
+
+  const padding = { top: 24, bottom: 22 }
+  const scale = (h - padding.top - padding.bottom) / totalDepth
+  const topMargin = padding.top
+  const axisGap = 14
+  const labelArea = Math.max(110, Math.min(160, w * 0.3))
+  const columnWidth = Math.max(80, Math.min(140, w * 0.22))
+  const groupWidth = axisGap + columnWidth + 16 + labelArea
+  const startX = Math.max(16, (w - groupWidth) / 2)
+  const axisX = startX
+  const columnX = axisX + axisGap
+  const labelX = columnX + columnWidth + 16
 
   // Draw title (Nature style - Light theme)
   ctx.fillStyle = '#0F172A'
   ctx.font = 'bold 12px Arial, sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText('岩性', columnX, 18)
+  ctx.fillText('地层柱状图', columnX, 18)
 
   // Draw depth scale (Nature style: ticks pointing inward)
   const tickSize = 4
-  const depthStep = Math.ceil(totalDepth / 6 / 5) * 5 || 10
+  const depthStep = Math.max(5, Math.ceil(totalDepth / 6 / 5) * 5) || 10
 
   ctx.strokeStyle = '#E2E8F0'
   ctx.lineWidth = 1.0
@@ -1007,8 +1159,8 @@ const drawStratigraphicColumn = () => {
 
   // Y-axis line
   ctx.beginPath()
-  ctx.moveTo(columnX - 8, topMargin)
-  ctx.lineTo(columnX - 8, h - 25)
+  ctx.moveTo(axisX, topMargin)
+  ctx.lineTo(axisX, h - padding.bottom)
   ctx.stroke()
 
   for (let depth = 0; depth <= totalDepth; depth += depthStep) {
@@ -1016,13 +1168,23 @@ const drawStratigraphicColumn = () => {
 
     // Tick pointing right (inward)
     ctx.beginPath()
-    ctx.moveTo(columnX - 8, y)
-    ctx.lineTo(columnX - 8 + tickSize, y)
+    ctx.moveTo(axisX, y)
+    ctx.lineTo(axisX + tickSize, y)
     ctx.stroke()
 
     // Depth label
-    ctx.fillText(`${depth}米`, columnX - 12, y + 3)
+    ctx.fillText(`${Math.round(depth)} m`, axisX - 6, y + 3)
   }
+
+  // Axis label
+  ctx.save()
+  ctx.translate(axisX - 28, topMargin + (h - padding.bottom - topMargin) / 2)
+  ctx.rotate(-Math.PI / 2)
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#64748B'
+  ctx.font = '11px Arial, sans-serif'
+  ctx.fillText('深度', 0, 0)
+  ctx.restore()
 
   // Draw layers with Nature-style patterns
   layers.forEach((layer, i) => {
@@ -1069,7 +1231,7 @@ const drawStratigraphicColumn = () => {
   // Column border (Nature style)
   ctx.strokeStyle = '#94A3B8'
   ctx.lineWidth = 1.0
-  ctx.strokeRect(columnX, topMargin, columnWidth, h - topMargin - 25)
+  ctx.strokeRect(columnX, topMargin, columnWidth, h - topMargin - padding.bottom)
 }
 
 // Draw Nature-style hatch patterns (matching Python matplotlib hatches)
@@ -1517,7 +1679,7 @@ defineExpose({ resetView })
 
 /* Grid Layout */
 .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--spacing-lg); }
-.params-card { grid-column: span 3; }
+.params-card { grid-column: span 4; }
 .param-row { margin-bottom: var(--spacing-lg); }
 .param-row:last-child { margin-bottom: 0; }
 .param-label { display: block; font-size: 13px; font-weight: 600; color: var(--color-secondary); margin-bottom: var(--spacing-sm); }
@@ -1547,12 +1709,19 @@ defineExpose({ resetView })
 .btn.small { padding: 8px 14px; font-size: 13px; }
 
 /* Cards */
-.grid > .card:nth-child(2) { grid-column: span 3; }
-.grid > .card:nth-child(3) { grid-column: span 3; }
-.grid > .card:nth-child(4) { grid-column: span 3; }
-.histogram-wrapper, .stratigraphic-wrapper { background: var(--color-primary-light); border-radius: var(--border-radius-md); padding: var(--spacing-lg); display: flex; align-items: center; justify-content: center; min-height: 220px; }
-.histogram-canvas { max-width: 100%; max-height: 200px; }
-.stratigraphic-canvas { max-width: 100%; max-height: 260px; }
+.grid > .card:nth-child(2) { grid-column: span 4; }
+.grid > .card:nth-child(3) { grid-column: span 4; }
+.grid > .card:nth-child(4) { grid-column: span 4; }
+.compact-card { padding: 16px; }
+.histogram-wrapper, .stratigraphic-wrapper { background: #ffffff; border-radius: var(--border-radius-md); padding: var(--spacing-md); display: flex; align-items: center; justify-content: center; min-height: 260px; }
+.histogram-canvas { max-width: 100%; max-height: 100%; width: 100%; }
+.stratigraphic-canvas { width: 100%; height: 300px; max-height: none; }
+
+/* Statistics Grid - Nature style */
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-sm); padding: var(--spacing-sm) var(--spacing-md); background: white; border-top: 1px solid #e5e7eb; }
+.stat-item { display: flex; flex-direction: column; align-items: center; padding: var(--spacing-xs); }
+.stat-item .stat-label { font-size: 10px; color: #666666; font-weight: 400; }
+.stat-item .stat-value { font-size: 13px; color: #000000; font-weight: 500; font-family: 'Arial', monospace; }
 
 /* Toggle */
 .toggle-group { display: flex; flex-direction: column; gap: var(--spacing-sm); }
@@ -1563,22 +1732,37 @@ defineExpose({ resetView })
 .hint-text { margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-warning-light); border-radius: var(--border-radius-sm); font-size: 12px; color: #B45309; line-height: 1.5; }
 
 /* Legend */
-.lithology-legend-compact { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm) var(--spacing-md); margin-top: var(--spacing-lg); }
-.legend-item-compact { display: flex; align-items: center; gap: var(--spacing-sm); font-size: 11px; }
-.legend-item-compact .legend-color { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); flex-shrink: 0; }
+.lithology-legend-compact { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 10px; margin-top: var(--spacing-md); }
+.legend-item-compact { display: flex; align-items: center; gap: 6px; font-size: 10px; }
+.legend-item-compact .legend-color { width: 10px; height: 10px; border-radius: 3px; border: 1px solid var(--border-color); flex-shrink: 0; }
+.legend-item-compact .legend-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .legend-item-compact .legend-name { color: var(--color-secondary); font-weight: 500; }
 
 /* Map Cards */
-.map-card-large { grid-column: span 6; }
+.map-row { grid-column: span 12; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-lg); }
+.map-row .map-card-large { grid-column: auto; }
+.map-card-large { grid-column: span 6; display: flex; flex-direction: column; }
 .map-card-full { grid-column: span 12; }
 .map-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-lg); border-bottom: 1px solid var(--border-color); }
 .section-badge { display: inline-block; padding: 4px 10px; background: var(--color-warning-light); color: var(--color-warning); font-size: 11px; font-weight: 700; font-family: monospace; border-radius: var(--border-radius-sm); margin-left: var(--spacing-sm); }
-.map-wrapper, .cross-section-wrapper {
+.map-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.cross-section-wrapper {
   border-radius: var(--border-radius-md);
   overflow: hidden;
   background: #f8fafc;
-  min-height: 450px;
-  height: 450px;
+  min-height: 320px;
+  height: 320px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1588,13 +1772,15 @@ defineExpose({ resetView })
 .map-wrapper :deep(.contour-map-wrapper) {
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .map-wrapper :deep(.contour-image) {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
 }
 
@@ -1650,7 +1836,7 @@ defineExpose({ resetView })
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Responsive */
-@media (max-width: 1400px) { .params-card, .grid > .card:nth-child(2), .grid > .card:nth-child(3), .grid > .card:nth-child(4) { grid-column: span 6; } .map-card-large { grid-column: span 12; } }
-@media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } .params-card, .grid > .card, .map-card-large, .map-card-full { grid-column: span 1; } .header-stats { flex-wrap: wrap; } .seam-selection-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } }
-@media (max-width: 768px) { .action-buttons { flex-direction: column; } .btn { width: 100%; } .map-wrapper, .uncertainty-wrapper, .cross-section-wrapper { min-height: 300px; } .map-wrapper :deep(.contour-map), .uncertainty-canvas, .cross-section-canvas { height: 300px; } .seam-selection-grid { grid-template-columns: 1fr; max-height: 400px; } }
+@media (max-width: 1400px) { .params-card, .grid > .card:nth-child(2), .grid > .card:nth-child(3), .grid > .card:nth-child(4) { grid-column: span 6; } .map-row { grid-template-columns: 1fr; } .map-card-large { grid-column: span 12; } }
+@media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } .params-card, .grid > .card, .map-card-large, .map-card-full { grid-column: span 1; } .header-stats { flex-wrap: wrap; } .seam-selection-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .action-buttons { flex-direction: column; } .btn { width: 100%; } .map-wrapper, .uncertainty-wrapper, .cross-section-wrapper { min-height: 300px; } .map-wrapper :deep(.contour-map), .uncertainty-canvas, .cross-section-canvas { height: 300px; } .seam-selection-grid { grid-template-columns: 1fr; max-height: 400px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
