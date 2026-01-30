@@ -25,8 +25,14 @@ from app.services.interpolate import interpolate_from_points
 from app.services.workface import compute_workface_adjusted_grid
 from app.services.summary import summarize_grid
 from app.services.contour_generator import generate_matplotlib_contour_image, generate_dual_contour_images
+from app.routes.mpi import router as mpi_router
+from app.routes.rock_params import router as rock_params_router
 
 app = FastAPI(title="Mining Pressure System API", version="0.1.0")
+
+# Include routers
+app.include_router(mpi_router)
+app.include_router(rock_params_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -285,7 +291,7 @@ def export_pressure_steps_workfaces(
 
 
 @app.get("/interpolate/field")
-def interpolate_field_api(field: str, method: str = "idw", grid_size: int = 50) -> dict:
+def interpolate_field_api(field: str, method: str = "kriging", grid_size: int = 50) -> dict:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
     if not coord_path.exists():
@@ -306,7 +312,7 @@ def interpolate_compare_api(field: str, grid_size: int = 50) -> dict:
 
     coords = load_borehole_coords(coord_path)
     files = sorted([p for p in data_dir.glob("*.csv") if p.is_file() and p.name != "zuobiao.csv"])
-    methods = ["idw", "linear", "nearest"]
+    methods = ["kriging", "idw", "linear", "nearest"]
     results = {}
     for method in methods:
         results[method] = interpolate_field(files=files, coords=coords, field=field, method=method, grid_size=grid_size)
@@ -314,7 +320,7 @@ def interpolate_compare_api(field: str, grid_size: int = 50) -> dict:
 
 
 @app.get("/interpolate/recommend")
-def interpolate_recommend_api(field: str, methods: str = "idw,linear,nearest") -> dict:
+def interpolate_recommend_api(field: str, methods: str = "kriging,idw,linear,nearest") -> dict:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
     if not coord_path.exists():
@@ -656,7 +662,7 @@ def interpolate_seam_api(
     Args:
         seam_name: Name of the coal seam (e.g., "16-3煤")
         property: Property to interpolate ("thickness" or "burial_depth")
-        method: Interpolation method ("idw", "linear", "nearest")
+        method: Interpolation method ("kriging", "idw", "linear", "nearest")
         grid_size: Grid resolution (20-100)
         contour_levels: Number of contour levels (5-20)
         include_contours: Whether to include contour line data
@@ -781,7 +787,7 @@ def compare_seam_methods_api(
 @app.get("/seams/contour-images")
 def get_seam_contour_images_api(
     seam_name: str,
-    method: str = "idw",
+    method: str = "kriging",
     grid_size: int = 80,
     num_levels: int = 12,
     dpi: int = 150,

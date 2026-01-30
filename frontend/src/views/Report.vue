@@ -46,6 +46,58 @@
         </div>
       </div>
 
+      <!-- MPI专题 -->
+      <div class="card" v-if="mpiSummary">
+        <h3 class="section-title">MPI专题分析（{{ mpiSummary.seamName }}）</h3>
+        <p class="section-desc">综合MPI与分项指标统计，并标注高/低MPI区域</p>
+
+        <div class="mpi-summary-grid">
+          <div class="mpi-summary-item">
+            <span class="stat-label">MPI最小值</span>
+            <span class="stat-value">{{ mpiSummary.stats.min?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="mpi-summary-item">
+            <span class="stat-label">MPI最大值</span>
+            <span class="stat-value">{{ mpiSummary.stats.max?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="mpi-summary-item">
+            <span class="stat-label">MPI平均值</span>
+            <span class="stat-value">{{ mpiSummary.stats.mean?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="mpi-summary-item">
+            <span class="stat-label">RSI平均值</span>
+            <span class="stat-value">{{ mpiSummary.breakdown.rsi?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="mpi-summary-item">
+            <span class="stat-label">BRI平均值</span>
+            <span class="stat-value">{{ mpiSummary.breakdown.bri?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="mpi-summary-item">
+            <span class="stat-label">ASI平均值</span>
+            <span class="stat-value">{{ mpiSummary.breakdown.asi?.toFixed(2) || '-' }}</span>
+          </div>
+        </div>
+
+        <div class="mpi-markers">
+          <div class="mpi-marker">
+            <div class="mpi-marker-title">高MPI区域（低风险）</div>
+            <ul>
+              <li v-for="item in mpiSummary.high" :key="item.id">
+                {{ item.id }}：MPI {{ item.mpi.toFixed(2) }}
+              </li>
+            </ul>
+          </div>
+          <div class="mpi-marker">
+            <div class="mpi-marker-title">低MPI区域（高风险）</div>
+            <ul>
+              <li v-for="item in mpiSummary.low" :key="item.id">
+                {{ item.id }}：MPI {{ item.mpi.toFixed(2) }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <!-- 详细数据表格 -->
       <div class="card">
         <h3 class="section-title">详细统计数据</h3>
@@ -95,12 +147,18 @@ import {
   summaryIndex,
   summaryIndexWorkfaces,
   summarySteps,
-  summaryStepsWorkfaces
+  summaryStepsWorkfaces,
+  getCoalSeams,
+  getSeamOverburden,
+  getRockParams,
+  mpiBatch
 } from '../api'
 
 const toast = useToast()
 const loading = ref(false)
 const summary = ref(null)
+const mpiSummary = ref(null)
+const layerParamsCache = new Map()
 
 const handleSummary = async () => {
   loading.value = true
@@ -133,11 +191,115 @@ const handleSummary = async () => {
       { name: '来压步距-工作面', stats: d.data.grid }
     ]
 
+    mpiSummary.value = await buildMpiReport()
+
     toast.add('报告生成完成', 'success')
   } catch (err) {
     toast.add(err.response?.data?.detail || '生成失败', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+const getLayerParams = async (name) => {
+  if (!name) return null
+  if (layerParamsCache.has(name)) return layerParamsCache.get(name)
+  try {
+    const { data } = await getRockParams(name)
+    layerParamsCache.set(name, data)
+    return data
+  } catch (err) {
+    layerParamsCache.set(name, null)
+    return null
+  }
+}
+
+const buildMpiPoints = async (boreholes = [], seamName = '') => {
+  const points = []
+  for (const borehole of boreholes) {
+    const layers = borehole.layers || []
+    const seamLayer = layers.find(l => l.name === seamName)
+    const strataLayers = layers.filter(l => l.name !== seamName)
+
+    const strata = []
+    for (const layer of strataLayers) {
+      const params = await getLayerParams(layer.name)
+      strata.push({
+        thickness: layer.thickness || 0,
+        name: layer.name || '',
+        density: params?.density,
+        bulk_modulus: params?.bulk_modulus,
+        shear_modulus: params?.shear_modulus,
+        cohesion: params?.cohesion,
+        friction_angle: params?.friction_angle,
+        tensile_strength: params?.tensile_strength,
+        compressive_strength: params?.compressive_strength,
+        elastic_modulus: params?.elastic_modulus,
+        poisson_ratio: params?.poisson_ratio
+      })
+    }
+
+    const burialDepth = borehole.seam_top_depth ?? borehole.total_overburden_thickness ?? 0
+    const thickness = seamLayer?.thickness || 0
+
+    points.push({
+      x: borehole.x,
+      y: borehole.y,
+      borehole: borehole.name,
+      thickness,
+      burial_depth: burialDepth,
+      z_top: burialDepth,
+      z_bottom: burialDepth + thickness,
+      strata
+    })
+  }
+  return points
+}
+
+const buildMpiReport = async () => {
+  try {
+    const { data: seamData } = await getCoalSeams()
+    const seams = seamData.seams || []
+    if (seams.length === 0) return null
+
+    const seamName = seams[0].name
+    const { data: overburden } = await getSeamOverburden(seamName)
+    const boreholes = overburden.boreholes || []
+    if (boreholes.length === 0) return null
+
+    const points = await buildMpiPoints(boreholes, seamName)
+    const { data: batch } = await mpiBatch(points)
+    const results = batch.results || []
+
+    const breakdown = results.reduce(
+      (acc, cur) => {
+        acc.rsi += cur.breakdown?.rsi || 0
+        acc.bri += cur.breakdown?.bri || 0
+        acc.asi += cur.breakdown?.asi || 0
+        return acc
+      },
+      { rsi: 0, bri: 0, asi: 0 }
+    )
+    const count = results.length || 1
+    const breakdownAvg = {
+      rsi: breakdown.rsi / count,
+      bri: breakdown.bri / count,
+      asi: breakdown.asi / count
+    }
+
+    const sorted = [...results].sort((a, b) => a.mpi - b.mpi)
+    const low = sorted.slice(0, 3)
+    const high = sorted.slice(-3).reverse()
+
+    return {
+      seamName,
+      stats: batch.summary || {},
+      breakdown: breakdownAvg,
+      high,
+      low
+    }
+  } catch (err) {
+    return null
   }
 }
 
@@ -152,6 +314,19 @@ const exportReport = () => {
     P50: row.stats.p50?.toFixed(3),
     P90: row.stats.p90?.toFixed(3)
   }))
+
+  if (mpiSummary.value) {
+    data.push({
+      指标: `MPI综合指标（${mpiSummary.value.seamName}）`,
+      最小值: mpiSummary.value.stats.min?.toFixed(3),
+      最大值: mpiSummary.value.stats.max?.toFixed(3),
+      平均值: mpiSummary.value.stats.mean?.toFixed(3),
+      标准差: mpiSummary.value.stats.std?.toFixed(3),
+      P10: '',
+      P50: '',
+      P90: ''
+    })
+  }
 
   const csv = [
     Object.keys(data[0]).join(','),
@@ -260,6 +435,45 @@ const exportReport = () => {
   gap: 16px;
 }
 
+.mpi-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mpi-summary-item {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.mpi-markers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.mpi-marker {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.mpi-marker-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.mpi-marker ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: #334155;
+}
+
 .summary-card {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e2e8f0;
@@ -365,6 +579,11 @@ const exportReport = () => {
 
 @media (max-width: 768px) {
   .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .mpi-summary-grid,
+  .mpi-markers {
     grid-template-columns: 1fr;
   }
 }

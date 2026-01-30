@@ -15,6 +15,11 @@ try:
 except Exception:  # pragma: no cover
     griddata = None
 
+try:
+    from pykrige.ok import OrdinaryKriging
+except Exception:  # pragma: no cover
+    OrdinaryKriging = None
+
 
 def _thickness_weighted_mean(df: pd.DataFrame, field: str) -> float | None:
     if field not in df.columns or "thickness" not in df.columns:
@@ -68,6 +73,24 @@ def _idw_interpolate(x: np.ndarray, y: np.ndarray, v: np.ndarray, grid_x: np.nda
     return values
 
 
+def _kriging_interpolate(x: np.ndarray, y: np.ndarray, v: np.ndarray, grid_x: np.ndarray, grid_y: np.ndarray) -> np.ndarray:
+    if OrdinaryKriging is None:
+        raise RuntimeError("pykrige is required for kriging interpolation")
+    ok = OrdinaryKriging(
+        x,
+        y,
+        v,
+        variogram_model="spherical",
+        verbose=False,
+        enable_plotting=False,
+    )
+    z, _ = ok.execute("grid", grid_x, grid_y)
+    grid = np.asarray(z, dtype=float)
+    if np.isnan(grid).any():
+        grid = np.nan_to_num(grid, nan=float(np.nanmean(v)))
+    return grid
+
+
 def interpolate_from_points(points: np.ndarray, values: np.ndarray, method: str, grid_size: int) -> Dict:
     x = points[:, 0]
     y = points[:, 1]
@@ -89,6 +112,10 @@ def interpolate_from_points(points: np.ndarray, values: np.ndarray, method: str,
     method_key = method.strip().lower()
     if method_key == "idw":
         grid = _idw_interpolate(x, y, v, grid_x, grid_y)
+    elif method_key in {"kriging", "ordinary_kriging", "ok"}:
+        if OrdinaryKriging is None:
+            return {"error": "pykrige is required for kriging interpolation"}
+        grid = _kriging_interpolate(x, y, v, grid_x, grid_y)
     elif method_key in {"linear", "nearest"}:
         if griddata is None:
             return {"error": "scipy is required for linear/nearest interpolation"}

@@ -23,7 +23,7 @@ def interpolate_seam_property(
     coords: Dict[str, Dict[str, float]],
     seam_name: str,
     property: str,  # "thickness" or "burial_depth"
-    method: str = "idw",
+    method: str = "kriging",
     grid_size: int = 50,
     contour_levels: int = 10,
     include_contours: bool = True
@@ -36,7 +36,7 @@ def interpolate_seam_property(
         coords: Dictionary mapping borehole names to coordinates
         seam_name: Name of the coal seam (e.g., "16-3煤")
         property: Property to interpolate ("thickness" or "burial_depth")
-        method: Interpolation method ("idw", "linear", "nearest")
+        method: Interpolation method ("kriging", "idw", "linear", "nearest")
         grid_size: Grid resolution
         contour_levels: Number of contour levels
         include_contours: Whether to generate contour line data
@@ -139,7 +139,7 @@ def interpolate_seam_with_overburden(
     files: List[Path],
     coords: Dict[str, Dict[str, float]],
     seam_name: str,
-    method: str = "idw",
+    method: str = "kriging",
     grid_size: int = 50,
     contour_levels: int = 10
 ) -> Dict:
@@ -225,7 +225,7 @@ def compare_interpolation_methods_for_seam(
     Returns:
         Dictionary comparing different methods
     """
-    methods = ["idw", "linear", "nearest"]
+    methods = ["kriging", "idw", "linear", "nearest"]
     results = {}
 
     for method in methods:

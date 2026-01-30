@@ -323,7 +323,7 @@ const selectedSeam = ref(null)
 const seamStats = ref(null)
 const seamPoints = ref([])
 const sortedLayers = ref([])
-const method = ref('idw')
+const method = ref('kriging')
 const gridSize = ref(80)
 const contourLevels = ref(10)
 const thicknessResult = ref(null)
@@ -342,6 +342,7 @@ const uncertaintyCanvas = ref(null)
 
 // Options
 const methodOptions = [
+  { key: 'kriging', label: 'Kriging' },
   { key: 'idw', label: 'IDW' },
   { key: 'linear', label: 'Linear' },
   { key: 'nearest', label: 'Nearest' }
@@ -378,7 +379,7 @@ const lithologyStyles = {
 }
 
 const methodName = (key) => {
-  const names = { idw: 'IDW', linear: 'Linear', nearest: 'Nearest' }
+  const names = { kriging: 'Kriging', idw: 'IDW', linear: 'Linear', nearest: 'Nearest' }
   return names[key] || key
 }
 

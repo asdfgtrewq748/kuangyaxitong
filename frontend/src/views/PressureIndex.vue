@@ -5,6 +5,21 @@
       <p class="page-subtitle">基于岩性参数计算矿压影响指数，生成压力分布图</p>
     </div>
 
+    <!-- 选项卡切换 -->
+    <div class="tabs">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        :class="['tab', { active: activeTab === tab.key }]"
+        @click="activeTab = tab.key"
+      >
+        <span class="tab-icon">{{ tab.icon }}</span>
+        <span class="tab-label">{{ tab.label }}</span>
+      </button>
+    </div>
+
+    <!-- 传统矿压指标选项卡 -->
+    <div v-show="activeTab === 'traditional'" class="tab-content">
     <div class="grid grid-2">
       <!-- 参数设置 -->
       <div class="card">
@@ -32,6 +47,7 @@
         <div class="param-group">
           <label class="param-label">插值方法</label>
           <select v-model="method" class="param-select">
+            <option value="kriging">Kriging</option>
             <option value="idw">IDW</option>
             <option value="linear">Linear</option>
             <option value="nearest">Nearest</option>
@@ -140,6 +156,190 @@
         <HeatmapCanvas :grid="workfaceGrid" :size="500" />
       </div>
     </div>
+    </div>
+
+    <!-- MPI指标选项卡 -->
+    <div v-show="activeTab === 'mpi'" class="tab-content">
+      <div class="grid grid-2">
+        <!-- MPI权重设置 -->
+        <div class="card">
+          <h3 class="section-title">MPI权重配置</h3>
+          <p class="section-desc">设置矿压影响指标各子项的权重</p>
+
+          <div class="weight-inputs">
+            <div class="weight-item">
+              <label class="weight-label">顶板稳定性 (RSI)</label>
+              <input v-model.number="mpiWeights.roof_stability" type="number" step="0.05" min="0" max="1" class="weight-input">
+              <span class="weight-percent">{{ (mpiWeights.roof_stability * 100).toFixed(0) }}%</span>
+            </div>
+            <div class="weight-item">
+              <label class="weight-label">冲击地压风险 (BRI)</label>
+              <input v-model.number="mpiWeights.burst_risk" type="number" step="0.05" min="0" max="1" class="weight-input">
+              <span class="weight-percent">{{ (mpiWeights.burst_risk * 100).toFixed(0) }}%</span>
+            </div>
+            <div class="weight-item">
+              <label class="weight-label">支承压力分布 (ASI)</label>
+              <input v-model.number="mpiWeights.abutment_stress" type="number" step="0.05" min="0" max="1" class="weight-input">
+              <span class="weight-percent">{{ (mpiWeights.abutment_stress * 100).toFixed(0) }}%</span>
+            </div>
+          </div>
+
+          <div class="weight-total" :class="{ invalid: !isWeightValid }">
+            <span>权重总和: {{ mpiWeightTotal }}</span>
+            <span v-if="!isWeightValid" class="weight-warning">（应为1.0）</span>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">插值方法</label>
+            <select v-model="mpiMethod" class="param-select">
+              <option value="kriging">Kriging - 普通克里金</option>
+              <option value="idw">IDW - 反距离加权</option>
+              <option value="linear">Linear - 线性插值</option>
+              <option value="nearest">Nearest - 最近邻</option>
+            </select>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">网格分辨率</label>
+            <input v-model.number="mpiGridSize" type="number" min="20" max="150" class="param-input">
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn primary" @click="handleMpiCalculate" :disabled="loading || !isWeightValid">
+              <span v-if="loading" class="spinner sm"></span>
+              {{ loading ? '计算中...' : '计算MPI网格' }}
+            </button>
+            <button v-if="mpiGrid" class="btn secondary" @click="handleMpiExport" :disabled="loading">
+              导出MPI数据
+            </button>
+          </div>
+        </div>
+
+        <!-- MPI网格结果 -->
+        <div class="card">
+          <h3 class="section-title">MPI综合指标分布</h3>
+
+          <div v-if="mpiGrid" class="result-content">
+            <div class="mpi-legend-tabs">
+              <button
+                v-for="mode in mpiDisplayModes"
+                :key="mode.key"
+                :class="['mpi-legend-tab', { active: mpiDisplayMode === mode.key }]"
+                @click="mpiDisplayMode = mode.key"
+              >
+                {{ mode.label }}
+              </button>
+            </div>
+
+            <HeatmapCanvas :grid="currentMpiGrid" :size="420" />
+
+            <div class="legend">
+              <div class="legend-label">MPI值 ({{ mpiDisplayModeLabel }})</div>
+              <div class="legend-bar mpi-gradient">
+                <span class="legend-low">高风险 (低MPI)</span>
+                <span class="legend-high">低风险 (高MPI)</span>
+              </div>
+            </div>
+
+            <div class="stats-row">
+              <div class="stat-item">
+                <span class="stat-label">最小值</span>
+                <span class="stat-value">{{ mpiStats.min?.toFixed(2) || '-' }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">最大值</span>
+                <span class="stat-value">{{ mpiStats.max?.toFixed(2) || '-' }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">平均值</span>
+                <span class="stat-value">{{ mpiStats.mean?.toFixed(2) || '-' }}</span>
+              </div>
+            </div>
+
+            <div v-if="mpiPointCount > 0" class="mpi-info">
+              <span class="mpi-info-item">数据点: {{ mpiPointCount }}</span>
+              <span class="mpi-info-item">插值方法: {{ mpiMethod }}</span>
+            </div>
+          </div>
+
+          <div v-else class="empty-state">
+            <div class="empty-icon">📊</div>
+            <p>请先设置权重并计算MPI网格</p>
+            <p class="empty-hint">需要先导入钻孔数据和坐标数据</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分项指标说明 -->
+      <div class="card">
+        <h3 class="section-title">MPI分项指标说明</h3>
+        <div class="mpi-definitions">
+          <div class="mpi-def-item">
+            <div class="mpi-def-header">
+              <span class="mpi-def-icon">🏠</span>
+              <span class="mpi-def-title">RSI - 顶板稳定性指标</span>
+            </div>
+            <p class="mpi-def-desc">评估顶板岩层的稳定性，基于直接顶抗拉强度、关键层数量和岩层结构综合计算。分数越高顶板越稳定。</p>
+            <div class="mpi-def-breakdown">
+              <span>抗拉强度 (40%)</span>
+              <span>关键层数量 (30%)</span>
+              <span>岩层结构 (30%)</span>
+            </div>
+          </div>
+          <div class="mpi-def-item">
+            <div class="mpi-def-header">
+              <span class="mpi-def-icon">💥</span>
+              <span class="mpi-def-title">BRI - 冲击地压风险指标</span>
+            </div>
+            <p class="mpi-def-desc">评估冲击地压发生的风险程度，考虑采深、硬厚岩层能量积聚和煤层厚度影响。分数越高风险越低。</p>
+            <div class="mpi-def-breakdown">
+              <span>采深因子</span>
+              <span>硬岩能量积聚</span>
+              <span>煤层厚度</span>
+            </div>
+          </div>
+          <div class="mpi-def-item">
+            <div class="mpi-def-header">
+              <span class="mpi-def-icon">⚖️</span>
+              <span class="mpi-def-title">ASI - 支承压力分布指标</span>
+            </div>
+            <p class="mpi-def-desc">评估支承压力分布的合理性，基于岩层综合刚度和内摩擦角计算。分数越高应力分布越合理。</p>
+            <div class="mpi-def-breakdown">
+              <span>综合刚度 (50%)</span>
+              <span>内摩擦角 (50%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 风险等级说明 -->
+      <div class="card">
+        <h3 class="section-title">MPI风险等级划分</h3>
+        <div class="risk-levels">
+          <div class="risk-level low">
+            <div class="risk-header">
+              <span class="risk-badge low">低风险</span>
+              <span class="risk-range">MPI ≥ 70</span>
+            </div>
+            <p class="risk-desc">围岩条件较好，可采用常规支护方式。</p>
+          </div>
+          <div class="risk-level medium">
+            <div class="risk-header">
+              <span class="risk-badge medium">中等风险</span>
+              <span class="risk-range">50 ≤ MPI < 70</span>
+            </div>
+            <p class="risk-desc">建议加强顶板支护，增加锚杆/锚索密度。</p>
+          </div>
+          <div class="risk-level high">
+            <div class="risk-header">
+              <span class="risk-badge high">高风险</span>
+              <span class="risk-range">MPI < 50</span>
+            </div>
+            <p class="risk-desc">围岩条件较差，建议采用加强支护联合方式，必要时采取卸压措施。</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -147,10 +347,27 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from '../composables/useToast'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
-import { pressureIndexGrid, pressureIndexWorkfaces, exportIndex, exportPressureIndexWorkfaces } from '../api'
+import {
+  pressureIndexGrid,
+  pressureIndexWorkfaces,
+  exportIndex,
+  exportPressureIndexWorkfaces,
+  mpiBatch,
+  getMpiWeights,
+  setMpiWeights
+} from '../api'
 
 const toast = useToast()
-const method = ref('idw')
+
+// 选项卡
+const tabs = [
+  { key: 'traditional', label: '传统指标', icon: '📈' },
+  { key: 'mpi', label: 'MPI指标', icon: '📊' }
+]
+const activeTab = ref('traditional')
+
+// 传统指标
+const method = ref('kriging')
 const gridSize = ref(60)
 const wElastic = ref(0.4)
 const wDensity = ref(0.3)
@@ -165,11 +382,74 @@ const faceDirection = ref('ascending')
 const faceMode = ref('decrease')
 const faceDecay = ref(0.08)
 
+// MPI相关
+const mpiWeights = ref({
+  roof_stability: 0.4,
+  burst_risk: 0.35,
+  abutment_stress: 0.25
+})
+const mpiMethod = ref('kriging')
+const mpiGridSize = ref(60)
+const mpiGrid = ref(null)
+const mpiBreakdown = ref({ rsi: null, bri: null, asi: null })
+const mpiPointCount = ref(0)
+const mpiDisplayMode = ref('mpi') // mpi, rsi, bri, asi
+const mpiDisplayModes = [
+  { key: 'mpi', label: '综合MPI' },
+  { key: 'rsi', label: '顶板稳定性' },
+  { key: 'bri', label: '冲击地压风险' },
+  { key: 'asi', label: '支承压力分布' }
+]
+
 const totalWeight = computed(() => {
   return (wElastic.value || 0) + (wDensity.value || 0) + (wTensile.value || 0) || 1
 })
 
 const normalizedWeights = computed(() => {
+  const sum = totalWeight.value
+  return {
+    elastic: (wElastic.value || 0) / sum,
+    density: (wDensity.value || 0) / sum,
+    tensile: (wTensile.value || 0) / sum
+  }
+})
+
+// MPI相关计算属性
+const mpiWeightTotal = computed(() => {
+  const total = mpiWeights.value.roof_stability + mpiWeights.value.burst_risk + mpiWeights.value.abutment_stress
+  return total.toFixed(2)
+})
+
+const isWeightValid = computed(() => {
+  const total = mpiWeights.value.roof_stability + mpiWeights.value.burst_risk + mpiWeights.value.abutment_stress
+  return Math.abs(total - 1.0) < 0.01
+})
+
+const mpiStats = computed(() => {
+  if (!mpiGrid.value) return {}
+  const grid = currentMpiGrid.value
+  const flat = grid.flat()
+  const valid = flat.filter(v => v != null && !isNaN(v))
+  if (valid.length === 0) return {}
+  return {
+    min: Math.min(...valid),
+    max: Math.max(...valid),
+    mean: valid.reduce((a, b) => a + b, 0) / valid.length
+  }
+})
+
+const currentMpiGrid = computed(() => {
+  if (!mpiGrid.value) return []
+  if (mpiDisplayMode.value === 'mpi') {
+    return mpiGrid.value
+  }
+  // 返回分项指标网格（如果有的话）
+  return mpiGrid.value
+})
+
+const mpiDisplayModeLabel = computed(() => {
+  const mode = mpiDisplayModes.find(m => m.key === mpiDisplayMode.value)
+  return mode ? mode.label : 'MPI'
   const sum = totalWeight.value
   return {
     elastic: (wElastic.value || 0) / sum,
@@ -291,8 +571,74 @@ const handleExportWorkfaces = async () => {
   }
 }
 
+// MPI相关函数
+const loadMpiWeights = async () => {
+  try {
+    const { data } = await getMpiWeights()
+    mpiWeights.value = data
+  } catch (err) {
+    // 使用默认权重
+  }
+}
+
+const saveMpiWeights = async () => {
+  if (!isWeightValid.value) return
+  try {
+    await setMpiWeights(mpiWeights.value)
+    toast.add('权重配置已保存', 'success')
+  } catch (err) {
+    toast.add('保存权重失败', 'error')
+  }
+}
+
+const handleMpiCalculate = async () => {
+  loading.value = true
+  try {
+    // 这里简化处理，实际需要从钻孔数据构建点数据
+    // 暂时使用模拟数据演示
+    toast.add('MPI计算功能开发中，请确保已导入钻孔数据', 'info')
+
+    // TODO: 实际实现需要：
+    // 1. 获取所有钻孔数据
+    // 2. 获取坐标数据
+    // 3. 为每个钻孔构建PointData（包含strata）
+    // 4. 调用mpiInterpolate获取网格
+
+  } catch (err) {
+    toast.add(err.response?.data?.detail || 'MPI计算失败', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleMpiExport = async () => {
+  if (!mpiGrid.value) return
+
+  // 导出CSV
+  const rows = [['x', 'y', 'mpi', 'rsi', 'bri', 'asi']]
+  const grid = mpiGrid.value
+  const size = grid.length
+  for (let i = 0; i < size; i++) {
+    for (let j = 0; j < size; j++) {
+      rows.push([i, j, grid[i][j], '', '', ''])
+    }
+  }
+  const csv = rows.map(r => r.join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `mpi_grid_${mpiMethod.value}_${mpiGridSize.value}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.add('导出成功', 'success')
+}
+
 watch([wElastic, wDensity, wTensile], saveWeights)
-onMounted(loadWeights)
+onMounted(() => {
+  loadWeights()
+  loadMpiWeights()
+})
 </script>
 
 <style scoped>
@@ -559,5 +905,255 @@ onMounted(loadWeights)
   .weight-label {
     width: 100%;
   }
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 6px;
+  background: #f1f5f9;
+  border-radius: 14px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #475569;
+}
+
+.tab.active {
+  background: white;
+  color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-label {
+  font-size: 14px;
+}
+
+.tab-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* MPI Styles */
+.weight-total {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: #f0fdf4;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.weight-total.invalid {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.weight-warning {
+  font-weight: 400;
+  font-size: 12px;
+}
+
+/* MPI Legend Tabs */
+.mpi-legend-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
+.mpi-legend-tab {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mpi-legend-tab:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.mpi-legend-tab.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.mpi-gradient {
+  background: linear-gradient(to right, #dc2626, #f97316, #eab308, #22c55e, #16a34a);
+}
+
+.mpi-info {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 12px;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.empty-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+/* MPI Definitions */
+.mpi-definitions {
+  display: grid;
+  gap: 16px;
+}
+
+.mpi-def-item {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border-left: 4px solid #3b82f6;
+}
+
+.mpi-def-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.mpi-def-icon {
+  font-size: 20px;
+}
+
+.mpi-def-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mpi-def-desc {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.mpi-def-breakdown {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mpi-def-breakdown span {
+  padding: 4px 10px;
+  background: white;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* Risk Levels */
+.risk-levels {
+  display: grid;
+  gap: 12px;
+}
+
+.risk-level {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border-left: 4px solid;
+}
+
+.risk-level.low {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.risk-level.medium {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.risk-level.high {
+  background: #fef2f2;
+  border-left-color: #dc2626;
+}
+
+.risk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.risk-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.risk-badge.low {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.risk-badge.medium {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.risk-badge.high {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.risk-range {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.risk-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
 }
 </style>

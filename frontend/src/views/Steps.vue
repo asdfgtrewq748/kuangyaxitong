@@ -120,6 +120,68 @@
       </div>
     </div>
 
+    <!-- MPI分布与步距建议 -->
+    <div class="card">
+      <h3 class="section-title">MPI分布与步距建议</h3>
+      <p class="section-desc">基于煤层上覆岩层参数计算MPI分布，用于辅助步距调整</p>
+
+      <div class="mpi-controls">
+        <div class="param-group">
+          <label class="param-label">煤层</label>
+          <select v-model="mpiSeam" class="param-select">
+            <option v-for="seam in mpiSeams" :key="seam.name" :value="seam.name">
+              {{ seam.name }}
+            </option>
+          </select>
+        </div>
+        <div class="param-group">
+          <label class="param-label">网格分辨率</label>
+          <input v-model.number="mpiGridSize" type="number" min="20" max="150" class="param-input">
+        </div>
+        <div class="param-group">
+          <label class="param-label">插值方法</label>
+          <select v-model="mpiMethod" class="param-select">
+            <option value="idw">IDW</option>
+            <option value="linear">Linear</option>
+            <option value="nearest">Nearest</option>
+          </select>
+        </div>
+        <button class="btn secondary" @click="handleMpiGrid" :disabled="loadingMpi || !mpiSeam">
+          <span v-if="loadingMpi" class="spinner sm"></span>
+          {{ loadingMpi ? '计算中...' : '计算MPI分布' }}
+        </button>
+      </div>
+
+      <div v-if="mpiGrid" class="result-content">
+        <HeatmapCanvas :grid="mpiGrid" :size="420" />
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-label">最小值</span>
+            <span class="stat-value">{{ mpiStats.min?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">最大值</span>
+            <span class="stat-value">{{ mpiStats.max?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">平均值</span>
+            <span class="stat-value">{{ mpiStats.mean?.toFixed(2) || '-' }}</span>
+          </div>
+        </div>
+
+        <div class="mpi-suggestion">
+          <div class="mpi-suggestion-title">步距调整建议</div>
+          <p class="mpi-suggestion-text">{{ mpiSuggestion }}</p>
+        </div>
+      </div>
+
+      <div v-else class="empty-state">
+        <div class="empty-icon">📊</div>
+        <p>请选择煤层并计算MPI分布</p>
+      </div>
+    </div>
+
     <!-- 批量计算结果 -->
     <div v-if="stepBatch" class="card">
       <h3 class="section-title">批量计算结果</h3>
@@ -150,7 +212,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useToast } from '../composables/useToast'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
 import {
@@ -158,7 +220,11 @@ import {
   pressureStepsBatch,
   pressureStepsGrid,
   exportPressureSteps,
-  exportPressureStepsGrid
+  exportPressureStepsGrid,
+  getCoalSeams,
+  getSeamOverburden,
+  getRockParams,
+  mpiInterpolate
 } from '../api'
 
 const toast = useToast()
@@ -176,6 +242,23 @@ const loading = ref(false)
 const stepResult = ref(null)
 const stepGrid = ref(null)
 const stepBatch = ref(null)
+
+const mpiSeams = ref([])
+const mpiSeam = ref('')
+const mpiGridSize = ref(60)
+const mpiMethod = ref('idw')
+const mpiGrid = ref(null)
+const mpiStats = ref({})
+const loadingMpi = ref(false)
+const layerParamsCache = new Map()
+
+const mpiSuggestion = computed(() => {
+  const mean = mpiStats.value?.mean
+  if (mean == null || Number.isNaN(mean)) return '暂无建议，请先计算MPI分布。'
+  if (mean < 60) return 'MPI偏低，建议适当减小来压步距或提高支护强度。'
+  if (mean < 80) return 'MPI中等，建议按当前步距执行，并关注局部高风险区。'
+  return 'MPI偏高，整体风险较低，可在安全条件下适度增大步距。'
+})
 
 const handleSteps = async () => {
   loading.value = true
@@ -271,6 +354,98 @@ const handleExportBatch = async () => {
     loading.value = false
   }
 }
+
+const loadMpiSeams = async () => {
+  try {
+    const { data } = await getCoalSeams()
+    mpiSeams.value = data.seams || []
+    if (!mpiSeam.value && mpiSeams.value.length > 0) {
+      mpiSeam.value = mpiSeams.value[0].name
+    }
+  } catch (err) {
+    toast.add('加载煤层失败', 'error')
+  }
+}
+
+const getLayerParams = async (name) => {
+  if (!name) return null
+  if (layerParamsCache.has(name)) return layerParamsCache.get(name)
+  try {
+    const { data } = await getRockParams(name)
+    layerParamsCache.set(name, data)
+    return data
+  } catch (err) {
+    layerParamsCache.set(name, null)
+    return null
+  }
+}
+
+const buildMpiPoints = async (boreholes = []) => {
+  const points = []
+  for (const borehole of boreholes) {
+    const layers = borehole.layers || []
+    const seamLayer = layers.find(l => l.name === mpiSeam.value)
+    const strataLayers = layers.filter(l => l.name !== mpiSeam.value)
+
+    const strata = []
+    for (const layer of strataLayers) {
+      const params = await getLayerParams(layer.name)
+      strata.push({
+        thickness: layer.thickness || 0,
+        name: layer.name || '',
+        density: params?.density,
+        bulk_modulus: params?.bulk_modulus,
+        shear_modulus: params?.shear_modulus,
+        cohesion: params?.cohesion,
+        friction_angle: params?.friction_angle,
+        tensile_strength: params?.tensile_strength,
+        compressive_strength: params?.compressive_strength,
+        elastic_modulus: params?.elastic_modulus,
+        poisson_ratio: params?.poisson_ratio
+      })
+    }
+
+    const burialDepth = borehole.seam_top_depth ?? borehole.total_overburden_thickness ?? 0
+    const thickness = seamLayer?.thickness || 0
+
+    points.push({
+      x: borehole.x,
+      y: borehole.y,
+      borehole: borehole.name,
+      thickness,
+      burial_depth: burialDepth,
+      z_top: burialDepth,
+      z_bottom: burialDepth + thickness,
+      strata
+    })
+  }
+  return points
+}
+
+const handleMpiGrid = async () => {
+  if (!mpiSeam.value) return
+  loadingMpi.value = true
+  try {
+    const { data } = await getSeamOverburden(mpiSeam.value)
+    const boreholes = data.boreholes || []
+    if (boreholes.length === 0) {
+      toast.add('当前煤层无可用钻孔数据', 'error')
+      return
+    }
+
+    const points = await buildMpiPoints(boreholes)
+    const { data: mpiData } = await mpiInterpolate(points, mpiGridSize.value, mpiMethod.value)
+    mpiGrid.value = mpiData.grid
+    mpiStats.value = mpiData.statistics || {}
+    toast.add('MPI分布计算完成', 'success')
+  } catch (err) {
+    toast.add(err.response?.data?.detail || 'MPI计算失败', 'error')
+  } finally {
+    loadingMpi.value = false
+  }
+}
+
+loadMpiSeams()
 </script>
 
 <style scoped>
@@ -348,6 +523,14 @@ const handleExportBatch = async () => {
   gap: 10px;
   margin-bottom: 24px;
   flex-wrap: wrap;
+}
+
+.mpi-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
 }
 
 .btn {
@@ -444,6 +627,64 @@ const handleExportBatch = async () => {
   text-align: center;
 }
 
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.stat-item {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.stat-value {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mpi-suggestion {
+  background: #eef2ff;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.mpi-suggestion-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4338ca;
+  margin-bottom: 6px;
+}
+
+.mpi-suggestion-text {
+  font-size: 13px;
+  color: #3730a3;
+  margin: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
 .table-wrapper {
   overflow-x: auto;
   margin-top: 16px;
@@ -492,6 +733,10 @@ const handleExportBatch = async () => {
 @media (max-width: 768px) {
   .param-row,
   .param-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mpi-controls {
     grid-template-columns: 1fr;
   }
 

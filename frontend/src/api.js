@@ -90,7 +90,7 @@ export const exportSeamInterpolation = (seamName, property, method, gridSize) =>
     params: { seam_name: seamName, property, method, grid_size: gridSize },
     responseType: 'blob'
   })
-export const getSeamContourImages = (seamName, method = 'idw', gridSize = 80, numLevels = 12, dpi = 150, smoothSigma = 1.0) =>
+export const getSeamContourImages = (seamName, method = 'kriging', gridSize = 80, numLevels = 12, dpi = 150, smoothSigma = 1.0) =>
   api.get('/seams/contour-images', {
     params: {
       seam_name: seamName,
@@ -101,3 +101,34 @@ export const getSeamContourImages = (seamName, method = 'idw', gridSize = 80, nu
       smooth_sigma: smoothSigma
     }
   })
+
+// MPI (矿压影响指标) APIs
+export const mpiCalculate = (point, weights = null, config = null) =>
+  api.post('/api/mpi/calculate', { point, weights, config })
+export const mpiBatch = (points, weights = null, config = null) =>
+  api.post('/api/mpi/batch', { points, weights, config })
+export const mpiInterpolate = (points, resolution = 50, method = 'idw', weights = null, bounds = null) =>
+  api.post('/api/mpi/interpolate', { points, resolution, method, weights, bounds })
+export const mpiKeyLayers = (strata, config = null) =>
+  api.post('/api/mpi/key-layers', { strata, config })
+export const getMpiWeights = () => api.get('/api/mpi/weights')
+export const setMpiWeights = (weights) => api.post('/api/mpi/weights', weights)
+export const getMpiConfig = () => api.get('/api/mpi/config')
+export const setMpiConfig = (params) => api.post('/api/mpi/config', null, { params })
+
+// Rock Params APIs
+export const getRockParams = (lithology, useSynonyms = true, includeDefault = true) =>
+  api.get('/api/rock-params/query', {
+    params: { lithology, use_synonyms: useSynonyms, include_default: includeDefault }
+  })
+export const getRockParamsStats = () => api.get('/api/rock-params/stats')
+export const getLithologies = (standardOnly = false) =>
+  api.get('/api/rock-params/lithologies', { params: { standard_only: standardOnly } })
+export const getMines = () => api.get('/api/rock-params/mines')
+export const getLithologySynonyms = () => api.get('/api/rock-params/synonyms')
+export const standardizeLithology = (lithology) =>
+  api.get('/api/rock-params/standardize', { params: { lithology } })
+export const estimateRockParams = (lithology, params = {}) =>
+  api.post('/api/rock-params/estimate', null, { params: { lithology, ...params } })
+export const getDefaultRockParams = (lithology) =>
+  api.get(`/api/rock-params/default/${lithology}`)
