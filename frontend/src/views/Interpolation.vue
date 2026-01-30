@@ -453,8 +453,11 @@ const handleInterpolate = async () => {
       console.error('❌ 深度图片数据缺失!')
     }
 
-    // Calculate uncertainty map
+    // Calculate uncertainty map and draw other charts after DOM update
+    await nextTick()
     calculateUncertainty()
+    drawHistogram()
+    console.log('✓ All charts绘制完成')
 
     toast.add('等值线图生成完成', 'success')
   } catch (err) {
@@ -468,17 +471,36 @@ const handleInterpolate = async () => {
 
 // Calculate uncertainty map - matching 误差分布图绘制.py style
 const calculateUncertainty = () => {
-  if (!seamPoints.value.length || !thicknessResult.value) return
+  console.log('calculateUncertainty called')
+  console.log('seamPoints.value.length:', seamPoints.value.length)
+  console.log('thicknessResult.value:', thicknessResult.value)
+
+  if (!seamPoints.value.length || !thicknessResult.value) {
+    console.log('❌ Missing data for uncertainty map')
+    return
+  }
 
   const canvas = uncertaintyCanvas.value
-  if (!canvas) return
+  console.log('uncertaintyCanvas.value:', canvas)
+
+  if (!canvas) {
+    console.log('❌ uncertaintyCanvas not found')
+    return
+  }
+
+  console.log('✓ Starting uncertainty map calculation...')
 
   const ctx = canvas.getContext('2d')
   const w = canvas.width = 900
   const h = canvas.height = 550
 
+  console.log('Canvas size:', w, 'x', h)
+
   const bounds = thicknessResult.value.bounds
   const points = seamPoints.value.map(p => ({ x: p.x, y: p.y }))
+
+  console.log('Bounds:', bounds)
+  console.log('Points count:', points.length)
 
   // Background
   ctx.fillStyle = '#ffffff'
@@ -620,7 +642,7 @@ const calculateUncertainty = () => {
   ctx.fillStyle = '#000000'
   ctx.font = '12px Arial, sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText('High Uncertainty', legendBoxX + 32, legendBoxY + 40)
+  ctx.fillText('高不确定性', legendBoxX + 32, legendBoxY + 40)
 
   // Borehole location dot
   ctx.beginPath()
@@ -628,7 +650,7 @@ const calculateUncertainty = () => {
   ctx.fillStyle = '#000000'
   ctx.fill()
 
-  ctx.fillText('Borehole Locations', legendBoxX + 32, legendBoxY + 22)
+  ctx.fillText('钻孔位置', legendBoxX + 32, legendBoxY + 22)
 
   // Custom scale bar (bottom-right, matching Python script)
   const scaleBoxX = padding.left + drawW - 150
@@ -651,7 +673,7 @@ const calculateUncertainty = () => {
   ctx.textAlign = 'center'
   ctx.fillText('500', scaleBoxX + 75, scaleBoxY + 22)
   ctx.textAlign = 'right'
-  ctx.fillText('1000 m', scaleBoxX + 120, scaleBoxY + 22)
+  ctx.fillText('1000 米', scaleBoxX + 120, scaleBoxY + 22)
 
   // Scale line
   const lineY = scaleBoxY + 12
@@ -715,23 +737,38 @@ const calculateUncertainty = () => {
   ctx.rotate(-Math.PI / 2)
   ctx.textAlign = 'center'
   ctx.font = '12px Arial, sans-serif'
-  ctx.fillText('Variance (normalized)', 0, 0)
+  ctx.fillText('方差 (归一化)', 0, 0)
   ctx.restore()
 
   // Title (matching Python script style)
   ctx.fillStyle = '#000000'
   ctx.font = 'bold 14px Arial, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('Interpolation Uncertainty Map', padding.left + drawW / 2, h - 28)
+  ctx.fillText('插值不确定性分布图', padding.left + drawW / 2, h - 28)
 
   ctx.font = '11px Arial, sans-serif'
-  ctx.fillText('Red zones indicate higher uncertainty; blue zones are more reliable.', padding.left + drawW / 2, h - 12)
+  ctx.fillText('红色区域表示较高的不确定性；蓝色区域更加可靠。', padding.left + drawW / 2, h - 12)
+
+  console.log('✓ Uncertainty map绘制完成')
 }
 
 // Draw histogram - Modern gradient style
 const drawHistogram = () => {
+  console.log('drawHistogram called')
+  console.log('histogramCanvas.value:', histogramCanvas.value)
+  console.log('seamPoints.value.length:', seamPoints.value.length)
+
   const canvas = histogramCanvas.value
-  if (!canvas || seamPoints.value.length === 0) return
+  if (!canvas) {
+    console.log('❌ histogramCanvas not found')
+    return
+  }
+  if (seamPoints.value.length === 0) {
+    console.log('❌ No seam points data')
+    return
+  }
+
+  console.log('✓ Starting histogram drawing...')
 
   const ctx = canvas.getContext('2d')
   const w = canvas.width = 320
@@ -849,7 +886,7 @@ const drawHistogram = () => {
   for (let i = 0; i <= 5; i++) {
     const val = minVal + (i / 5) * (maxVal - minVal)
     const x = padding.left + (i / 5) * drawW
-    ctx.fillText(val.toFixed(1) + 'm', x, h - padding.bottom + 18)
+    ctx.fillText(val.toFixed(1) + '米', x, h - padding.bottom + 18)
   }
 
   // Y-axis labels
@@ -870,8 +907,8 @@ const drawHistogram = () => {
   // Statistics box (modern card style)
   const statsLines = [
     `数量: ${values.length}`,
-    `均值: ${mean.toFixed(2)} m`,
-    `标准差: ${stdDev.toFixed(2)} m`
+    `均值: ${mean.toFixed(2)} 米`,
+    `标准差: ${stdDev.toFixed(2)} 米`
   ]
 
   const boxWidth = 120
@@ -912,6 +949,8 @@ const drawHistogram = () => {
     ctx.fillText(parts[1], boxX + 55, boxY + 18 + i * 16)
     ctx.font = '11px sans-serif'
   })
+
+  console.log('✓ Histogram绘制完成')
 }
 
 // Helper function to draw rounded rectangle
@@ -954,7 +993,7 @@ const drawStratigraphicColumn = () => {
   ctx.fillStyle = '#0F172A'
   ctx.font = 'bold 12px Arial, sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText('Lithology', columnX, 18)
+  ctx.fillText('岩性', columnX, 18)
 
   // Draw depth scale (Nature style: ticks pointing inward)
   const tickSize = 4
@@ -982,7 +1021,7 @@ const drawStratigraphicColumn = () => {
     ctx.stroke()
 
     // Depth label
-    ctx.fillText(`${depth}m`, columnX - 12, y + 3)
+    ctx.fillText(`${depth}米`, columnX - 12, y + 3)
   }
 
   // Draw layers with Nature-style patterns
@@ -1023,7 +1062,7 @@ const drawStratigraphicColumn = () => {
       // Thickness value (smaller, monospace)
       ctx.fillStyle = '#2563EB'
       ctx.font = '9px SF Mono, monospace'
-      ctx.fillText(`${thickness.toFixed(1)}m`, labelX, yTop + layerHeight / 2 + 14)
+      ctx.fillText(`${thickness.toFixed(1)}米`, labelX, yTop + layerHeight / 2 + 14)
     }
   })
 
@@ -1409,20 +1448,20 @@ const drawCrossSectionProfile = (profile, totalDistance, w, h) => {
   ctx.textAlign = 'center'
 
   // X-axis title
-  ctx.fillText('Distance along profile (m)', padding.left + drawW / 2, h - 5)
+  ctx.fillText('剖面距离 (米)', padding.left + drawW / 2, h - 5)
 
   // Y-axis title (rotated)
   ctx.save()
   ctx.translate(12, padding.top + drawH / 2)
   ctx.rotate(-Math.PI / 2)
-  ctx.fillText('Burial Depth (m)', 0, 0)
+  ctx.fillText('埋藏深度 (米)', 0, 0)
   ctx.restore()
 
   // Title (Nature style: Figure label format - Light theme)
   ctx.fillStyle = '#0F172A'
   ctx.font = 'bold 13px Arial, sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText(`Profile A-A' | Depth: ${minDepth.toFixed(1)} - ${maxDepth.toFixed(1)} m`, padding.left, 18)
+  ctx.fillText(`剖面 A-A' | 深度: ${minDepth.toFixed(1)} - ${maxDepth.toFixed(1)} 米`, padding.left, 18)
 
   // Scale bar (Nature style: manual scale bar instead of axis ticks)
   const scaleBarX = w - padding.right - 80
@@ -1449,7 +1488,7 @@ const drawCrossSectionProfile = (profile, totalDistance, w, h) => {
   ctx.fillStyle = '#64748B'
   ctx.font = '10px Arial, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('Scale: 60m', scaleBarX + scaleLength / 2, scaleBarY + 12)
+  ctx.fillText('比例尺: 60米', scaleBarX + scaleLength / 2, scaleBarY + 12)
 }
 
 const resetCrossSection = () => {
@@ -1565,9 +1604,12 @@ defineExpose({ resetView })
 }
 
 .uncertainty-canvas {
-  width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   border-radius: var(--border-radius-md);
+  display: block;
 }
 
 .cross-section-wrapper {
@@ -1576,8 +1618,11 @@ defineExpose({ resetView })
 }
 
 .cross-section-canvas {
-  width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
 }
 
 /* Seam Selection */

@@ -530,19 +530,19 @@ def generate_matplotlib_contour_image(
         contour_lines,
         inline=True,
         fontsize=8,
-        fmt='%1.1fm',
+        fmt='%1.1f米',
         colors='k'
     )
 
     # Labels and title
-    ax.set_xlabel('Distance East (m)', fontsize=12, weight='bold')
-    ax.set_ylabel('Distance North (m)', fontsize=12, weight='bold')
+    ax.set_xlabel('东向距离 (米)', fontsize=12, weight='bold')
+    ax.set_ylabel('北向距离 (米)', fontsize=12, weight='bold')
     ax.set_title(title, fontsize=14, weight='bold', pad=15)
 
     # Colorbar
     cbar = fig.colorbar(contour_filled, ax=ax, pad=0.03, aspect=30)
     cbar.set_label(
-        property_name + ' (m)',
+        property_name + ' (米)',
         rotation=270,
         labelpad=20,
         fontsize=12,
@@ -608,8 +608,8 @@ def generate_dual_contour_images(
     thickness_result = generate_matplotlib_contour_image(
         thickness_grid,
         bounds,
-        title=f'{seam_name} - Thickness Distribution',
-        property_name='Thickness',
+        title=f'{seam_name} - 厚度分布',
+        property_name='厚度',
         levels=levels,
         num_levels=num_levels,
         dpi=dpi,
@@ -621,8 +621,8 @@ def generate_dual_contour_images(
     depth_result = generate_matplotlib_contour_image(
         depth_grid,
         bounds,
-        title=f'{seam_name} - Burial Depth Distribution',
-        property_name='Burial Depth',
+        title=f'{seam_name} - 埋藏深度分布',
+        property_name='埋藏深度',
         levels=levels,
         num_levels=num_levels,
         dpi=dpi,
