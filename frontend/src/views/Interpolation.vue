@@ -1,349 +1,280 @@
 <template>
-  <div class="dashboard">
-    <!-- Compact Header -->
-    <header class="dashboard-header">
-      <div class="header-left">
-        <div class="project-badge">
-          <span class="project-icon">⚡</span>
-          <div class="project-info">
-            <h1 class="project-title">{{ selectedSeam?.name || '请选择煤层' }}</h1>
-            <span class="project-subtitle">Mining Pressure Analysis</span>
+  <div class="page">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h2>插值分析</h2>
+        <div class="muted">{{ selectedSeam?.name || '选择煤层进行空间插值分析' }}</div>
+      </div>
+      <div v-if="selectedSeam && seamStats" class="header-stats">
+        <div class="stat-badge">
+          <span class="stat-label">厚度范围</span>
+          <strong>{{ seamStats?.thickness_min?.toFixed(2) || '-' }} - {{ seamStats?.thickness_max?.toFixed(2) || '-' }} m</strong>
+        </div>
+        <div class="stat-badge primary">
+          <span class="stat-label">平均厚度</span>
+          <strong>{{ seamStats?.thickness_mean?.toFixed(2) || '-' }} m</strong>
+        </div>
+        <div class="stat-badge">
+          <span class="stat-label">钻孔数量</span>
+          <strong>{{ seamStats?.borehole_count || seamPoints.length || '-' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seam Selection View -->
+    <div v-if="!selectedSeam" class="card">
+      <h3 class="section-title">
+        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>
+        选择分析煤层
+      </h3>
+      <p class="section-desc">从以下可用煤层中选择一个进行插值分析</p>
+
+      <div class="seam-selection-grid">
+        <div
+          v-for="seam in availableSeams"
+          :key="seam.name"
+          class="seam-selection-card"
+          @click="selectSeam(seam)"
+        >
+          <div class="seam-card-header">
+            <span class="seam-name">{{ seam.name }}</span>
+            <span class="seam-count">{{ seam.borehole_count }} 个钻孔</span>
+          </div>
+          <div class="seam-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-label">平均厚度</span>
+              <span class="mini-stat-value">{{ seam.avg_thickness?.toFixed(2) }} m</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-label">厚度范围</span>
+              <span class="mini-stat-value">{{ seam.thickness_range?.min?.toFixed(1) }}-{{ seam.thickness_range?.max?.toFixed(1) }} m</span>
+            </div>
           </div>
         </div>
       </div>
-      <div class="header-stats">
-        <div class="stat-item">
-          <span class="stat-label">Min</span>
-          <span class="stat-value">{{ seamStats?.thickness_min?.toFixed(2) || seamStats?.thickness?.min?.toFixed(2) || '-' }}</span>
-          <span class="stat-unit">m</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Max</span>
-          <span class="stat-value">{{ seamStats?.thickness_max?.toFixed(2) || seamStats?.thickness?.max?.toFixed(2) || '-' }}</span>
-          <span class="stat-unit">m</span>
-        </div>
-        <div class="stat-item primary">
-          <span class="stat-label">Avg</span>
-          <span class="stat-value">{{ seamStats?.thickness_mean?.toFixed(2) || seamStats?.thickness?.mean?.toFixed(2) || '-' }}</span>
-          <span class="stat-unit">m</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Depth</span>
-          <span class="stat-value">{{ seamStats?.burial_depth_mean?.toFixed(1) || seamStats?.burial_depth?.mean?.toFixed(1) || '-' }}</span>
-          <span class="stat-unit">m</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Holes</span>
-          <span class="stat-value">{{ seamStats?.borehole_count || seamPoints.length || '-' }}</span>
-          <span class="stat-unit">n</span>
-        </div>
-      </div>
-    </header>
+    </div>
 
     <!-- Main Dashboard -->
-    <div v-if="selectedSeam" class="dashboard-main">
-      <!-- Left Sidebar: Controls + Histogram -->
-      <aside class="sidebar-left">
-        <div class="sidebar-section">
-          <h3 class="section-title">插值参数</h3>
+    <div v-else class="grid">
+      <!-- Card 1: Interpolation Parameters -->
+      <div class="card params-card">
+        <h3 class="section-title">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6"></path>
+            <path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24"></path>
+            <path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24"></path>
+          </svg>
+          插值参数
+        </h3>
 
-          <!-- Method Selection - Segmented Control -->
-          <div class="control-group">
-            <label class="control-label">插值方法</label>
-            <div class="segmented-control">
-              <button
-                v-for="opt in methodOptions"
-                :key="opt.key"
-                :class="['segment-btn', { active: method === opt.key }]"
-                @click="method = opt.key"
-              >
-                {{ opt.label }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Grid Size Slider -->
-          <div class="control-group">
-            <div class="slider-header">
-              <label class="control-label">网格密度</label>
-              <span class="slider-value">{{ gridSize }}</span>
-            </div>
-            <input
-              v-model.number="gridSize"
-              type="range"
-              min="30"
-              max="150"
-              step="10"
-              class="slider"
+        <div class="param-row">
+          <label class="param-label">插值方法</label>
+          <div class="tab-buttons">
+            <button
+              v-for="opt in methodOptions"
+              :key="opt.key"
+              :class="['tab-btn', { active: method === opt.key }]"
+              @click="method = opt.key"
             >
-            <div class="slider-labels">
-              <span>粗</span>
-              <span>细</span>
-            </div>
-          </div>
-
-          <!-- Contour Levels Slider -->
-          <div class="control-group">
-            <div class="slider-header">
-              <label class="control-label">等值线级别</label>
-              <span class="slider-value">{{ contourLevels }}</span>
-            </div>
-            <input
-              v-model.number="contourLevels"
-              type="range"
-              min="5"
-              max="20"
-              step="1"
-              class="slider"
-            >
-            <div class="slider-labels">
-              <span>少</span>
-              <span>多</span>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div class="action-buttons">
-            <button class="btn primary" @click="handleInterpolate" :disabled="loading">
-              <span v-if="loading" class="spinner sm"></span>
-              {{ loading ? '计算中...' : '生成等值线图' }}
+              {{ opt.label }}
             </button>
           </div>
         </div>
 
-        <!-- Data Histogram -->
-        <div class="sidebar-section">
-          <h3 class="section-title">数据分布</h3>
-          <div v-if="seamPoints.length > 0" class="histogram-container">
-            <canvas ref="histogramCanvas" class="histogram-canvas"></canvas>
+        <div class="param-row">
+          <div class="param-header">
+            <label class="param-label">网格密度</label>
+            <span class="param-value">{{ gridSize }}</span>
           </div>
-          <div v-else class="empty-hint">
-            选择煤层后显示数据分布
-          </div>
-        </div>
-
-        <!-- Uncertainty Map Toggle -->
-        <div class="sidebar-section" v-if="thicknessResult">
-          <h3 class="section-title">视图模式</h3>
-          <div class="toggle-group">
-            <label class="toggle-btn">
-              <input type="radio" v-model="viewMode" value="contour">
-              <span>等值线图</span>
-            </label>
-            <label class="toggle-btn">
-              <input type="radio" v-model="viewMode" value="uncertainty">
-              <span>不确定性</span>
-            </label>
+          <input v-model.number="gridSize" type="range" min="30" max="150" step="10" class="slider">
+          <div class="slider-labels">
+            <span>粗</span>
+            <span>细</span>
           </div>
         </div>
 
-        <!-- Cross-section Mode Toggle -->
-        <div class="sidebar-section" v-if="thicknessResult && viewMode === 'contour'">
-          <h3 class="section-title">剖面工具</h3>
-          <div class="toggle-group">
-            <label class="toggle-btn">
-              <input type="checkbox" v-model="crossSectionMode">
-              <span>绘制剖面线</span>
-            </label>
+        <div class="param-row">
+          <div class="param-header">
+            <label class="param-label">等值线级别</label>
+            <span class="param-value">{{ contourLevels }}</span>
           </div>
-          <div v-if="crossSectionMode" class="hint-text">
-            在地图上点击两点绘制剖面线 A-A'
-          </div>
-        </div>
-      </aside>
-
-      <!-- Center Stage: Visualization -->
-      <main class="center-stage">
-        <!-- Contour Maps View -->
-        <div v-if="viewMode === 'contour'" class="contour-view">
-          <!-- Maps Container -->
-          <div class="maps-container">
-            <!-- Thickness Map -->
-            <div class="map-card">
-              <div class="map-header">
-                <h3 class="map-title">煤层厚度分布</h3>
-                <span class="map-method">{{ methodName(method) }}</span>
-                <span class="map-range" v-if="thicknessResult">
-                  {{ thicknessResult.valueRange?.min?.toFixed(1) }} - {{ thicknessResult.valueRange?.max?.toFixed(1) }} m
-                </span>
-              </div>
-
-              <div class="map-container" :class="{ loading: loading && !thicknessResult }">
-                <ContourMap
-                  v-if="thicknessResult"
-                  :image-url="thicknessResult.imageUrl"
-                  :boreholes="seamPoints"
-                  :bounds="thicknessResult.bounds"
-                  property="thickness"
-                  property-label="厚度"
-                  :value-range="thicknessResult.valueRange"
-                  colormap="YlOrBr"
-                  :cross-section-mode="crossSectionMode"
-                  @cross-section-complete="handleCrossSectionComplete"
-                />
-                <div v-else class="map-placeholder">
-                  <span class="placeholder-icon">📏</span>
-                  <p>设置参数后点击"生成等值线图"</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Depth Map -->
-            <div class="map-card">
-              <div class="map-header">
-                <h3 class="map-title">煤层埋深分布</h3>
-                <span class="map-method">{{ methodName(method) }}</span>
-                <span class="map-range" v-if="depthResult">
-                  {{ depthResult.valueRange?.min?.toFixed(1) }} - {{ depthResult.valueRange?.max?.toFixed(1) }} m
-                </span>
-              </div>
-
-              <div class="map-container" :class="{ loading: loading && !depthResult }">
-                <ContourMap
-                  v-if="depthResult"
-                  :image-url="depthResult.imageUrl"
-                  :boreholes="seamPoints"
-                  :bounds="depthResult.bounds"
-                  property="burial_depth"
-                  property-label="埋深"
-                  :value-range="depthResult.valueRange"
-                  colormap="viridis"
-                  :cross-section-mode="crossSectionMode"
-                  @cross-section-complete="handleCrossSectionComplete"
-                />
-                <div v-else class="map-placeholder">
-                  <span class="placeholder-icon">⬇️</span>
-                  <p>设置参数后点击"生成等值线图"</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Cross-Section Profile -->
-          <div class="cross-section-container">
-            <div class="section-header">
-              <h3 class="section-title">
-                <span class="section-icon">📐</span>
-                剖面切片 (A-A')
-                <span v-if="crossSectionData.distance" class="section-distance">
-                  {{ crossSectionData.distance.toFixed(0) }}m
-                </span>
-              </h3>
-              <div class="section-controls">
-                <button class="btn-sm" @click="resetCrossSection">重置</button>
-              </div>
-            </div>
-            <div class="cross-section-view">
-              <canvas
-                ref="crossSectionCanvas"
-                class="cross-section-canvas"
-              ></canvas>
-              <div v-if="!crossSectionData.hasData && !crossSectionData.distance" class="cross-section-placeholder">
-                <span class="placeholder-icon">📐</span>
-                <p>开启"绘制剖面线"模式，在地图上点击两点绘制剖面</p>
-              </div>
-            </div>
+          <input v-model.number="contourLevels" type="range" min="5" max="20" step="1" class="slider">
+          <div class="slider-labels">
+            <span>少</span>
+            <span>多</span>
           </div>
         </div>
 
-        <!-- Uncertainty View -->
-        <div v-else class="uncertainty-view">
-          <div class="map-card uncertainty-map-card">
-            <div class="map-header">
-              <h3 class="map-title">插值不确定性分布</h3>
-              <span class="map-method">Interpolation Uncertainty Map</span>
-            </div>
-
-            <div class="map-container uncertainty-map-container">
-              <canvas
-                ref="uncertaintyCanvas"
-                class="uncertainty-canvas"
-              ></canvas>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      <!-- Right Sidebar: Geological Context -->
-      <aside class="sidebar-right">
-        <div class="sidebar-section">
-          <h3 class="section-title">地层柱状图</h3>
-          <div class="stratigraphic-container">
-            <canvas
-              ref="stratigraphicCanvas"
-              class="stratigraphic-canvas"
-            ></canvas>
-          </div>
-
-          <!-- Legend -->
-          <div class="lithology-legend">
-            <div
-              v-for="(color, name) in lithologyColors"
-              :key="name"
-              class="legend-item"
-            >
-              <div class="legend-color" :style="{ background: color }"></div>
-              <span class="legend-name">{{ name }}</span>
-            </div>
-          </div>
+        <div class="param-row" v-if="thicknessResult">
+          <label class="toggle-btn" style="width: 100%">
+            <input type="checkbox" v-model="crossSectionMode">
+            <span>绘制剖面线</span>
+          </label>
+          <p v-if="crossSectionMode" class="hint-text">在地图上点击两点绘制剖面线</p>
         </div>
 
-        <!-- Layer Details Table -->
-        <div class="sidebar-section">
-          <h3 class="section-title">岩层详情</h3>
-          <div class="layer-table">
-            <div class="table-header">
-              <span>岩性</span>
-              <span>厚度</span>
-            </div>
-            <div class="table-body">
-              <div
-                v-for="(layer, i) in sortedLayers"
-                :key="i"
-                class="table-row"
-              >
-                <span class="layer-name">{{ layer.name }}</span>
-                <span class="layer-value">{{ layer.thickness?.toFixed(2) }} m</span>
-              </div>
-            </div>
+        <div class="action-buttons">
+          <button class="btn primary" @click="handleInterpolate" :disabled="loading">
+            <span v-if="loading" class="spinner sm"></span>
+            {{ loading ? '计算中...' : '生成等值线图' }}
+          </button>
+          <button class="btn outline" @click="selectedSeam = null; thicknessResult = null; depthResult = null">
+            更换煤层
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 2: Data Distribution -->
+      <div class="card">
+        <h3 class="section-title">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          数据分布
+        </h3>
+        <div v-if="seamPoints.length > 0" class="histogram-wrapper">
+          <canvas ref="histogramCanvas" class="histogram-canvas"></canvas>
+        </div>
+        <div v-else class="empty-state">
+          <p>暂无数据分布</p>
+        </div>
+      </div>
+
+      <!-- Card 4: Lithology Column -->
+      <div class="card">
+        <h3 class="section-title">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="m2 17 10 5 10-5"></path>
+            <path d="m2 12 10 5 10-5"></path>
+          </svg>
+          地层柱状图
+        </h3>
+        <div class="stratigraphic-wrapper">
+          <canvas ref="stratigraphicCanvas" class="stratigraphic-canvas"></canvas>
+        </div>
+        <div class="lithology-legend-compact">
+          <div v-for="(color, name) in lithologyColors" :key="name" class="legend-item-compact">
+            <div class="legend-color" :style="{ background: color }"></div>
+            <span class="legend-name">{{ name }}</span>
           </div>
         </div>
-      </aside>
-    </div>
+      </div>
 
-    <!-- Seam Selection (shown when no seam selected) -->
-    <div v-else class="seam-selection-view">
-      <h2 class="selection-title">选择分析煤层</h2>
-      <p class="selection-subtitle">从以下可用煤层中选择一个进行插值分析</p>
+      <!-- Card 5-6: Contour Maps -->
+      <div class="card map-card-large" v-if="thicknessResult">
+        <div class="map-header">
+          <div>
+            <h3 class="section-title">
+              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+              </svg>
+              煤层厚度分布
+            </h3>
+            <p class="section-desc">{{ methodName(method) }} · {{ thicknessResult?.valueRange?.min?.toFixed(1) }} - {{ thicknessResult?.valueRange?.max?.toFixed(1) }} m</p>
+          </div>
+        </div>
+        <div class="map-wrapper">
+          <ContourMap
+            v-if="thicknessResult"
+            :image-url="thicknessResult.imageUrl"
+            :boreholes="seamPoints"
+            :bounds="thicknessResult.bounds"
+            property="thickness"
+            property-label="厚度"
+            :value-range="thicknessResult.valueRange"
+            colormap="YlOrBr"
+            :cross-section-mode="crossSectionMode"
+            @cross-section-complete="handleCrossSectionComplete"
+          />
+          <div v-else class="empty-state">
+            <p>设置参数后点击"生成等值线图"</p>
+          </div>
+        </div>
+      </div>
 
-      <div class="seam-grid">
-        <div
-          v-for="seam in availableSeams"
-          :key="seam.name"
-          class="seam-card"
-          @click="selectSeam(seam)"
-        >
-          <div class="seam-card-header">
-            <div class="seam-title-group">
-              <span class="seam-icon">📊</span>
-              <span class="seam-name">{{ seam.name }}</span>
-            </div>
-            <span class="seam-count">{{ seam.borehole_count }}个钻孔</span>
+      <div class="card map-card-large" v-if="depthResult">
+        <div class="map-header">
+          <div>
+            <h3 class="section-title">
+              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="m2 17 10 5 10-5"></path>
+              </svg>
+              煤层埋深分布
+            </h3>
+            <p class="section-desc">{{ methodName(method) }} · {{ depthResult?.valueRange?.min?.toFixed(1) }} - {{ depthResult?.valueRange?.max?.toFixed(1) }} m</p>
           </div>
-          <div class="seam-card-stats">
-            <div class="seam-stat">
-              <span class="stat-label">平均厚度</span>
-              <span class="stat-value">{{ seam.avg_thickness?.toFixed(2) }} m</span>
-            </div>
-            <div class="seam-stat">
-              <span class="stat-label">厚度范围</span>
-              <span class="stat-value">{{ seam.thickness_range?.min?.toFixed(1) }}-{{ seam.thickness_range?.max?.toFixed(1) }} m</span>
-            </div>
+        </div>
+        <div class="map-wrapper">
+          <ContourMap
+            v-if="depthResult"
+            :image-url="depthResult.imageUrl"
+            :boreholes="seamPoints"
+            :bounds="depthResult.bounds"
+            property="burial_depth"
+            property-label="埋深"
+            :value-range="depthResult.valueRange"
+            colormap="viridis"
+            :cross-section-mode="crossSectionMode"
+            @cross-section-complete="handleCrossSectionComplete"
+          />
+          <div v-else class="empty-state">
+            <p>设置参数后点击"生成等值线图"</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Uncertainty Map -->
+      <div class="card map-card-full" v-if="thicknessResult">
+        <div class="map-header">
+          <div>
+            <h3 class="section-title">
+              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              插值不确定性分布
+            </h3>
+            <p class="section-desc">红色区域表示高不确定性，蓝色区域更可靠</p>
+          </div>
+        </div>
+        <div class="map-wrapper uncertainty-wrapper">
+          <canvas ref="uncertaintyCanvas" class="uncertainty-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Cross Section Profile -->
+      <div class="card map-card-full" v-if="crossSectionData.hasData">
+        <div class="map-header">
+          <div>
+            <h3 class="section-title">
+              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3v18h18"></path>
+                <path d="m19 9-5 5-4-4-3 3"></path>
+              </svg>
+              剖面切片 (A-A')
+              <span class="section-badge">{{ crossSectionData.distance?.toFixed(0) }}m</span>
+            </h3>
+          </div>
+          <button class="btn outline small" @click="resetCrossSection">重置</button>
+        </div>
+        <div class="cross-section-wrapper">
+          <canvas ref="crossSectionCanvas" class="cross-section-canvas"></canvas>
         </div>
       </div>
     </div>
   </div>
+
 </template>
 
 <script setup>
@@ -368,7 +299,6 @@ const gridSize = ref(80)
 const contourLevels = ref(10)
 const thicknessResult = ref(null)
 const depthResult = ref(null)
-const viewMode = ref('contour')
 const crossSectionMode = ref(false)
 
 // Cross section
@@ -475,18 +405,52 @@ const handleInterpolate = async () => {
       contourLevels.value
     )
 
-    seamPoints.value = data.boreholes || []
-
-    thicknessResult.value = {
-      imageUrl: `data:image/png;base64,${data.thickness.image}`,
-      valueRange: data.thickness.value_range,
-      bounds: data.bounds
+    console.log('完整API响应:', data)
+    console.log('data.thickness:', data.thickness)
+    console.log('data.depth:', data.depth)
+    
+    if (data.thickness) {
+      console.log('thickness对象的keys:', Object.keys(data.thickness))
+      console.log('thickness.image存在吗?', 'image' in data.thickness)
+      console.log('thickness所有属性:', JSON.stringify(data.thickness, null, 2))
+    }
+    
+    if (data.depth) {
+      console.log('depth对象的keys:', Object.keys(data.depth))
+      console.log('depth.image存在吗?', 'image' in data.depth)
     }
 
-    depthResult.value = {
-      imageUrl: `data:image/png;base64,${data.depth.image}`,
-      valueRange: data.depth.value_range,
-      bounds: data.bounds
+    console.log('API Response:', {
+      hasThicknessImage: !!data.thickness?.image,
+      hasDepthImage: !!data.depth?.image,
+      thicknessImageLength: data.thickness?.image?.length,
+      depthImageLength: data.depth?.image?.length,
+      thicknessImagePrefix: data.thickness?.image?.substring(0, 50),
+      depthImagePrefix: data.depth?.image?.substring(0, 50)
+    })
+
+    seamPoints.value = data.boreholes || []
+
+    if (data.thickness?.image) {
+      thicknessResult.value = {
+        imageUrl: `data:image/png;base64,${data.thickness.image}`,
+        valueRange: data.thickness.value_range,
+        bounds: data.bounds
+      }
+      console.log('Thickness imageUrl created:', thicknessResult.value.imageUrl.substring(0, 50) + '...')
+    } else {
+      console.error('❌ 厚度图片数据缺失!')
+    }
+
+    if (data.depth?.image) {
+      depthResult.value = {
+        imageUrl: `data:image/png;base64,${data.depth.image}`,
+        valueRange: data.depth.value_range,
+        bounds: data.bounds
+      }
+      console.log('Depth imageUrl created:', depthResult.value.imageUrl.substring(0, 50) + '...')
+    } else {
+      console.error('❌ 深度图片数据缺失!')
     }
 
     // Calculate uncertainty map
@@ -494,6 +458,8 @@ const handleInterpolate = async () => {
 
     toast.add('等值线图生成完成', 'success')
   } catch (err) {
+    console.error('Interpolate error:', err)
+    console.error('Error response:', err.response?.data)
     toast.add(err.response?.data?.detail || '生成等值线图失败', 'error')
   } finally {
     loading.value = false
@@ -762,7 +728,7 @@ const calculateUncertainty = () => {
   ctx.fillText('Red zones indicate higher uncertainty; blue zones are more reliable.', padding.left + drawW / 2, h - 12)
 }
 
-// Draw histogram - Nature style
+// Draw histogram - Modern gradient style
 const drawHistogram = () => {
   const canvas = histogramCanvas.value
   if (!canvas || seamPoints.value.length === 0) return
@@ -781,7 +747,7 @@ const drawHistogram = () => {
   const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length
   const stdDev = Math.sqrt(variance)
 
-  const numBins = 20
+  const numBins = 15
   const binWidthVal = (maxVal - minVal) / numBins
 
   // Calculate histogram
@@ -793,161 +759,159 @@ const drawHistogram = () => {
 
   const maxCount = Math.max(...bins)
 
-  // Nature style colors (matching Python script) - Light theme
-  const barColor = '#607c8e'      // Slate gray-blue
-  const edgeColor = '#1a1a1a'     // Near black
-  const errorColor = '#333333'    // Dark gray for error bars
+  // Modern gradient colors
+  const gradientColors = {
+    start: { r: 99, g: 102, b: 241 },   // Indigo-500
+    end: { r: 168, g: 85, b: 247 }      // Purple-500
+  }
 
-  // Draw background - Light theme
-  ctx.fillStyle = '#FFFFFF'
+  // Draw gradient background
+  const bgGradient = ctx.createLinearGradient(0, 0, 0, h)
+  bgGradient.addColorStop(0, '#f8fafc')
+  bgGradient.addColorStop(1, '#f1f5f9')
+  ctx.fillStyle = bgGradient
   ctx.fillRect(0, 0, w, h)
 
-  const padding = { left: 45, right: 20, top: 30, bottom: 35 }
+  const padding = { left: 45, right: 20, top: 40, bottom: 40 }
   const drawW = w - padding.left - padding.right
   const drawH = h - padding.top - padding.bottom
-  const barWidth = drawW / numBins
-  const scaleY = drawH / (maxCount * 1.15) // Leave 15% space at top
+  const barWidth = drawW / numBins - 4  // Add gap between bars
+  const gap = 4
+  const scaleY = drawH / (maxCount * 1.2)
 
-  // Draw axes (Nature style: ticks pointing inward)
-  ctx.strokeStyle = '#E2E8F0'
-  ctx.lineWidth = 1.0
-
-  // Y-axis
-  ctx.beginPath()
-  ctx.moveTo(padding.left, padding.top)
-  ctx.lineTo(padding.left, h - padding.bottom)
-  ctx.stroke()
-
-  // X-axis
-  ctx.beginPath()
-  ctx.moveTo(padding.left, h - padding.bottom)
-  ctx.lineTo(w - padding.right, h - padding.bottom)
-  ctx.stroke()
-
-  // Draw ticks (pointing inward)
-  const tickSize = 4
-  ctx.strokeStyle = '#CBD5E1'
-  ctx.lineWidth = 1.0
-
-  // X-axis ticks
-  for (let i = 0; i <= 5; i++) {
-    const x = padding.left + (i / 5) * drawW
-    ctx.beginPath()
-    ctx.moveTo(x, h - padding.bottom)
-    ctx.lineTo(x, h - padding.bottom + tickSize)
-    ctx.stroke()
-  }
-
-  // Y-axis ticks
+  // Draw grid lines (subtle)
+  ctx.strokeStyle = '#e2e8f0'
+  ctx.lineWidth = 1
   for (let i = 0; i <= 4; i++) {
-    const y = h - padding.bottom - (i / 4) * drawH
+    const y = padding.top + (i / 4) * drawH
     ctx.beginPath()
+    ctx.setLineDash([4, 4])
     ctx.moveTo(padding.left, y)
-    ctx.lineTo(padding.left - tickSize, y)
+    ctx.lineTo(w - padding.right, y)
     ctx.stroke()
   }
+  ctx.setLineDash([])
 
-  // Draw bars with Nature style
+  // Draw bars with gradient
   for (let i = 0; i < numBins; i++) {
     const height = bins[i] * scaleY
-    const x = padding.left + i * barWidth
+    const x = padding.left + i * (barWidth + gap)
     const y = h - padding.bottom - height
 
-    // Bar fill (alpha 0.85 like Python script)
-    ctx.fillStyle = barColor
-    ctx.globalAlpha = 0.85
-    ctx.fillRect(x + 1, y, barWidth - 2, height)
-    ctx.globalAlpha = 1.0
+    if (height > 0) {
+      // Create gradient for each bar
+      const barGradient = ctx.createLinearGradient(x, y, x, h - padding.bottom)
+      const ratio = i / numBins
+      const r = Math.round(gradientColors.start.r + (gradientColors.end.r - gradientColors.start.r) * ratio)
+      const g = Math.round(gradientColors.start.g + (gradientColors.end.g - gradientColors.start.g) * ratio)
+      const b = Math.round(gradientColors.start.b + (gradientColors.end.b - gradientColors.start.b) * ratio)
 
-    // Black edge (linewidth 0.8)
-    ctx.strokeStyle = edgeColor
-    ctx.lineWidth = 0.8
-    ctx.strokeRect(x + 1, y, barWidth - 2, height)
+      barGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.9)`)
+      barGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.6)`)
 
-    // Error bars (Poisson error: sqrt(N))
-    const error = Math.sqrt(bins[i])
-    const errorHeight = error * scaleY
-
-    if (errorHeight > 2) {
-      ctx.strokeStyle = errorColor
-      ctx.lineWidth = 1.0
+      // Draw bar with rounded top corners
+      ctx.fillStyle = barGradient
       ctx.beginPath()
-      // Vertical line
-      ctx.moveTo(x + barWidth / 2, y - errorHeight)
-      ctx.lineTo(x + barWidth / 2, y)
-      // Top cap
-      ctx.moveTo(x + barWidth / 2 - 3, y - errorHeight)
-      ctx.lineTo(x + barWidth / 2 + 3, y - errorHeight)
-      ctx.stroke()
+      const radius = Math.min(6, barWidth / 2)
+      ctx.moveTo(x + radius, y)
+      ctx.lineTo(x + barWidth - radius, y)
+      ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius)
+      ctx.lineTo(x + barWidth, h - padding.bottom)
+      ctx.lineTo(x, h - padding.bottom)
+      ctx.lineTo(x, y + radius)
+      ctx.quadraticCurveTo(x, y, x + radius, y)
+      ctx.closePath()
+      ctx.fill()
+
+      // Add value label on top of bar
+      if (bins[i] > 0) {
+        ctx.fillStyle = '#475569'
+        ctx.font = 'bold 10px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText(bins[i].toString(), x + barWidth / 2, y - 6)
+      }
     }
   }
 
+  // Draw axes
+  ctx.strokeStyle = '#94a3b8'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(padding.left, padding.top)
+  ctx.lineTo(padding.left, h - padding.bottom)
+  ctx.lineTo(w - padding.right, h - padding.bottom)
+  ctx.stroke()
+
   // X-axis labels
-  ctx.fillStyle = '#64748B'
+  ctx.fillStyle = '#64748b'
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'center'
   for (let i = 0; i <= 5; i++) {
     const val = minVal + (i / 5) * (maxVal - minVal)
     const x = padding.left + (i / 5) * drawW
-    ctx.fillText(val.toFixed(1), x, h - padding.bottom + 15)
+    ctx.fillText(val.toFixed(1) + 'm', x, h - padding.bottom + 18)
   }
 
   // Y-axis labels
   ctx.textAlign = 'right'
+  ctx.font = '10px sans-serif'
   for (let i = 0; i <= 4; i++) {
     const count = Math.round((i / 4) * maxCount)
     const y = h - padding.bottom - (i / 4) * drawH
     ctx.fillText(count.toString(), padding.left - 8, y + 3)
   }
 
-  // Axis titles (Nature style: normal weight, no bold)
-  ctx.fillStyle = '#475569'
-  ctx.font = '12px sans-serif'
-
-  // X-axis title
+  // Title
+  ctx.fillStyle = '#1e293b'
+  ctx.font = 'bold 13px sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('Thickness (m)', padding.left + drawW / 2, h - 8)
+  ctx.fillText('钻孔厚度分布', padding.left + drawW / 2, 22)
 
-  // Y-axis title (rotated)
-  ctx.save()
-  ctx.translate(12, padding.top + drawH / 2)
-  ctx.rotate(-Math.PI / 2)
-  ctx.fillText('Frequency', 0, 0)
-  ctx.restore()
-
-  // Statistics text box (top right, Nature style)
+  // Statistics box (modern card style)
   const statsLines = [
-    `Total n = ${values.length}`,
-    `Mean = ${mean.toFixed(2)} m`,
-    `Std = ${stdDev.toFixed(2)} m`
+    `数量: ${values.length}`,
+    `均值: ${mean.toFixed(2)} m`,
+    `标准差: ${stdDev.toFixed(2)} m`
   ]
 
-  const boxWidth = 110
-  const boxHeight = 50
-  const boxX = w - padding.right - boxWidth
-  const boxY = padding.top
+  const boxWidth = 120
+  const boxHeight = 70
+  const boxX = w - padding.right - boxWidth - 5
+  const boxY = padding.top + 5
 
-  // Light background box with rounded corners and border
-  ctx.fillStyle = '#F8FAFC'
-  ctx.strokeStyle = '#E2E8F0'
-  ctx.lineWidth = 1
-  roundRect(ctx, boxX, boxY, boxWidth, boxHeight, 4)
+  // Shadow
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
+  ctx.shadowBlur = 10
+  ctx.shadowOffsetY = 2
+
+  // White background with gradient
+  const boxGradient = ctx.createLinearGradient(boxX, boxY, boxX, boxY + boxHeight)
+  boxGradient.addColorStop(0, '#ffffff')
+  boxGradient.addColorStop(1, '#f8fafc')
+  ctx.fillStyle = boxGradient
+  ctx.beginPath()
+  ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 8)
   ctx.fill()
+
+  // Border
+  ctx.shadowColor = 'transparent'
+  ctx.strokeStyle = '#e2e8f0'
+  ctx.lineWidth = 1
   ctx.stroke()
 
   // Statistics text
-  ctx.fillStyle = '#1a1a1a'
+  ctx.fillStyle = '#475569'
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'left'
   statsLines.forEach((line, i) => {
-    ctx.fillText(line, boxX + 8, boxY + 15 + i * 13)
+    const parts = line.split(': ')
+    ctx.fillStyle = '#94a3b8'
+    ctx.fillText(parts[0] + ':', boxX + 10, boxY + 18 + i * 16)
+    ctx.fillStyle = '#1e293b'
+    ctx.font = 'bold 11px sans-serif'
+    ctx.fillText(parts[1], boxX + 55, boxY + 18 + i * 16)
+    ctx.font = '11px sans-serif'
   })
-
-  // Figure label (Nature style: bottom left)
-  ctx.fillStyle = '#94A3B8'
-  ctx.font = '10px sans-serif'
-  ctx.textAlign = 'left'
-  ctx.fillText('Fig. 1 | Thickness distribution', padding.left, h - 5)
 }
 
 // Helper function to draw rounded rectangle
@@ -1510,638 +1474,105 @@ defineExpose({ resetView })
 </script>
 
 <style scoped>
-/* ============================================
-   MODERN DASHBOARD STYLE
-   Clean, Professional & Scientific
-   ============================================ */
+/* Interpolation Analysis Page - Unified with Global Design System */
 
-:root {
-  /* Color Palette - Engineering / Scientific */
-  --bg-primary: #F3F4F6;
-  --bg-secondary: #FFFFFF;
-  --bg-tertiary: #F9FAFB;
-  --bg-elevated: #FFFFFF;
+/* Grid Layout */
+.grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--spacing-lg); }
+.params-card { grid-column: span 3; }
+.param-row { margin-bottom: var(--spacing-lg); }
+.param-row:last-child { margin-bottom: 0; }
+.param-label { display: block; font-size: 13px; font-weight: 600; color: var(--color-secondary); margin-bottom: var(--spacing-sm); }
+.param-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm); }
+.param-value { font-family: monospace; font-size: 13px; color: var(--color-primary); background: var(--color-primary-light); padding: 4px 10px; border-radius: var(--border-radius-sm); font-weight: 700; }
 
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --text-muted: #9CA3AF;
+/* Tab Buttons */
+.tab-buttons { display: flex; background: var(--color-primary-light); border-radius: var(--border-radius-sm); padding: 4px; gap: 4px; }
+.tab-btn { flex: 1; padding: 10px 14px; border: none; border-radius: 6px; background: transparent; color: var(--color-secondary); font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); }
+.tab-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.6); }
+.tab-btn.active { background: var(--gradient-primary); color: white; box-shadow: var(--shadow-sm); }
 
-  --border-subtle: #E5E7EB;
-  --border-medium: #D1D5DB;
-
-  /* Brand Colors (Prussian Blue + Orange Accent) */
-  --primary: #0F4C81;
-  --primary-light: #1F6AA5;
-  --primary-faint: #E8F1F8;
-  --primary-gradient: linear-gradient(135deg, #0F4C81 0%, #1F6AA5 100%);
-
-  --success: #10B981;
-  --success-faint: #ECFDF5;
-
-  --warning: #F59E0B;
-  --warning-faint: #FFFBEB;
-
-  --danger: #EF4444;
-  --danger-faint: #FEF2F2;
-
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 6px 14px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 32px rgba(0, 0, 0, 0.12);
-
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-}
-
-/* ============================================
-   DASHBOARD LAYOUT
-   ============================================ */
-
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  overflow: hidden;
-}
-
-/* ============================================
-   HEADER
-   ============================================ */
-
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 24px;
-  background: #1F2937;
-  border-bottom: 1px solid #111827;
-  height: 56px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
-  z-index: 100;
-  flex-shrink: 0;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.project-badge {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.project-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
-  font-size: 20px;
-  color: #F9FAFB;
-}
-
-.project-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.project-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #F9FAFB;
-  line-height: 1.3;
-}
-
-.project-subtitle {
-  font-size: 11px;
-  color: #9CA3AF;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-}
-
-.header-stats {
-  display: flex;
-  gap: 12px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.15s ease;
-}
-
-.stat-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-.stat-item.primary {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.35);
-}
-
-.stat-item.primary .stat-value {
-  color: #F59E0B;
-}
-
-.stat-label {
-  font-size: 10px;
-  color: #9CA3AF;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.stat-value {
-  font-size: 14px;
-  font-weight: 600;
-  font-family: 'SF Mono', 'JetBrains Mono', monospace;
-  color: #E5E7EB;
-}
-
-.stat-unit {
-  display: inline-block;
-  font-size: 10px;
-  color: #9CA3AF;
-  margin-left: 2px;
-}
-
-/* ============================================
-   MAIN CONTENT - GRID LAYOUT
-   ============================================ */
-
-.dashboard-main {
-  display: grid;
-  grid-template-columns: 280px 1fr 320px;
-  gap: 16px;
-  padding: 16px;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* ============================================
-   SIDEBARS
-   ============================================ */
-
-.sidebar-left,
-.sidebar-right {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 2px 6px 6px 2px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-medium) transparent;
-}
-
-.sidebar-left::-webkit-scrollbar,
-.sidebar-right::-webkit-scrollbar {
-  width: 5px;
-}
-
-.sidebar-left::-webkit-scrollbar-thumb,
-.sidebar-right::-webkit-scrollbar-thumb {
-  background: var(--border-medium);
-  border-radius: 3px;
-}
-
-.sidebar-section {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-}
-
-.section-title {
-  margin: 0 0 16px 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  border-left: 3px solid var(--primary);
-  padding-left: 8px;
-}
-
-.section-icon {
-  margin-right: 6px;
-}
-
-/* ============================================
-   CONTROLS
-   ============================================ */
-
-.control-group {
-  margin-bottom: 20px;
-}
-
-.control-group:last-child {
-  margin-bottom: 0;
-}
-
-.control-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 10px;
-}
-
-.segmented-control {
-  display: flex;
-  background: var(--bg-tertiary);
-  border-radius: 8px;
-  padding: 4px;
-  gap: 4px;
-  border: 1px solid var(--border-subtle);
-}
-
-.segment-btn {
-  flex: 1;
-  padding: 8px 10px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.segment-btn:hover {
-  color: var(--text-primary);
-}
-
-.segment-btn.active {
-  background: #111827;
-  color: #F9FAFB;
-  box-shadow: var(--shadow-xs);
-}
-
-/* Sliders */
-.slider-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.slider-value {
-  font-family: 'SF Mono', 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--primary);
-  background: var(--primary-faint);
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-}
-
-.slider {
-  width: 100%;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--border-subtle);
-  outline: none;
-  -webkit-appearance: none;
-  margin: 8px 0;
-  cursor: pointer;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  background: var(--bg-secondary);
-  border: 2.5px solid var(--primary);
-  cursor: grab;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.1s;
-}
-
-.slider::-webkit-slider-thumb:hover {
-  transform: scale(1.08);
-}
-
-.slider::-webkit-slider-thumb:active {
-  cursor: grabbing;
-  transform: scale(1.05);
-}
-
-.slider-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
+/* Slider */
+.slider { width: 100%; height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--color-primary-light), #ddd6fe); outline: none; -webkit-appearance: none; margin: var(--spacing-sm) 0; cursor: pointer; }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: white; border: 3px solid var(--color-primary); cursor: grab; box-shadow: var(--shadow-md); transition: all var(--transition-normal); }
+.slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--color-secondary); font-weight: 500; }
 
 /* Buttons */
-.action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.action-buttons { display: flex; gap: var(--spacing-md); margin-top: var(--spacing-xl); }
+.btn { padding: 12px 18px; border: none; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); display: inline-flex; align-items: center; justify-content: center; gap: var(--spacing-sm); }
+.btn.primary { background: var(--gradient-primary); color: white; box-shadow: var(--shadow-md); }
+.btn.primary:hover:not(:disabled) { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn.outline { background: transparent; border: 2px solid var(--border-color); color: var(--color-secondary); }
+.btn.outline:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-light); }
+.btn.small { padding: 8px 14px; font-size: 13px; }
 
-.btn {
-  width: 100%;
-  padding: 12px 16px;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.btn.primary {
-  background: var(--primary-gradient);
-  color: white;
-  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.35);
-}
-
-.btn.primary:hover:not(:disabled) {
-  box-shadow: 0 6px 16px rgba(15, 76, 129, 0.45);
-  transform: translateY(-1px);
-}
-
-.btn.primary:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn:disabled {
-  background: var(--border-medium);
-  color: var(--text-muted);
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-sm {
-  padding: 7px 14px;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-}
-
-.btn-sm:hover {
-  background: var(--bg-secondary);
-  border-color: var(--border-medium);
-  color: var(--text-primary);
-}
+/* Cards */
+.grid > .card:nth-child(2) { grid-column: span 3; }
+.grid > .card:nth-child(3) { grid-column: span 3; }
+.grid > .card:nth-child(4) { grid-column: span 3; }
+.histogram-wrapper, .stratigraphic-wrapper { background: var(--color-primary-light); border-radius: var(--border-radius-md); padding: var(--spacing-lg); display: flex; align-items: center; justify-content: center; min-height: 220px; }
+.histogram-canvas { max-width: 100%; max-height: 200px; }
+.stratigraphic-canvas { max-width: 100%; max-height: 260px; }
 
 /* Toggle */
-.toggle-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.toggle-group { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.toggle-btn { display: flex; align-items: center; gap: var(--spacing-md); padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); cursor: pointer; transition: all var(--transition-fast); background: white; }
+.toggle-btn:hover { border-color: var(--color-primary); background: var(--color-primary-light); }
+.toggle-btn input { width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer; }
+.toggle-btn span { font-size: 14px; color: var(--color-secondary); font-weight: 500; }
+.hint-text { margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-warning-light); border-radius: var(--border-radius-sm); font-size: 12px; color: #B45309; line-height: 1.5; }
 
-.toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-tertiary);
-}
+/* Legend */
+.lithology-legend-compact { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm) var(--spacing-md); margin-top: var(--spacing-lg); }
+.legend-item-compact { display: flex; align-items: center; gap: var(--spacing-sm); font-size: 11px; }
+.legend-item-compact .legend-color { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); flex-shrink: 0; }
+.legend-item-compact .legend-name { color: var(--color-secondary); font-weight: 500; }
 
-.toggle-btn:hover {
-  background: var(--bg-secondary);
-  border-color: var(--border-medium);
-}
-
-.toggle-btn input[type="checkbox"],
-.toggle-btn input[type="radio"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--warning);
-  cursor: pointer;
-}
-
-.toggle-btn span {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.hint-text {
-  margin-top: 12px;
-  padding: 10px 12px;
-  background: var(--warning-faint);
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  color: #B45309;
-  line-height: 1.4;
-}
-
-/* Empty State */
-.empty-hint {
-  text-align: center;
-  padding: 24px 16px;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-/* ============================================
-   CENTER STAGE
-   ============================================ */
-
-.center-stage {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 2px 6px 6px 2px;
-}
-
-.contour-view {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* ============================================
-   MAP CARDS
-   ============================================ */
-
-.maps-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.map-card {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
+/* Map Cards */
+.map-card-large { grid-column: span 6; }
+.map-card-full { grid-column: span 12; }
+.map-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-lg); border-bottom: 1px solid var(--border-color); }
+.section-badge { display: inline-block; padding: 4px 10px; background: var(--color-warning-light); color: var(--color-warning); font-size: 11px; font-weight: 700; font-family: monospace; border-radius: var(--border-radius-sm); margin-left: var(--spacing-sm); }
+.map-wrapper, .cross-section-wrapper {
+  border-radius: var(--border-radius-md);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
-}
-
-.map-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-medium);
-}
-
-.map-header {
+  background: #f8fafc;
+  min-height: 450px;
+  height: 450px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-secondary);
-}
-
-.map-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.map-method {
-  font-size: 11px;
-  color: var(--text-muted);
-  background: var(--bg-tertiary);
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.map-range {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-family: 'SF Mono', 'JetBrains Mono', monospace;
-  font-weight: 500;
-}
-
-.map-container {
-  flex: 1;
+  justify-content: center;
   position: relative;
-  min-height: 440px;
-  background: var(--bg-secondary);
 }
 
-.map-container.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.map-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.map-wrapper :deep(.contour-map-wrapper) {
+  width: 100%;
   height: 100%;
-  min-height: 300px;
-  color: var(--text-muted);
-  gap: 12px;
 }
 
-.placeholder-icon {
-  font-size: 40px;
-  opacity: 0.5;
+.map-wrapper :deep(.contour-image) {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
 }
 
-.map-placeholder p {
-  margin: 0;
-  font-size: 13px;
+.uncertainty-wrapper {
+  min-height: 500px;
+  height: 500px;
 }
 
-/* ============================================
-   CROSS SECTION
-   ============================================ */
-
-.cross-section-container {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  border: 1px solid var(--border-subtle);
-  padding: 16px;
-  box-shadow: var(--shadow-sm);
+.uncertainty-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--border-radius-md);
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.section-title {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.section-distance {
-  margin-left: 8px;
-  padding: 4px 10px;
-  background: var(--warning-faint);
-  color: var(--warning);
-  font-size: 12px;
-  font-weight: 600;
-  font-family: 'SF Mono', 'JetBrains Mono', monospace;
-  border-radius: var(--radius-sm);
-}
-
-.section-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.cross-section-view {
-  position: relative;
-  height: 300px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  overflow: hidden;
+.cross-section-wrapper {
+  min-height: 320px;
+  height: 320px;
 }
 
 .cross-section-canvas {
@@ -2149,323 +1580,32 @@ defineExpose({ resetView })
   height: 100%;
 }
 
-.cross-section-placeholder {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  gap: 10px;
-}
+/* Seam Selection */
+.seam-selection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--spacing-lg); margin-top: var(--spacing-xl); max-height: 600px; overflow-y: auto; padding: 4px; }
+.seam-selection-card { background: white; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: var(--spacing-lg); cursor: pointer; transition: all var(--transition-normal); box-shadow: var(--shadow-sm); }
+.seam-selection-card:hover { box-shadow: var(--shadow-lg); border-color: var(--color-primary); transform: translateY(-4px); }
+.seam-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); }
+.seam-name { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.seam-count { font-size: 11px; color: var(--color-primary); background: var(--color-primary-light); padding: 4px 10px; border-radius: var(--border-radius-sm); font-weight: 700; }
+.seam-card-stats { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.mini-stat { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.mini-stat-label { color: var(--color-secondary); font-weight: 500; }
+.mini-stat-value { color: var(--text-primary); font-weight: 700; font-family: monospace; }
 
-.cross-section-placeholder .placeholder-icon {
-  font-size: 36px;
-}
-
-.cross-section-placeholder p {
-  margin: 0;
-  font-size: 13px;
-}
-
-/* ============================================
-   UNCERTAINTY VIEW
-   ============================================ */
-
-.uncertainty-view {
-  display: flex;
-  flex-direction: column;
-}
-
-.uncertainty-map-card {
-  flex: 1;
-}
-
-.uncertainty-map-container {
-  min-height: 500px;
-}
-
-.uncertainty-canvas {
-  width: 100%;
-  height: 100%;
-  border-radius: var(--radius-md);
-}
-
-/* ============================================
-   RIGHT SIDEBAR COMPONENTS
-   ============================================ */
-
-.stratigraphic-container {
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  display: flex;
-  justify-content: center;
-}
-
-.stratigraphic-canvas {
-  width: 100%;
-  height: 380px;
-  max-width: 240px;
-}
-
-/* Legend */
-.lithology-legend {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-  margin-top: 16px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1px solid var(--border-medium);
-  flex-shrink: 0;
-}
-
-.legend-name {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-/* Layer Table */
-.layer-table {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.table-header {
-  background: var(--bg-tertiary);
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text-secondary);
-  display: flex;
-  justify-content: space-between;
-}
-
-.table-body {
-  display: flex;
-  flex-direction: column;
-}
-
-.table-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: 12px;
-  transition: background 0.15s ease;
-}
-
-.table-row:hover {
-  background: var(--bg-tertiary);
-}
-
-.table-row:last-child {
-  border-bottom: none;
-}
-
-.layer-name {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.layer-value {
-  font-family: 'SF Mono', 'JetBrains Mono', monospace;
-  font-weight: 600;
-  color: var(--primary);
-}
-
-/* Histogram */
-.histogram-container {
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
-  padding: 14px;
-}
-
-.histogram-canvas {
-  width: 100%;
-  height: 200px;
-}
-
-/* ============================================
-   SEAM SELECTION VIEW
-   ============================================ */
-
-.seam-selection-view {
-  padding: 48px;
-  max-width: 1000px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.selection-title {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--text-primary);
-  text-align: center;
-  margin-bottom: 10px;
-  letter-spacing: -0.02em;
-}
-
-.selection-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.seam-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.seam-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-}
-
-.seam-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--primary);
-}
-
-.seam-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.seam-title-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.seam-icon {
-  font-size: 20px;
-}
-
-.seam-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.seam-count {
-  font-size: 11px;
-  color: var(--text-muted);
-  background: var(--bg-tertiary);
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-}
-
-.seam-card-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.seam-stat {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.seam-stat .stat-label {
-  font-size: 12px;
-  color: var(--text-muted);
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.seam-stat .stat-value {
-  font-size: 13px;
-  color: var(--text-primary);
-}
-
-/* ============================================
-   RESPONSIVE DESIGN
-   ============================================ */
-
-@media (max-width: 1400px) {
-  .dashboard-main {
-    grid-template-columns: 260px 1fr;
-    grid-template-rows: auto auto;
-  }
-
-  .sidebar-right {
-    grid-column: 2;
-    grid-row: 2;
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .sidebar-right > * {
-    flex: 1;
-    min-width: 280px;
-  }
-}
-
-@media (max-width: 1100px) {
-  .dashboard-main {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-
-  .maps-container {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-header {
-    padding: 0 16px;
-  }
-
-  .header-stats {
-    display: none;
-  }
-}
+/* Header Stats */
+.header-stats { display: flex; gap: var(--spacing-md); position: relative; z-index: 1; }
+.stat-badge { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: var(--spacing-sm) var(--spacing-md); background: rgba(255, 255, 255, 0.2); border-radius: var(--border-radius-sm); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); }
+.stat-badge.primary { background: rgba(251, 191, 36, 0.2); border-color: rgba(251, 191, 36, 0.3); }
+.stat-badge .stat-label { font-size: 10px; color: rgba(255, 255, 255, 0.85); font-weight: 600; text-transform: uppercase; }
+.stat-badge strong { font-size: 14px; color: white; font-weight: 700; font-family: monospace; }
 
 /* Spinner */
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+.spinner.sm { width: 14px; height: 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.spinner.sm {
-  width: 14px;
-  height: 14px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+/* Responsive */
+@media (max-width: 1400px) { .params-card, .grid > .card:nth-child(2), .grid > .card:nth-child(3), .grid > .card:nth-child(4) { grid-column: span 6; } .map-card-large { grid-column: span 12; } }
+@media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } .params-card, .grid > .card, .map-card-large, .map-card-full { grid-column: span 1; } .header-stats { flex-wrap: wrap; } .seam-selection-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } }
+@media (max-width: 768px) { .action-buttons { flex-direction: column; } .btn { width: 100%; } .map-wrapper, .uncertainty-wrapper, .cross-section-wrapper { min-height: 300px; } .map-wrapper :deep(.contour-map), .uncertainty-canvas, .cross-section-canvas { height: 300px; } .seam-selection-grid { grid-template-columns: 1fr; max-height: 400px; } }
 </style>

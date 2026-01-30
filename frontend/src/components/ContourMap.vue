@@ -10,28 +10,36 @@
       @mouseleave="handleMouseUp"
       @wheel.prevent="handleWheel"
     >
+      <!-- Error state -->
+      <div v-if="imageError" class="error-placeholder">
+        <p>⚠️ 图片加载失败</p>
+        <p class="error-detail">{{ imageError }}</p>
+        <p class="error-hint">请检查后端服务是否正常运行</p>
+      </div>
+      <!-- Loading state -->
+      <div v-else-if="!imageUrl" class="loading-placeholder">
+        <div class="spinner"></div>
+        <p>正在生成等值线图...</p>
+      </div>
+      <!-- Image display -->
       <img
-        v-if="imageUrl"
+        v-else
         :src="imageUrl"
         class="contour-image"
         :style="imageStyle"
         alt="Contour Map"
         @load="onImageLoad"
+        @error="onImageError"
       />
-      <div v-else class="loading-placeholder">
-        <div class="spinner"></div>
-        <p>正在生成等值线图...</p>
-      </div>
     </div>
 
     <!-- Borehole overlay (positioned on top of the image) -->
     <svg
       v-if="imageUrl"
       class="borehole-overlay"
-      :style="overlayStyle"
       :viewBox="`0 0 ${imageWidth} ${imageHeight}`"
-      :width="imageWidth"
-      :height="imageHeight"
+      :style="overlayStyle"
+      preserveAspectRatio="xMidYMid meet"
     >
       <defs>
         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -201,6 +209,7 @@ const imageContainer = ref(null)
 const imageWidth = ref(800)
 const imageHeight = ref(600)
 const imageLoaded = ref(false)
+const imageError = ref(null)
 const scale = ref(1)
 const offsetX = ref(0)
 const offsetY = ref(0)
@@ -244,9 +253,27 @@ const boreholesWithCanvas = computed(() => {
   if (!imageLoaded.value || !props.imageUrl) return []  // Not loaded yet
 
   const b = bounds.value
-  const padding = 60  // matplotlib figure padding
   const w = imageWidth.value
   const h = imageHeight.value
+
+  // matplotlib subplot position: [left=0.10, bottom=0.10, width=0.85, height=0.80]
+  const leftPadding = w * 0.10
+  const rightPadding = w * (1 - 0.10 - 0.85)
+  const bottomPadding = h * 0.10
+  const topPadding = h * (1 - 0.10 - 0.80)
+
+  const plotWidth = w - leftPadding - rightPadding
+  const plotHeight = h - bottomPadding - topPadding
+
+  console.log('Image dimensions:', w, 'x', h)
+  console.log('Plot area:', {
+    leftPadding: leftPadding.toFixed(1),
+    rightPadding: rightPadding.toFixed(1),
+    topPadding: topPadding.toFixed(1),
+    bottomPadding: bottomPadding.toFixed(1),
+    plotWidth: plotWidth.toFixed(1),
+    plotHeight: plotHeight.toFixed(1)
+  })
 
   return props.boreholes.map(bh => {
     const x = bh.x ?? bh.borehole_x
@@ -259,8 +286,17 @@ const boreholesWithCanvas = computed(() => {
     const relX = (x - b.minX) / b.rangeX
     const relY = (y - b.minY) / b.rangeY
 
-    const canvasX = padding + relX * (w - padding * 2)
-    const canvasY = h - padding - relY * (h - padding * 2)
+    // Apply correct padding
+    const canvasX = leftPadding + relX * plotWidth
+    const canvasY = h - bottomPadding - relY * plotHeight
+
+    if (bh.borehole === 'ZK101' || bh.borehole === 'ZK102') {
+      console.log(`Borehole ${bh.borehole}:`, {
+        world: { x: x.toFixed(1), y: y.toFixed(1) },
+        relative: { x: relX.toFixed(3), y: relY.toFixed(3) },
+        canvas: { x: canvasX.toFixed(1), y: canvasY.toFixed(1) }
+      })
+    }
 
     return {
       ...bh,
@@ -325,15 +361,23 @@ const imageStyle = computed(() => ({
   transition: isDragging.value ? 'none' : 'transform 0.1s ease-out'
 }))
 
-const overlayStyle = computed(() => ({
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  pointerEvents: 'none',
-  width: `${imageWidth.value}px`,
-  height: `${imageHeight.value}px`
-}))
+const overlayStyle = computed(() => {
+  // SVG overlay should match the image's transform exactly
+  return {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: `translate(-50%, -50%) scale(${scale.value}) translate(${offsetX.value / scale.value}px, ${offsetY.value / scale.value}px)`,
+    transformOrigin: 'center center',
+    pointerEvents: 'none',
+    transition: isDragging.value ? 'none' : 'transform 0.1s ease-out',
+    // Match image display behavior
+    maxWidth: '100%',
+    maxHeight: '100%',
+    width: 'auto',
+    height: 'auto'
+  }
+})
 
 const tooltipStyle = computed(() => ({
   left: hoverPos.value.x + 15 + 'px',
@@ -352,6 +396,27 @@ const onImageLoad = (e) => {
   imageWidth.value = e.target.naturalWidth
   imageHeight.value = e.target.naturalHeight
   imageLoaded.value = true
+  imageError.value = null
+  console.log('Image loaded successfully:', imageWidth.value, 'x', imageHeight.value)
+  console.log('Bounds:', props.bounds)
+  console.log('Boreholes count:', props.boreholes.length)
+
+  // Debug: Log first few boreholes
+  if (props.boreholes.length > 0) {
+    console.log('First borehole:', {
+      name: props.boreholes[0].borehole,
+      x: props.boreholes[0].x,
+      y: props.boreholes[0].y,
+      thickness: props.boreholes[0].thickness
+    })
+  }
+}
+
+const onImageError = (e) => {
+  imageError.value = '图片加载失败，请检查数据'
+  imageLoaded.value = false
+  console.error('Image load error:', e)
+  console.log('ImageUrl:', props.imageUrl?.substring(0, 50) + '...')
 }
 
 const zoomIn = () => {
@@ -398,13 +463,21 @@ const screenToCanvas = (screenX, screenY) => {
 // Convert canvas coordinates to world coordinates
 const canvasToWorld = (canvasX, canvasY) => {
   if (!bounds.value) return null
-  const padding = 60
-  const w = imageWidth.value - padding * 2
-  const h = imageHeight.value - padding * 2
+  const w = imageWidth.value
+  const h = imageHeight.value
+
+  // matplotlib subplot position: [left=0.10, bottom=0.10, width=0.85, height=0.80]
+  const leftPadding = w * 0.10
+  const rightPadding = w * (1 - 0.10 - 0.85)
+  const bottomPadding = h * 0.10
+  const topPadding = h * (1 - 0.10 - 0.80)
+
+  const plotWidth = w - leftPadding - rightPadding
+  const plotHeight = h - bottomPadding - topPadding
 
   const b = bounds.value
-  const worldX = b.minX + (canvasX - padding) / w * b.rangeX
-  const worldY = b.minY + (imageHeight.value - canvasY - padding) / h * b.rangeY
+  const worldX = b.minX + (canvasX - leftPadding) / plotWidth * b.rangeX
+  const worldY = b.minY + (h - canvasY - bottomPadding) / plotHeight * b.rangeY
 
   return { x: worldX, y: worldY }
 }
@@ -492,9 +565,11 @@ onMounted(() => {
   // Initialize
 })
 
-watch(() => props.imageUrl, () => {
+watch(() => props.imageUrl, (newUrl) => {
   resetView()
   imageLoaded.value = false
+  imageError.value = null
+  console.log('ImageUrl changed:', newUrl ? newUrl.substring(0, 50) + '...' : 'null')
 })
 
 // Expose methods for external access
@@ -515,6 +590,7 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -536,6 +612,7 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -550,22 +627,60 @@ defineExpose({
 .contour-image {
   max-width: 100%;
   max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   border-radius: 6px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  display: block;
 }
 
 .loading-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 14px;
   color: #94A3B8;
+  min-height: 200px;
 }
 
 .loading-placeholder p {
   margin: 0;
   font-size: 13px;
+}
+
+.error-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #ef4444;
+  min-height: 200px;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-radius: 12px;
+  border: 1px dashed #fca5a5;
+}
+
+.error-placeholder p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.error-detail {
+  font-size: 13px !important;
+  color: #dc2626 !important;
+  font-weight: 400 !important;
+}
+
+.error-hint {
+  font-size: 12px !important;
+  color: #f87171 !important;
+  font-weight: 400 !important;
+  font-style: italic;
 }
 
 .spinner {
@@ -587,6 +702,12 @@ defineExpose({
   left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  /* Match image display behavior */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
 }
 
 .borehole-marker {

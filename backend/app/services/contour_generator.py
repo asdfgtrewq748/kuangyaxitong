@@ -501,7 +501,12 @@ def generate_matplotlib_contour_image(
     plt.rcParams['axes.linewidth'] = 1.0
     plt.rcParams['axes.unicode_minus'] = False  # Fix minus sign display
 
-    fig, ax = plt.subplots(figsize=(8, 6), dpi=dpi)
+    # Create figure with explicit subplot parameters for consistent padding
+    # fig, ax = plt.subplots(figsize=(8, 6), dpi=dpi)
+    fig = plt.figure(figsize=(8, 6), dpi=dpi)
+    # Use specific subplot position to match frontend expectations
+    # [left, bottom, width, height] - matches ~8% padding on all sides
+    ax = fig.add_axes([0.10, 0.10, 0.85, 0.80])
 
     # A. Draw filled contours
     contour_filled = ax.contourf(
@@ -551,11 +556,12 @@ def generate_matplotlib_contour_image(
     ax.tick_params(which='minor', length=3, width=0.5, direction='in', top=True, right=True)
     ax.tick_params(which='major', top=True, right=True)
 
-    plt.tight_layout()
+    # Don't use tight_layout or bbox_inches='tight' to maintain fixed subplot position
+    # plt.tight_layout()
 
-    # Save to base64 string
+    # Save to base64 string with NO bbox_inches cropping
     buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=dpi, bbox_inches='tight')
+    plt.savefig(buf, format='png', dpi=dpi, bbox_inches=None, pad_inches=0)
     buf.seek(0)
     image_base64 = base64.b64encode(buf.read()).decode('utf-8')
     plt.close(fig)

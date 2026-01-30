@@ -1,14 +1,14 @@
 <template>
   <div class="page">
-    <div class="page-header">
-      <h1 class="page-title">📁 数据导入</h1>
-      <p class="page-subtitle">上传钻孔数据，设置坐标位置，系统将自动解析并预览</p>
-    </div>
-
     <div class="grid grid-2">
       <!-- 左侧：文件上传 -->
-      <div class="card">
-        <h3 class="section-title">📂 上传钻孔数据文件</h3>
+      <div class="card upload-card">
+        <h3 class="section-title">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          上传钻孔数据文件
+        </h3>
         <p class="section-desc">上传包含岩性参数（弹性模量、容重、抗拉强度、厚度）的 CSV 文件</p>
 
         <div class="upload-area" :class="{ 'drag-over': isDragOver }"
@@ -17,7 +17,14 @@
              @dragleave.prevent="isDragOver = false"
              @click="triggerFileInput">
           <input ref="fileInput" type="file" multiple accept=".csv" @change="onFiles" style="display: none">
-          <div class="upload-icon">📄</div>
+          <div class="upload-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+          </div>
           <p class="upload-text">点击选择或拖拽文件到此处</p>
           <p class="upload-hint">支持 .csv 格式，可多选</p>
         </div>
@@ -29,10 +36,19 @@
           </div>
           <div class="file-items">
             <div v-for="(file, i) in files" :key="i" class="file-item">
-              <span class="file-icon">📊</span>
+              <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
               <span class="file-name">{{ file.name }}</span>
               <span class="file-size">{{ formatSize(file.size) }}</span>
-              <button class="file-remove" @click="removeFile(i)">×</button>
+              <button class="file-remove" @click="removeFile(i)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -49,7 +65,11 @@
 
         <!-- 扫描结果 -->
         <div v-if="scanResult" class="result-box success">
-          <div class="result-icon">✓</div>
+          <div class="result-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
           <div class="result-content">
             <div class="result-title">扫描完成</div>
             <div class="result-desc">检测到 {{ scanResult.files?.length || 0 }} 个 CSV 文件</div>
@@ -67,8 +87,14 @@
       </div>
 
       <!-- 右侧：钻孔坐标 -->
-      <div class="card">
-        <h3 class="section-title">📍 钻孔坐标</h3>
+      <div class="card upload-card">
+        <h3 class="section-title">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          钻孔坐标
+        </h3>
         <p class="section-desc">设置钻孔的平面位置坐标（X, Y）</p>
 
         <!-- 坐标输入方式切换 -->
@@ -89,7 +115,12 @@
               <input type="text" v-model="b.name" placeholder="名称" class="coord-name-input">
               <input type="number" v-model.number="b.x" placeholder="X (m)" class="coord-value-input">
               <input type="number" v-model.number="b.y" placeholder="Y (m)" class="coord-value-input">
-              <button class="coord-remove" @click="removeBorehole(i)" title="删除">×</button>
+              <button class="coord-remove" @click="removeBorehole(i)" title="删除">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
           </div>
           <div class="coord-actions">
@@ -106,7 +137,12 @@
         <div v-else class="coord-file">
           <div class="upload-area compact" @click="triggerCoordInput">
             <input ref="coordInput" type="file" accept=".csv,.json,.txt" @change="onCoordFile" style="display: none">
-            <div class="upload-icon">📍</div>
+            <div class="upload-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </div>
             <p class="upload-text">上传坐标文件</p>
             <p class="upload-hint">支持 CSV/JSON/TXT 格式</p>
           </div>
@@ -134,15 +170,31 @@
     <div class="card preview-card" v-if="boreholes.length > 0">
       <div class="preview-header">
         <div>
-          <h3 class="section-title">🗺️ 钻孔位置预览</h3>
+          <h3 class="section-title">
+            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+              <line x1="8" y1="2" x2="8" y2="18"></line>
+              <line x1="16" y1="6" x2="16" y2="22"></line>
+            </svg>
+            钻孔位置预览
+          </h3>
           <p class="section-desc">{{ boreholes.length }} 个钻孔 · 可拖拽平移 · 滚轮缩放 · 点击选择</p>
         </div>
         <div class="preview-actions">
           <button class="icon-btn" @click="exportCoords" title="导出坐标">
-            📥
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
           </button>
-          <button class="icon-btn" @click="clearCoords" title="清空坐标">
-            🗑️
+          <button class="icon-btn danger" @click="clearCoords" title="清空坐标">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
           </button>
         </div>
       </div>
@@ -203,7 +255,13 @@
     <!-- 空状态 -->
     <div class="card" v-else>
       <div class="empty-state">
-        <div class="empty-icon">🗺️</div>
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+        </div>
         <p>暂无钻孔位置数据</p>
         <p class="empty-hint">请先上传数据文件或手动输入坐标</p>
       </div>
@@ -532,6 +590,16 @@ onMounted(() => {
   font-size: 17px;
   font-weight: 700;
   color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-icon {
+  width: 20px;
+  height: 20px;
+  color: #3b82f6;
+  flex-shrink: 0;
 }
 
 .section-desc {
@@ -575,21 +643,76 @@ onMounted(() => {
   padding: 16px;
 }
 
+/* Upload Card - with scroll */
+.upload-card {
+  max-height: 440px;
+  overflow-y: auto;
+}
+
+/* 美化滚动条 */
+.upload-card::-webkit-scrollbar {
+  width: 8px;
+}
+
+.upload-card::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.upload-card::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.upload-card::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 /* Upload Area */
 .upload-area {
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 24px 20px;
+  border: 3px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 32px 24px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background: #f8fafc;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-area::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .upload-area:hover,
 .upload-area.drag-over {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  border-color: #6366f1;
+  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+}
+
+.upload-area:hover::before,
+.upload-area.drag-over::before {
+  opacity: 1;
+}
+
+.upload-area:hover .upload-text {
+  color: #6366f1;
+  transform: scale(1.02);
+}
+
+.upload-area:hover .upload-icon {
+  transform: translateY(-4px) scale(1.1);
 }
 
 .upload-area.compact {
@@ -597,59 +720,93 @@ onMounted(() => {
 }
 
 .upload-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  color: #a5b4fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.upload-area:hover .upload-icon {
+  color: #6366f1;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.upload-area:hover .upload-icon svg {
+  stroke: white;
 }
 
 .upload-text {
-  margin: 0 0 4px 0;
-  font-size: 14px;
-  font-weight: 500;
+  margin: 0 0 6px 0;
+  font-size: 15px;
+  font-weight: 600;
   color: #334155;
+  transition: all 0.3s ease;
 }
 
 .upload-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: #94a3b8;
+  font-weight: 500;
 }
 
 /* File List */
 .file-list {
-  margin-top: 16px;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 10px;
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.06);
 }
 
 .file-list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: #475569;
 }
 
 .file-items {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 12px 14px;
   background: white;
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.file-item:hover {
+  background: #fafbff;
+  border-color: rgba(99, 102, 241, 0.2);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
 }
 
 .file-icon {
-  font-size: 14px;
+  width: 16px;
+  height: 16px;
+  color: #3b82f6;
+  flex-shrink: 0;
 }
 
 .file-name {
@@ -667,18 +824,27 @@ onMounted(() => {
 }
 
 .file-remove {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border: none;
   background: #fee2e2;
   color: #dc2626;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s;
 }
 
 .file-remove:hover {
   background: #fecaca;
+}
+
+.file-remove svg {
+  width: 12px;
+  height: 12px;
 }
 
 .text-btn {
@@ -710,7 +876,7 @@ onMounted(() => {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn.small {
@@ -719,13 +885,31 @@ onMounted(() => {
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #667eea 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn.primary::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
 }
 
 .btn.primary:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
+}
+
+.btn.primary:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .btn.secondary {
@@ -746,6 +930,7 @@ onMounted(() => {
 .btn.outline:hover {
   border-color: #3b82f6;
   color: #3b82f6;
+  background: #eff6ff;
 }
 
 .btn:disabled {
@@ -791,7 +976,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.result-icon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .result-title {
@@ -817,26 +1007,38 @@ onMounted(() => {
 /* Tab Buttons */
 .tab-buttons {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 12px;
 }
 
 .tab-btn {
   flex: 1;
-  padding: 8px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 8px;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   color: #64748b;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  position: relative;
+}
+
+.tab-btn:hover:not(.active) {
+  color: #475569;
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .tab-btn.active {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
-  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 /* Coordinate Input */
@@ -859,6 +1061,11 @@ onMounted(() => {
   padding: 6px 8px;
   background: #f8fafc;
   border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.coord-item:hover {
+  background: #f1f5f9;
 }
 
 .coord-num {
@@ -884,14 +1091,27 @@ onMounted(() => {
 }
 
 .coord-remove {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border: none;
   background: #fee2e2;
   color: #dc2626;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.coord-remove:hover {
+  background: #fecaca;
+}
+
+.coord-remove svg {
+  width: 12px;
+  height: 12px;
 }
 
 .coord-stats {
@@ -957,13 +1177,29 @@ onMounted(() => {
   background: white;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   transition: all 0.2s;
+  color: #64748b;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .icon-btn:hover {
   border-color: #3b82f6;
   background: #eff6ff;
+  color: #3b82f6;
+}
+
+.icon-btn.danger:hover {
+  border-color: #ef4444;
+  background: #fee2e2;
+  color: #ef4444;
 }
 
 .preview-grid {
@@ -1097,9 +1333,14 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 40px;
-  margin-bottom: 10px;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 10px;
+  color: #94a3b8;
   opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-hint {

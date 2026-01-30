@@ -12,3 +12,5 @@ The API exposes:
 - GET /boreholes/preview?file=<csv>&limit=20
 
 `DATA_DIR` env can override data folder. Default is ../data relative to backend.
+
+Default backend URL: http://localhost:8001

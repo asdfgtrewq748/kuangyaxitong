@@ -589,12 +589,21 @@ watch(showBoundary, draw)
 
 .map-wrapper {
   position: relative;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08),
-              inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  background: white;
+  border: 2px solid transparent;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%) border-box;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.12),
+              0 2px 8px rgba(15, 23, 42, 0.05),
+              inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+}
+
+.map-wrapper:hover {
+  box-shadow: 0 12px 32px rgba(99, 102, 241, 0.18),
+              0 4px 12px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 .map-wrapper.dragging {
@@ -621,20 +630,22 @@ watch(showBoundary, draw)
 }
 
 .control-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  background: linear-gradient(145deg, #ffffff 0%, #fafbff 100%);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15),
+              0 0 0 1px rgba(99, 102, 241, 0.1);
   cursor: pointer;
   font-size: 16px;
-  color: #475569;
+  color: #6366f1;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  font-weight: 600;
 }
 
 .control-btn span {
@@ -643,15 +654,16 @@ watch(showBoundary, draw)
 }
 
 .control-btn:hover {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
 }
 
 .control-btn.active {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
 }
 
 .map-empty {
@@ -677,25 +689,40 @@ watch(showBoundary, draw)
 
 .tooltip {
   position: fixed;
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
   color: white;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
   font-size: 12px;
   pointer-events: none;
   z-index: 1000;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25),
+  box-shadow: 0 12px 32px rgba(30, 27, 75, 0.4),
+              0 4px 12px rgba(0, 0, 0, 0.2),
               0 0 0 1px rgba(255, 255, 255, 0.1);
   white-space: nowrap;
+  backdrop-filter: blur(12px);
+  animation: tooltipFadeIn 0.2s ease;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .tooltip-header {
   font-weight: 600;
-  color: #60a5fa;
+  color: #a5b4fc;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 13px;
 }
 
 .tooltip-icon {
@@ -723,14 +750,26 @@ watch(showBoundary, draw)
 .selection-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  border: 1px solid #fcd34d;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #92400e;
-  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.15);
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #78350f;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.25);
+  animation: selectionFadeIn 0.3s ease;
+}
+
+@keyframes selectionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .selection-icon {
@@ -765,18 +804,20 @@ watch(showBoundary, draw)
 
 .map-stats {
   display: flex;
-  gap: 12px;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-radius: 8px;
-  font-size: 11px;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  gap: 14px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+  border-radius: 10px;
+  font-size: 12px;
+  color: #475569;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  font-weight: 500;
 }
 </style>
