@@ -416,7 +416,7 @@ def generate_matplotlib_contour_image(
     num_levels: int = 12,
     dpi: int = 300,
     smooth_sigma: float = 1.0,
-    colormap: str = "YlOrBr"
+    colormap: str | List[str] = "YlOrBr"
 ) -> Dict:
     """
     Generate high-quality matplotlib contour image following Nature/Science publication style.
@@ -438,7 +438,7 @@ def generate_matplotlib_contour_image(
         num_levels: Number of contour levels if auto-calculated
         dpi: Image DPI for high-quality output
         smooth_sigma: Gaussian smoothing sigma (higher = smoother)
-        colormap: Matplotlib colormap name
+        colormap: Matplotlib colormap name or custom hex color list
 
     Returns:
         Dictionary with:
@@ -453,6 +453,7 @@ def generate_matplotlib_contour_image(
         import matplotlib
         matplotlib.use('Agg')  # Non-interactive backend
         import matplotlib.pyplot as plt
+        from matplotlib.colors import LinearSegmentedColormap
     except ImportError:
         return {"error": "matplotlib not available"}
 
@@ -509,10 +510,15 @@ def generate_matplotlib_contour_image(
     ax = fig.add_axes([0.10, 0.10, 0.85, 0.80])
 
     # A. Draw filled contours
+    if isinstance(colormap, (list, tuple)):
+        cmap = LinearSegmentedColormap.from_list("custom", list(colormap))
+    else:
+        cmap = colormap
+
     contour_filled = ax.contourf(
         X, Y, grid_smooth,
         levels=fill_levels,
-        cmap=colormap,
+        cmap=cmap,
         extend='both'
     )
 

@@ -91,20 +91,33 @@ def _kriging_interpolate(x: np.ndarray, y: np.ndarray, v: np.ndarray, grid_x: np
     return grid
 
 
-def interpolate_from_points(points: np.ndarray, values: np.ndarray, method: str, grid_size: int) -> Dict:
+def interpolate_from_points(
+    points: np.ndarray,
+    values: np.ndarray,
+    method: str,
+    grid_size: int,
+    bounds: Dict[str, float] | None = None
+) -> Dict:
     x = points[:, 0]
     y = points[:, 1]
     v = values
 
-    padding = 0.05
-    min_x, max_x = float(x.min()), float(x.max())
-    min_y, max_y = float(y.min()), float(y.max())
-    dx = max_x - min_x
-    dy = max_y - min_y
-    min_x -= dx * padding
-    max_x += dx * padding
-    min_y -= dy * padding
-    max_y += dy * padding
+    if bounds is None:
+        padding = 0.05
+        min_x, max_x = float(x.min()), float(x.max())
+        min_y, max_y = float(y.min()), float(y.max())
+        dx = max_x - min_x
+        dy = max_y - min_y
+        min_x -= dx * padding
+        max_x += dx * padding
+        min_y -= dy * padding
+        max_y += dy * padding
+        bounds = {"min_x": min_x, "max_x": max_x, "min_y": min_y, "max_y": max_y}
+    else:
+        min_x = float(bounds["min_x"])
+        max_x = float(bounds["max_x"])
+        min_y = float(bounds["min_y"])
+        max_y = float(bounds["max_y"])
 
     grid_x = np.linspace(min_x, max_x, grid_size)
     grid_y = np.linspace(min_y, max_y, grid_size)

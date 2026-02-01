@@ -24,6 +24,12 @@ const routes = [
     meta: { title: '矿压指标', icon: '📈' }
   },
   {
+    path: '/mpi-heatmap',
+    name: 'MpiHeatmap',
+    component: () => import('../views/MpiHeatmap.vue'),
+    meta: { title: 'MPI热力图', icon: '🔥' }
+  },
+  {
     path: '/steps',
     name: 'Steps',
     component: () => import('../views/Steps.vue'),

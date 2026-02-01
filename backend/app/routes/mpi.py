@@ -11,7 +11,7 @@ MPI (矿压影响指标) API路由
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Any
 import numpy as np
@@ -28,6 +28,17 @@ from app.services.mpi_calculator import (
     calc_abutment_stress,
 )
 from app.services.interpolate import interpolate_from_points
+from app.services.contour_generator import generate_matplotlib_contour_image
+from app.services.workface_parser import parse_workface_file
+
+
+ODI_GRADIENT_COLORS = [
+    "#3b82f6",
+    "#facc15",
+    "#fb923c",
+    "#f87171",
+    "#dc2626",
+]
 
 
 # =============================================================================
@@ -182,6 +193,18 @@ class MPIInterpolateResponse(BaseModel):
     grid_size: int = Field(..., description="网格大小")
     method: str = Field(..., description="插值方法")
     statistics: Dict[str, float] = Field(..., description="网格统计")
+
+
+class MPIHeatmapImageRequest(BaseModel):
+    """MPI热力图图像请求"""
+    grid: List[List[float]] = Field(..., description="MPI网格值")
+    bounds: Dict[str, float] = Field(..., description="边界范围")
+    title: str = Field("MPI热力图", description="图像标题")
+    property_name: str = Field("MPI", description="属性名称")
+    num_levels: int = Field(12, ge=3, le=30, description="等值线级数")
+    dpi: int = Field(200, ge=72, le=400, description="图像DPI")
+    smooth_sigma: float = Field(1.0, ge=0, le=5, description="平滑系数")
+    colormap: Optional[str] = Field("odi", description="色带名称（odi或matplotlib色带名）")
 
 
 class KeyLayersRequest(BaseModel):
@@ -470,22 +493,15 @@ def interpolate_mpi(request: MPIInterpolateRequest) -> MPIInterpolateResponse:
         points=pts_array,
         values=vals_array,
         method=request.method,
-        grid_size=request.resolution
+        grid_size=request.resolution,
+        bounds=request.bounds
     )
 
     if "error" in grid_result:
         raise HTTPException(status_code=400, detail=grid_result["error"])
 
     # 处理边界
-    bounds = request.bounds
-    if bounds is None:
-        # 自动计算边界
-        bounds = {
-            "min_x": float(np.min(pts_array[:, 0])),
-            "max_x": float(np.max(pts_array[:, 0])),
-            "min_y": float(np.min(pts_array[:, 1])),
-            "max_y": float(np.max(pts_array[:, 1])),
-        }
+    bounds = request.bounds or grid_result.get("bounds")
 
     # 计算统计信息
     grid_arr = np.array(grid_result["grid"])
@@ -503,6 +519,61 @@ def interpolate_mpi(request: MPIInterpolateRequest) -> MPIInterpolateResponse:
         method=request.method,
         statistics=statistics
     )
+
+
+@router.post("/heatmap-image", summary="生成MPI热力图图像")
+def generate_mpi_heatmap_image(request: MPIHeatmapImageRequest) -> Dict[str, Any]:
+    """
+    基于MPI网格生成高质量热力图图片（matplotlib）。
+    """
+    grid_arr = np.array(request.grid, dtype=float)
+    if grid_arr.size == 0:
+        raise HTTPException(status_code=400, detail="网格数据为空")
+
+    colormap = request.colormap or "odi"
+    if colormap == "odi":
+        colormap = ODI_GRADIENT_COLORS
+
+    result = generate_matplotlib_contour_image(
+        grid_arr,
+        request.bounds,
+        title=request.title,
+        property_name=request.property_name,
+        num_levels=request.num_levels,
+        dpi=request.dpi,
+        smooth_sigma=request.smooth_sigma,
+        colormap=colormap,
+    )
+
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+
+    return {
+        **result,
+        "bounds": request.bounds,
+        "palette": "odi" if request.colormap == "odi" else request.colormap,
+    }
+
+
+@router.post("/workfaces/parse", summary="解析工作面坐标文件")
+async def parse_workfaces(file: UploadFile = File(...)) -> Dict[str, Any]:
+    """
+    解析工作面坐标文件（支持CSV/JSON/TXT）。
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="文件名不能为空")
+
+    content = await file.read()
+    text = content.decode("utf-8", errors="ignore")
+    workfaces = parse_workface_file(text, file.filename)
+
+    if not workfaces:
+        raise HTTPException(status_code=400, detail="未解析到有效工作面")
+
+    return {
+        "count": len(workfaces),
+        "workfaces": workfaces
+    }
 
 
 @router.post("/key-layers", response_model=KeyLayersResponse, summary="关键层识别")

@@ -115,6 +115,12 @@ export const getMpiWeights = () => api.get('/api/mpi/weights')
 export const setMpiWeights = (weights) => api.post('/api/mpi/weights', weights)
 export const getMpiConfig = () => api.get('/api/mpi/config')
 export const setMpiConfig = (params) => api.post('/api/mpi/config', null, { params })
+export const parseMpiWorkfaces = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post('/api/mpi/workfaces/parse', form)
+}
+export const mpiHeatmapImage = (payload) => api.post('/api/mpi/heatmap-image', payload)
 
 // Rock Params APIs
 export const getRockParams = (lithology, useSynonyms = true, includeDefault = true) =>
