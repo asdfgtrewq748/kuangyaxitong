@@ -1,6 +1,27 @@
 <template>
   <div class="mpi-heatmap-viewer">
-    <div ref="stageRef" class="heatmap-stage" @mousemove="handleMouseMove" @mouseleave="clearHover">
+    <!-- 加载骨架屏 -->
+    <div v-if="loading" class="heatmap-skeleton">
+      <div class="skeleton-header">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-subtitle"></div>
+      </div>
+      <div class="skeleton-grid">
+        <div v-for="i in 9" :key="i" class="skeleton-cell"></div>
+      </div>
+      <div class="skeleton-spinner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round">
+            <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+          </path>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 热力图显示区域 -->
+    <div v-else ref="stageRef" class="heatmap-stage" @mousemove="handleMouseMove" @mouseleave="clearHover" tabindex="0" @keydown.esc="clearHover">
+      <!-- 图像模式 -->
       <img
         v-if="mode === 'image' && imageUrl"
         ref="imageRef"
@@ -8,29 +29,95 @@
         class="heatmap-image"
         @load="syncCanvas"
         @error="handleImageError"
+        alt="MPI热力图"
       />
-      <div v-else-if="mode === 'image' && !imageUrl" class="empty-image">
-        <div class="empty-icon">🖼️</div>
-        <p>{{ imageError || '暂无热力图图片' }}</p>
+
+      <!-- 图像加载失败/空状态 -->
+      <div v-else-if="mode === 'image' && !imageUrl" class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+        </div>
+        <p class="empty-text">{{ imageError || '暂无热力图图片' }}</p>
+        <button v-if="imageError" class="btn-retry" @click="$emit('retry')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
+          </svg>
+          重试
+        </button>
       </div>
+
+      <!-- Canvas模式 -->
       <canvas
         v-if="mode === 'canvas'"
         ref="heatmapCanvas"
         class="heatmap-canvas"
       ></canvas>
-      <div v-if="mode === 'canvas' && isEmpty" class="empty-image">
-        <div class="empty-icon">📊</div>
-        <p>暂无MPI网格数据</p>
+
+      <!-- Canvas空状态 -->
+      <div v-if="mode === 'canvas' && isEmpty" class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+          </svg>
+        </div>
+        <p class="empty-text">暂无MPI网格数据</p>
       </div>
+
+      <!-- 覆盖层Canvas -->
       <canvas ref="overlayCanvas" class="overlay-canvas"></canvas>
 
-      <div v-if="hover" class="hover-tooltip" :style="hoverStyle">
-        <div class="tooltip-title">MPI</div>
-        <div class="tooltip-row">X: {{ hover.x.toFixed(1) }}</div>
-        <div class="tooltip-row">Y: {{ hover.y.toFixed(1) }}</div>
-        <div class="tooltip-row">
-          值: <strong>{{ hover.value?.toFixed(2) }}</strong>
+      <!-- 悬停提示框 -->
+      <Transition name="tooltip-fade">
+        <div v-if="hover" class="hover-tooltip" :style="hoverStyle" role="tooltip" :aria-label="`MPI值: ${hover.value?.toFixed(2)}`">
+          <div class="tooltip-header">
+            <svg class="tooltip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            <span class="tooltip-title">MPI综合指标</span>
+          </div>
+          <div class="tooltip-body">
+            <div class="tooltip-row">
+              <span class="tooltip-label">X坐标</span>
+              <span class="tooltip-value">{{ hover.x.toFixed(1) }} m</span>
+            </div>
+            <div class="tooltip-row">
+              <span class="tooltip-label">Y坐标</span>
+              <span class="tooltip-value">{{ hover.y.toFixed(1) }} m</span>
+            </div>
+            <div class="tooltip-divider"></div>
+            <div class="tooltip-row tooltip-row-highlight">
+              <span class="tooltip-label">MPI值</span>
+              <span class="tooltip-value tooltip-value-primary">{{ hover.value?.toFixed(3) }}</span>
+            </div>
+            <div class="tooltip-row">
+              <span class="tooltip-label">风险等级</span>
+              <span :class="['tooltip-badge', getRiskClass(hover.value)]">{{ getRiskLevel(hover.value) }}</span>
+            </div>
+          </div>
         </div>
+      </Transition>
+
+      <!-- 导出按钮 -->
+      <div class="export-actions">
+        <button class="btn-export" @click="handleExport" :title="'导出热力图'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+        <button class="btn-export" @click="handleFullscreen" :title="'全屏显示'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -48,10 +135,11 @@ const props = defineProps({
   showBoundary: { type: Boolean, default: true },
   showMask: { type: Boolean, default: true },
   palette: { type: Array, default: () => [] },
-  size: { type: Number, default: 560 }
+  size: { type: Number, default: 560 },
+  loading: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['hover', 'imageError'])
+const emit = defineEmits(['hover', 'imageError', 'retry', 'export', 'fullscreen'])
 
 const stageRef = ref(null)
 const imageRef = ref(null)
@@ -62,8 +150,8 @@ const hoverPos = ref({ x: 0, y: 0 })
 const imageError = ref('')
 
 const hoverStyle = computed(() => ({
-  left: `${hoverPos.value.x + 12}px`,
-  top: `${hoverPos.value.y + 12}px`
+  left: `${hoverPos.value.x + 16}px`,
+  top: `${hoverPos.value.y + 16}px`
 }))
 
 const isEmpty = computed(() => !props.grid || props.grid.length === 0)
@@ -83,6 +171,50 @@ const subplotPadding = {
   top: 0.10,
   width: 0.85,
   height: 0.80
+}
+
+// 风险等级判断
+const getRiskLevel = (value) => {
+  if (value === null || value === undefined) return '未知'
+  if (value >= 0.7) return '低风险'
+  if (value >= 0.4) return '中等风险'
+  return '高风险'
+}
+
+const getRiskClass = (value) => {
+  if (value === null || value === undefined) return 'risk-unknown'
+  if (value >= 0.7) return 'risk-low'
+  if (value >= 0.4) return 'risk-medium'
+  return 'risk-high'
+}
+
+// 导出功能
+const handleExport = () => {
+  if (props.mode === 'image' && props.imageUrl) {
+    // 触发图片下载
+    const link = document.createElement('a')
+    link.href = props.imageUrl
+    link.download = `MPI热力图_${new Date().toISOString().slice(0, 10)}.png`
+    link.click()
+  } else if (props.mode === 'canvas' && heatmapCanvas.value) {
+    // 导出Canvas
+    const link = document.createElement('a')
+    link.download = `MPI热力图_${new Date().toISOString().slice(0, 10)}.png`
+    link.href = heatmapCanvas.value.toDataURL('image/png')
+    link.click()
+  }
+  emit('export')
+}
+
+const handleFullscreen = () => {
+  if (stageRef.value) {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      stageRef.value.requestFullscreen()
+    }
+  }
+  emit('fullscreen')
 }
 
 const syncCanvas = async () => {
@@ -358,15 +490,107 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
+/* 骨架屏样式 */
+.heatmap-skeleton {
+  position: relative;
+  width: 100%;
+  height: 560px;
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  box-shadow: var(--shadow-lg);
+}
+
+.skeleton-header {
+  padding: var(--spacing-xl);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.skeleton-title {
+  height: 24px;
+  width: 200px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.skeleton-subtitle {
+  height: 14px;
+  width: 300px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--border-radius-sm);
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl);
+}
+
+.skeleton-cell {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
+  border-radius: var(--border-radius-md);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  color: var(--color-primary);
+}
+
+.skeleton-spinner svg {
+  width: 100%;
+  height: 100%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 热力图显示区域 */
 .heatmap-stage {
   position: relative;
   width: 100%;
   height: 560px;
-  border-radius: 16px;
+  border-radius: var(--border-radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: #f8fafc;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  border: 1.5px solid var(--border-color);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
+  transition: all var(--transition-normal);
+}
+
+.heatmap-stage:hover {
+  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.heatmap-stage:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
 }
 
 .heatmap-image,
@@ -383,39 +607,256 @@ onBeforeUnmount(() => {
   background: #ffffff;
 }
 
-.empty-image {
+/* 空状态 */
+.empty-state {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
-  gap: 6px;
+  color: #64748b;
+  gap: var(--spacing-md);
+  padding: var(--spacing-2xl);
 }
 
 .empty-icon {
-  font-size: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--color-info-light);
+  border-radius: var(--border-radius-lg);
+  color: var(--color-info);
+  transition: all var(--transition-normal);
 }
 
+.empty-state:hover .empty-icon {
+  transform: scale(1.05);
+}
+
+.empty-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.empty-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.btn-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  background: white;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-retry:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.btn-retry svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tooltip样式 */
 .hover-tooltip {
   position: absolute;
-  padding: 10px 12px;
-  background: rgba(15, 23, 42, 0.92);
+  padding: 0;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(10px);
   color: #f8fafc;
   font-size: 12px;
-  border-radius: 10px;
-  min-width: 110px;
+  border-radius: var(--border-radius-md);
+  min-width: 160px;
   pointer-events: none;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.4);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.4), 0 2px 8px rgba(15, 23, 42, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(99, 102, 241, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-primary);
 }
 
 .tooltip-title {
   font-weight: 700;
-  margin-bottom: 4px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.tooltip-body {
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .tooltip-row {
-  line-height: 1.4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  line-height: 1.6;
+  margin-bottom: var(--spacing-xs);
+}
+
+.tooltip-row:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-row-highlight {
+  background: rgba(99, 102, 241, 0.15);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  margin: var(--spacing-xs) 0;
+}
+
+.tooltip-label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.tooltip-value {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.tooltip-value-primary {
+  color: var(--color-primary);
+  font-size: 13px;
+}
+
+.tooltip-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: var(--spacing-xs) 0;
+}
+
+.tooltip-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.risk-low {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.risk-medium {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.risk-high {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.risk-unknown {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+/* Tooltip动画 */
+.tooltip-fade-enter-active,
+.tooltip-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.tooltip-fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.tooltip-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* 导出按钮 */
+.export-actions {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  display: flex;
+  gap: var(--spacing-sm);
+  z-index: 10;
+}
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  color: #475569;
+}
+
+.btn-export:hover {
+  background: var(--color-primary);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-export svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .heatmap-stage,
+  .heatmap-skeleton {
+    height: 400px;
+  }
+
+  .skeleton-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .export-actions {
+    flex-direction: column;
+  }
+
+  .hover-tooltip {
+    min-width: 140px;
+  }
 }
 </style>
