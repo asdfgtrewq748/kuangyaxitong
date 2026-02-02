@@ -52,20 +52,20 @@ onMounted(() => {
   background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 50%, #f0fdf4 100%);
 }
 
-/* Sidebar */
+/* Sidebar - Light theme with professional industrial look */
 .sidebar {
-  width: 260px;
-  background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+  width: 240px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   display: flex;
   flex-direction: column;
   padding: 0;
-  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.2), 0 0 60px rgba(99, 102, 241, 0.1);
+  box-shadow: 4px 0 24px rgba(99, 102, 241, 0.08), 0 0 60px rgba(99, 102, 241, 0.04);
   position: fixed;
   left: 0;
   top: 0;
   bottom: 0;
   z-index: 100;
-  border-right: 1px solid rgba(99, 102, 241, 0.2);
+  border-right: 1px solid rgba(99, 102, 241, 0.12);
 }
 
 .sidebar::before {
@@ -75,22 +75,22 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.1) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(139, 92, 246, 0.02) 100%);
   pointer-events: none;
 }
 
 .sidebar-header {
   padding: 28px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.12);
   position: relative;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(139, 92, 246, 0.04) 100%);
 }
 
 .sidebar-header h2 {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #ffffff;
+  color: #1e293b;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -99,7 +99,7 @@ onMounted(() => {
 .sidebar-subtitle {
   margin: 4px 0 0 0;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -119,13 +119,14 @@ onMounted(() => {
   gap: 14px;
   padding: 14px 18px;
   border-radius: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #475569;
   text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 14px;
   font-weight: 500;
   position: relative;
   overflow: hidden;
+  border: 1px solid transparent;
 }
 
 .nav-item::before {
@@ -138,13 +139,14 @@ onMounted(() => {
   height: 0;
   background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
   border-radius: 0 3px 3px 0;
-  transition: height 0.3s ease;
+  transition: height 0.25s ease;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  transform: translateX(4px);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.06) 100%);
+  color: #1e293b;
+  border-color: rgba(99, 102, 241, 0.15);
+  transform: translateX(2px);
 }
 
 .nav-item:hover::before {
@@ -154,8 +156,9 @@ onMounted(() => {
 .nav-item.active {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: #ffffff;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
-  transform: translateX(4px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25), 0 0 0 1px rgba(99, 102, 241, 0.1);
+  transform: translateX(2px);
+  border-color: rgba(99, 102, 241, 0.2);
 }
 
 .nav-item.active::before {
@@ -176,19 +179,20 @@ onMounted(() => {
 /* Sidebar Footer */
 .sidebar-footer {
   padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(99, 102, 241, 0.12);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.02) 0%, transparent 100%);
 }
 
 .footer-text {
   margin: 0;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
+  color: #94a3b8;
   text-align: center;
 }
 
-/* Main Content */
+/* Main Content - Updated margin to match new sidebar width */
 .main-content {
-  margin-left: 260px;
+  margin-left: 240px;
   flex: 1;
   min-height: 100vh;
   background: linear-gradient(135deg, #f8f9ff 0%, #fafbff 50%, #f0fdf9 100%);
@@ -199,7 +203,7 @@ onMounted(() => {
   content: "";
   position: fixed;
   top: 0;
-  left: 260px;
+  left: 240px;
   right: 0;
   height: 100vh;
   background: radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.03) 0%, transparent 50%),
@@ -208,11 +212,12 @@ onMounted(() => {
   z-index: 0;
 }
 
+/* Content Wrapper - Reduced max-width from 1600px to 1400px for better readability */
 .content-wrapper {
   padding: 32px;
   position: relative;
   z-index: 1;
-  max-width: 1600px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -240,7 +245,7 @@ onMounted(() => {
   color: #64748b;
 }
 
-/* Responsive */
+/* Responsive - Optimized breakpoints */
 @media (max-width: 768px) {
   .sidebar {
     width: 200px;
@@ -249,6 +254,11 @@ onMounted(() => {
   .main-content {
     margin-left: 200px;
     padding: 16px;
+  }
+
+  .content-wrapper {
+    padding: 24px;
+    max-width: 100%;
   }
 
   .sidebar-header h2 {

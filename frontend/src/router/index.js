@@ -30,6 +30,18 @@ const routes = [
     meta: { title: 'MPI热力图', icon: '🔥' }
   },
   {
+    path: '/mpi-heatmap-pro',
+    name: 'MpiHeatmapPro',
+    component: () => import('../views/MpiHeatmapPro.vue'),
+    meta: { title: 'MPI数值模拟', icon: '⚡' }
+  },
+  {
+    path: '/mpi-algorithm',
+    name: 'MpiAlgorithm',
+    component: () => import('../views/MpiAlgorithm.vue'),
+    meta: { title: 'MPI算法原理', icon: '🧠' }
+  },
+  {
     path: '/steps',
     name: 'Steps',
     component: () => import('../views/Steps.vue'),
