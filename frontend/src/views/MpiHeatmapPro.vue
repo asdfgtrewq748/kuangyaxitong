@@ -1170,26 +1170,29 @@ const fitToScreen = () => {
   const { min_x, max_x, min_y, max_y } = gridBounds.value
   const worldW = max_x - min_x
   const worldH = max_y - min_y
-  
+
   const rect = stageContainer.value.getBoundingClientRect()
   const screenW = rect.width
   const screenH = rect.height
-  
+
   const scaleX = screenW / worldW
   const scaleY = screenH / worldH
   const scale = Math.min(scaleX, scaleY) * 0.9 // 90% fit
-  
+
   viewport.scale = scale
-  
-  // Center (Shifted right by 120px to account for sidebar)
+
+  // Center (no longer shifted since we have full width)
   const midX = (min_x + max_x) / 2
   const midY = (min_y + max_y) / 2
-  
-  viewport.x = (screenW / 2 + 120) - (midX - min_x) * scale
-  viewport.y = (screenH / 2) - (max_y - midY) * scale 
+
+  viewport.x = (screenW / 2) - (midX - min_x) * scale
+  viewport.y = (screenH / 2) - (max_y - midY) * scale
+
+  requestRender()
 }
 
 const handleMouseDown = (e) => {
+  if (!stageContainer.value) return
   viewport.isDragging = true
   viewport.lastX = e.clientX
   viewport.lastY = e.clientY
@@ -1199,6 +1202,7 @@ const handleMouseDown = (e) => {
 
 const handleMouseMove = (e) => {
   // Tooltip
+  if (!stageContainer.value) return
   const rect = stageContainer.value.getBoundingClientRect()
   const sx = e.clientX - rect.left
   const sy = e.clientY - rect.top
@@ -1207,7 +1211,7 @@ const handleMouseMove = (e) => {
   const wPos = screenToWorld(sx, sy)
   
   // Find grid val
-  if (globalGrid.value) {
+  if (globalGrid.value && gridBounds.value) {
     const { min_x, max_x, min_y, max_y } = gridBounds.value
     const rows = globalGrid.value.length
     const cols = globalGrid.value[0].length
@@ -1248,6 +1252,7 @@ const handleMouseUp = (e) => {
 }
 
 const handleCanvasClick = (e) => {
+  if (!stageContainer.value) return
   const rect = stageContainer.value.getBoundingClientRect()
   const sx = e.clientX - rect.left
   const sy = e.clientY - rect.top
