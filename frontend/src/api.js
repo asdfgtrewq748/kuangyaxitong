@@ -4,6 +4,74 @@ const api = axios.create({
   baseURL: 'http://localhost:8001'
 })
 
+// LRU Cache for API responses (server-cache-lru pattern)
+class ApiCache {
+  constructor(maxSize = 50) {
+    this.cache = new Map()
+    this.maxSize = maxSize
+  }
+
+  generateKey(url, params) {
+    return `${url}?${JSON.stringify(params)}`
+  }
+
+  get(url, params) {
+    const key = this.generateKey(url, params)
+    const entry = this.cache.get(key)
+    if (entry) {
+      // Update access time for LRU
+      entry.lastAccess = Date.now()
+      return entry.data
+    }
+    return null
+  }
+
+  set(url, params, data) {
+    const key = this.generateKey(url, params)
+
+    // Evict oldest if at capacity
+    if (this.cache.size >= this.maxSize) {
+      let oldestKey = null
+      let oldestTime = Infinity
+      for (const [k, v] of this.cache.entries()) {
+        if (v.lastAccess < oldestTime) {
+          oldestTime = v.lastAccess
+          oldestKey = k
+        }
+      }
+      if (oldestKey) this.cache.delete(oldestKey)
+    }
+
+    this.cache.set(key, {
+      data,
+      lastAccess: Date.now()
+    })
+  }
+
+  clear() {
+    this.cache.clear()
+  }
+
+  // Cache GET requests for static data
+  cachedGet(url, config = {}) {
+    const params = config.params || {}
+    const cached = this.get(url, params)
+    if (cached) {
+      return Promise.resolve({ data: cached })
+    }
+    return api.get(url, config).then(response => {
+      this.set(url, params, response.data)
+      return response
+    })
+  }
+}
+
+// Create cache instance
+const apiCache = new ApiCache(100)
+
+// Clear cache on certain actions
+export const clearApiCache = () => apiCache.clear()
+
 export const scanBoreholes = () => api.get('/boreholes/scan')
 export const previewBorehole = (file, limit = 20) => api.get('/boreholes/preview', { params: { file, limit } })
 export const fixEncoding = () => api.post('/boreholes/fix-encoding')
@@ -67,7 +135,8 @@ export const exportPressureStepsWorkfaces = (params) =>
   api.get('/export/pressure-steps-workfaces', { params, responseType: 'blob' })
 
 // Coal Seam Interpolation APIs
-export const getCoalSeams = () => api.get('/seams/list')
+// Use cached GET for static data (client-swr-dedup pattern)
+export const getCoalSeams = () => apiCache.cachedGet('/seams/list')
 export const getSeamStats = (seamName) =>
   api.get('/seams/stats', { params: { seam_name: seamName } })
 export const interpolateSeam = (seamName, property, method = 'idw', gridSize = 100, contourLevels = 10, includeContours = true) =>
@@ -122,9 +191,9 @@ export const parseMpiWorkfaces = (file) => {
 }
 export const mpiHeatmapImage = (payload) => api.post('/api/mpi/heatmap-image', payload)
 
-// Rock Params APIs
+// Rock Params APIs - use cached GET for reference data
 export const getRockParams = (lithology, useSynonyms = true, includeDefault = true) =>
-  api.get('/api/rock-params/query', {
+  apiCache.cachedGet('/api/rock-params/query', {
     params: { lithology, use_synonyms: useSynonyms, include_default: includeDefault }
   })
 export const getRockParamsStats = () => api.get('/api/rock-params/stats')

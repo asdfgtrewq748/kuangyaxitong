@@ -174,7 +174,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted, shallowRef, markRaw } from 'vue'
 import { useToast } from '../composables/useToast'
 import { useMiningSimulation } from '../composables/useMiningSimulation'
 import { useParticles, useRipples } from '../composables/useParticles'
@@ -235,8 +235,12 @@ const dynamicCanvas = ref(null)
 const overlayCanvas = ref(null)
 const fileInput = ref(null)
 
-// Data State
-const globalGrid = ref(null)
+// Offscreen canvas for caching static content (rendering-hydration-no-flicker pattern)
+const bgCacheCanvas = ref(null)
+const bgCacheValid = ref(false)
+
+// Data State - use shallowRef for large arrays to reduce reactivity overhead
+const globalGrid = shallowRef(null)
 const gridBounds = ref(null)
 const hoverInfo = ref(null)
 const hoverPos = ref({ x: 0, y: 0 })
@@ -527,7 +531,15 @@ const screenToWorld = (sx, sy) => {
 const drawBackground = () => {
   const ctx = bgCanvas.value?.getContext('2d')
   if (!ctx || !globalGrid.value) return
-  
+
+  // Invalidate cache when viewport changes significantly (js-cache-function-results pattern)
+  const cacheKey = `${viewport.scale.toFixed(2)}-${viewport.x.toFixed(0)}-${viewport.y.toFixed(0)}`
+  if (bgCacheValid.value && bgCacheCanvas.value && bgCacheCanvas.value.key === cacheKey) {
+    ctx.clearRect(0, 0, bgCanvas.value.width, bgCanvas.value.height)
+    ctx.drawImage(bgCacheCanvas.value, 0, 0)
+    return
+  }
+
   ctx.clearRect(0, 0, bgCanvas.value.width, bgCanvas.value.height)
   
   const grid = globalGrid.value
@@ -571,6 +583,15 @@ const drawBackground = () => {
       ctx.fillRect(Math.floor(p1.x), Math.floor(p1.y), Math.ceil(w)+1, Math.ceil(h)+1)
     }
   }
+
+  // Cache the rendered background (js-cache-function-results pattern)
+  const offscreen = document.createElement('canvas')
+  offscreen.width = bgCanvas.value.width
+  offscreen.height = bgCanvas.value.height
+  offscreen.key = cacheKey
+  offscreen.getContext('2d').drawImage(bgCanvas.value, 0, 0)
+  bgCacheCanvas.value = markRaw(offscreen)
+  bgCacheValid.value = true
 }
 
 const drawContours = (ctx) => {
@@ -1141,8 +1162,8 @@ const handleMouseMove = (e) => {
   viewport.y += dy
   viewport.lastX = e.clientX
   viewport.lastY = e.clientY
-  
-  requestAnimationFrame(renderAll)
+
+  requestRender()
 }
 
 const handleMouseUp = (e) => {
@@ -1179,13 +1200,24 @@ const handleWheel = (e) => {
   const zoomSensitivity = 0.001
   const delta = -e.deltaY * zoomSensitivity
   const newScale = viewport.scale * (1 + delta)
-  
+
   viewport.scale = Math.max(0.1, Math.min(50, newScale))
-  requestAnimationFrame(renderAll)
+  requestRender()
 }
 
 // Animation loop reference
 const animationLoopRef = ref(null)
+
+// Throttled render request (js-early-exit pattern)
+let renderRequested = false
+const requestRender = () => {
+  if (renderRequested) return
+  renderRequested = true
+  requestAnimationFrame(() => {
+    renderAll()
+    renderRequested = false
+  })
+}
 
 // Watchers
 watch(() => simulation.progress.value, (val) => {
@@ -1198,6 +1230,11 @@ watch(() => simulation.isPlaying.value, (isPlaying) => {
     startAnimationLoop()
   }
 })
+
+// Invalidate background cache when viewport changes (rerender-defer-reads pattern)
+watch(() => [viewport.scale, viewport.x, viewport.y], () => {
+  bgCacheValid.value = false
+}, { flush: 'sync' })
 
 // Animation loop for smooth playback
 const startAnimationLoop = () => {
@@ -1325,19 +1362,20 @@ const handleFileUpload = async (e) => {
 
 const zoomIn = () => {
   viewport.scale = Math.min(50, viewport.scale * 1.15)
-  requestAnimationFrame(renderAll)
+  requestRender()
 }
 
 const zoomOut = () => {
   viewport.scale = Math.max(0.1, viewport.scale / 1.15)
-  requestAnimationFrame(renderAll)
+  requestRender()
 }
 
 const resetView = () => {
   viewport.scale = 1
   viewport.x = 0
   viewport.y = 0
-  requestAnimationFrame(renderAll)
+  bgCacheValid.value = false
+  requestRender()
 }
 </script>
 

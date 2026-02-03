@@ -1,8 +1,8 @@
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, shallowRef, computed, onUnmounted } from 'vue'
 
 /**
- * Particle System for Mining Simulation
- * Visualizes stress accumulation and relief zones with flowing particles
+ * Optimized Particle System with Object Pooling
+ * Reduces GC pressure by reusing particle objects
  */
 export function useParticles(config = {}) {
   const {
@@ -11,61 +11,80 @@ export function useParticles(config = {}) {
     emitRate = 2, // particles per frame
   } = config
 
-  const particles = ref([])
+  // Use shallowRef for large arrays to reduce reactivity overhead
+  const particles = shallowRef([])
+  const particlePool = []
   let animationId = null
   let lastEmitTime = 0
 
-  /**
-   * Particle class
-   */
-  class Particle {
-    constructor(x, y, vx, vy, type = 'stress') {
-      this.x = x
-      this.y = y
-      this.vx = vx
-      this.vy = vy
-      this.type = type // 'stress' or 'relief'
-      this.life = 1 // 1 = full life, 0 = dead
-      this.maxLife = particleLife + Math.random() * 500 - 250
-      this.birth = Date.now()
-      this.size = 2 + Math.random() * 2
+  // Pre-allocate particle pool (js-cache-function-results pattern)
+  const initPool = () => {
+    for (let i = 0; i < maxParticles + 50; i++) {
+      particlePool.push(createParticle())
+    }
+  }
 
-      // Stress particles: red/orange, moving away from face
-      // Relief particles: blue/cyan, moving toward goaf
-      if (type === 'stress') {
-        this.color = `hsl(${0 + Math.random() * 30}, 80%, 60%)` // Red to orange
-      } else {
-        this.color = `hsl(${200 + Math.random() * 40}, 80%, 60%)` // Blue to cyan
+  /**
+   * Particle class with pooling support
+   */
+  function createParticle() {
+    return {
+      x: 0, y: 0, vx: 0, vy: 0,
+      type: 'stress',
+      life: 0,
+      maxLife: particleLife,
+      birth: 0,
+      size: 2,
+      colorHue: 0,
+      colorSat: 80,
+      colorLight: 60,
+      active: false
+    }
+  }
+
+  /**
+   * Acquire particle from pool (js-index-maps pattern)
+   */
+  function acquireParticle() {
+    // Find inactive particle
+    for (let i = 0; i < particlePool.length; i++) {
+      if (!particlePool[i].active) {
+        return particlePool[i]
       }
     }
+    // Pool exhausted, create new
+    const p = createParticle()
+    particlePool.push(p)
+    return p
+  }
 
-    update(dt) {
-      const age = Date.now() - this.birth
-      this.life = 1 - (age / this.maxLife)
+  /**
+   * Release particle back to pool
+   */
+  function releaseParticle(p) {
+    p.active = false
+  }
 
-      if (this.life <= 0) return false
+  /**
+   * Initialize particle with values
+   */
+  function initParticle(p, x, y, vx, vy, type = 'stress') {
+    p.x = x
+    p.y = y
+    p.vx = vx
+    p.vy = vy
+    p.type = type
+    p.life = 1
+    p.maxLife = particleLife + Math.random() * 500 - 250
+    p.birth = Date.now()
+    p.size = 2 + Math.random() * 2
+    p.active = true
 
-      // Apply velocity
-      this.x += this.vx * dt
-      this.y += this.vy * dt
-
-      // Add some turbulence
-      this.vx += (Math.random() - 0.5) * 0.02
-      this.vy += (Math.random() - 0.5) * 0.02
-
-      // Damping
-      this.vx *= 0.99
-      this.vy *= 0.99
-
-      return true
-    }
-
-    draw(ctx) {
-      const alpha = this.life * 0.6
-      ctx.beginPath()
-      ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2)
-      ctx.fillStyle = this.color.replace(')', `, ${alpha})`).replace('hsl', 'hsla')
-      ctx.fill()
+    // Stress particles: red/orange, Relief particles: blue/cyan
+    if (type === 'stress') {
+      p.colorHue = Math.random() * 30
+    } else {
+      p.colorHue = 200 + Math.random() * 40
     }
   }
 
@@ -76,63 +95,162 @@ export function useParticles(config = {}) {
    * @param {Number} speed - Base particle speed
    */
   const emitStressParticles = (line, direction, speed = 1) => {
-    if (particles.value.length >= maxParticles) return
+    // Count active particles (js-length-check-first pattern)
+    let activeCount = 0
+    for (let i = 0; i < particlePool.length; i++) {
+      if (particlePool[i].active) activeCount++
+    }
+
+    if (activeCount >= maxParticles) return
+
+    const spread = 0.3
+    const now = Date.now()
 
     for (let i = 0; i < emitRate; i++) {
+      const p = acquireParticle()
+
       // Random position along the line
       const t = Math.random()
       const x = line[0].x + (line[1].x - line[0].x) * t
       const y = line[0].y + (line[1].y - line[0].y) * t
 
-      // Velocity in emission direction with some spread
-      const spread = 0.3
+      // Velocity with spread
       const vx = direction.x * speed + (Math.random() - 0.5) * spread
       const vy = direction.y * speed + (Math.random() - 0.5) * spread
 
-      particles.value.push(new Particle(x, y, vx, vy, 'stress'))
+      initParticle(p, x, y, vx, vy, 'stress')
     }
+
+    // Update active particles array for drawing
+    updateActiveParticles()
   }
 
   /**
    * Emit relief particles in an area
    */
   const emitReliefParticles = (area, speed = 0.5) => {
-    if (particles.value.length >= maxParticles) return
+    let activeCount = 0
+    for (let i = 0; i < particlePool.length; i++) {
+      if (particlePool[i].active) activeCount++
+    }
 
-    for (let i = 0; i < emitRate / 2; i++) {
+    if (activeCount >= maxParticles) return
+
+    for (let i = 0; i < Math.ceil(emitRate / 2); i++) {
+      const p = acquireParticle()
+
       // Random position in area
       const x = area.minX + Math.random() * (area.maxX - area.minX)
       const y = area.minY + Math.random() * (area.maxY - area.minY)
 
-      // Velocity generally toward goaf (backward)
+      // Random velocity direction
       const angle = Math.random() * Math.PI * 2
       const vx = Math.cos(angle) * speed
       const vy = Math.sin(angle) * speed
 
-      particles.value.push(new Particle(x, y, vx, vy, 'relief'))
+      initParticle(p, x, y, vx, vy, 'relief')
     }
+
+    updateActiveParticles()
   }
 
   /**
-   * Update all particles
+   * Update active particles array for drawing
+   * Called after emitting to sync the display array
+   */
+  function updateActiveParticles() {
+    const active = []
+    for (let i = 0; i < particlePool.length; i++) {
+      if (particlePool[i].active) {
+        active.push(particlePool[i])
+      }
+    }
+    particles.value = active
+  }
+
+  /**
+   * Update all particles (js-combine-iterations pattern)
    * @param {Number} dt - Delta time in seconds
    */
   const update = (dt = 0.016) => {
-    particles.value = particles.value.filter(p => p.update(dt))
+    const now = Date.now()
+    const writeIdx = 0
+
+    // Update in place, filtering dead particles
+    for (let i = 0; i < particlePool.length; i++) {
+      const p = particlePool[i]
+      if (!p.active) continue
+
+      const age = now - p.birth
+      p.life = 1 - (age / p.maxLife)
+
+      if (p.life <= 0) {
+        p.active = false
+        continue
+      }
+
+      // Apply velocity
+      p.x += p.vx * dt
+      p.y += p.vy * dt
+
+      // Add turbulence
+      p.vx += (Math.random() - 0.5) * 0.02
+      p.vy += (Math.random() - 0.5) * 0.02
+
+      // Damping
+      p.vx *= 0.99
+      p.vy *= 0.99
+    }
+
+    updateActiveParticles()
   }
 
   /**
-   * Draw all particles
+   * Draw all particles (batch Canvas operations)
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   const draw = (ctx) => {
-    particles.value.forEach(p => p.draw(ctx))
+    // Batch draw calls by particle type (js-batch-dom-css pattern)
+    const stressParticles = []
+    const reliefParticles = []
+
+    for (let i = 0; i < particles.value.length; i++) {
+      const p = particles.value[i]
+      if (p.type === 'stress') {
+        stressParticles.push(p)
+      } else {
+        reliefParticles.push(p)
+      }
+    }
+
+    // Draw stress particles
+    for (let i = 0; i < stressParticles.length; i++) {
+      const p = stressParticles[i]
+      const alpha = p.life * 0.6
+      ctx.fillStyle = `hsla(${p.colorHue}, ${p.colorSat}%, ${p.colorLight}%, ${alpha})`
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // Draw relief particles
+    for (let i = 0; i < reliefParticles.length; i++) {
+      const p = reliefParticles[i]
+      const alpha = p.life * 0.6
+      ctx.fillStyle = `hsla(${p.colorHue}, ${p.colorSat}%, ${p.colorLight}%, ${alpha})`
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
+      ctx.fill()
+    }
   }
 
   /**
    * Clear all particles
    */
   const clear = () => {
+    for (let i = 0; i < particlePool.length; i++) {
+      particlePool[i].active = false
+    }
     particles.value = []
   }
 
@@ -140,6 +258,9 @@ export function useParticles(config = {}) {
    * Get particle count
    */
   const count = computed(() => particles.value.length)
+
+  // Initialize particle pool on creation
+  initPool()
 
   /**
    * Start animation loop
@@ -196,7 +317,7 @@ export function useParticles(config = {}) {
 }
 
 /**
- * Ripple Effect for stress zone visualization
+ * Optimized Ripple Effect with Object Pooling
  */
 export function useRipples(config = {}) {
   const {
@@ -205,58 +326,107 @@ export function useRipples(config = {}) {
     rippleInterval = 800, // ms between ripples
   } = config
 
-  const ripples = ref([])
+  // Use shallowRef for arrays
+  const ripples = shallowRef([])
+  const ripplePool = []
   let lastRippleTime = 0
-  let animationId = null
 
-  class Ripple {
-    constructor(x, y) {
-      this.x = x
-      this.y = y
-      this.radius = 0
-      this.maxRadius = 100 + Math.random() * 50
-      this.life = 1
-      this.speed = rippleSpeed + Math.random() * 20
-      this.width = 2 + Math.random() * 2
+  // Initialize ripple pool
+  const initRipplePool = () => {
+    for (let i = 0; i < maxRipples + 2; i++) {
+      ripplePool.push({
+        x: 0, y: 0, radius: 0,
+        maxRadius: 100,
+        life: 0,
+        speed: rippleSpeed,
+        width: 2,
+        active: false
+      })
     }
+  }
 
-    update(dt) {
-      this.radius += this.speed * dt
-      this.life = 1 - (this.radius / this.maxRadius)
-      return this.life > 0
+  function acquireRipple() {
+    for (let i = 0; i < ripplePool.length; i++) {
+      if (!ripplePool[i].active) {
+        return ripplePool[i]
+      }
     }
+    const r = { x: 0, y: 0, radius: 0, maxRadius: 100, life: 0, speed: rippleSpeed, width: 2, active: false }
+    ripplePool.push(r)
+    return r
+  }
 
-    draw(ctx) {
-      if (this.life <= 0) return
-
-      ctx.beginPath()
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
-      ctx.strokeStyle = `rgba(239, 68, 68, ${this.life * 0.5})`
-      ctx.lineWidth = this.width * this.life
-      ctx.stroke()
+  function updateActiveRipples() {
+    const active = []
+    for (let i = 0; i < ripplePool.length; i++) {
+      if (ripplePool[i].active) {
+        active.push(ripplePool[i])
+      }
     }
+    ripples.value = active
   }
 
   const emit = (x, y) => {
     const now = Date.now()
     if (now - lastRippleTime < rippleInterval) return
-    if (ripples.value.length >= maxRipples) return
 
-    ripples.value.push(new Ripple(x, y))
+    // Count active ripples
+    let activeCount = 0
+    for (let i = 0; i < ripplePool.length; i++) {
+      if (ripplePool[i].active) activeCount++
+    }
+    if (activeCount >= maxRipples) return
+
+    const r = acquireRipple()
+    r.x = x
+    r.y = y
+    r.radius = 0
+    r.maxRadius = 100 + Math.random() * 50
+    r.life = 1
+    r.speed = rippleSpeed + Math.random() * 20
+    r.width = 2 + Math.random() * 2
+    r.active = true
     lastRippleTime = now
+
+    updateActiveRipples()
   }
 
   const update = (dt = 0.016) => {
-    ripples.value = ripples.value.filter(r => r.update(dt))
+    for (let i = 0; i < ripplePool.length; i++) {
+      const r = ripplePool[i]
+      if (!r.active) continue
+
+      r.radius += r.speed * dt
+      r.life = 1 - (r.radius / r.maxRadius)
+
+      if (r.life <= 0) {
+        r.active = false
+      }
+    }
+    updateActiveRipples()
   }
 
   const draw = (ctx) => {
-    ripples.value.forEach(r => r.draw(ctx))
+    // Batch stroke style setting
+    for (let i = 0; i < ripples.value.length; i++) {
+      const r = ripples.value[i]
+      ctx.beginPath()
+      ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(239, 68, 68, ${r.life * 0.5})`
+      ctx.lineWidth = r.width * r.life
+      ctx.stroke()
+    }
   }
 
   const clear = () => {
+    for (let i = 0; i < ripplePool.length; i++) {
+      ripplePool[i].active = false
+    }
     ripples.value = []
   }
+
+  // Initialize pool
+  initRipplePool()
 
   return {
     ripples,
