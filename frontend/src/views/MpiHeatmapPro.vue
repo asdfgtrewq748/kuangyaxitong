@@ -140,6 +140,16 @@
         @skip-to-start="simulation.skipToStart"
         @skip-to-end="simulation.skipToEnd"
       />
+
+      <SimulationDataPanel
+        v-if="activeWorkface"
+        :progress="simulation.progress.value"
+        :playing="simulation.isPlaying.value"
+        :direction="miningDirection"
+        :playback-speed="simulation.playbackSpeed.value"
+        :total-distance="500"
+        :workface-length="activeWorkface?.bounds ? (activeWorkface.bounds.max_y - activeWorkface.bounds.min_y) : 150"
+      />
     </div>
 
     <div class="ui-panel bottom-right-panel">
@@ -167,6 +177,7 @@ import { useMiningSimulation } from '../composables/useMiningSimulation'
 import { useParticles, useRipples } from '../composables/useParticles'
 import DirectionControl from '../components/simulation/DirectionControl.vue'
 import PlaybackControls from '../components/simulation/PlaybackControls.vue'
+import SimulationDataPanel from '../components/simulation/SimulationDataPanel.vue'
 import * as d3 from 'd3'
 import {
   getCoalSeams,
