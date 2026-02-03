@@ -1,168 +1,210 @@
 <template>
   <div class="mpi-pro-page">
-    <!-- Map Canvas Container (The "Stage") -->
+    <!-- Top Navigation Bar (Compact) -->
+    <nav class="top-nav">
+      <div class="nav-left">
+        <button class="back-btn-mini" @click="$router.back()" title="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <span class="nav-title">MPI 数值模拟</span>
+        <div class="nav-separator"></div>
+        <select v-model="seam" @change="handleSeamChange" class="nav-select">
+          <option v-for="s in seams" :key="s.name" :value="s.name">{{ s.name }}</option>
+        </select>
+        <div class="mini-stats" v-if="hasData">
+          <span class="mini-stat">均值: <b>{{ stats.mean?.toFixed(1) }}</b></span>
+          <span class="mini-stat danger">风险: <b>{{ stats.min?.toFixed(1) }}</b></span>
+        </div>
+      </div>
+
+      <div class="nav-center">
+        <button class="nav-tool" @click="toggleControls" :class="{ active: controlsVisible }" title="控制面板">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6m4.24-13.24l-4.24 4.24m0 5.66l4.24 4.24M1 12h6m6 0h6m13.24 4.24l-4.24-4.24m-5.66 0l-4.24-4.24"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="nav-right">
+        <button class="nav-btn" @click="triggerWorkfaceUpload" title="导入工作面">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+          </svg>
+        </button>
+        <button class="nav-btn" @click="fitToScreen" title="适配视图">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+          </svg>
+        </button>
+        <button class="nav-btn" @click="zoomIn" title="放大">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/>
+          </svg>
+        </button>
+        <button class="nav-btn" @click="zoomOut" title="缩小">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M8 11h6"/>
+          </svg>
+        </button>
+      </div>
+      <input ref="fileInput" type="file" style="display:none" @change="handleFileUpload" accept=".csv,.json,.txt">
+    </nav>
+
+    <!-- Collapsible Control Panel -->
+    <transition name="panel-slide">
+      <div v-if="controlsVisible" class="control-panel-overlay">
+        <div class="control-panel">
+          <div class="control-section">
+            <h4>视图设置</h4>
+            <div class="control-grid">
+              <div class="control-item">
+                <label>网格精度</label>
+                <div class="range-wrapper">
+                  <input type="range" v-model.number="resolution" min="30" max="150" step="10" @change="recomputeGlobal" class="range-input">
+                  <span class="range-value">{{ resolution }}m</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-section">
+            <h4>图层</h4>
+            <div class="layer-toggles">
+              <label class="layer-toggle">
+                <input type="checkbox" v-model="layers.workfaces">
+                <span>工作面</span>
+              </label>
+              <label class="layer-toggle">
+                <input type="checkbox" v-model="layers.contours">
+                <span>等值线</span>
+              </label>
+              <label class="layer-toggle">
+                <input type="checkbox" v-model="layers.grid">
+                <span>网格</span>
+              </label>
+              <label class="layer-toggle">
+                <input type="checkbox" v-model="layers.boreholes">
+                <span>钻孔</span>
+              </label>
+              <label class="layer-toggle">
+                <input type="checkbox" v-model="layers.gradedBands">
+                <span>分级带</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="control-section">
+            <h4>推进方向</h4>
+            <DirectionControl
+              v-model:direction="miningDirection"
+              @update:direction="simulation.setDirection"
+            />
+          </div>
+
+          <div class="control-section">
+            <h4>图例</h4>
+            <div class="mini-legend">
+              <div class="legend-gradient"></div>
+              <div class="legend-labels">
+                <span>低风险</span>
+                <span>高风险</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="panel-close" @click="toggleControls">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Main Canvas Container -->
     <div ref="stageContainer" class="stage-container">
       <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">全域数据计算中...</div>
       </div>
-      
-      <!-- Background Layer (Global MPI) -->
+
       <canvas ref="bgCanvas" class="layer-canvas layer-bg"></canvas>
-      
-      <!-- Dynamic Layer (Simulation/Mining Effect) -->
       <canvas ref="dynamicCanvas" class="layer-canvas layer-dynamic"></canvas>
-      
-      <!-- Overlay Layer (Workfaces, Grid, Highlights) -->
       <canvas ref="overlayCanvas" class="layer-canvas layer-overlay"></canvas>
     </div>
 
-    <!-- UI Overlay: Header & Stats -->
-    <div class="ui-panel top-left-panel">
-      <div class="panel-header">
-        <button class="back-btn" @click="$router.back()" title="返回">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        </button>
-        <div class="app-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-            <path d="M12 6v6l4 2"/>
+    <!-- Bottom Compact Playback Bar -->
+    <div class="playback-bar">
+      <div class="playback-main">
+        <button class="play-btn-mini" @click="simulation.togglePlay" :class="{ playing: simulation.isPlaying.value }" title="播放/暂停">
+          <svg v-if="!simulation.isPlaying.value" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
           </svg>
-        </div>
-        <div class="title-group">
-          <h1>MPI 数值模拟系统</h1>
-          <span class="subtitle">Mining Pressure Intelligence Core</span>
-        </div>
-      </div>
-
-      <div class="status-chips">
-        <span class="chip">煤层: {{ seam || '-' }}</span>
-        <span class="chip">分辨率: {{ resolution }}m</span>
-        <span class="chip">工作面: {{ workfaces.length }}</span>
-        <span class="chip" :class="{ on: layers.contours }">等值线</span>
-      </div>
-
-      <div class="stats-card glass-panel" v-if="hasData">
-        <div class="stat-row">
-          <span class="label">全域均值</span>
-          <span class="value">{{ stats.mean?.toFixed(2) || '-' }}</span>
-        </div>
-        <div class="stat-row">
-          <span class="label">最低风险</span>
-          <span class="value safe">{{ stats.max?.toFixed(2) || '-' }}</span>
-        </div>
-        <div class="stat-row">
-          <span class="label">最高风险</span>
-          <span class="value danger">{{ stats.min?.toFixed(2) || '-' }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- UI Overlay: Controls & Layers -->
-    <div class="ui-panel top-right-panel">
-      <div class="glass-panel control-group">
-        <h3>视图控制</h3>
-        <div class="control-row">
-          <label>煤层</label>
-          <select v-model="seam" @change="handleSeamChange" class="select-input">
-            <option v-for="s in seams" :key="s.name" :value="s.name">{{ s.name }}</option>
-          </select>
-        </div>
-        <div class="control-row">
-          <label>网格精度</label>
-          <input type="range" v-model.number="resolution" min="30" max="150" step="10" @change="recomputeGlobal" class="range-input">
-          <span class="value-display">{{ resolution }}m</span>
-        </div>
-      </div>
-
-      <div class="glass-panel control-group">
-        <h3>图层叠加</h3>
-        <label class="checkbox-row">
-          <input type="checkbox" v-model="layers.workfaces"> 工作面边界
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" v-model="layers.contours"> 等值线
-        </label>
-        <label class="checkbox-row sub-option" v-if="layers.contours">
-          <input type="checkbox" v-model="layers.contourLabels"> 等值线标注
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" v-model="layers.boreholes"> 钻孔点位
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" v-model="layers.grid"> 工程网格
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" v-model="layers.gradedBands"> 分级等值带
-        </label>
-      </div>
-
-      <DirectionControl
-        v-model:direction="miningDirection"
-        @update:direction="simulation.setDirection"
-      />
-
-      <div class="glass-panel control-group action-group">
-        <button class="btn primary" @click="triggerWorkfaceUpload">
-          导入工作面
-          <span class="btn-sub">CSV / JSON / TXT</span>
-          <input ref="fileInput" type="file" style="display:none" @change="handleFileUpload" accept=".csv,.json,.txt">
+          <svg v-else viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          </svg>
         </button>
-        <button class="btn ghost" @click="fitToScreen">适配视图</button>
-      </div>
 
-      <div class="glass-panel legend-card">
-        <div class="legend-title">MPI 分级等值带</div>
-        <div class="legend-bands">
-          <div v-for="(item, idx) in gradeRanges" :key="item.label" class="legend-band">
-            <div class="legend-swatch" :style="{ background: gradeColors[idx] }"></div>
-            <div class="legend-text">
-              <div class="legend-grade">{{ item.label }}</div>
-              <div class="legend-range">{{ item.range }}</div>
-            </div>
+        <div class="progress-section">
+          <input
+            type="range"
+            :value="simulation.progress.value"
+            @input="simulation.seek(Number($event.target.value))"
+            min="0"
+            max="100"
+            step="0.1"
+            class="progress-slider"
+          >
+          <div class="progress-info">
+            <span>{{ Math.round(simulation.progress.value) }}%</span>
+            <span>{{ ((simulation.progress.value / 100) * 500).toFixed(0) }}m</span>
           </div>
         </div>
+
+        <div class="speed-control">
+          <button
+            v-for="speed in [0.5, 1, 2, 5]"
+            :key="speed"
+            :class="['speed-btn', { active: simulation.playbackSpeed.value === speed }]"
+            @click="simulation.setPlaybackSpeed(speed)"
+          >{{ speed }}x</button>
+        </div>
+
+        <button class="step-btn" @click="simulation.stepBackward" title="后退">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5-6V12z"/></svg>
+        </button>
+        <button class="step-btn" @click="simulation.stepForward" title="前进">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+      </div>
+
+      <!-- Mini Dashboard -->
+      <div class="mini-dashboard" v-if="activeWorkface">
+        <div class="dash-item">
+          <span class="dash-label">应力</span>
+          <span class="dash-value stress">{{ stressLevel.toFixed(0) }}%</span>
+        </div>
+        <div class="dash-item">
+          <span class="dash-label">卸压</span>
+          <span class="dash-value relief">{{ reliefLevel.toFixed(0) }}%</span>
+        </div>
+        <div class="dash-item">
+          <span class="dash-label">阶段</span>
+          <span class="dash-value phase">{{ phaseLabels[currentPhase] }}</span>
+        </div>
+        <div class="dash-item">
+          <span class="dash-label">方向</span>
+          <span class="dash-value">{{ miningDirection }}°</span>
+        </div>
       </div>
     </div>
 
-    <!-- UI Overlay: Simulation Bar (Bottom) -->
-    <div class="ui-panel bottom-panel glass-panel">
-      <PlaybackControls
-        :progress="simulation.progress.value"
-        :playing="simulation.isPlaying.value"
-        :playback-speed="simulation.playbackSpeed.value"
-        :total-distance="500"
-        @update:progress="simulation.seek"
-        @toggle-play="simulation.togglePlay"
-        @update:playbackSpeed="simulation.setPlaybackSpeed"
-        @step-forward="simulation.stepForward"
-        @step-backward="simulation.stepBackward"
-        @skip-to-start="simulation.skipToStart"
-        @skip-to-end="simulation.skipToEnd"
-      />
-
-      <SimulationDataPanel
-        v-if="activeWorkface"
-        :progress="simulation.progress.value"
-        :playing="simulation.isPlaying.value"
-        :direction="miningDirection"
-        :playback-speed="simulation.playbackSpeed.value"
-        :total-distance="500"
-        :workface-length="activeWorkface?.bounds ? (activeWorkface.bounds.max_y - activeWorkface.bounds.min_y) : 150"
-      />
-    </div>
-
-    <div class="ui-panel bottom-right-panel">
-      <div class="glass-panel tool-group">
-        <button class="tool-btn" @click="zoomIn" title="放大">+</button>
-        <button class="tool-btn" @click="zoomOut" title="缩小">−</button>
-        <button class="tool-btn" @click="fitToScreen" title="适配">适配</button>
-        <button class="tool-btn" @click="resetView" title="复位">复位</button>
-      </div>
-      <div class="hint-card">
-        <span class="hint-main">拖拽移动 · 滚轮缩放 · 单击选择</span>
-        <span class="hint-shortcuts">空格:播放 ←→:步进 ↑↓:速度 R:重置</span>
-      </div>
+    <!-- Floating Hint -->
+    <div class="floating-hint">
+      拖拽移动 · 滚轮缩放 · 空格播放 · R 重置
     </div>
 
     <!-- Tooltip -->
@@ -174,13 +216,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted, shallowRef, markRaw } from 'vue'
+import { ref, reactive, onMounted, computed, watch, onUnmounted, shallowRef, markRaw } from 'vue'
 import { useToast } from '../composables/useToast'
 import { useMiningSimulation } from '../composables/useMiningSimulation'
 import { useParticles, useRipples } from '../composables/useParticles'
 import DirectionControl from '../components/simulation/DirectionControl.vue'
-import PlaybackControls from '../components/simulation/PlaybackControls.vue'
-import SimulationDataPanel from '../components/simulation/SimulationDataPanel.vue'
 import * as d3 from 'd3'
 import {
   getCoalSeams,
@@ -198,6 +238,9 @@ const resolution = ref(80)
 const stats = ref({})
 const activeWorkface = ref(null)
 const workfaces = ref([])
+
+// UI State
+const controlsVisible = ref(false)
 
 // Mining Simulation State
 const miningDirection = ref(0)  // Direction angle in degrees
@@ -290,6 +333,35 @@ const gradeRanges = computed(() => {
     { label: 'IV 级', range: `${fmt(t3)} ~ ${fmt(t4)}` },
     { label: 'V 级', range: `>= ${fmt(t4)}` }
   ]
+})
+
+// --- UI Methods ---
+const toggleControls = () => {
+  controlsVisible.value = !controlsVisible.value
+}
+
+// --- Mini Dashboard Computed ---
+const currentPhase = computed(() => {
+  const p = simulation.progress.value
+  if (p < 15) return 0
+  if (p < 30) return 1
+  if (p < 70) return 2
+  if (p < 90) return 3
+  return 4
+})
+
+const phaseLabels = ['初采', '初压', '推进', '周压', '收尾']
+
+const stressLevel = computed(() => {
+  const p = simulation.progress.value
+  const baseStress = 40 + p * 0.3
+  const periodicStress = 20 * Math.sin((p / 100) * Math.PI * 4)
+  return Math.min(100, Math.max(0, baseStress + periodicStress))
+})
+
+const reliefLevel = computed(() => {
+  const p = simulation.progress.value
+  return Math.min(95, p * 0.8 + 10)
 })
 
 // --- Methods: Data Loading ---
@@ -1380,300 +1452,620 @@ const resetView = () => {
 </script>
 
 <style scoped>
+/* ==================== Main Layout ==================== */
 .mpi-pro-page {
+  position: fixed;
+  inset: 0;
+  background: #f0f2f5;
+  overflow: hidden;
+  font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+}
+
+/* ==================== Top Navigation Bar ==================== */
+.top-nav {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: radial-gradient(1200px 800px at 20% 10%, rgba(136, 146, 168, 0.08), transparent 55%),
-              radial-gradient(1200px 800px at 80% 90%, rgba(90, 99, 120, 0.06), transparent 55%),
-              #f5f6f8;
-  overflow: hidden;
-  color: var(--text-primary);
-  font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
-  z-index: 200;
-}
-.mpi-pro-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(245, 246, 248, 0.8));
-  pointer-events: none;
-  z-index: 0;
+  right: 0;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
 }
 
-.back-btn {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn-mini {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #64748b;
   cursor: pointer;
-  padding: 8px;
-  border-radius: var(--border-radius-sm);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-normal);
+  transition: all 0.15s;
 }
-.back-btn:hover {
-  background: var(--color-primary);
-  color: #fff;
+.back-btn-mini:hover {
+  background: #f1f5f9;
+  color: #334155;
 }
-.back-btn svg { width: 24px; height: 24px; }
+.back-btn-mini svg {
+  width: 18px;
+  height: 18px;
+}
 
-/* Stage */
+.nav-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.nav-separator {
+  width: 1px;
+  height: 20px;
+  background: #e2e8f0;
+}
+
+.nav-select {
+  font-size: 12px;
+  color: #475569;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.nav-select:hover {
+  background: #f1f5f9;
+}
+.nav-select:focus {
+  outline: none;
+  background: #e2e8f0;
+}
+
+.mini-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mini-stat b {
+  color: #0f172a;
+}
+.mini-stat.danger b {
+  color: #dc2626;
+}
+
+.nav-center {
+  display: flex;
+  justify-content: center;
+}
+
+.nav-tool {
+  width: 32px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.nav-tool:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+.nav-tool.active {
+  background: #3b82f6;
+  color: white;
+}
+.nav-tool svg {
+  width: 16px;
+  height: 16px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-btn {
+  width: 32px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.nav-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+.nav-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ==================== Stage Container ==================== */
 .stage-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
+  position: absolute;
+  inset: 0;
   cursor: crosshair;
   z-index: 1;
-  background-image: linear-gradient(transparent 95%, rgba(136, 146, 168, 0.06) 96%),
-                    linear-gradient(90deg, transparent 95%, rgba(136, 146, 168, 0.05) 96%);
-  background-size: 40px 40px;
 }
 
 .layer-canvas {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   pointer-events: none;
 }
-
 .layer-bg { z-index: 1; }
 .layer-dynamic { z-index: 2; }
 .layer-overlay { z-index: 3; }
 
-/* Loading */
+/* ==================== Loading ==================== */
 .loading-overlay {
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
+  inset: 0;
   background: rgba(255, 255, 255, 0.9);
   z-index: 50;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 16px;
 }
-.loading-spinner {
-  width: 40px; height: 40px;
-  border: 3px solid var(--border-color);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-.loading-text {
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin-top: var(--spacing-md);
-}
-@keyframes spin { to { transform: rotate(360deg); } }
 
-/* UI Panels */
-.ui-panel {
-  position: absolute;
-  z-index: 10;
-  padding: 16px;
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ==================== Control Panel Overlay ==================== */
+.control-panel-overlay {
+  position: fixed;
+  top: 52px;
+  right: 16px;
+  z-index: 90;
   pointer-events: none;
 }
-.ui-panel > * {
+
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: all 0.2s ease;
+}
+.panel-slide-enter-from,
+.panel-slide-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.control-panel {
   pointer-events: auto;
-}
-
-.top-left-panel { top: 12px; left: 240px; width: 360px; display: flex; flex-direction: column; gap: 14px; }
-.top-right-panel { top: 12px; right: 12px; width: 320px; display: flex; flex-direction: column; gap: 14px; }
-.bottom-panel { bottom: 20px; left: calc(50% + 120px); transform: translateX(-50%); width: 640px; }
-.bottom-right-panel { bottom: 18px; right: 12px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
-
-/* Glass Panel Style - Academic Light */
-.glass-panel {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-md);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
   padding: 16px;
-  box-shadow: var(--shadow-md);
+  width: 260px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
-/* Header */
-.panel-header {
+.panel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.panel-close:hover {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.panel-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.control-section {
+  margin-bottom: 16px;
+}
+.control-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.control-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.control-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-item label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.range-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.range-input {
+  flex: 1;
+  height: 4px;
+  accent-color: #3b82f6;
+}
+
+.range-value {
+  font-size: 12px;
+  color: #475569;
+  min-width: 40px;
+  text-align: right;
+}
+
+.layer-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+}
+.layer-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+}
+
+.mini-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-gradient {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #3b82f6, #22c55e, #eab308, #f97316, #dc2626);
+}
+
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* ==================== Bottom Playback Bar ==================== */
+.playback-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.playback-main {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 6px;
-}
-.app-icon {
-  width: 40px; height: 40px;
-  background: var(--gradient-primary);
-  border-radius: var(--border-radius-sm);
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: var(--shadow-sm);
-}
-.app-icon svg { width: 24px; height: 24px; stroke: #fff; }
-.title-group h1 { font-size: 18px; font-weight: 600; margin: 0; color: var(--text-primary); }
-.title-group .subtitle { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; }
-
-.status-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.chip {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-}
-.chip.on {
-  background: var(--color-info-light);
-  border-color: var(--color-info);
-  color: var(--color-info);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* Stats */
-.stats-card { display: flex; flex-direction: column; gap: 12px; }
-.stat-row { display: flex; justify-content: space-between; align-items: baseline; }
-.stat-row .label { font-size: 13px; color: var(--text-tertiary); }
-.stat-row .value { font-size: 16px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--text-primary); }
-.stat-row .value.safe { color: var(--color-success); }
-.stat-row .value.danger { color: var(--color-error); }
-
-/* Controls */
-.control-group h3 { font-size: 12px; color: var(--text-tertiary); text-transform: uppercase; margin: 0 0 12px 0; font-weight: 500; }
-.control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.select-input { background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: var(--border-radius-sm); min-width: 140px; }
-.range-input { flex: 1; margin: 0 10px; accent-color: var(--color-primary); }
-.value-display { min-width: 44px; text-align: right; font-size: 12px; color: var(--text-secondary); }
-.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-primary); margin-bottom: 8px; cursor: pointer; }
-
-/* Action Button */
-.btn.primary {
-  width: 100%;
-  background: var(--gradient-primary);
+.play-btn-mini {
+  width: 36px;
+  height: 36px;
   border: none;
-  padding: 10px;
-  border-radius: var(--border-radius-sm);
+  background: #3b82f6;
   color: white;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.play-btn-mini:hover {
+  background: #2563eb;
+  transform: scale(1.05);
+}
+.play-btn-mini.playing {
+  background: #ef4444;
+}
+.play-btn-mini svg {
+  width: 16px;
+  height: 16px;
+}
+
+.progress-section {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  align-items: center;
+  min-width: 180px;
 }
-.btn.primary:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
-.btn.primary .btn-sub { font-size: 11px; opacity: 0.8; }
-.btn.ghost {
+
+.progress-slider {
   width: 100%;
-  margin-top: 10px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: 8px;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
+  height: 4px;
+  border-radius: 2px;
+  background: #e2e8f0;
+  outline: none;
+  -webkit-appearance: none;
   cursor: pointer;
 }
-.btn.ghost:hover { background: var(--bg-tertiary); color: var(--color-primary); }
+.progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: grab;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.progress-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
 
-/* Simulation Bar */
-.simulation-controls { display: flex; align-items: center; gap: 16px; }
-.btn-icon { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--transition-normal); }
-.btn-icon:hover { background: var(--color-primary); color: #fff; }
-.btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
-.timeline-container { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.timeline-label { font-size: 10px; color: var(--text-tertiary); }
-.timeline-slider { width: 100%; accent-color: var(--color-primary); }
-.step-display { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); width: 100px; text-align: right; }
-.workface-indicator { font-size: 10px; color: var(--text-tertiary); margin-top: 4px; }
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #64748b;
+}
 
-/* Tooltip */
+.speed-control {
+  display: flex;
+  gap: 4px;
+}
+
+.speed-btn {
+  width: 28px;
+  height: 24px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.speed-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+.speed-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.step-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.step-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+.step-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ==================== Mini Dashboard ==================== */
+.mini-dashboard {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dash-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.dash-label {
+  font-size: 9px;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.dash-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.dash-value.stress {
+  color: #ef4444;
+}
+
+.dash-value.relief {
+  color: #3b82f6;
+}
+
+.dash-value.phase {
+  color: #f59e0b;
+}
+
+/* ==================== Floating Hint ==================== */
+.floating-hint {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  font-size: 11px;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* ==================== Tooltip ==================== */
 .hover-tooltip {
   position: fixed;
-  background: rgba(44, 53, 69, 0.95);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 8px 12px;
-  border-radius: var(--border-radius-sm);
-  pointer-events: none;
-  z-index: 100;
-  transform: translate(10px, 10px);
-}
-.tooltip-val { color: #d0d5e0; font-weight: 600; font-size: 14px; }
-.tooltip-xy { color: #aab0c0; font-size: 11px; margin-top: 2px; }
-
-.legend-card { display: flex; flex-direction: column; gap: 8px; }
-.legend-title { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
-.legend-bar {
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #dc2626 0%, #fb923c 35%, #facc15 55%, #60a5fa 75%, #3b82f6 100%);
-  border: 1px solid var(--border-color);
-}
-.legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-tertiary); }
-.legend-labels span { width: 33%; text-align: center; }
-.legend-labels span:first-child { text-align: left; }
-.legend-labels span:last-child { text-align: right; }
-.sub-option { margin-left: 14px; opacity: 0.9; }
-
-.legend-bands { display: flex; flex-direction: column; gap: 6px; }
-.legend-band { display: flex; align-items: center; gap: 8px; }
-.legend-swatch { width: 28px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); }
-.legend-text { display: flex; flex-direction: column; line-height: 1.2; }
-.legend-grade { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
-.legend-range { font-size: 10px; color: var(--text-tertiary); }
-
-.tool-group { display: flex; gap: 8px; }
-.tool-btn {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  background: rgba(30, 41, 59, 0.95);
+  color: white;
   padding: 6px 10px;
-  border-radius: var(--border-radius-sm);
+  border-radius: 6px;
   font-size: 12px;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-.tool-btn:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-
-.hint-card {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  background: var(--bg-primary);
-  padding: 6px 10px;
-  border-radius: var(--border-radius-sm);
-  border: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: center;
+  pointer-events: none;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.hint-main {
-  font-size: 11px;
-  color: var(--text-tertiary);
+.tooltip-val {
+  font-weight: 600;
 }
 
-.hint-shortcuts {
+.tooltip-xy {
   font-size: 10px;
-  color: var(--color-primary);
-  font-family: 'JetBrains Mono', monospace;
   opacity: 0.8;
 }
 
-@media (max-width: 1200px) {
-  .top-left-panel { left: 16px; width: 320px; }
-  .bottom-panel { width: 520px; left: 50%; }
-}
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+  .nav-title {
+    display: none;
+  }
 
-@media (max-width: 900px) {
-  .top-right-panel { width: 280px; }
-  .bottom-panel { width: 420px; }
-  .bottom-right-panel { right: 8px; }
+  .mini-stats {
+    display: none;
+  }
+
+  .playback-bar {
+    flex-direction: column;
+    align-items: stretch;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    transform: none;
+  }
+
+  .playback-main {
+    flex-wrap: wrap;
+  }
+
+  .mini-dashboard {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .control-panel-overlay {
+    top: 48px;
+    right: 8px;
+  }
+
+  .control-panel {
+    width: 220px;
+    padding: 12px;
+  }
+
+  .floating-hint {
+    display: none;
+  }
 }
 </style>
