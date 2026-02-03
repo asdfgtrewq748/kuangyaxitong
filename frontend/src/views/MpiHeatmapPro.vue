@@ -97,6 +97,11 @@
         </label>
       </div>
 
+      <DirectionControl
+        v-model:direction="miningDirection"
+        @update:direction="simulation.setDirection"
+      />
+
       <div class="glass-panel control-group action-group">
         <button class="btn primary" @click="triggerWorkfaceUpload">
           导入工作面
@@ -122,29 +127,19 @@
 
     <!-- UI Overlay: Simulation Bar (Bottom) -->
     <div class="ui-panel bottom-panel glass-panel">
-      <div class="simulation-controls">
-        <button class="btn-icon" @click="toggleSimulation" :disabled="!activeWorkface">
-          <svg v-if="!isSimulating" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          <svg v-else viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-        </button>
-        
-        <div class="timeline-container">
-          <div class="timeline-label">开采推进度</div>
-          <input 
-            type="range" 
-            class="timeline-slider" 
-            v-model.number="simulationStep" 
-            min="0" 
-            max="100" 
-            :disabled="!activeWorkface"
-          >
-        </div>
-        
-        <div class="step-display">
-          Step: {{ simulationStep }} / 100
-          <div class="workface-indicator">{{ activeWorkface?.name || '未选择工作面' }}</div>
-        </div>
-      </div>
+      <PlaybackControls
+        :progress="simulation.progress.value"
+        :playing="simulation.isPlaying.value"
+        :playback-speed="simulation.playbackSpeed.value"
+        :total-distance="500"
+        @update:progress="simulation.seek"
+        @toggle-play="simulation.togglePlay"
+        @update:playbackSpeed="simulation.setPlaybackSpeed"
+        @step-forward="simulation.stepForward"
+        @step-backward="simulation.stepBackward"
+        @skip-to-start="simulation.skipToStart"
+        @skip-to-end="simulation.skipToEnd"
+      />
     </div>
 
     <div class="ui-panel bottom-right-panel">
@@ -166,15 +161,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useToast } from '../composables/useToast'
+import { useMiningSimulation } from '../composables/useMiningSimulation'
+import DirectionControl from '../components/simulation/DirectionControl.vue'
+import PlaybackControls from '../components/simulation/PlaybackControls.vue'
 import * as d3 from 'd3'
-import { 
-  getCoalSeams, 
-  getSeamOverburden, 
-  getRockParams, 
+import {
+  getCoalSeams,
+  getSeamOverburden,
+  getRockParams,
   mpiInterpolate,
-  parseMpiWorkfaces 
+  parseMpiWorkfaces
 } from '../api'
 
 // --- State ---
@@ -183,10 +181,19 @@ const seams = ref([])
 const seam = ref('')
 const resolution = ref(80)
 const stats = ref({})
-const isSimulating = ref(false)
-const simulationStep = ref(0)
 const activeWorkface = ref(null)
 const workfaces = ref([])
+
+// Mining Simulation State
+const miningDirection = ref(0)  // Direction angle in degrees
+const miningSpeed = ref(1)       // Playback speed multiplier
+
+// Initialize simulation composable (reactive to activeWorkface)
+const simulation = useMiningSimulation(activeWorkface, {
+  totalDistance: 500,
+  frameRate: 60,
+  progressPerSecond: 10
+})
 
 const layers = reactive({
   workfaces: true,
@@ -401,8 +408,10 @@ const renderAll = () => {
   
   drawBackground()
   drawOverlay()
-  // Re-draw simulation if active
-  if (isSimulating.value) simulateMiningEffect(simulationStep.value)
+  // Re-draw simulation if active or at any progress
+  if (simulation.progress.value > 0) {
+    simulateMiningEffect(simulation.progress.value)
+  }
 }
 
 const resizeCanvas = (canvas) => {
@@ -672,81 +681,200 @@ const drawEngineeringGrid = (ctx) => {
   ctx.restore()
 }
 
+/**
+ * Simulate Mining Effect with Directional Support
+ * Renders goaf area, stress zone, and relief zone based on current progress and direction
+ */
 const simulateMiningEffect = (progress) => {
   const ctx = dynamicCanvas.value?.getContext('2d')
-  if(!ctx || !activeWorkface.value) return
-  
+  if (!ctx || !activeWorkface.value) return
+
   ctx.clearRect(0, 0, dynamicCanvas.value.width, dynamicCanvas.value.height)
-  
+
+  // Get bounds from workface
   let bounds = activeWorkface.value.bounds
   if (!bounds && activeWorkface.value.points) {
-     const xs = activeWorkface.value.points.map(p => p[0])
-     const ys = activeWorkface.value.points.map(p => p[1])
-     bounds = {
-         min_x: Math.min(...xs), max_x: Math.max(...xs),
-         min_y: Math.min(...ys), max_y: Math.max(...ys)
-     }
+    const xs = activeWorkface.value.points.map(p => p[0])
+    const ys = activeWorkface.value.points.map(p => p[1])
+    bounds = {
+      min_x: Math.min(...xs), max_x: Math.max(...xs),
+      min_y: Math.min(...ys), max_y: Math.max(...ys)
+    }
   }
   if (!bounds) return
-  
-  // Mining Progress Logic: Left to Right
-  const width = bounds.max_x - bounds.min_x
-  const currentX = bounds.min_x + width * (progress / 100)
-  
-  // 1. Draw Goaf (Gray)
-  const p1 = worldToScreen(bounds.min_x, bounds.max_y)
-  const p2 = worldToScreen(currentX, bounds.max_y)
-  const p3 = worldToScreen(currentX, bounds.min_y)
-  const p4 = worldToScreen(bounds.min_x, bounds.min_y)
-  
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-  ctx.beginPath()
-  ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-  ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
-  ctx.closePath()
-  ctx.fill()
-  
-  // 2. Stress Zone (Red Glow ahead)
-  const dist = 30 * viewport.scale // 30m influence zone in pixels? No, need meters
-  // Convert 50m to pixels
-  const mToPx = (p2.x - p1.x) / ((currentX - bounds.min_x) || 1) 
-  // Wait, simpler:
-  // p2 is Top-Current. p3 is Bot-Current.
-  
+
+  const directionRad = (miningDirection.value - 90) * Math.PI / 180
+  const workfaceLength = bounds.max_y - bounds.min_y
+  const maxWidth = bounds.max_x - bounds.min_x
+  const centerX = (bounds.min_x + bounds.max_x) / 2
+  const centerY = (bounds.min_y + bounds.max_y) / 2
+
+  // Calculate distance from initial position to front
+  const distance = maxWidth * (progress / 100)
+
+  // Front line center position
+  const frontCenterX = centerX + Math.cos(directionRad) * distance
+  const frontCenterY = centerY + Math.sin(directionRad) * distance
+
+  // Perpendicular angle for front line
+  const perpAngle = directionRad + Math.PI / 2
+  const halfLength = workfaceLength / 2
+
+  // Calculate front line endpoints
+  const frontStart = {
+    x: frontCenterX - Math.cos(perpAngle) * halfLength,
+    y: frontCenterY - Math.sin(perpAngle) * halfLength
+  }
+  const frontEnd = {
+    x: frontCenterX + Math.cos(perpAngle) * halfLength,
+    y: frontCenterY + Math.sin(perpAngle) * halfLength
+  }
+
+  // Back line (initial position)
+  const backCenterX = centerX - Math.cos(directionRad) * (centerX - bounds.min_x)
+  const backCenterY = centerY - Math.sin(directionRad) * (centerX - bounds.min_x)
+  const backStart = {
+    x: backCenterX - Math.cos(perpAngle) * halfLength,
+    y: backCenterY - Math.sin(perpAngle) * halfLength
+  }
+  const backEnd = {
+    x: backCenterX + Math.cos(perpAngle) * halfLength,
+    y: backCenterY + Math.sin(perpAngle) * halfLength
+  }
+
+  // Convert to screen coordinates
+  const sBackStart = worldToScreen(backStart.x, backStart.y)
+  const sBackEnd = worldToScreen(backEnd.x, backEnd.y)
+  const sFrontStart = worldToScreen(frontStart.x, frontStart.y)
+  const sFrontEnd = worldToScreen(frontEnd.x, frontEnd.y)
+
+  // 1. Draw Goaf (Mined Area) with gradient
   ctx.save()
-  
-  // Front Abutment (Red)
-  const aheadX = currentX + (width * 0.1) // 10% of panel width ahead
-  const pAheadTop = worldToScreen(aheadX, bounds.max_y)
-  const pAheadBot = worldToScreen(aheadX, bounds.min_y)
-  
-  const gradStress = ctx.createLinearGradient(p2.x, p2.y, pAheadTop.x, pAheadTop.y)
-  gradStress.addColorStop(0, 'rgba(239, 68, 68, 0.6)') // Red
-  gradStress.addColorStop(1, 'rgba(239, 68, 68, 0)')
-  
+  const goafGradient = ctx.createLinearGradient(
+    (sBackStart.x + sBackEnd.x) / 2,
+    (sBackStart.y + sBackEnd.y) / 2,
+    (sFrontStart.x + sFrontEnd.x) / 2,
+    (sFrontStart.y + sFrontEnd.y) / 2
+  )
+
+  if (progress < 30) {
+    goafGradient.addColorStop(0, 'rgba(40, 40, 40, 0.85)')
+    goafGradient.addColorStop(1, 'rgba(45, 45, 45, 0.8)')
+  } else if (progress < 70) {
+    goafGradient.addColorStop(0, 'rgba(50, 50, 50, 0.75)')
+    goafGradient.addColorStop(1, 'rgba(40, 40, 40, 0.85)')
+  } else {
+    goafGradient.addColorStop(0, 'rgba(45, 45, 45, 0.7)')
+    goafGradient.addColorStop(1, 'rgba(35, 35, 35, 0.8)')
+  }
+
+  ctx.fillStyle = goafGradient
   ctx.beginPath()
-  ctx.moveTo(p2.x, p2.y); ctx.lineTo(pAheadTop.x, pAheadTop.y);
-  ctx.lineTo(pAheadBot.x, pAheadBot.y); ctx.lineTo(p3.x, p3.y);
+  ctx.moveTo(sBackStart.x, sBackStart.y)
+  ctx.lineTo(sBackEnd.x, sBackEnd.y)
+  ctx.lineTo(sFrontEnd.x, sFrontEnd.y)
+  ctx.lineTo(sFrontStart.x, sFrontStart.y)
   ctx.closePath()
-  ctx.fillStyle = gradStress
   ctx.fill()
 
-  // Relief Zone (Blue behind)
-  const behindX = currentX - (width * 0.1)
-  const pBehindTop = worldToScreen(behindX, bounds.max_y)
-  const pBehindBot = worldToScreen(behindX, bounds.min_y)
-  
-  const gradRelief = ctx.createLinearGradient(p2.x, p2.y, pBehindTop.x, pBehindTop.y)
-  gradRelief.addColorStop(0, 'rgba(59, 130, 246, 0.5)') // Blue
-  gradRelief.addColorStop(1, 'rgba(59, 130, 246, 0)')
-  
+  // 2. Draw Stress Zone (Red Glow ahead)
+  const stressDistance = maxWidth * 0.1  // 10% ahead
+  const stressCenterX = frontCenterX + Math.cos(directionRad) * stressDistance
+  const stressCenterY = frontCenterY + Math.sin(directionRad) * stressDistance
+
+  const perpAngle2 = directionRad + Math.PI / 2
+  const stressHalfLength = workfaceLength * 0.55  // Slightly wider
+
+  const stressStart = {
+    x: stressCenterX - Math.cos(perpAngle2) * stressHalfLength,
+    y: stressCenterY - Math.sin(perpAngle2) * stressHalfLength
+  }
+  const stressEnd = {
+    x: stressCenterX + Math.cos(perpAngle2) * stressHalfLength,
+    y: stressCenterY + Math.sin(perpAngle2) * stressHalfLength
+  }
+
+  const sStressStart = worldToScreen(stressStart.x, stressStart.y)
+  const sStressEnd = worldToScreen(stressEnd.x, stressEnd.y)
+
+  // Pulsing effect
+  const pulsePhase = (Date.now() / 1000) % 2
+  const pulseIntensity = 0.5 + 0.15 * Math.sin(pulsePhase * Math.PI)
+
+  const stressGradient = ctx.createLinearGradient(
+    (sFrontStart.x + sFrontEnd.x) / 2,
+    (sFrontStart.y + sFrontEnd.y) / 2,
+    (sStressStart.x + sStressEnd.x) / 2,
+    (sStressStart.y + sStressEnd.y) / 2
+  )
+  stressGradient.addColorStop(0, `rgba(239, 68, 68, ${pulseIntensity * 0.8})`)
+  stressGradient.addColorStop(1, `rgba(239, 68, 68, 0)`)
+
+  ctx.fillStyle = stressGradient
   ctx.beginPath()
-  ctx.moveTo(pBehindTop.x, pBehindTop.y); ctx.lineTo(p2.x, p2.y);
-  ctx.lineTo(p3.x, p3.y); ctx.lineTo(pBehindBot.x, pBehindBot.y);
+  ctx.moveTo(sFrontStart.x, sFrontStart.y)
+  ctx.lineTo(sFrontEnd.x, sFrontEnd.y)
+  ctx.lineTo(sStressEnd.x, sStressEnd.y)
+  ctx.lineTo(sStressStart.x, sStressStart.y)
   ctx.closePath()
-  ctx.fillStyle = gradRelief
   ctx.fill()
-  
+
+  // 3. Draw Relief Zone (Blue Glow behind)
+  const reliefDistance = maxWidth * 0.08
+  const reliefCenterX = frontCenterX - Math.cos(directionRad) * reliefDistance
+  const reliefCenterY = frontCenterY - Math.sin(directionRad) * reliefDistance
+
+  const reliefHalfLength = workfaceLength * 0.5
+  const reliefStart = {
+    x: reliefCenterX - Math.cos(perpAngle2) * reliefHalfLength,
+    y: reliefCenterY - Math.sin(perpAngle2) * reliefHalfLength
+  }
+  const reliefEnd = {
+    x: reliefCenterX + Math.cos(perpAngle2) * reliefHalfLength,
+    y: reliefCenterY + Math.sin(perpAngle2) * reliefHalfLength
+  }
+
+  const sReliefStart = worldToScreen(reliefStart.x, reliefStart.y)
+  const sReliefEnd = worldToScreen(reliefEnd.x, reliefEnd.y)
+
+  const reliefGradient = ctx.createLinearGradient(
+    (sReliefStart.x + sReliefEnd.x) / 2,
+    (sReliefStart.y + sReliefEnd.y) / 2,
+    (sFrontStart.x + sFrontEnd.x) / 2,
+    (sFrontStart.y + sFrontEnd.y) / 2
+  )
+  reliefGradient.addColorStop(0, `rgba(59, 130, 246, 0.4)`)
+  reliefGradient.addColorStop(1, `rgba(59, 130, 246, 0)`)
+
+  ctx.fillStyle = reliefGradient
+  ctx.beginPath()
+  ctx.moveTo(sReliefStart.x, sReliefStart.y)
+  ctx.lineTo(sReliefEnd.x, sReliefEnd.y)
+  ctx.lineTo(sFrontStart.x, sFrontStart.y)
+  ctx.lineTo(sFrontEnd.x, sFrontEnd.y)
+  ctx.closePath()
+  ctx.fill()
+
+  // 4. Draw Direction Arrow (indicator)
+  ctx.restore()
+
+  // Draw direction indicator arrow at top of goaf
+  ctx.save()
+  const arrowX = (backCenterX + frontCenterX) / 2
+  const arrowY = (backCenterY + frontCenterY) / 2
+  const sArrow = worldToScreen(arrowX, arrowY)
+
+  ctx.translate(sArrow.x, sArrow.y)
+  ctx.rotate(miningDirection.value * Math.PI / 180)
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+  ctx.beginPath()
+  ctx.moveTo(-8, 0)
+  ctx.lineTo(4, -5)
+  ctx.lineTo(4, 5)
+  ctx.closePath()
+  ctx.fill()
+
   ctx.restore()
 }
 
@@ -864,12 +992,45 @@ const handleWheel = (e) => {
   requestAnimationFrame(renderAll)
 }
 
+// Animation loop reference
+const animationLoopRef = ref(null)
+
 // Watchers
-watch(simulationStep, (val) => {
-  // If not playing, manual drag should update view
-  if (!isSimulating.value) {
-    simulateMiningEffect(val)
+watch(() => simulation.progress.value, (val) => {
+  // Update render when progress changes (manual or during playback)
+  simulateMiningEffect(val)
+})
+
+watch(() => simulation.isPlaying.value, (isPlaying) => {
+  if (isPlaying) {
+    startAnimationLoop()
   }
+})
+
+// Animation loop for smooth playback
+const startAnimationLoop = () => {
+  if (animationLoopRef.value) {
+    cancelAnimationFrame(animationLoopRef.value)
+  }
+
+  const loop = () => {
+    if (simulation.isPlaying.value && simulation.progress.value < 100) {
+      simulateMiningEffect(simulation.progress.value)
+      animationLoopRef.value = requestAnimationFrame(loop)
+    } else if (simulation.progress.value >= 100) {
+      simulation.isPlaying.value = false
+    }
+  }
+
+  animationLoopRef.value = requestAnimationFrame(loop)
+}
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (animationLoopRef.value) {
+    cancelAnimationFrame(animationLoopRef.value)
+  }
+  simulation.pause()
 })
 
 // --- Lifecycle ---
@@ -883,37 +1044,19 @@ onMounted(() => {
   stage.addEventListener('wheel', handleWheel, { passive: false })
 })
 
-// --- Workface Upload Stub ---
+// --- Workface Upload Handler ---
 const triggerWorkfaceUpload = () => fileInput.value?.click()
 const handleFileUpload = async (e) => {
   const file = e.target.files[0]
   if(!file) return
   const { data } = await parseMpiWorkfaces(file)
   workfaces.value = [...workfaces.value, ...data.workfaces]
-  if(data.workfaces.length) activeWorkface.value = data.workfaces[0]
-  renderAll()
-}
-
-// --- Simulation Stub ---
-const toggleSimulation = () => {
-  isSimulating.value = !isSimulating.value
-  if(isSimulating.value) playSimulation()
-}
-
-const playSimulation = () => {
-  if(!isSimulating.value) return
-  if(simulationStep.value >= 100) simulationStep.value = 0
-  
-  simulationStep.value += 0.5
-  simulateMiningEffect(simulationStep.value)
-  
-  if(simulationStep.value < 100) {
-    requestAnimationFrame(playSimulation)
-  } else {
-    // Loop
-    simulationStep.value = 0
-    requestAnimationFrame(playSimulation)
+  if(data.workfaces.length) {
+    activeWorkface.value = data.workfaces[0]
+    // Reset simulation progress when new workface is selected
+    simulation.seek(0)
   }
+  renderAll()
 }
 
 const zoomIn = () => {
@@ -941,11 +1084,11 @@ const resetView = () => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: radial-gradient(1200px 800px at 20% 10%, rgba(56, 189, 248, 0.12), transparent 55%),
-              radial-gradient(1200px 800px at 80% 90%, rgba(59, 130, 246, 0.14), transparent 55%),
-              #0b1220;
+  background: radial-gradient(1200px 800px at 20% 10%, rgba(136, 146, 168, 0.08), transparent 55%),
+              radial-gradient(1200px 800px at 80% 90%, rgba(90, 99, 120, 0.06), transparent 55%),
+              #f5f6f8;
   overflow: hidden;
-  color: #fff;
+  color: var(--text-primary);
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
   z-index: 200;
 }
@@ -953,24 +1096,25 @@ const resetView = () => {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.2), rgba(2, 6, 23, 0.9));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(245, 246, 248, 0.8));
   pointer-events: none;
   z-index: 0;
 }
 
 .back-btn {
-  background: transparent;
-  border: none;
-  color: #cbd5f5;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 8px;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all var(--transition-normal);
 }
 .back-btn:hover {
-  background: rgba(255,255,255,0.12);
+  background: var(--color-primary);
   color: #fff;
 }
 .back-btn svg { width: 24px; height: 24px; }
@@ -982,8 +1126,8 @@ const resetView = () => {
   position: relative;
   cursor: crosshair;
   z-index: 1;
-  background-image: linear-gradient(transparent 95%, rgba(148, 163, 184, 0.06) 96%),
-                    linear-gradient(90deg, transparent 95%, rgba(148, 163, 184, 0.05) 96%);
+  background-image: linear-gradient(transparent 95%, rgba(136, 146, 168, 0.06) 96%),
+                    linear-gradient(90deg, transparent 95%, rgba(136, 146, 168, 0.05) 96%);
   background-size: 40px 40px;
 }
 
@@ -993,7 +1137,7 @@ const resetView = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none; /* Events handled by container */
+  pointer-events: none;
 }
 
 .layer-bg { z-index: 1; }
@@ -1004,7 +1148,7 @@ const resetView = () => {
 .loading-overlay {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   z-index: 50;
   display: flex;
   flex-direction: column;
@@ -1013,10 +1157,15 @@ const resetView = () => {
 }
 .loading-spinner {
   width: 40px; height: 40px;
-  border: 3px solid rgba(255,255,255,0.1);
-  border-top-color: #3b82f6;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+.loading-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: var(--spacing-md);
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -1025,10 +1174,10 @@ const resetView = () => {
   position: absolute;
   z-index: 10;
   padding: 16px;
-  pointer-events: none; /* Let clicks pass through empty areas */
+  pointer-events: none;
 }
 .ui-panel > * {
-  pointer-events: auto; /* Re-enable for content */
+  pointer-events: auto;
 }
 
 .top-left-panel { top: 12px; left: 240px; width: 360px; display: flex; flex-direction: column; gap: 14px; }
@@ -1036,14 +1185,14 @@ const resetView = () => {
 .bottom-panel { bottom: 20px; left: calc(50% + 120px); transform: translateX(-50%); width: 640px; }
 .bottom-right-panel { bottom: 18px; right: 12px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
 
-/* Glass Panel Style */
+/* Glass Panel Style - Academic Light */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.75);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(99, 102, 241, 0.12);
-  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
   padding: 16px;
-  box-shadow: 0 6px 30px rgba(2, 6, 23, 0.35);
+  box-shadow: var(--shadow-md);
 }
 
 /* Header */
@@ -1055,14 +1204,14 @@ const resetView = () => {
 }
 .app-icon {
   width: 40px; height: 40px;
-  background: linear-gradient(135deg, #6366f1, #3b82f6);
-  border-radius: 8px;
+  background: var(--gradient-primary);
+  border-radius: var(--border-radius-sm);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.4);
+  box-shadow: var(--shadow-sm);
 }
 .app-icon svg { width: 24px; height: 24px; stroke: #fff; }
-.title-group h1 { font-size: 18px; font-weight: 700; margin: 0; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
-.title-group .subtitle { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+.title-group h1 { font-size: 18px; font-weight: 600; margin: 0; color: var(--text-primary); }
+.title-group .subtitle { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; }
 
 .status-chips {
   display: flex;
@@ -1073,41 +1222,41 @@ const resetView = () => {
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 11px;
-  color: #e2e8f0;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
 }
 .chip.on {
-  background: rgba(56, 189, 248, 0.16);
-  border-color: rgba(56, 189, 248, 0.45);
-  color: #e0f2fe;
+  background: var(--color-info-light);
+  border-color: var(--color-info);
+  color: var(--color-info);
 }
 
 /* Stats */
 .stats-card { display: flex; flex-direction: column; gap: 12px; }
 .stat-row { display: flex; justify-content: space-between; align-items: baseline; }
-.stat-row .label { font-size: 13px; color: #94a3b8; }
-.stat-row .value { font-size: 16px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
-.stat-row .value.safe { color: #10b981; }
-.stat-row .value.danger { color: #f43f5e; }
+.stat-row .label { font-size: 13px; color: var(--text-tertiary); }
+.stat-row .value { font-size: 16px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--text-primary); }
+.stat-row .value.safe { color: var(--color-success); }
+.stat-row .value.danger { color: var(--color-error); }
 
 /* Controls */
-.control-group h3 { font-size: 12px; color: #94a3b8; text-transform: uppercase; margin: 0 0 12px 0; font-weight: 600; }
+.control-group h3 { font-size: 12px; color: var(--text-tertiary); text-transform: uppercase; margin: 0 0 12px 0; font-weight: 500; }
 .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.select-input { background: rgba(2, 6, 23, 0.6); color: #fff; border: 1px solid #475569; padding: 6px 10px; border-radius: 8px; min-width: 140px; }
-.range-input { flex: 1; margin: 0 10px; accent-color: #6366f1; }
-.value-display { min-width: 44px; text-align: right; font-size: 12px; color: #cbd5f5; }
-.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 8px; cursor: pointer; }
+.select-input { background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: var(--border-radius-sm); min-width: 140px; }
+.range-input { flex: 1; margin: 0 10px; accent-color: var(--color-primary); }
+.value-display { min-width: 44px; text-align: right; font-size: 12px; color: var(--text-secondary); }
+.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-primary); margin-bottom: 8px; cursor: pointer; }
 
 /* Action Button */
 .btn.primary {
   width: 100%;
-  background: linear-gradient(135deg, #6366f1, #3b82f6);
+  background: var(--gradient-primary);
   border: none;
   padding: 10px;
-  border-radius: 10px;
+  border-radius: var(--border-radius-sm);
   color: white;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -1115,56 +1264,56 @@ const resetView = () => {
   gap: 2px;
   align-items: center;
 }
-.btn.primary:hover { background: #2563eb; transform: translateY(-1px); }
-.btn.primary .btn-sub { font-size: 11px; opacity: 0.7; }
+.btn.primary:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
+.btn.primary .btn-sub { font-size: 11px; opacity: 0.8; }
 .btn.ghost {
   width: 100%;
   margin-top: 10px;
-  background: rgba(148, 163, 184, 0.12);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  color: #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   padding: 8px;
-  border-radius: 10px;
-  font-weight: 600;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
   cursor: pointer;
 }
-.btn.ghost:hover { background: rgba(148, 163, 184, 0.2); }
+.btn.ghost:hover { background: var(--bg-tertiary); color: var(--color-primary); }
 
 /* Simulation Bar */
 .simulation-controls { display: flex; align-items: center; gap: 16px; }
-.btn-icon { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #475569; background: transparent; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.btn-icon:hover { background: rgba(255,255,255,0.1); }
+.btn-icon { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--transition-normal); }
+.btn-icon:hover { background: var(--color-primary); color: #fff; }
 .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
 .timeline-container { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.timeline-label { font-size: 10px; color: #94a3b8; }
-.timeline-slider { width: 100%; accent-color: #3b82f6; }
-.step-display { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #64748b; width: 100px; text-align: right; }
-.workface-indicator { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+.timeline-label { font-size: 10px; color: var(--text-tertiary); }
+.timeline-slider { width: 100%; accent-color: var(--color-primary); }
+.step-display { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); width: 100px; text-align: right; }
+.workface-indicator { font-size: 10px; color: var(--text-tertiary); margin-top: 4px; }
 
 /* Tooltip */
 .hover-tooltip {
   position: fixed;
-  background: rgba(0,0,0,0.8);
+  background: rgba(44, 53, 69, 0.95);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   pointer-events: none;
   z-index: 100;
   transform: translate(10px, 10px);
 }
-.tooltip-val { color: #facc15; font-weight: 700; font-size: 14px; }
-.tooltip-xy { color: #94a3b8; font-size: 11px; margin-top: 2px; }
+.tooltip-val { color: #d0d5e0; font-weight: 600; font-size: 14px; }
+.tooltip-xy { color: #aab0c0; font-size: 11px; margin-top: 2px; }
 
 .legend-card { display: flex; flex-direction: column; gap: 8px; }
-.legend-title { font-size: 12px; color: #cbd5f5; font-weight: 600; }
+.legend-title { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
 .legend-bar {
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(90deg, #dc2626 0%, #fb923c 35%, #facc15 55%, #60a5fa 75%, #3b82f6 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--border-color);
 }
-.legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+.legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-tertiary); }
 .legend-labels span { width: 33%; text-align: center; }
 .legend-labels span:first-child { text-align: left; }
 .legend-labels span:last-child { text-align: right; }
@@ -1172,30 +1321,31 @@ const resetView = () => {
 
 .legend-bands { display: flex; flex-direction: column; gap: 6px; }
 .legend-band { display: flex; align-items: center; gap: 8px; }
-.legend-swatch { width: 28px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.12); }
+.legend-swatch { width: 28px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); }
 .legend-text { display: flex; flex-direction: column; line-height: 1.2; }
-.legend-grade { font-size: 11px; color: #cbd5f5; font-weight: 600; }
-.legend-range { font-size: 10px; color: #94a3b8; }
+.legend-grade { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.legend-range { font-size: 10px; color: var(--text-tertiary); }
 
 .tool-group { display: flex; gap: 8px; }
 .tool-btn {
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  color: #e2e8f0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: var(--border-radius-sm);
   font-size: 12px;
   cursor: pointer;
+  transition: all var(--transition-normal);
 }
-.tool-btn:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(99, 102, 241, 0.6); }
+.tool-btn:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
 .hint-card {
   font-size: 11px;
-  color: #94a3b8;
-  background: rgba(15, 23, 42, 0.6);
+  color: var(--text-tertiary);
+  background: var(--bg-primary);
   padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
 }
 
 @media (max-width: 1200px) {

@@ -498,8 +498,8 @@ onBeforeUnmount(() => {
   border-radius: var(--border-radius-lg);
   overflow: hidden;
   border: 1px solid var(--border-color);
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  box-shadow: var(--shadow-lg);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+  box-shadow: var(--shadow-sm);
 }
 
 .skeleton-header {
@@ -510,7 +510,7 @@ onBeforeUnmount(() => {
 .skeleton-title {
   height: 24px;
   width: 200px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--bg-tertiary) 50%, var(--border-color) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--border-radius-sm);
@@ -520,7 +520,7 @@ onBeforeUnmount(() => {
 .skeleton-subtitle {
   height: 14px;
   width: 300px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--bg-tertiary) 50%, var(--border-color) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--border-radius-sm);
@@ -535,7 +535,7 @@ onBeforeUnmount(() => {
 
 .skeleton-cell {
   aspect-ratio: 1;
-  background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, var(--border-color) 0%, var(--bg-tertiary) 100%);
   border-radius: var(--border-radius-md);
   animation: pulse 1.5s ease-in-out infinite;
 }
@@ -577,20 +577,20 @@ onBeforeUnmount(() => {
   height: 560px;
   border-radius: var(--border-radius-lg);
   overflow: hidden;
-  border: 1.5px solid var(--border-color);
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
+  border: 1px solid var(--border-color);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  box-shadow: var(--shadow-sm);
   transition: all var(--transition-normal);
 }
 
 .heatmap-stage:hover {
-  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .heatmap-stage:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 3px rgba(90, 99, 120, 0.1);
 }
 
 .heatmap-image,
@@ -615,7 +615,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #64748b;
+  color: var(--text-tertiary);
   gap: var(--spacing-md);
   padding: var(--spacing-2xl);
 }
@@ -644,7 +644,7 @@ onBeforeUnmount(() => {
 .empty-text {
   font-size: 14px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .btn-retry {
@@ -652,12 +652,12 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-lg);
-  border: 1.5px solid var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius-md);
-  background: white;
+  background: var(--bg-primary);
   color: var(--color-primary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-normal);
 }
@@ -666,7 +666,7 @@ onBeforeUnmount(() => {
   border-color: var(--color-primary);
   background: var(--color-primary-light);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-retry svg {
@@ -678,14 +678,14 @@ onBeforeUnmount(() => {
 .hover-tooltip {
   position: absolute;
   padding: 0;
-  background: rgba(15, 23, 42, 0.96);
+  background: rgba(44, 53, 69, 0.95);
   backdrop-filter: blur(10px);
   color: #f8fafc;
   font-size: 12px;
   border-radius: var(--border-radius-md);
   min-width: 160px;
   pointer-events: none;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.4), 0 2px 8px rgba(15, 23, 42, 0.2);
+  box-shadow: var(--shadow-lg);
   border: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 100;
   overflow: hidden;
@@ -696,18 +696,18 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(90, 99, 120, 0.3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .tooltip-icon {
   width: 16px;
   height: 16px;
-  color: var(--color-primary);
+  color: #aab0c0;
 }
 
 .tooltip-title {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.02em;
 }
@@ -730,24 +730,24 @@ onBeforeUnmount(() => {
 }
 
 .tooltip-row-highlight {
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(90, 99, 120, 0.2);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   margin: var(--spacing-xs) 0;
 }
 
 .tooltip-label {
-  color: #94a3b8;
+  color: #aab0c0;
   font-weight: 500;
 }
 
 .tooltip-value {
-  font-weight: 600;
+  font-weight: 500;
   color: #f1f5f9;
 }
 
 .tooltip-value-primary {
-  color: var(--color-primary);
+  color: #d0d5e0;
   font-size: 13px;
 }
 
@@ -818,21 +818,21 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: none;
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: all var(--transition-normal);
-  color: #475569;
+  color: var(--text-secondary);
 }
 
 .btn-export:hover {
   background: var(--color-primary);
   color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-export svg {

@@ -73,8 +73,8 @@
         </div>
       </div>
       <div class="flow-figure">
-        <img src="/mpi-algorithm/flow_overview.svg" alt="MPI流程图" />
-        <p class="figure-caption">图1 | MPI 计算流程（高分辨率示意）</p>
+        <img :src="useBwFigures ? '/mpi-algorithm/flow_overview_bw.svg' : '/mpi-algorithm/flow_overview.svg'" alt="MPI流程图" class="flow-image" />
+        <p class="figure-caption">图1 | MPI 计算流程示意</p>
       </div>
       <div class="flow-steps">
         <div
@@ -114,18 +114,10 @@
           </div>
           <div class="formula">
             <div class="formula-title">计算公式</div>
-            <div class="formula-body">
-              RSI = clamp( RSI_norm + RSI_key + RSI_structure, 0, 100 )
-            </div>
-            <div class="formula-body">
-              RSI_norm = min( avg(σt) / 10, 1 ) × 40
-            </div>
-            <div class="formula-body">
-              RSI_key = min( n_key × 15, 30 )
-            </div>
-            <div class="formula-body">
-              RSI_structure = (1 - soft_ratio) × 40
-            </div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.rsi.main"></div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.rsi.norm"></div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.rsi.key"></div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.rsi.struct"></div>
           </div>
           <div class="indicator-visual">
             <div class="visual-bar">
@@ -150,18 +142,10 @@
           </div>
           <div class="formula">
             <div class="formula-title">计算公式</div>
-            <div class="formula-body">
-              BRI = clamp( 100 - depth_penalty - hard_penalty - thickness_penalty, 0, 100 )
-            </div>
-            <div class="formula-body">
-              depth_penalty = min( (depth - critical) / 200, 1 ) × 40
-            </div>
-            <div class="formula-body">
-              hard_penalty = min( hard_energy / 500, 1 ) × 30
-            </div>
-            <div class="formula-body">
-              thickness_penalty = min( thickness / 10, 1 ) × 30
-            </div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.bri.main"></div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.bri.depth"></div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.bri.hard"></div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.bri.thick"></div>
           </div>
           <div class="indicator-visual">
             <div class="visual-line">
@@ -186,15 +170,9 @@
           </div>
           <div class="formula">
             <div class="formula-title">计算公式</div>
-            <div class="formula-body">
-              ASI = clamp( stiffness_score + friction_score, 0, 100 )
-            </div>
-            <div class="formula-body">
-              stiffness_score = min( avg_stiffness / 35 × 50, 50 )
-            </div>
-            <div class="formula-body">
-              friction_score = clamp( (avg_friction - 20) / 25 × 50, 0, 50 )
-            </div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.asi.main"></div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.asi.stiff"></div>
+            <div class="formula-body formula-katex" v-html="renderedFormulas.asi.fric"></div>
           </div>
           <div class="indicator-visual">
             <div class="visual-wave"></div>
@@ -238,6 +216,11 @@
           </div>
           <div class="weight-note">
             默认权重来源于专家经验与历史样本拟合，可在后续版本中开放自定义策略。
+          </div>
+          <!-- MPI融合公式 -->
+          <div class="formula formula-inline">
+            <div class="formula-title">MPI融合公式</div>
+            <div class="formula-body formula-katex" v-html="renderInlineFormula(formulas.mpi)"></div>
           </div>
         </div>
       </div>
@@ -324,8 +307,88 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import JSZip from 'jszip'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
+
+// KaTeX渲染函数
+const renderFormula = (formula) => {
+  try {
+    return katex.renderToString(formula, {
+      throwOnError: false,
+      displayMode: true,
+      output: 'html',
+      strict: false
+    })
+  } catch (e) {
+    console.error('KaTeX render error:', e)
+    return formula
+  }
+}
+
+// 定义公式的LaTeX表达式
+const formulas = {
+  rsi: {
+    main: '\\text{RSI} = \\min(\\text{RSI}_{\\text{norm}} + \\text{RSI}_{\\text{key}} + \\text{RSI}_{\\text{struct}}, 0, 100)',
+    norm: '\\text{RSI}_{\\text{norm}} = \\min\\left(\\frac{\\bar{\\sigma_t}}{10}, 1\\right) \\times 40',
+    key: '\\text{RSI}_{\\text{key}} = \\min(n_{\\text{key}} \\times 15, 30)',
+    struct: '\\text{RSI}_{\\text{struct}} = (1 - r_{\\text{soft}}) \\times 40'
+  },
+  bri: {
+    main: '\\text{BRI} = \\max(100 - P_{\\text{depth}} - P_{\\text{hard}} - P_{\\text{thick}}, 0)',
+    depth: 'P_{\\text{depth}} = \\min\\left(\\frac{H - H_{\\text{crit}}}{200}, 1\\right) \\times 40',
+    hard: 'P_{\\text{hard}} = \\min\\left(\\frac{E_{\\text{hard}}}{500}, 1\\right) \\times 30',
+    thick: 'P_{\\text{thick}} = \\min\\left(\\frac{h_{\\text{coal}}}{10}, 1\\right) \\times 30'
+  },
+  asi: {
+    main: '\\text{ASI} = S_{\\text{stiff}} + S_{\\text{fric}}',
+    stiff: 'S_{\\text{stiff}} = \\min\\left(\\frac{\\bar{E}}{35} \\times 50, 50\\right)',
+    fric: 'S_{\\text{fric}} = \\max\\left(\\frac{\\bar{\\varphi} - 20}{25} \\times 50, 0\\right)'
+  },
+  mpi: '\\text{MPI} = w_r \\cdot \\text{RSI} + w_b \\cdot \\text{BRI} + w_a \\cdot \\text{ASI}'
+}
+
+// 渲染后的公式HTML
+const renderedFormulas = reactive({
+  rsi: { main: '', norm: '', key: '', struct: '' },
+  bri: { main: '', depth: '', hard: '', thick: '' },
+  asi: { main: '', stiff: '', fric: '' }
+})
+
+onMounted(() => {
+  // 渲染RSI公式
+  renderedFormulas.rsi.main = renderFormula(formulas.rsi.main)
+  renderedFormulas.rsi.norm = renderFormula(formulas.rsi.norm)
+  renderedFormulas.rsi.key = renderFormula(formulas.rsi.key)
+  renderedFormulas.rsi.struct = renderFormula(formulas.rsi.struct)
+
+  // 渲染BRI公式
+  renderedFormulas.bri.main = renderFormula(formulas.bri.main)
+  renderedFormulas.bri.depth = renderFormula(formulas.bri.depth)
+  renderedFormulas.bri.hard = renderFormula(formulas.bri.hard)
+  renderedFormulas.bri.thick = renderFormula(formulas.bri.thick)
+
+  // 渲染ASI公式
+  renderedFormulas.asi.main = renderFormula(formulas.asi.main)
+  renderedFormulas.asi.stiff = renderFormula(formulas.asi.stiff)
+  renderedFormulas.asi.fric = renderFormula(formulas.asi.fric)
+})
+
+// 内联渲染函数 (用于单行公式)
+const renderInlineFormula = (formula) => {
+  try {
+    return katex.renderToString(formula, {
+      throwOnError: false,
+      displayMode: false,
+      output: 'html',
+      strict: false
+    })
+  } catch (e) {
+    console.error('KaTeX render error:', e)
+    return formula
+  }
+}
 
 const flowSteps = [
   {
@@ -667,19 +730,30 @@ const openDownloads = () => {
   line-height: 1.75;
 }
 
-/* Page Header - Improved proportions and spacing */
+/* Page Header - Improved proportions and spacing - Academic Light Style */
 .page-header {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: start;
   gap: 28px;
-  background: var(--gradient-header);
+  background: var(--bg-primary);
   padding: 28px 32px;
-  border-radius: var(--border-radius-xl);
-  color: #fff;
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--border-radius-lg);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.page-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
 }
 
 .page-header-content {
@@ -694,10 +768,10 @@ const openDownloads = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(10px);
+  border-radius: var(--border-radius-md);
+  background: var(--gradient-primary);
   flex-shrink: 0;
+  color: white;
 }
 
 .page-header-icon svg {
@@ -708,16 +782,17 @@ const openDownloads = () => {
 
 .page-title {
   margin: 0 0 6px 0;
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   line-height: 1.3;
   letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
 .page-subtitle {
   margin: 0;
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -733,11 +808,11 @@ const openDownloads = () => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-primary);
   padding: 12px;
-  border-radius: 14px;
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.2);
-  backdrop-filter: blur(10px);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
 }
 
 .export-controls .export-select:nth-child(1),
@@ -751,33 +826,33 @@ const openDownloads = () => {
 
 .export-status {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary);
   text-align: right;
 }
 
 .export-done {
   font-size: 12px;
-  color: #bbf7d0;
+  color: var(--color-success);
   text-align: right;
 }
 
 .export-error {
   font-size: 12px;
-  color: #fecaca;
+  color: var(--color-error);
   text-align: right;
 }
 
 .export-progress {
   width: 100%;
   height: 6px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--bg-secondary);
   border-radius: 999px;
   overflow: hidden;
 }
 
 .export-progress-bar {
   height: 100%;
-  background: #ffffff;
+  background: var(--color-primary);
   width: 0;
   transition: width 0.2s ease;
 }
@@ -785,26 +860,26 @@ const openDownloads = () => {
 .export-select {
   width: 100%;
   height: 40px;
-  border-radius: 10px;
-  border: 2px solid #e2e8f0;
-  background: #fff;
-  color: #0f172a;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .export-select:hover {
-  border-color: #cbd5e1;
-  background: #fafbff;
+  border-color: var(--color-secondary);
+  background: var(--bg-elevated);
 }
 
 .export-select:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(90, 99, 120, 0.1);
 }
 
 .export-toggle {
@@ -812,11 +887,11 @@ const openDownloads = () => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  font-weight: 600;
-  color: #0f172a;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
   height: 40px;
   padding: 0 14px;
   cursor: pointer;
@@ -824,8 +899,8 @@ const openDownloads = () => {
 }
 
 .export-toggle:hover {
-  border-color: #cbd5e1;
-  background: #f1f5f9;
+  border-color: var(--color-secondary);
+  background: var(--bg-tertiary);
 }
 
 .export-toggle input {
@@ -883,27 +958,28 @@ const openDownloads = () => {
   }
 }
 
-/* Card Improvements - Visual Hierarchy */
+/* Card Improvements - Visual Hierarchy - Academic Light */
 .overview-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   padding: 28px 32px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
-  border: 2px solid rgba(99, 102, 241, 0.15);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .overview-text h2 {
   margin: 0 0 10px 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .overview-text p {
   margin: 0;
-  color: #475569;
+  color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.75;
 }
@@ -917,12 +993,11 @@ const openDownloads = () => {
 .badge {
   padding: 8px 16px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
-  color: #4f46e5;
-  font-weight: 600;
+  background: var(--bg-secondary);
+  color: var(--color-primary);
+  font-weight: 500;
   font-size: 13px;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  backdrop-filter: blur(5px);
+  border: 1px solid var(--border-color);
 }
 
 /* Section Headers - Better Typography */
@@ -940,15 +1015,15 @@ const openDownloads = () => {
 
 .section-header h2 {
   margin: 0 0 8px 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 
 .section-header p {
   margin: 0;
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -993,12 +1068,12 @@ const openDownloads = () => {
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  border-radius: 16px;
-  border: 2px solid transparent;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
   position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   min-width: calc(20% - 10px);
   flex: 1;
@@ -1006,10 +1081,10 @@ const openDownloads = () => {
 }
 
 .flow-step.active {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
-  transform: translateY(-2px);
+  background: var(--gradient-primary);
+  border-color: transparent;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .flow-step.active .step-content h3,
@@ -1021,28 +1096,28 @@ const openDownloads = () => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: var(--gradient-primary);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 15px;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
 }
 
 .step-content h3 {
   margin: 0 0 4px 0;
   font-size: 15px;
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 500;
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
 .step-content p {
   margin: 0;
-  color: #64748b;
+  color: var(--text-tertiary);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -1056,17 +1131,17 @@ const openDownloads = () => {
 
 .indicator-card {
   padding: 20px;
-  border-radius: 14px;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  background: linear-gradient(145deg, #ffffff 0%, #fafbff 100%);
-  box-shadow: var(--shadow-md);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .indicator-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
 }
 
 .indicator-head {
@@ -1079,24 +1154,24 @@ const openDownloads = () => {
 .indicator-tag {
   padding: 6px 14px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
-  color: #2563eb;
-  font-weight: 700;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
   font-size: 13px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid var(--border-color);
 }
 
 .indicator-card h3 {
   font-size: 18px;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 600;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .indicator-card ul {
   margin: 0 0 16px 20px;
   padding: 0;
-  color: #475569;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.8;
 }
@@ -1124,20 +1199,20 @@ const openDownloads = () => {
   color: #64748b;
 }
 
-/* Formula - Better Readability */
+/* Formula - Better Readability - Academic */
 .formula {
-  background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
-  border-radius: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
   padding: 16px 18px;
   margin-bottom: 16px;
-  border: 1px solid #e2e8f0;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .formula-title {
   font-size: 13px;
-  font-weight: 600;
-  color: #64748b;
+  font-weight: 500;
+  color: var(--text-secondary);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1145,11 +1220,92 @@ const openDownloads = () => {
 
 .formula-body {
   font-family: "Times New Roman", "Cambria Math", serif;
-  color: #0f172a;
+  color: var(--text-primary);
   font-size: 14px;
   line-height: 1.8;
   padding-left: 12px;
-  border-left: 3px solid rgba(99, 102, 241, 0.3);
+  border-left: 3px solid var(--color-primary);
+}
+
+/* KaTeX公式样式 - 学术风格 */
+.formula-katex {
+  font-size: 15px;
+  line-height: 2;
+  padding: 16px 20px;
+  margin: 8px 0;
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.formula-inline {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.formula-inline .formula-title {
+  margin-bottom: var(--spacing-sm);
+}
+
+.formula-inline .formula-body {
+  padding: 0;
+  border-left: none;
+  font-size: 16px;
+}
+
+.formula-inline .formula-katex {
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+}
+
+.formula-katex :deep(.katex) {
+  color: var(--text-primary);
+}
+
+.formula-katex :deep(.katex .mord) {
+  color: var(--text-primary);
+}
+
+.formula-katex :deep(.katex .mrel) {
+  color: var(--color-primary);
+}
+
+.formula-katex :deep(.katex .mbin) {
+  color: var(--color-primary);
+}
+
+.formula-katex :deep(.katex .mop) {
+  color: var(--text-secondary);
+}
+
+.formula-katex :deep(.katex .minner) {
+  color: var(--text-secondary);
+}
+
+.formula-katex :deep(.katex .vlist-t) {
+  color: var(--text-primary);
+}
+
+/* 流程图样式优化 */
+.flow-figure {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-xl);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.flow-image {
+  width: 100%;
+  max-width: 1100px;
+  height: auto;
+  border-radius: var(--border-radius-sm);
 }
 
 .indicator-visual {
@@ -1161,14 +1317,14 @@ const openDownloads = () => {
 .visual-bar span,
 .visual-line span {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .bar-track {
   flex: 1;
   height: 8px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--border-color);
   overflow: hidden;
 }
 
@@ -1180,7 +1336,7 @@ const openDownloads = () => {
 .line-track {
   flex: 1;
   height: 4px;
-  background: linear-gradient(90deg, #cbd5f5 0%, #6366f1 100%);
+  background: var(--gradient-primary);
   border-radius: 999px;
 }
 
@@ -1193,7 +1349,7 @@ const openDownloads = () => {
   border-radius: 12px;
 }
 
-/* Weight Controls - Better Spacing */
+/* Weight Controls - Better Spacing - Academic */
 .weight-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1204,27 +1360,28 @@ const openDownloads = () => {
 .weight-item {
   margin-bottom: 20px;
   padding: 16px;
-  background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
 }
 
 .weight-label {
   display: flex;
   justify-content: space-between;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 10px;
   font-size: 14px;
+  color: var(--text-primary);
 }
 
 .weight-value {
-  color: #6366f1;
-  font-weight: 700;
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 .weight-hint {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   margin-top: 6px;
 }
 
@@ -1257,7 +1414,7 @@ const openDownloads = () => {
   display: flex;
   gap: 12px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .dot {
@@ -1269,16 +1426,16 @@ const openDownloads = () => {
 }
 
 .dot.rsi { background: #6366f1; }
-.dot.bri { background: #8b5cf6; }
-.dot.asi { background: #22c55e; }
+.dot.bri { background: #7a7cb0; }
+.dot.asi { background: #5b8c6e; }
 
 .weight-note {
   margin-top: 12px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
-/* Risk Levels - Optimized proportions */
+/* Risk Levels - Optimized proportions - Academic */
 .risk-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1287,21 +1444,22 @@ const openDownloads = () => {
 
 .risk-level {
   padding: 20px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
-  border: 2px solid #e2e8f0;
-  transition: all 0.3s ease;
+  border-radius: var(--border-radius-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  transition: all 0.25s ease;
 }
 
 .risk-level:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary);
 }
 
 .risk-level p {
   margin: 12px 0 0 0;
   font-size: 14px;
-  color: #475569;
+  color: var(--text-secondary);
   line-height: 1.7;
 }
 
@@ -1315,24 +1473,24 @@ const openDownloads = () => {
 }
 
 .level.high {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #dc2626;
-  border: 1px solid #fca5a5;
+  background: var(--color-error-light);
+  color: var(--color-error);
+  border: 1px solid var(--border-color);
 }
 
 .level.medium {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #d97706;
-  border: 1px solid #fbbf24;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  border: 1px solid var(--border-color);
 }
 
 .level.low {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #16a34a;
-  border: 1px solid #4ade80;
+  background: var(--color-success-light);
+  color: var(--color-success);
+  border: 1px solid var(--border-color);
 }
 
-/* Example Section - Better Layout */
+/* Example Section - Better Layout - Academic */
 .example-grid {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
@@ -1343,52 +1501,54 @@ const openDownloads = () => {
   display: flex;
   gap: 10px;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-bottom: 2px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sample-btn {
   padding: 8px 16px;
   border-radius: 999px;
-  border: 2px solid #cbd5f5;
-  background: #fff;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  color: var(--text-secondary);
 }
 
 .sample-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .sample-btn.active {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: var(--gradient-primary);
   color: #fff;
-  border-color: #6366f1;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  border-color: transparent;
+  box-shadow: var(--shadow-sm);
 }
 
 .example-table {
-  border-radius: 12px;
+  border-radius: var(--border-radius-sm);
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
 }
 
 .table-row {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #fff;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
   font-size: 14px;
+  color: var(--text-primary);
 }
 
 .table-row.header {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e0e7ff 100%);
-  font-weight: 700;
-  color: #334155;
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1403,11 +1563,11 @@ const openDownloads = () => {
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
-  border-radius: 16px;
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-md);
   padding: 24px;
-  border: 2px solid #e0e7ff;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .result-breakdown {
@@ -1415,24 +1575,24 @@ const openDownloads = () => {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-secondary);
   width: 100%;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
 }
 
 .result-title {
   font-size: 13px;
-  color: #64748b;
-  font-weight: 600;
+  color: var(--text-tertiary);
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .result-value {
   font-size: 36px;
-  font-weight: 800;
+  font-weight: 700;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1444,29 +1604,29 @@ const openDownloads = () => {
   padding: 8px 20px;
   border-radius: 999px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .result-level.low {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #16a34a;
-  border: 1px solid #4ade80;
+  background: var(--color-success-light);
+  color: var(--color-success);
+  border: 1px solid var(--border-color);
 }
 
 .result-level.medium {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #d97706;
-  border: 1px solid #fbbf24;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  border: 1px solid var(--border-color);
 }
 
 .result-level.high {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #dc2626;
-  border: 1px solid #fca5a5;
+  background: var(--color-error-light);
+  color: var(--color-error);
+  border: 1px solid var(--border-color);
 }
 
-/* Output Steps - Optimized spacing */
+/* Output Steps - Optimized spacing - Academic */
 .output-steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1475,28 +1635,28 @@ const openDownloads = () => {
 
 .output-step {
   padding: 20px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
-  border: 2px solid #e2e8f0;
-  transition: all 0.3s ease;
+  border-radius: var(--border-radius-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  transition: all 0.25s ease;
 }
 
 .output-step:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary);
 }
 
 .output-step h3 {
   margin: 0 0 10px 0;
   font-size: 16px;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .output-step p {
   margin: 0;
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -1505,10 +1665,10 @@ const openDownloads = () => {
   margin-top: 20px;
   padding: 16px;
   font-size: 14px;
-  color: #475569;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
-  border-radius: 12px;
-  border-left: 4px solid #6366f1;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  border-left: 4px solid var(--color-primary);
   line-height: 1.75;
 }
 
