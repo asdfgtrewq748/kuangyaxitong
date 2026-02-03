@@ -164,6 +164,7 @@
 import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useToast } from '../composables/useToast'
 import { useMiningSimulation } from '../composables/useMiningSimulation'
+import { useParticles, useRipples } from '../composables/useParticles'
 import DirectionControl from '../components/simulation/DirectionControl.vue'
 import PlaybackControls from '../components/simulation/PlaybackControls.vue'
 import * as d3 from 'd3'
@@ -194,6 +195,15 @@ const simulation = useMiningSimulation(activeWorkface, {
   frameRate: 60,
   progressPerSecond: 10
 })
+
+// Initialize particle systems for visual effects
+const stressParticles = useParticles({ maxParticles: 150, emitRate: 2 })
+const reliefParticles = useParticles({ maxParticles: 100, emitRate: 1 })
+const ripples = useRipples({ maxRipples: 8, rippleSpeed: 60, rippleInterval: 600 })
+
+// Track last emission time for particle generation
+const lastParticleEmit = ref(0)
+const particleEmitInterval = 50 // ms between emissions
 
 const layers = reactive({
   workfaces: true,
@@ -682,8 +692,8 @@ const drawEngineeringGrid = (ctx) => {
 }
 
 /**
- * Simulate Mining Effect with Directional Support
- * Renders goaf area, stress zone, and relief zone based on current progress and direction
+ * Enhanced Mining Effect with Directional Support and Particles
+ * Renders goaf area, stress zone, relief zone, ripples, and particles
  */
 const simulateMiningEffect = (progress) => {
   const ctx = dynamicCanvas.value?.getContext('2d')
@@ -747,9 +757,12 @@ const simulateMiningEffect = (progress) => {
   const sBackEnd = worldToScreen(backEnd.x, backEnd.y)
   const sFrontStart = worldToScreen(frontStart.x, frontStart.y)
   const sFrontEnd = worldToScreen(frontEnd.x, frontEnd.y)
+  const sFrontCenter = worldToScreen(frontCenterX, frontCenterY)
 
-  // 1. Draw Goaf (Mined Area) with gradient
+  // ===== 1. Draw Goaf (Mined Area) with Enhanced Progressive Gradient =====
   ctx.save()
+
+  // Multi-stage gradient based on progress
   const goafGradient = ctx.createLinearGradient(
     (sBackStart.x + sBackEnd.x) / 2,
     (sBackStart.y + sBackEnd.y) / 2,
@@ -757,15 +770,31 @@ const simulateMiningEffect = (progress) => {
     (sFrontStart.y + sFrontEnd.y) / 2
   )
 
-  if (progress < 30) {
-    goafGradient.addColorStop(0, 'rgba(40, 40, 40, 0.85)')
-    goafGradient.addColorStop(1, 'rgba(45, 45, 45, 0.8)')
-  } else if (progress < 70) {
-    goafGradient.addColorStop(0, 'rgba(50, 50, 50, 0.75)')
+  // Progressive color scheme based on mining stage
+  if (progress < 20) {
+    // Early stage: fresh goaf, darker
+    goafGradient.addColorStop(0, 'rgba(35, 35, 35, 0.9)')
     goafGradient.addColorStop(1, 'rgba(40, 40, 40, 0.85)')
+  } else if (progress < 40) {
+    // Initial settling
+    goafGradient.addColorStop(0, 'rgba(40, 40, 40, 0.85)')
+    goafGradient.addColorStop(0.5, 'rgba(38, 38, 38, 0.82)')
+    goafGradient.addColorStop(1, 'rgba(42, 42, 42, 0.8)')
+  } else if (progress < 60) {
+    // Mid stage: compacting
+    goafGradient.addColorStop(0, 'rgba(45, 45, 45, 0.8)')
+    goafGradient.addColorStop(0.5, 'rgba(40, 40, 40, 0.78)')
+    goafGradient.addColorStop(1, 'rgba(43, 43, 43, 0.75)')
+  } else if (progress < 80) {
+    // Advanced: compacted
+    goafGradient.addColorStop(0, 'rgba(48, 48, 48, 0.75)')
+    goafGradient.addColorStop(0.5, 'rgba(42, 42, 42, 0.73)')
+    goafGradient.addColorStop(1, 'rgba(45, 45, 45, 0.7)')
   } else {
-    goafGradient.addColorStop(0, 'rgba(45, 45, 45, 0.7)')
-    goafGradient.addColorStop(1, 'rgba(35, 35, 35, 0.8)')
+    // Final: fully compacted
+    goafGradient.addColorStop(0, 'rgba(50, 50, 50, 0.72)')
+    goafGradient.addColorStop(0.5, 'rgba(44, 44, 44, 0.7)')
+    goafGradient.addColorStop(1, 'rgba(47, 47, 47, 0.68)')
   }
 
   ctx.fillStyle = goafGradient
@@ -777,40 +806,77 @@ const simulateMiningEffect = (progress) => {
   ctx.closePath()
   ctx.fill()
 
-  // 2. Draw Stress Zone (Red Glow ahead)
-  const stressDistance = maxWidth * 0.1  // 10% ahead
+  // Add grid pattern overlay to goaf for texture
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)'
+  ctx.lineWidth = 1
+  const gridSpacing = 20
+  const goafWidth = Math.hypot(sFrontEnd.x - sBackEnd.x, sFrontEnd.y - sBackEnd.y)
+  const goafHeight = Math.hypot(sFrontEnd.x - sFrontStart.x, sFrontEnd.y - sFrontStart.y)
+
+  for (let i = 0; i < goafWidth; i += gridSpacing) {
+    const t = i / goafWidth
+    const x = sBackStart.x + (sFrontStart.x - sBackStart.x) * t
+    const y = sBackStart.y + (sFrontStart.y - sBackStart.y) * t
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x + sFrontEnd.x - sFrontStart.x, y + sFrontEnd.y - sFrontStart.y)
+    ctx.stroke()
+  }
+
+  // ===== 2. Draw Multi-Layered Stress Zone with Pulse =====
+  const stressDistance = maxWidth * 0.12
   const stressCenterX = frontCenterX + Math.cos(directionRad) * stressDistance
   const stressCenterY = frontCenterY + Math.sin(directionRad) * stressDistance
 
-  const perpAngle2 = directionRad + Math.PI / 2
-  const stressHalfLength = workfaceLength * 0.55  // Slightly wider
+  const stressHalfLength = workfaceLength * 0.58
 
   const stressStart = {
-    x: stressCenterX - Math.cos(perpAngle2) * stressHalfLength,
-    y: stressCenterY - Math.sin(perpAngle2) * stressHalfLength
+    x: stressCenterX - Math.cos(perpAngle) * stressHalfLength,
+    y: stressCenterY - Math.sin(perpAngle) * stressHalfLength
   }
   const stressEnd = {
-    x: stressCenterX + Math.cos(perpAngle2) * stressHalfLength,
-    y: stressCenterY + Math.sin(perpAngle2) * stressHalfLength
+    x: stressCenterX + Math.cos(perpAngle) * stressHalfLength,
+    y: stressCenterY + Math.sin(perpAngle) * stressHalfLength
   }
 
   const sStressStart = worldToScreen(stressStart.x, stressStart.y)
   const sStressEnd = worldToScreen(stressEnd.x, stressEnd.y)
 
-  // Pulsing effect
-  const pulsePhase = (Date.now() / 1000) % 2
-  const pulseIntensity = 0.5 + 0.15 * Math.sin(pulsePhase * Math.PI)
+  // Multi-layer pulsing effect with different frequencies
+  const pulsePhase1 = (Date.now() / 800) % 2
+  const pulsePhase2 = (Date.now() / 1200) % 2
+  const pulseIntensity1 = 0.5 + 0.2 * Math.sin(pulsePhase1 * Math.PI)
+  const pulseIntensity2 = 0.4 + 0.15 * Math.sin(pulsePhase2 * Math.PI)
 
-  const stressGradient = ctx.createLinearGradient(
+  // Outer stress layer (larger, softer)
+  const outerStressGradient = ctx.createRadialGradient(
+    sFrontCenter.x, sFrontCenter.y, 0,
+    sFrontCenter.x, sFrontCenter.y,
+    Math.hypot(sStressEnd.x - sFrontCenter.x, sStressEnd.y - sFrontCenter.y) * 1.5
+  )
+  outerStressGradient.addColorStop(0, `rgba(239, 68, 68, ${pulseIntensity1 * 0.3})`)
+  outerStressGradient.addColorStop(0.5, `rgba(239, 68, 68, ${pulseIntensity1 * 0.15})`)
+  outerStressGradient.addColorStop(1, 'rgba(239, 68, 68, 0)')
+
+  ctx.fillStyle = outerStressGradient
+  ctx.beginPath()
+  ctx.arc(sFrontCenter.x, sFrontCenter.y,
+    Math.hypot(sStressEnd.x - sFrontCenter.x, sStressEnd.y - sFrontCenter.y) * 1.5,
+    0, Math.PI * 2)
+  ctx.fill()
+
+  // Inner stress layer (more intense)
+  const innerStressGradient = ctx.createLinearGradient(
     (sFrontStart.x + sFrontEnd.x) / 2,
     (sFrontStart.y + sFrontEnd.y) / 2,
     (sStressStart.x + sStressEnd.x) / 2,
     (sStressStart.y + sStressEnd.y) / 2
   )
-  stressGradient.addColorStop(0, `rgba(239, 68, 68, ${pulseIntensity * 0.8})`)
-  stressGradient.addColorStop(1, `rgba(239, 68, 68, 0)`)
+  innerStressGradient.addColorStop(0, `rgba(220, 38, 38, ${pulseIntensity2 * 0.7})`)
+  innerStressGradient.addColorStop(0.5, `rgba(239, 68, 68, ${pulseIntensity2 * 0.4})`)
+  innerStressGradient.addColorStop(1, `rgba(239, 68, 68, 0)`)
 
-  ctx.fillStyle = stressGradient
+  ctx.fillStyle = innerStressGradient
   ctx.beginPath()
   ctx.moveTo(sFrontStart.x, sFrontStart.y)
   ctx.lineTo(sFrontEnd.x, sFrontEnd.y)
@@ -819,23 +885,27 @@ const simulateMiningEffect = (progress) => {
   ctx.closePath()
   ctx.fill()
 
-  // 3. Draw Relief Zone (Blue Glow behind)
-  const reliefDistance = maxWidth * 0.08
+  // ===== 3. Draw Relief Zone with Enhanced Gradient =====
+  const reliefDistance = maxWidth * 0.1
   const reliefCenterX = frontCenterX - Math.cos(directionRad) * reliefDistance
   const reliefCenterY = frontCenterY - Math.sin(directionRad) * reliefDistance
 
-  const reliefHalfLength = workfaceLength * 0.5
+  const reliefHalfLength = workfaceLength * 0.52
   const reliefStart = {
-    x: reliefCenterX - Math.cos(perpAngle2) * reliefHalfLength,
-    y: reliefCenterY - Math.sin(perpAngle2) * reliefHalfLength
+    x: reliefCenterX - Math.cos(perpAngle) * reliefHalfLength,
+    y: reliefCenterY - Math.sin(perpAngle) * reliefHalfLength
   }
   const reliefEnd = {
-    x: reliefCenterX + Math.cos(perpAngle2) * reliefHalfLength,
-    y: reliefCenterY + Math.sin(perpAngle2) * reliefHalfLength
+    x: reliefCenterX + Math.cos(perpAngle) * reliefHalfLength,
+    y: reliefCenterY + Math.sin(perpAngle) * reliefHalfLength
   }
 
   const sReliefStart = worldToScreen(reliefStart.x, reliefStart.y)
   const sReliefEnd = worldToScreen(reliefEnd.x, reliefEnd.y)
+
+  // Relief pulse (calmer, slower)
+  const reliefPulse = (Date.now() / 2000) % 2
+  const reliefIntensity = 0.4 + 0.1 * Math.sin(reliefPulse * Math.PI)
 
   const reliefGradient = ctx.createLinearGradient(
     (sReliefStart.x + sReliefEnd.x) / 2,
@@ -843,7 +913,8 @@ const simulateMiningEffect = (progress) => {
     (sFrontStart.x + sFrontEnd.x) / 2,
     (sFrontStart.y + sFrontEnd.y) / 2
   )
-  reliefGradient.addColorStop(0, `rgba(59, 130, 246, 0.4)`)
+  reliefGradient.addColorStop(0, `rgba(59, 130, 246, ${reliefIntensity * 0.5})`)
+  reliefGradient.addColorStop(0.7, `rgba(96, 165, 250, ${reliefIntensity * 0.3})`)
   reliefGradient.addColorStop(1, `rgba(59, 130, 246, 0)`)
 
   ctx.fillStyle = reliefGradient
@@ -855,10 +926,74 @@ const simulateMiningEffect = (progress) => {
   ctx.closePath()
   ctx.fill()
 
-  // 4. Draw Direction Arrow (indicator)
+  // ===== 4. Draw Ripples (Stress Wave Visualization) =====
+  if (simulation.isPlaying.value || progress > 0) {
+    ripples.update(0.016)
+    ripples.draw(ctx)
+
+    // Emit new ripple periodically
+    if (simulation.isPlaying.value && Math.random() < 0.02) {
+      ripples.emit(sFrontCenter.x, sFrontCenter.y)
+    }
+  }
+
+  // ===== 5. Emit and Draw Particles =====
+  if (simulation.isPlaying.value && progress > 0) {
+    const now = Date.now()
+    if (now - lastParticleEmit.value > particleEmitInterval) {
+      // Emit stress particles from front line
+      const stressDir = { x: Math.cos(directionRad), y: Math.sin(directionRad) }
+      stressParticles.emitStressParticles(
+        [sFrontStart, sFrontEnd],
+        stressDir,
+        2
+      )
+
+      // Emit relief particles in goaf area
+      const goafBounds = {
+        minX: Math.min(sBackStart.x, sBackEnd.x, sFrontStart.x, sFrontEnd.x),
+        maxX: Math.max(sBackStart.x, sBackEnd.x, sFrontStart.x, sFrontEnd.x),
+        minY: Math.min(sBackStart.y, sBackEnd.y, sFrontStart.y, sFrontEnd.y),
+        maxY: Math.max(sBackStart.y, sBackEnd.y, sFrontStart.y, sFrontEnd.y)
+      }
+      reliefParticles.emitReliefParticles(goafBounds, 0.5)
+
+      lastParticleEmit.value = now
+    }
+
+    // Update and draw particles
+    stressParticles.update(0.016)
+    stressParticles.draw(ctx)
+    reliefParticles.update(0.016)
+    reliefParticles.draw(ctx)
+  } else if (progress > 0) {
+    // Still update particles when paused for visual effect
+    stressParticles.update(0.016)
+    reliefParticles.update(0.016)
+    stressParticles.draw(ctx)
+    reliefParticles.draw(ctx)
+  }
+
+  // ===== 6. Draw Workface Front Line =====
+  ctx.strokeStyle = '#facc15'
+  ctx.lineWidth = 3
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  ctx.moveTo(sFrontStart.x, sFrontStart.y)
+  ctx.lineTo(sFrontEnd.x, sFrontEnd.y)
+  ctx.stroke()
+
+  // Front line glow
+  ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)'
+  ctx.lineWidth = 6
+  ctx.beginPath()
+  ctx.moveTo(sFrontStart.x, sFrontStart.y)
+  ctx.lineTo(sFrontEnd.x, sFrontEnd.y)
+  ctx.stroke()
+
+  // ===== 7. Draw Direction Indicator =====
   ctx.restore()
 
-  // Draw direction indicator arrow at top of goaf
   ctx.save()
   const arrowX = (backCenterX + frontCenterX) / 2
   const arrowY = (backCenterY + frontCenterY) / 2
@@ -867,12 +1002,18 @@ const simulateMiningEffect = (progress) => {
   ctx.translate(sArrow.x, sArrow.y)
   ctx.rotate(miningDirection.value * Math.PI / 180)
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+  // Arrow body
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
   ctx.beginPath()
-  ctx.moveTo(-8, 0)
-  ctx.lineTo(4, -5)
-  ctx.lineTo(4, 5)
+  ctx.moveTo(-10, 0)
+  ctx.lineTo(6, -6)
+  ctx.lineTo(6, 6)
   ctx.closePath()
+  ctx.fill()
+
+  // Arrow glow
+  ctx.shadowColor = 'rgba(255, 255, 255, 0.5)'
+  ctx.shadowBlur = 8
   ctx.fill()
 
   ctx.restore()
@@ -1031,6 +1172,12 @@ onUnmounted(() => {
     cancelAnimationFrame(animationLoopRef.value)
   }
   simulation.pause()
+  // Clear particle systems
+  stressParticles.clear()
+  reliefParticles.clear()
+  ripples.clear()
+  stressParticles.stopAnimation()
+  reliefParticles.stopAnimation()
 })
 
 // --- Lifecycle ---
@@ -1055,6 +1202,10 @@ const handleFileUpload = async (e) => {
     activeWorkface.value = data.workfaces[0]
     // Reset simulation progress when new workface is selected
     simulation.seek(0)
+    // Clear visual effects
+    stressParticles.clear()
+    reliefParticles.clear()
+    ripples.clear()
   }
   renderAll()
 }
