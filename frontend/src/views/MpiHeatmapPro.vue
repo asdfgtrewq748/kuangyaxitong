@@ -159,7 +159,10 @@
         <button class="tool-btn" @click="fitToScreen" title="适配">适配</button>
         <button class="tool-btn" @click="resetView" title="复位">复位</button>
       </div>
-      <div class="hint-card">拖拽移动 · 滚轮缩放 · 单击选择工作面</div>
+      <div class="hint-card">
+        <span class="hint-main">拖拽移动 · 滚轮缩放 · 单击选择</span>
+        <span class="hint-shortcuts">空格:播放 ←→:步进 ↑↓:速度 R:重置</span>
+      </div>
     </div>
 
     <!-- Tooltip -->
@@ -294,10 +297,47 @@ const loadSeams = async () => {
       seam.value = seams.value[0].name
       await computeGlobal()
     }
+    // Create demo workface if none exists
+    if (workfaces.value.length === 0 && gridBounds.value) {
+      createDemoWorkface()
+    }
   } catch (e) {
     console.error(e)
     toast.add('加载煤层失败', 'error')
   }
+}
+
+// Create a demo workface from grid bounds
+const createDemoWorkface = () => {
+  if (!gridBounds.value) return
+
+  const { min_x, max_x, min_y, max_y } = gridBounds.value
+  const width = max_x - min_x
+  const height = max_y - min_y
+
+  // Create a workface in the center-left of the grid
+  const demoWorkface = {
+    id: 'demo-workface',
+    name: '演示工作面',
+    type: 'polygon',
+    bounds: {
+      min_x: min_x + width * 0.1,
+      max_x: min_x + width * 0.35,
+      min_y: min_y + height * 0.3,
+      max_y: min_y + height * 0.7
+    },
+    // Generate polygon points from bounds
+    points: [
+      [min_x + width * 0.1, min_y + height * 0.3],  // bottom-left
+      [min_x + width * 0.35, min_y + height * 0.3], // bottom-right
+      [min_x + width * 0.35, min_y + height * 0.7], // top-right
+      [min_x + width * 0.1, min_y + height * 0.7]   // top-left
+    ]
+  }
+
+  workfaces.value.push(demoWorkface)
+  activeWorkface.value = demoWorkface
+  toast.add('已创建演示工作面', 'success')
 }
 
 const getLayerParams = async (name) => {
@@ -1177,6 +1217,64 @@ const startAnimationLoop = () => {
   animationLoopRef.value = requestAnimationFrame(loop)
 }
 
+// Keyboard shortcuts for playback control
+const handleKeyboard = (e) => {
+  // Ignore if typing in an input
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    return
+  }
+
+  switch (e.code) {
+    case 'Space':
+      e.preventDefault()
+      simulation.togglePlay()
+      break
+    case 'ArrowLeft':
+      e.preventDefault()
+      if (e.shiftKey) {
+        simulation.skipToStart()
+      } else {
+        simulation.stepBackward()
+      }
+      break
+    case 'ArrowRight':
+      e.preventDefault()
+      if (e.shiftKey) {
+        simulation.skipToEnd()
+      } else {
+        simulation.stepForward()
+      }
+      break
+    case 'ArrowUp':
+      e.preventDefault()
+      simulation.setPlaybackSpeed(Math.min(5, simulation.playbackSpeed.value + 0.5))
+      break
+    case 'ArrowDown':
+      e.preventDefault()
+      simulation.setPlaybackSpeed(Math.max(0.5, simulation.playbackSpeed.value - 0.5))
+      break
+    case 'KeyR':
+      e.preventDefault()
+      simulation.seek(0)
+      stressParticles.clear()
+      reliefParticles.clear()
+      ripples.clear()
+      break
+    case 'Digit1':
+      e.preventDefault()
+      simulation.setPlaybackSpeed(1)
+      break
+    case 'Digit2':
+      e.preventDefault()
+      simulation.setPlaybackSpeed(2)
+      break
+    case 'Digit5':
+      e.preventDefault()
+      simulation.setPlaybackSpeed(5)
+      break
+  }
+}
+
 // Cleanup on unmount
 onUnmounted(() => {
   if (animationLoopRef.value) {
@@ -1189,17 +1287,21 @@ onUnmounted(() => {
   ripples.clear()
   stressParticles.stopAnimation()
   reliefParticles.stopAnimation()
+  // Remove keyboard listener
+  window.removeEventListener('keydown', handleKeyboard)
 })
 
 // --- Lifecycle ---
 onMounted(() => {
   loadSeams()
-  
+
   const stage = stageContainer.value
   stage.addEventListener('mousedown', handleMouseDown)
   window.addEventListener('mousemove', handleMouseMove)
   window.addEventListener('mouseup', handleMouseUp)
   stage.addEventListener('wheel', handleWheel, { passive: false })
+  // Add keyboard shortcuts
+  window.addEventListener('keydown', handleKeyboard)
 })
 
 // --- Workface Upload Handler ---
@@ -1508,6 +1610,22 @@ const resetView = () => {
   padding: 6px 10px;
   border-radius: var(--border-radius-sm);
   border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.hint-main {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.hint-shortcuts {
+  font-size: 10px;
+  color: var(--color-primary);
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.8;
 }
 
 @media (max-width: 1200px) {
