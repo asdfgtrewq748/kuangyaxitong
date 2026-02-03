@@ -61,9 +61,9 @@
             <h4>视图设置</h4>
             <div class="control-grid">
               <div class="control-item">
-                <label>网格精度</label>
+                <label>网格精度 (越小越精细)</label>
                 <div class="range-wrapper">
-                  <input type="range" v-model.number="resolution" min="30" max="150" step="10" @change="recomputeGlobal" class="range-input">
+                  <input type="range" v-model.number="resolution" min="20" max="100" step="5" @change="recomputeGlobal" class="range-input">
                   <span class="range-value">{{ resolution }}m</span>
                 </div>
               </div>
@@ -234,10 +234,11 @@ import {
 const loading = ref(false)
 const seams = ref([])
 const seam = ref('')
-const resolution = ref(80)
+const resolution = ref(50)
 const stats = ref({})
 const activeWorkface = ref(null)
 const workfaces = ref([])
+const seamBoreholes = shallowRef([]) // Store borehole data for display
 
 // UI State
 const controlsVisible = ref(false)
@@ -292,7 +293,8 @@ const toast = useToast()
 
 // Cache
 const layerParamsCache = new Map()
-const odiPalette = ['#3b82f6', '#facc15', '#fb923c', '#f87171', '#dc2626']
+// Enhanced color palette for better visual quality - smoother gradient
+const odiPalette = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#7c2d12']
 
 // --- Viewport State (Pan/Zoom) ---
 const viewport = reactive({
@@ -338,6 +340,25 @@ const gradeRanges = computed(() => {
 // --- UI Methods ---
 const toggleControls = () => {
   controlsVisible.value = !controlsVisible.value
+}
+
+const handleSeamChange = () => {
+  // Reset and recompute when seam changes
+  globalGrid.value = null
+  seamBoreholes.value = []
+  gridBounds.value = null
+  stats.value = {}
+  simulation.seek(0)
+  if (seam.value) {
+    computeGlobal()
+  }
+}
+
+const recomputeGlobal = () => {
+  // Recompute grid with new resolution
+  if (seam.value) {
+    computeGlobal()
+  }
 }
 
 // --- Mini Dashboard Computed ---
@@ -470,23 +491,26 @@ const computeGlobal = async () => {
     // 1. Get Boreholes
     const { data } = await getSeamOverburden(seam.value)
     if (!data.boreholes?.length) throw new Error('无钻孔数据')
-    
+
+    // Store boreholes for display
+    seamBoreholes.value = data.boreholes
+
     // 2. Build Points
     const points = await buildPoints(data.boreholes)
-    
+
     // 3. Interpolate Global Grid (No bounds = auto bounds)
     const res = await mpiInterpolate(points, resolution.value, 'idw', null, null)
-    
+
     globalGrid.value = res.data.grid
     gridBounds.value = res.data.bounds
     stats.value = res.data.statistics
-    
+
     // 4. Center View
     fitToScreen()
-    
+
     // 5. Render
     requestAnimationFrame(renderAll)
-    
+
   } catch (e) {
     console.error(e)
     toast.add(e.message || '计算失败', 'error')
@@ -746,6 +770,57 @@ const drawContours = (ctx) => {
   ctx.restore()
 }
 
+const drawBoreholes = (ctx) => {
+  if (!seamBoreholes.value?.length) return
+
+  ctx.save()
+  ctx.font = '11px JetBrains Mono, monospace'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  for (const b of seamBoreholes.value) {
+    const pos = worldToScreen(b.x, b.y)
+
+    // Skip if outside viewport (with margin)
+    const margin = 50
+    if (pos.x < -margin || pos.x > overlayCanvas.value.width + margin ||
+        pos.y < -margin || pos.y > overlayCanvas.value.height + margin) {
+      continue
+    }
+
+    // Draw borehole marker (circle with cross)
+    ctx.beginPath()
+    ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.9)'
+    ctx.fill()
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.stroke()
+
+    // Draw cross inside
+    ctx.beginPath()
+    ctx.moveTo(pos.x - 3, pos.y)
+    ctx.lineTo(pos.x + 3, pos.y)
+    ctx.moveTo(pos.x, pos.y - 3)
+    ctx.lineTo(pos.x, pos.y + 3)
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    // Draw borehole name label
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.85)'
+    ctx.fillRect(pos.x - 25, pos.y + 10, 50, 16)
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)'
+    ctx.lineWidth = 1
+    ctx.strokeRect(pos.x - 25, pos.y + 10, 50, 16)
+
+    ctx.fillStyle = '#fff'
+    ctx.fillText(b.name || '', pos.x, pos.y + 18)
+  }
+
+  ctx.restore()
+}
+
 const drawOverlay = () => {
   const ctx = overlayCanvas.value?.getContext('2d')
   if (!ctx) return
@@ -759,7 +834,12 @@ const drawOverlay = () => {
   if (layers.contours) {
     drawContours(ctx)
   }
-  
+
+  // Draw boreholes
+  if (layers.boreholes) {
+    drawBoreholes(ctx)
+  }
+
   // Draw workfaces
   if (layers.workfaces) {
     workfaces.value.forEach(wf => {
@@ -1674,27 +1754,29 @@ const resetView = () => {
   right: 16px;
   z-index: 90;
   pointer-events: none;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
 }
 
 .panel-slide-enter-active,
 .panel-slide-leave-active {
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .panel-slide-enter-from,
 .panel-slide-leave-to {
   opacity: 0;
-  transform: translateX(20px);
+  transform: translateY(-10px);
 }
 
 .control-panel {
   pointer-events: auto;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  padding: 16px;
-  width: 260px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  width: 280px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
   position: relative;
 }
 
@@ -1763,8 +1845,38 @@ const resetView = () => {
 
 .range-input {
   flex: 1;
-  height: 4px;
-  accent-color: #3b82f6;
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: grab;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  transition: transform 0.15s;
+}
+.range-input::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+.range-input::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+}
+.range-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: grab;
+  border: none;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
 }
 
 .range-value {
@@ -1803,7 +1915,7 @@ const resetView = () => {
 .legend-gradient {
   height: 12px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #3b82f6, #22c55e, #eab308, #f97316, #dc2626);
+  background: linear-gradient(90deg, #22c55e, #84cc16, #eab308, #f97316, #ef4444, #7c2d12);
 }
 
 .legend-labels {

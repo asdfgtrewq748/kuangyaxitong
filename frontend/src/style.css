@@ -2,28 +2,28 @@
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, Segoe UI, sans-serif;
   color: #0f172a;
 
-  /* Colors - Modern Tech Palette */
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  --color-primary-active: #4338ca;
-  --color-primary-light: #e0e7ff;
-  --color-secondary: #64748b;
-  --color-secondary-hover: #475569;
-  --color-secondary-active: #334155;
-  --color-success: #10b981;
-  --color-success-light: #d1fae5;
-  --color-error: #ef4444;
-  --color-error-light: #fee2e2;
-  --color-warning: #f59e0b;
-  --color-warning-light: #fef3c7;
-  --color-info: #06b6d4;
-  --color-info-light: #cffafe;
+  /* Colors - Academic Light Palette (浅色学术风格) */
+  --color-primary: #5a6378;
+  --color-primary-hover: #4a5368;
+  --color-primary-active: #3a4358;
+  --color-primary-light: #e8eaf0;
+  --color-secondary: #8892a8;
+  --color-secondary-hover: #6b768d;
+  --color-secondary-active: #5a6378;
+  --color-success: #5b8c6e;
+  --color-success-light: #d8e8e0;
+  --color-error: #b86a6a;
+  --color-error-light: #f0d8d8;
+  --color-warning: #b8956a;
+  --color-warning-light: #f5ebd8;
+  --color-info: #6a8db8;
+  --color-info-light: #d8e5f0;
 
   /* Gradient Colors */
-  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  --gradient-success: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-  --gradient-card: linear-gradient(145deg, #ffffff 0%, #fafbff 100%);
-  --gradient-header: linear-gradient(135deg, #667eea 0%, #6366f1 50%, #8b5cf6 100%);
+  --gradient-primary: linear-gradient(135deg, #5a6378 0%, #8892a8 100%);
+  --gradient-success: linear-gradient(135deg, #6ba88a 0%, #5b8c6e 100%);
+  --gradient-card: linear-gradient(145deg, #fafbfc 0%, #f5f6f8 100%);
+  --gradient-header: linear-gradient(135deg, #e8eaf0 0%, #d8dbe8 50%, #c8ccd8 100%);
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -34,21 +34,33 @@
   --spacing-2xl: 24px;
   --spacing-3xl: 32px;
 
-  /* Border */
-  --border-color: #e2e8f0;
-  --border-color-light: #f1f5f9;
-  --border-radius-sm: 8px;
-  --border-radius-md: 12px;
-  --border-radius-lg: 20px;
-  --border-radius-xl: 24px;
+  /* Border - Academic Light */
+  --border-color: #d0d5dc;
+  --border-color-light: #e8ebf0;
+  --border-radius-sm: 6px;
+  --border-radius-md: 10px;
+  --border-radius-lg: 16px;
+  --border-radius-xl: 20px;
 
-  /* Shadow */
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.12);
-  --shadow-xl: 0 20px 60px rgba(15, 23, 42, 0.15);
-  --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.15);
-  --shadow-glow-sm: 0 0 20px rgba(59, 130, 246, 0.1);
+  /* Shadow - Softer for light theme */
+  --shadow-sm: 0 1px 3px rgba(90, 99, 120, 0.06);
+  --shadow-md: 0 4px 16px rgba(90, 99, 120, 0.08);
+  --shadow-lg: 0 12px 40px rgba(90, 99, 120, 0.10);
+  --shadow-xl: 0 20px 60px rgba(90, 99, 120, 0.12);
+  --shadow-glow: 0 0 40px rgba(90, 99, 120, 0.10);
+  --shadow-glow-sm: 0 0 20px rgba(90, 99, 120, 0.06);
+
+  /* Background Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f6f8;
+  --bg-tertiary: #ebeef2;
+  --bg-elevated: #fafbfc;
+
+  /* Text Colors */
+  --text-primary: #2c3545;
+  --text-secondary: #5a6378;
+  --text-tertiary: #8892a8;
+  --text-inverse: #ffffff;
 
   /* Transition */
   --transition-fast: 150ms ease;
@@ -668,108 +680,9 @@ input[type="file"]::file-selector-button:hover {
   color: #0e7490;
 }
 
-/* Dark Mode */
+/* Dark Mode - Optional override for system preference */
 @media (prefers-color-scheme: dark) {
   :root {
-    color: #e2e8f0;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-
-    --color-primary: #60a5fa;
-    --color-primary-hover: #3b82f6;
-    --color-primary-active: #2563eb;
-    --color-primary-light: rgba(96, 165, 250, 0.15);
-    --color-secondary: #94a3b8;
-    --color-secondary-hover: #64748b;
-    --color-secondary-active: #475569;
-
-    --gradient-card: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-    --gradient-header: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #0891b2 100%);
-
-    --border-color: #334155;
-    --border-color-light: #1e293b;
-
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4);
-    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.2);
-    --shadow-glow-sm: 0 0 20px rgba(59, 130, 246, 0.15);
-  }
-
-  .header h2 {
-    color: #ffffff;
-  }
-
-  .card {
-    background: var(--gradient-card);
-  }
-
-  .section-title {
-    color: #f1f5f9;
-  }
-
-  .label {
-    color: #94a3b8;
-  }
-
-  .muted {
-    color: #94a3b8;
-  }
-
-  .input,
-  select {
-    background: #1e293b;
-    color: #e2e8f0;
-    border-color: #334155;
-  }
-
-  .input:hover,
-  select:hover {
-    background: #334155;
-  }
-
-  .input:focus,
-  select:focus {
-    background: #1e293b;
-  }
-
-  .table th {
-    background: linear-gradient(135deg, #334155 0%, #475569 100%);
-    color: #e2e8f0;
-  }
-
-  .table td {
-    color: #e2e8f0;
-    border-color: #334155;
-  }
-
-  .table tbody tr:hover {
-    background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
-  }
-
-  .empty-state {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    color: #64748b;
-    border-color: #334155;
-  }
-
-  .toast {
-    background: #1e293b;
-  }
-
-  .toast.success {
-    background: linear-gradient(135deg, #1e293b 0%, #14532d 100%);
-  }
-
-  .toast.error {
-    background: linear-gradient(135deg, #1e293b 0%, #450a0a 100%);
-  }
-
-  .toast.warning {
-    background: linear-gradient(135deg, #1e293b 0%, #451a03 100%);
-  }
-
-  .toast-content {
-    color: #e2e8f0;
+    /* Keep light academic theme as default, dark mode only if explicitly enabled */
   }
 }
