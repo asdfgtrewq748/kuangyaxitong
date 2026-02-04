@@ -208,7 +208,7 @@
         <!-- 右侧坐标列表 -->
         <div class="table-section">
           <div class="table-header">
-            <h4>坐标列表</h4>
+            <h4>坐标列表 ({{ filteredBoreholes.length }})</h4>
             <input
               v-model="searchQuery"
               placeholder="搜索..."
@@ -216,7 +216,46 @@
             >
           </div>
           <div class="table-wrapper">
-            <table class="table compact">
+            <!-- Use virtual list for large datasets (>100 items) -->
+            <template v-if="filteredBoreholes.length > 100">
+              <div class="virtual-table-header">
+                <div class="virtual-row virtual-header">
+                  <div class="virtual-cell" style="width: 50px;">序号</div>
+                  <div class="virtual-cell">名称</div>
+                  <div class="virtual-cell" style="width: 80px;">X (m)</div>
+                  <div class="virtual-cell" style="width: 80px;">Y (m)</div>
+                  <div class="virtual-cell" style="width: 120px;">操作</div>
+                </div>
+              </div>
+              <VirtualList
+                :items="filteredBoreholes"
+                :item-height="44"
+                :height="320"
+                :buffer="5"
+                key-field="name"
+                item-class="virtual-row"
+              >
+                <template #default="{ item, index }">
+                  <div
+                    :class="{ 'selected': selectedBorehole === item }"
+                    @click="selectedBorehole = item"
+                    style="display: flex; width: 100%; height: 100%; align-items: center;"
+                  >
+                    <div class="virtual-cell" style="width: 50px;">{{ index + 1 }}</div>
+                    <div class="virtual-cell">{{ item.name || `BH-${index + 1}` }}</div>
+                    <div class="virtual-cell" style="width: 80px;">{{ item.x?.toFixed(1) || '-' }}</div>
+                    <div class="virtual-cell" style="width: 80px;">{{ item.y?.toFixed(1) || '-' }}</div>
+                    <div class="virtual-cell" style="width: 120px;">
+                      <button class="table-btn" @click.stop="editBoreholeByItem(item)">编辑</button>
+                      <button class="table-btn danger" @click.stop="removeBoreholeByItem(item)">删除</button>
+                    </div>
+                  </div>
+                </template>
+              </VirtualList>
+            </template>
+
+            <!-- Regular table for smaller datasets -->
+            <table v-else class="table compact">
               <thead>
                 <tr>
                   <th>序号</th>
@@ -230,20 +269,21 @@
                 <tr
                   v-for="(b, i) in filteredBoreholes"
                   :key="i"
-                  :class="{ 'selected': selectedBorehole === i }"
-                  @click="selectedBorehole = i"
+                  :class="{ 'selected': selectedBorehole === b }"
+                  @click="selectedBorehole = b"
                 >
                   <td>{{ i + 1 }}</td>
                   <td>{{ b.name || `BH-${i + 1}` }}</td>
                   <td>{{ b.x?.toFixed(1) || '-' }}</td>
                   <td>{{ b.y?.toFixed(1) || '-' }}</td>
                   <td>
-                    <button class="table-btn" @click.stop="editBorehole(i)">编辑</button>
-                    <button class="table-btn danger" @click.stop="removeBorehole(i)">删除</button>
+                    <button class="table-btn" @click.stop="editBoreholeByItem(b)">编辑</button>
+                    <button class="table-btn danger" @click.stop="removeBoreholeByItem(b)">删除</button>
                   </td>
                 </tr>
               </tbody>
             </table>
+
             <div v-if="filteredBoreholes.length === 0" class="table-empty">
               没有找到匹配的钻孔
             </div>
@@ -273,6 +313,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useToast } from '../composables/useToast'
 import BoreholeMap from '../components/BoreholeMap.vue'
+import VirtualList from '../components/VirtualList.vue'
 import { scanBoreholes, uploadBoreholes, previewBorehole } from '../api'
 
 const toast = useToast()
@@ -515,9 +556,11 @@ const addBorehole = () => {
 }
 
 const removeBorehole = (index) => {
+  const item = boreholes.value[index]
   boreholes.value.splice(index, 1)
   saveCoordinates()
-  if (selectedBorehole.value === index) {
+  // Clear selection if the removed item was selected
+  if (selectedBorehole.value === index || selectedBorehole.value === item) {
     selectedBorehole.value = null
   }
 }
@@ -531,6 +574,28 @@ const editBorehole = (index) => {
   if (newX !== null && !isNaN(parseFloat(newX))) b.x = parseFloat(newX)
   if (newY !== null && !isNaN(parseFloat(newY))) b.y = parseFloat(newY)
   saveCoordinates()
+}
+
+// Helper to get original index from borehole object
+const getBoreholeIndex = (boreholeItem) => {
+  if (typeof boreholeItem === 'number') return boreholeItem
+  return boreholes.value.indexOf(boreholeItem)
+}
+
+// Remove borehole by object (for virtual list with filtered data)
+const removeBoreholeByItem = (item) => {
+  const index = getBoreholeIndex(item)
+  if (index !== -1) {
+    removeBorehole(index)
+  }
+}
+
+// Edit borehole by object (for virtual list with filtered data)
+const editBoreholeByItem = (item) => {
+  const index = getBoreholeIndex(item)
+  if (index !== -1) {
+    editBorehole(index)
+  }
 }
 
 const onSelectBorehole = (index) => {
@@ -1360,5 +1425,57 @@ onMounted(() => {
   .map-section {
     order: -1;
   }
+}
+
+/* Virtual Table Styles */
+.virtual-table-header {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  border-radius: 8px 8px 0 0;
+}
+
+.virtual-header {
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+}
+
+.virtual-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.virtual-row:hover {
+  background: #f8fafc;
+}
+
+.virtual-row.selected {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+}
+
+.virtual-cell {
+  flex: 1;
+  padding: 0 8px;
+  font-size: 13px;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.virtual-header .virtual-cell {
+  font-weight: 600;
+}
+
+/* Ensure virtual list container has proper height */
+.table-wrapper :deep(.virtual-list-container) {
+  border-radius: 0 0 8px 8px;
+  border: 1px solid #e2e8f0;
+  border-top: none;
 }
 </style>

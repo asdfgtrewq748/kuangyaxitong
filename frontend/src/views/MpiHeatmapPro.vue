@@ -255,9 +255,10 @@ const simulation = useMiningSimulation(activeWorkface, {
 })
 
 // Initialize particle systems for visual effects
-const stressParticles = useParticles({ maxParticles: 150, emitRate: 2 })
-const reliefParticles = useParticles({ maxParticles: 100, emitRate: 1 })
-const ripples = useRipples({ maxRipples: 8, rippleSpeed: 60, rippleInterval: 600 })
+// Reduced particle counts for better performance while maintaining visual quality
+const stressParticles = useParticles({ maxParticles: 80, emitRate: 1.5 })
+const reliefParticles = useParticles({ maxParticles: 60, emitRate: 1 })
+const ripples = useRipples({ maxRipples: 6, rippleSpeed: 60, rippleInterval: 600 })
 
 // Track last emission time for particle generation
 const lastParticleEmit = ref(0)
@@ -293,6 +294,15 @@ const toast = useToast()
 
 // Cache
 const layerParamsCache = new Map()
+// Color cache to avoid repeated color calculations (js-cache-function-results pattern)
+const colorCache = new Map()
+const getColorCacheKey = (val, min, max) => {
+  // Handle null/undefined values safely
+  const safeVal = Number.isFinite(val) ? val.toFixed(2) : 'null'
+  const safeMin = Number.isFinite(min) ? min.toFixed(2) : 'null'
+  const safeMax = Number.isFinite(max) ? max.toFixed(2) : 'null'
+  return `${safeVal}-${safeMin}-${safeMax}`
+}
 // Enhanced color palette for better visual quality - smoother gradient
 const odiPalette = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#7c2d12']
 
@@ -348,6 +358,8 @@ const handleSeamChange = () => {
   seamBoreholes.value = []
   gridBounds.value = null
   stats.value = {}
+  // Clear color cache when data changes
+  colorCache.clear()
   simulation.seek(0)
   if (seam.value) {
     computeGlobal()
@@ -637,40 +649,50 @@ const drawBackground = () => {
   }
 
   ctx.clearRect(0, 0, bgCanvas.value.width, bgCanvas.value.height)
-  
+
   const grid = globalGrid.value
   const rows = grid.length
   const cols = grid[0].length
   const { min_x, max_x, min_y, max_y } = gridBounds.value
   const cellW_m = (max_x - min_x) / cols
   const cellH_m = (max_y - min_y) / rows
-  
+
   const minVal = stats.value.min || 0
   const maxVal = stats.value.max || 100
   const thresholds = gradeThresholds.value
-  
-  // Optimization: Only draw cells in viewport? 
-  // For now draw all, but using simple rects.
-  // Better approach: Create an offscreen ImageBitmap for the grid, then drawImage with transform.
-  // But to support dynamic updates, we'll draw cells.
-  
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+
+  // PERFORMANCE: Viewport culling - only render visible cells
+  // Calculate visible world bounds from screen viewport
+  const canvasW = bgCanvas.value.width
+  const canvasH = bgCanvas.value.height
+  const tl = screenToWorld(0, 0)
+  const br = screenToWorld(canvasW, canvasH)
+
+  // Convert to grid indices with padding for smooth panning
+  const padding = 1 // Extra cells around edges
+  const startCol = Math.max(0, Math.floor((tl.x - min_x) / cellW_m) - padding)
+  const endCol = Math.min(cols - 1, Math.ceil((br.x - min_x) / cellW_m) + padding)
+  const startRow = Math.max(0, Math.floor((max_y - br.y) / cellH_m) - padding)
+  const endRow = Math.min(rows - 1, Math.ceil((max_y - tl.y) / cellH_m) + padding)
+
+  // Only iterate visible cells - major performance improvement for large grids
+  for (let r = startRow; r <= endRow; r++) {
+    for (let c = startCol; c <= endCol; c++) {
       const val = grid[r][c]
       if (val === null) continue
-      
+
       const wx = min_x + c * cellW_m
       const wy = max_y - r * cellH_m // Top-left of cell in world
-      
+
       const p1 = worldToScreen(wx, wy)
       const p2 = worldToScreen(wx + cellW_m, wy - cellH_m)
-      
+
       const w = p2.x - p1.x
       const h = p2.y - p1.y // h will be positive
-      
-      // Cull invisible
-      if (p1.x > bgCanvas.value.width || p2.x < 0 || p1.y > bgCanvas.value.height || p2.y < 0) continue
-      
+
+      // Additional culling for edge cases
+      if (p1.x > canvasW || p2.x < 0 || p1.y > canvasH || p2.y < 0) continue
+
       const color = layers.gradedBands
         ? getDiscreteColor(val, thresholds, gradeColors)
         : getColor(val, minVal, maxVal)
@@ -1388,9 +1410,16 @@ watch(() => simulation.isPlaying.value, (isPlaying) => {
   }
 })
 
-// Invalidate background cache when viewport changes (rerender-defer-reads pattern)
+// Invalidate background cache when viewport changes - with throttling for performance
+let cacheInvalidationScheduled = false
 watch(() => [viewport.scale, viewport.x, viewport.y], () => {
-  bgCacheValid.value = false
+  if (!cacheInvalidationScheduled) {
+    cacheInvalidationScheduled = true
+    requestAnimationFrame(() => {
+      bgCacheValid.value = false
+      cacheInvalidationScheduled = false
+    })
+  }
 }, { flush: 'sync' })
 
 // Animation loop for smooth playback

@@ -309,11 +309,12 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
 import JSZip from 'jszip'
-import katex from 'katex'
-import 'katex/dist/katex.min.css'
+// Lazy load KaTeX - only loads formulas when component is mounted
+let katex = null
 
-// KaTeX渲染函数
+// KaTeX渲染函数 - handles lazy loaded KaTeX
 const renderFormula = (formula) => {
+  if (!katex) return formula // Return plain text if KaTeX not loaded yet
   try {
     return katex.renderToString(formula, {
       throwOnError: false,
@@ -356,27 +357,48 @@ const renderedFormulas = reactive({
   asi: { main: '', stiff: '', fric: '' }
 })
 
-onMounted(() => {
-  // 渲染RSI公式
-  renderedFormulas.rsi.main = renderFormula(formulas.rsi.main)
-  renderedFormulas.rsi.norm = renderFormula(formulas.rsi.norm)
-  renderedFormulas.rsi.key = renderFormula(formulas.rsi.key)
-  renderedFormulas.rsi.struct = renderFormula(formulas.rsi.struct)
+onMounted(async () => {
+  // Lazy load KaTeX only when this component mounts
+  try {
+    const katexModule = await import('katex')
+    katex = katexModule.default || katexModule
+    await import('katex/dist/katex.min.css')
 
-  // 渲染BRI公式
-  renderedFormulas.bri.main = renderFormula(formulas.bri.main)
-  renderedFormulas.bri.depth = renderFormula(formulas.bri.depth)
-  renderedFormulas.bri.hard = renderFormula(formulas.bri.hard)
-  renderedFormulas.bri.thick = renderFormula(formulas.bri.thick)
+    // 渲染RSI公式
+    renderedFormulas.rsi.main = renderFormula(formulas.rsi.main)
+    renderedFormulas.rsi.norm = renderFormula(formulas.rsi.norm)
+    renderedFormulas.rsi.key = renderFormula(formulas.rsi.key)
+    renderedFormulas.rsi.struct = renderFormula(formulas.rsi.struct)
 
-  // 渲染ASI公式
-  renderedFormulas.asi.main = renderFormula(formulas.asi.main)
-  renderedFormulas.asi.stiff = renderFormula(formulas.asi.stiff)
-  renderedFormulas.asi.fric = renderFormula(formulas.asi.fric)
+    // 渲染BRI公式
+    renderedFormulas.bri.main = renderFormula(formulas.bri.main)
+    renderedFormulas.bri.depth = renderFormula(formulas.bri.depth)
+    renderedFormulas.bri.hard = renderFormula(formulas.bri.hard)
+    renderedFormulas.bri.thick = renderFormula(formulas.bri.thick)
+
+    // 渲染ASI公式
+    renderedFormulas.asi.main = renderFormula(formulas.asi.main)
+    renderedFormulas.asi.stiff = renderFormula(formulas.asi.stiff)
+    renderedFormulas.asi.fric = renderFormula(formulas.asi.fric)
+  } catch (e) {
+    console.error('Failed to load KaTeX:', e)
+    // Fallback to plain text formulas
+    Object.keys(formulas).forEach(key => {
+      if (typeof formulas[key] === 'string') {
+        // Single formula
+      } else if (typeof formulas[key] === 'object') {
+        // Multiple formulas
+        Object.keys(formulas[key]).forEach(subKey => {
+          renderedFormulas[key][subKey] = formulas[key][subKey]
+        })
+      }
+    })
+  }
 })
 
 // 内联渲染函数 (用于单行公式)
 const renderInlineFormula = (formula) => {
+  if (!katex) return formula
   try {
     return katex.renderToString(formula, {
       throwOnError: false,
