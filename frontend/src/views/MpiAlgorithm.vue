@@ -140,6 +140,37 @@
             <img :src="useBwFigures ? '/mpi-algorithm/bri_depth_curve_bw.svg' : '/mpi-algorithm/bri_depth_curve.svg'" alt="BRI采深影响曲线" />
             <span>图3 | 采深影响曲线</span>
           </div>
+
+          <!-- 深度交互滑块 -->
+          <div class="interactive-control">
+            <div class="control-header">
+              <span class="control-label">采深模拟</span>
+              <span class="control-value" :class="briRiskClass">{{ briSimDepth }}m ({{ briSimLabel }})</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1200"
+              step="10"
+              v-model.number="briSimDepth"
+              class="depth-slider"
+            />
+            <div class="depth-labels">
+              <span>0m</span>
+              <span>400m</span>
+              <span>800m</span>
+              <span>1200m</span>
+            </div>
+            <div class="bri-sim-result">
+              <div class="bri-value-bar">
+                <div class="bri-bar-track">
+                  <div class="bri-bar-fill" :style="{ width: briSimValue + '%', background: briBarColor }"></div>
+                </div>
+                <span class="bri-value">BRI = {{ briSimValue.toFixed(1) }}</span>
+              </div>
+            </div>
+          </div>
+
           <div class="formula">
             <div class="formula-title">计算公式</div>
             <div class="formula-body formula-katex" v-html="renderedFormulas.bri.main"></div>
@@ -174,8 +205,30 @@
             <div class="formula-body formula-katex" v-html="renderedFormulas.asi.stiff"></div>
             <div class="formula-body formula-katex" v-html="renderedFormulas.asi.fric"></div>
           </div>
-          <div class="indicator-visual">
-            <div class="visual-wave"></div>
+          <!-- ASI应力传递动画 -->
+          <div class="asi-animation-container">
+            <div class="asi-label">应力传递模拟</div>
+            <div class="stress-bars">
+              <div
+                v-for="(bar, idx) in stressBars"
+                :key="idx"
+                class="stress-bar"
+                :style="{
+                  height: bar.height + '%',
+                  background: bar.color,
+                  animationDelay: bar.delay + 's'
+                }"
+              ></div>
+            </div>
+            <div class="stress-labels">
+              <span>采空区</span>
+              <span>煤壁</span>
+              <span>前方</span>
+            </div>
+            <div class="peak-indicator" :style="{ left: peakPosition + '%' }">
+              <div class="peak-arrow">↑</div>
+              <div class="peak-label">峰值</div>
+            </div>
           </div>
         </div>
       </div>
@@ -468,6 +521,71 @@ const weights = reactive({
   bri: 0.35,
   asi: 0.25
 })
+
+// BRI深度模拟
+const briSimDepth = ref(600)
+const briSimValue = computed(() => {
+  const depth = briSimDepth.value
+  const criticalDepth = 400
+  const depthPenalty = depth > criticalDepth
+    ? Math.min((depth - criticalDepth) / 200, 1) * 40
+    : 0
+  // 假设中等硬层和煤层厚度
+  const hardPenalty = 15
+  const thicknessPenalty = 15
+  return Math.min(Math.max(100 - depthPenalty - hardPenalty - thicknessPenalty, 0), 100)
+})
+const briRiskClass = computed(() => {
+  const v = briSimValue.value
+  if (v >= 70) return 'low'
+  if (v >= 50) return 'medium'
+  return 'high'
+})
+const briSimLabel = computed(() => {
+  const v = briSimValue.value
+  if (v >= 70) return '低风险'
+  if (v >= 50) return '中风险'
+  return '高风险'
+})
+const briBarColor = computed(() => {
+  const v = briSimValue.value
+  if (v >= 70) return 'linear-gradient(90deg, #22c55e, #16a34a)'
+  if (v >= 50) return 'linear-gradient(90deg, #f59e0b, #d97706)'
+  return 'linear-gradient(90deg, #ef4444, #dc2626)'
+})
+
+// ASI应力动画
+const stressBars = computed(() => {
+  // 模拟支承压力分布曲线：采空区低 -> 煤壁峰值 -> 前方衰减
+  const bars = []
+  for (let i = 0; i < 20; i++) {
+    const x = i / 19 // 0 到 1
+    // 应力分布函数：左低 -> 中峰 -> 右衰减
+    let stress
+    if (x < 0.4) {
+      // 采空区：较低应力
+      stress = 30 + Math.random() * 10
+    } else if (x < 0.6) {
+      // 煤壁附近：应力集中峰值
+      const peak = 1 - Math.abs(x - 0.5) / 0.1
+      stress = 30 + peak * 60 + Math.random() * 5
+    } else {
+      // 前方：衰减至原岩应力
+      const decay = Math.exp(-(x - 0.6) * 3)
+      stress = 30 + decay * 30 + Math.random() * 10
+    }
+    bars.push({
+      height: Math.min(Math.max(stress, 10), 95),
+      color: stress > 70 ? 'linear-gradient(180deg, #ef4444, #dc2626)' :
+             stress > 50 ? 'linear-gradient(180deg, #f59e0b, #d97706)' :
+             'linear-gradient(180deg, #22c55e, #16a34a)',
+      delay: i * 0.05
+    })
+  }
+  return bars
+})
+
+const peakPosition = computed(() => 50) // 峰值在煤壁位置
 
 const weightItems = [
   { key: 'rsi', label: 'RSI 权重', default: '0.40' },
@@ -1362,15 +1480,6 @@ const openDownloads = () => {
   border-radius: 999px;
 }
 
-.visual-wave {
-  width: 100%;
-  height: 40px;
-  background: radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.2) 0%, transparent 60%),
-    radial-gradient(circle at 60% 40%, rgba(16, 185, 129, 0.2) 0%, transparent 70%),
-    radial-gradient(circle at 90% 60%, rgba(59, 130, 246, 0.2) 0%, transparent 60%);
-  border-radius: 12px;
-}
-
 /* Weight Controls - Better Spacing - Academic */
 .weight-grid {
   display: grid;
@@ -1451,10 +1560,220 @@ const openDownloads = () => {
 .dot.bri { background: #7a7cb0; }
 .dot.asi { background: #5b8c6e; }
 
+/* BRI深度交互控件 */
+.interactive-control {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid var(--border-color);
+}
+
+.control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.control-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.control-value {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.control-value.low {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.control-value.medium {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.control-value.high {
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.depth-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e 0%, #22c55e 33%, #f59e0b 33%, #f59e0b 66%, #ef4444 66%, #ef4444 100%);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.depth-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--color-primary);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.depth-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.depth-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--color-primary);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+
+.depth-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.bri-sim-result {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.bri-value-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bri-bar-track {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.bri-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.bri-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 80px;
+  text-align: right;
+}
+
 .weight-note {
   margin-top: 12px;
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+/* ASI应力传递动画 */
+.asi-animation-container {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.asi-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.stress-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 80px;
+  padding: 0 40px;
+  position: relative;
+}
+
+.stress-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  min-width: 4px;
+  transition: height 0.5s ease;
+  animation: stressPulse 2s ease-in-out infinite;
+}
+
+@keyframes stressPulse {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.stress-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 40px 0;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.peak-indicator {
+  position: absolute;
+  top: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.5s ease;
+}
+
+.peak-arrow {
+  font-size: 16px;
+  color: var(--color-error);
+  font-weight: bold;
+  animation: arrowBounce 1s ease-in-out infinite;
+}
+
+@keyframes arrowBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.peak-label {
+  font-size: 10px;
+  color: var(--color-error);
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
 }
 
 /* Risk Levels - Optimized proportions - Academic */
