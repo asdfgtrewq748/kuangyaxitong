@@ -42,6 +42,12 @@ const routes = [
     meta: { title: 'MPI算法原理', icon: '🧠' }
   },
   {
+    path: '/academic-algorithm',
+    name: 'AcademicAlgorithm',
+    component: () => import('../views/AcademicAlgorithm.vue'),
+    meta: { title: '学术算法展示', icon: '🔬' }
+  },
+  {
     path: '/steps',
     name: 'Steps',
     component: () => import('../views/Steps.vue'),
