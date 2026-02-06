@@ -3,39 +3,46 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ================================
-echo    矿压系统启动中...
+echo   Mining Pressure System Startup
 echo ================================
 echo.
 
-echo [1/3] 检查依赖...
+echo [1/4] Checking dependencies...
 cd backend
 pip install python-multipart >nul 2>nul
 pip install -r requirements.txt >nul 2>nul
 cd ..
 
-echo [2/3] 后端服务...
+echo [2/4] Starting backend services...
 cd backend
-start "后端-8001" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+start "backend-8001" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+start "backend-5000" cmd /k python api_server.py
 cd ..
 
 timeout /t 3 /nobreak >nul
 
-echo [3/3] 前端服务...
+echo [3/4] Starting frontend service...
 cd frontend
 if not exist node_modules (
-    echo 安装前端依赖...
+    echo Installing frontend dependencies...
     call npm install
 )
-start "前端-5173" cmd /k npm run dev
+start "frontend-5173" cmd /k npm run dev
 cd ..
 
 timeout /t 2 /nobreak >nul
 
+echo [4/4] Health check URLs:
+echo   API-8001: http://localhost:8001/health
+echo   API-5000: http://localhost:5000/api/health
+echo   WEB-5173: http://localhost:5173
+
 echo.
 echo ================================
-echo   启动完成！
-echo   后端: http://localhost:8001
-echo   前端: http://localhost:5173
+echo   Startup Complete
+echo   Backend:      http://localhost:8001
+echo   Academic API: http://localhost:5000
+echo   Frontend:     http://localhost:5173
 echo ================================
 echo.
 pause

@@ -207,3 +207,26 @@ export const estimateRockParams = (lithology, params = {}) =>
   api.post('/api/rock-params/estimate', null, { params: { lithology, ...params } })
 export const getDefaultRockParams = (lithology) =>
   api.get(`/api/rock-params/default/${lithology}`)
+
+// Algorithm Validation APIs
+export const validationDatasets = () =>
+  api.get('/api/algorithm-validation/datasets')
+export const validationRun = (payload) =>
+  api.post('/api/algorithm-validation/run', payload)
+export const validationResult = (runId) =>
+  api.get(`/api/algorithm-validation/result/${runId}`)
+export const validationEvaluate = (payload) =>
+  api.post('/api/algorithm-validation/evaluate', payload)
+export const validationExport = (runId) =>
+  api.get(`/api/algorithm-validation/export/${runId}`, { responseType: 'blob' })
+export const validationSpatialOverview = (seamName = '16-3煤', resolution = 50, method = 'idw', weights = null) => {
+  const params = {
+    seam_name: seamName,
+    resolution,
+    method
+  }
+  if (weights && typeof weights === 'object') {
+    params.weights = JSON.stringify(weights)
+  }
+  return apiCache.cachedGet('/api/algorithm-validation/spatial-overview', { params })
+}

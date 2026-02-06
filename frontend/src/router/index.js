@@ -48,6 +48,12 @@ const routes = [
     meta: { title: '学术算法展示', icon: '🔬' }
   },
   {
+    path: '/algorithm-validation',
+    name: 'AlgorithmValidation',
+    component: () => import('../views/AlgorithmValidation.vue'),
+    meta: { title: '新算法实证', icon: '🧪' }
+  },
+  {
     path: '/steps',
     name: 'Steps',
     component: () => import('../views/Steps.vue'),

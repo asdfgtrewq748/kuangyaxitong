@@ -138,6 +138,20 @@ const icons = {
     h('line', { x1: '12', y1: '22.08', x2: '12', y2: '12' })
   ]),
 
+  AlgorithmValidation: () => h('svg', {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    'stroke-width': 2,
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round'
+  }, [
+    h('path', { d: 'M9 3h6' }),
+    h('path', { d: 'M10 3v3l-4 6a5 5 0 0 0 4.3 7.5h3.4A5 5 0 0 0 18 12l-4-6V3' }),
+    h('path', { d: 'M8.5 13h7' }),
+    h('path', { d: 'M9.5 16h5' })
+  ]),
+
   Steps: () => h('svg', {
     viewBox: '0 0 24 24',
     fill: 'none',

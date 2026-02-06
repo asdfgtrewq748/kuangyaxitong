@@ -329,6 +329,54 @@ def calc_mpi(
     }
 
 
+def calc_all_indicators(
+    point: PointData,
+    config: Optional[MPIConfig] = None,
+    weights: Optional[Dict[str, float]] = None
+) -> Dict[str, float]:
+    """
+    一次性计算 RSI / BRI / ASI / MPI 四项指标。
+
+    Args:
+        point: 坐标点数据
+        config: MPI配置
+        weights: 可选权重，支持两套键名：
+            - {rsi, bri, asi}
+            - {roof_stability, burst_risk, abutment_stress}
+
+    Returns:
+        {"rsi": float, "bri": float, "asi": float, "mpi": float}
+    """
+    cfg = config if config is not None else MPIConfig()
+
+    # Local weights override, normalized to avoid validation failure.
+    if weights:
+        w_rsi = float(weights.get("rsi", weights.get("roof_stability", cfg.weight_roof_stability)))
+        w_bri = float(weights.get("bri", weights.get("burst_risk", cfg.weight_burst_risk)))
+        w_asi = float(weights.get("asi", weights.get("abutment_stress", cfg.weight_abutment_stress)))
+        total = w_rsi + w_bri + w_asi
+        if total > 0:
+            cfg.weight_roof_stability = w_rsi / total
+            cfg.weight_burst_risk = w_bri / total
+            cfg.weight_abutment_stress = w_asi / total
+
+    rsi = calc_roof_stability(point, cfg)
+    bri = calc_burst_risk(point, cfg)
+    asi = calc_abutment_stress(point, cfg)
+    mpi = (
+        cfg.weight_roof_stability * rsi +
+        cfg.weight_burst_risk * bri +
+        cfg.weight_abutment_stress * asi
+    )
+
+    return {
+        "rsi": round(_clamp(float(rsi), 0.0, 100.0), 4),
+        "bri": round(_clamp(float(bri), 0.0, 100.0), 4),
+        "asi": round(_clamp(float(asi), 0.0, 100.0), 4),
+        "mpi": round(_clamp(float(mpi), 0.0, 100.0), 4),
+    }
+
+
 def calc_mpi_batch(
     points_data: Dict[str, Dict[str, Any]],
     config: Optional[MPIConfig] = None,

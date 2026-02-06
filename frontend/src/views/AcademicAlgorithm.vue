@@ -42,6 +42,117 @@
 
     <!-- 算法原理 Tab -->
     <template v-if="activeTab === 'principle'">
+      <section class="card onboarding-card">
+        <div class="section-header">
+          <h2>新用户导读</h2>
+          <p>先按“问题-证据-结论”三步阅读，再深入公式和推导细节。</p>
+        </div>
+        <div class="onboarding-grid">
+          <div class="reading-path">
+            <div class="reading-step" v-for="item in newcomerJourney" :key="item.step">
+              <span class="reading-index">{{ item.step }}</span>
+              <div class="reading-body">
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.desc }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="io-map">
+            <h3>输入-处理-输出总示意图</h3>
+            <svg viewBox="0 0 680 220" class="io-map-svg" role="img" aria-label="MPI 输入处理输出总示意图">
+              <defs>
+                <linearGradient id="ioInputGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#e0f2fe"/>
+                  <stop offset="100%" style="stop-color:#bae6fd"/>
+                </linearGradient>
+                <linearGradient id="ioProcessGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#ede9fe"/>
+                  <stop offset="100%" style="stop-color:#ddd6fe"/>
+                </linearGradient>
+                <linearGradient id="ioOutputGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#dcfce7"/>
+                  <stop offset="100%" style="stop-color:#bbf7d0"/>
+                </linearGradient>
+                <marker id="ioArrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="#64748b"/>
+                </marker>
+              </defs>
+
+              <rect x="20" y="48" width="190" height="124" rx="14" fill="url(#ioInputGradient)" stroke="#0ea5e9" stroke-width="1.5"/>
+              <text x="115" y="78" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">输入层</text>
+              <text x="115" y="104" text-anchor="middle" font-size="12" fill="#334155">岩层参数、微震事件</text>
+              <text x="115" y="124" text-anchor="middle" font-size="12" fill="#334155">应力边界、支护条件</text>
+              <text x="115" y="144" text-anchor="middle" font-size="12" fill="#334155">历史风险标签</text>
+
+              <rect x="245" y="32" width="190" height="156" rx="14" fill="url(#ioProcessGradient)" stroke="#8b5cf6" stroke-width="1.5"/>
+              <text x="340" y="62" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">机理计算层</text>
+              <text x="340" y="87" text-anchor="middle" font-size="12" fill="#334155">RSI: 裂纹演化</text>
+              <text x="340" y="107" text-anchor="middle" font-size="12" fill="#334155">BRI: 震源机制识别</text>
+              <text x="340" y="127" text-anchor="middle" font-size="12" fill="#334155">ASI: 应力重分布</text>
+              <text x="340" y="147" text-anchor="middle" font-size="12" fill="#334155">DBN: 概率融合推理</text>
+              <text x="340" y="167" text-anchor="middle" font-size="11" fill="#475569">输出中间量: RSI/BRI/ASI</text>
+
+              <rect x="470" y="48" width="190" height="124" rx="14" fill="url(#ioOutputGradient)" stroke="#22c55e" stroke-width="1.5"/>
+              <text x="565" y="78" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">决策输出层</text>
+              <text x="565" y="104" text-anchor="middle" font-size="12" fill="#334155">MPI 综合指数</text>
+              <text x="565" y="124" text-anchor="middle" font-size="12" fill="#334155">风险等级与概率分布</text>
+              <text x="565" y="144" text-anchor="middle" font-size="12" fill="#334155">支护与预警建议</text>
+
+              <line x1="210" y1="110" x2="245" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#ioArrow)"/>
+              <line x1="435" y1="110" x2="470" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#ioArrow)"/>
+            </svg>
+            <p class="io-map-tip">阅读建议：先确认右侧“输出层”含义，再回看中间机理如何支撑结论。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card glossary-card">
+        <div class="section-header">
+          <h2>术语速查</h2>
+          <p>把“学术名词”翻译成“业务含义”，第一次看也能快速建立直觉。</p>
+        </div>
+        <div class="glossary-grid">
+          <article class="glossary-item" v-for="item in termGlossary" :key="item.term">
+            <h3>{{ item.term }}</h3>
+            <p class="glossary-plain">{{ item.plain }}</p>
+            <p class="glossary-cue">{{ item.cue }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="card storyboard-card">
+        <div class="section-header">
+          <h2>四大算法分镜示意</h2>
+          <p>每个算法都拆成“输入 → 机理 → 输出”，并标注新手优先关注点。</p>
+        </div>
+        <div class="storyboard-grid">
+          <article class="storyboard-item" v-for="item in algorithmStoryboards" :key="item.key">
+            <div class="storyboard-head">
+              <span class="storyboard-tag">{{ item.tag }}</span>
+              <h3>{{ item.name }}</h3>
+            </div>
+            <div class="storyboard-strip">
+              <div class="story-node input">
+                <span class="story-node-label">输入</span>
+                <span class="story-node-text">{{ item.input }}</span>
+              </div>
+              <span class="story-arrow">→</span>
+              <div class="story-node process">
+                <span class="story-node-label">机理</span>
+                <span class="story-node-text">{{ item.process }}</span>
+              </div>
+              <span class="story-arrow">→</span>
+              <div class="story-node output">
+                <span class="story-node-label">输出</span>
+                <span class="story-node-text">{{ item.output }}</span>
+              </div>
+            </div>
+            <p class="storyboard-watch">新手先看：{{ item.watch }}</p>
+            <button class="storyboard-jump" @click="activeAlgo = item.key">查看详细原理</button>
+          </article>
+        </div>
+      </section>
+
       <!-- 总体流程 -->
       <section class="card flow-card">
         <div class="section-header">
@@ -838,133 +949,109 @@
 
               <div class="sci-figure">
                 <div class="figure-caption-top">
-                  <strong>Fig. 4</strong> | Dynamic Bayesian Network architecture. Observations O (microseismic, geomechanical)
-                  update hidden states H, which evolve temporally and produce risk outputs R.
+                  <strong>Fig. 4</strong> | Dynamic Bayesian Network (paper style). Observations O update hidden states H;
+                  hidden states evolve over time and generate risk outputs R.
                 </div>
                 <div class="dbn-container">
-                  <svg viewBox="0 0 700 220" class="sci-svg-dbn">
+                  <svg viewBox="0 0 860 320" class="sci-svg-dbn" role="img" aria-label="动态贝叶斯网络时间片结构示意图">
                     <defs>
-                      <!-- 节点渐变 -->
-                      <linearGradient id="obsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#5dade2"/>
-                        <stop offset="100%" style="stop-color:#2874a6"/>
-                      </linearGradient>
-                      <linearGradient id="hiddenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#f5b041"/>
-                        <stop offset="100%" style="stop-color:#b7950b"/>
-                      </linearGradient>
-                      <linearGradient id="outGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#58d68d"/>
-                        <stop offset="100%" style="stop-color:#239b56"/>
-                      </linearGradient>
-
-                      <!-- 阴影 -->
-                      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.2"/>
-                      </filter>
-
-                      <!-- 箭头 -->
-                      <marker id="arrBlue" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
-                        <polygon points="0 0, 10 4, 0 8" fill="#2874a6"/>
+                      <marker id="dbnArrowSolid" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                        <polygon points="0 0, 8 3, 0 6" fill="#111827"/>
                       </marker>
-                      <marker id="arrGray" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
-                        <polygon points="0 0, 10 4, 0 8" fill="#7f8c8d"/>
+                      <marker id="dbnArrowDash" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                        <polygon points="0 0, 8 3, 0 6" fill="#111827"/>
                       </marker>
                     </defs>
 
-                    <!-- 时间片分隔线 -->
-                    <line x1="240" y1="20" x2="240" y2="200" stroke="#bdc3c7" stroke-width="1" stroke-dasharray="5,3"/>
-                    <line x1="460" y1="20" x2="460" y2="200" stroke="#bdc3c7" stroke-width="1" stroke-dasharray="5,3"/>
+                    <!-- 时间片背景 -->
+                    <rect x="26" y="44" width="248" height="184" rx="8" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
+                    <rect x="306" y="44" width="248" height="184" rx="8" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
+                    <rect x="586" y="44" width="248" height="184" rx="8" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
 
-                    <!-- 时间标签 -->
-                    <text x="130" y="195" text-anchor="middle" font-size="12" fill="#5d6d7e" font-family="Arial" font-style="italic">t-1</text>
-                    <text x="350" y="195" text-anchor="middle" font-size="12" fill="#5d6d7e" font-family="Arial" font-style="italic">t</text>
-                    <text x="570" y="195" text-anchor="middle" font-size="12" fill="#5d6d7e" font-family="Arial" font-style="italic">t+1</text>
+                    <!-- 时间片标签 -->
+                    <text x="150" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">Slice t-1</text>
+                    <text x="430" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">Slice t</text>
+                    <text x="710" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">Slice t+1</text>
 
-                    <!-- 时间片1 -->
-                    <!-- O0 -->
-                    <rect x="70" y="60" width="60" height="50" rx="5" fill="url(#obsGrad)" filter="url(#shadow)" stroke="#1a5276" stroke-width="1.5"/>
-                    <text x="100" y="80" text-anchor="middle" font-size="11" fill="white" font-family="Arial" font-weight="bold">O</text>
-                    <text x="100" y="95" text-anchor="middle" font-size="9" fill="#d6eaf8" font-family="Arial">Observations</text>
+                    <!-- slice t-1 -->
+                    <rect x="50" y="136" width="80" height="54" rx="6" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+                    <text x="90" y="158" text-anchor="middle" font-size="17" fill="#111827" font-family="Times New Roman, serif" font-weight="700">O</text>
+                    <text x="90" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Observed</text>
 
-                    <!-- H0 -->
-                    <ellipse cx="180" cy="85" rx="50" ry="35" fill="url(#hiddenGrad)" filter="url(#shadow)" stroke="#9a7d0a" stroke-width="1.5"/>
-                    <text x="180" y="80" text-anchor="middle" font-size="11" fill="white" font-family="Arial" font-weight="bold">H</text>
-                    <text x="180" y="95" text-anchor="middle" font-size="9" fill="#fcf3cf" font-family="Arial">Hidden</text>
+                    <ellipse cx="206" cy="161" rx="56" ry="38" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+                    <text x="206" y="154" text-anchor="middle" font-size="18" fill="#111827" font-family="Times New Roman, serif" font-weight="700">H</text>
+                    <text x="206" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Hidden state</text>
+                    <text x="206" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">risk / stress</text>
 
-                    <!-- R0 -->
-                    <rect x="235" y="25" width="50" height="40" rx="20" fill="url(#outGrad)" filter="url(#shadow)" stroke="#145a32" stroke-width="1.5"/>
-                    <text x="260" y="42" text-anchor="middle" font-size="10" fill="white" font-family="Arial" font-weight="bold">R</text>
-                    <text x="260" y="55" text-anchor="middle" font-size="8" fill="#d5f5e3" font-family="Arial">Risk</text>
+                    <circle cx="248" cy="96" r="26" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+                    <text x="248" y="93" text-anchor="middle" font-size="16" fill="#111827" font-family="Times New Roman, serif" font-weight="700">R</text>
+                    <text x="248" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">Output</text>
 
-                    <!-- 时间片2 -->
-                    <!-- O1 -->
-                    <rect x="290" y="60" width="60" height="50" rx="5" fill="url(#obsGrad)" filter="url(#shadow)" stroke="#1a5276" stroke-width="1.5"/>
-                    <text x="320" y="80" text-anchor="middle" font-size="11" fill="white" font-family="Arial" font-weight="bold">O</text>
-                    <text x="320" y="95" text-anchor="middle" font-size="9" fill="#d6eaf8" font-family="Arial">Observations</text>
+                    <!-- slice t -->
+                    <rect x="330" y="136" width="80" height="54" rx="6" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+                    <text x="370" y="158" text-anchor="middle" font-size="17" fill="#111827" font-family="Times New Roman, serif" font-weight="700">O</text>
+                    <text x="370" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Observed</text>
 
-                    <!-- H1 -->
-                    <ellipse cx="400" cy="85" rx="50" ry="35" fill="url(#hiddenGrad)" filter="url(#shadow)" stroke="#9a7d0a" stroke-width="1.5"/>
-                    <text x="400" y="80" text-anchor="middle" font-size="11" fill="white" font-family="Arial" font-weight="bold">H</text>
-                    <text x="400" y="95" text-anchor="middle" font-size="9" fill="#fcf3cf" font-family="Arial">Hidden</text>
+                    <ellipse cx="486" cy="161" rx="56" ry="38" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+                    <text x="486" y="154" text-anchor="middle" font-size="18" fill="#111827" font-family="Times New Roman, serif" font-weight="700">H</text>
+                    <text x="486" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Hidden state</text>
+                    <text x="486" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">risk / stress</text>
 
-                    <!-- R1 -->
-                    <rect x="455" y="25" width="50" height="40" rx="20" fill="url(#outGrad)" filter="url(#shadow)" stroke="#145a32" stroke-width="1.5"/>
-                    <text x="480" y="42" text-anchor="middle" font-size="10" fill="white" font-family="Arial" font-weight="bold">R</text>
-                    <text x="480" y="55" text-anchor="middle" font-size="8" fill="#d5f5e3" font-family="Arial">Risk</text>
+                    <circle cx="528" cy="96" r="26" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+                    <text x="528" y="93" text-anchor="middle" font-size="16" fill="#111827" font-family="Times New Roman, serif" font-weight="700">R</text>
+                    <text x="528" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">Output</text>
 
-                    <!-- 时间片3 -->
-                    <!-- O2 -->
-                    <rect x="510" y="60" width="60" height="50" rx="5" fill="url(#obsGrad)" filter="url(#shadow)" stroke="#1a5276" stroke-width="1.5"/>
-                    <text x="540" y="80" text-anchor="middle" font-size="11" fill="white" font-family="Arial" font-weight="bold">O</text>
-                    <text x="540" y="95" text-anchor="middle" font-size="9" fill="#d6eaf8" font-family="Arial">Observations</text>
+                    <!-- slice t+1 -->
+                    <rect x="610" y="136" width="80" height="54" rx="6" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+                    <text x="650" y="158" text-anchor="middle" font-size="17" fill="#111827" font-family="Times New Roman, serif" font-weight="700">O</text>
+                    <text x="650" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Observed</text>
 
-                    <!-- H2 -->
-                    <ellipse cx="620" cy="85" rx="50" ry="35" fill="url(#hiddenGrad)" filter="url(#shadow)" stroke="#9a7d0a" stroke-width="1.5"/>
-                    <text x="620" y="80" text-anchor="middle" font-size="11" fill="white" font-family="Arial" font-weight="bold">H</text>
-                    <text x="620" y="95" text-anchor="middle" font-size="9" fill="#fcf3cf" font-family="Arial">Hidden</text>
+                    <ellipse cx="766" cy="161" rx="56" ry="38" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+                    <text x="766" y="154" text-anchor="middle" font-size="18" fill="#111827" font-family="Times New Roman, serif" font-weight="700">H</text>
+                    <text x="766" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Hidden state</text>
+                    <text x="766" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">risk / stress</text>
 
-                    <!-- R2 -->
-                    <rect x="675" y="25" width="50" height="40" rx="20" fill="url(#outGrad)" filter="url(#shadow)" stroke="#145a32" stroke-width="1.5"/>
-                    <text x="700" y="42" text-anchor="middle" font-size="10" fill="white" font-family="Arial" font-weight="bold">R</text>
-                    <text x="700" y="55" text-anchor="middle" font-size="8" fill="#d5f5e3" font-family="Arial">Risk</text>
+                    <circle cx="808" cy="96" r="26" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+                    <text x="808" y="93" text-anchor="middle" font-size="16" fill="#111827" font-family="Times New Roman, serif" font-weight="700">R</text>
+                    <text x="808" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">Output</text>
 
-                    <!-- 片内边 O->H -->
-                    <line x1="130" y1="85" x2="130" y2="85" stroke="#2874a6" stroke-width="1.5" marker-end="url(#arrBlue)"/>
-                    <path d="M 130 85 Q 155 65 180 65" fill="none" stroke="#2874a6" stroke-width="1.5" marker-end="url(#arrBlue)"/>
-                    <path d="M 350 85 Q 375 65 400 65" fill="none" stroke="#2874a6" stroke-width="1.5" marker-end="url(#arrBlue)"/>
-                    <path d="M 570 85 Q 595 65 620 65" fill="none" stroke="#2874a6" stroke-width="1.5" marker-end="url(#arrBlue)"/>
+                    <!-- 片内关系 O -> H -->
+                    <path d="M130 156 Q142 140 154 140" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
+                    <path d="M410 156 Q422 140 434 140" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
+                    <path d="M690 156 Q702 140 714 140" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
 
-                    <!-- 片内边 H->R -->
-                    <line x1="220" y1="60" x2="245" y2="65" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrGray)"/>
-                    <line x1="440" y1="60" x2="465" y2="65" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrGray)"/>
-                    <line x1="660" y1="60" x2="685" y2="65" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrGray)"/>
+                    <!-- 片内关系 H -> R -->
+                    <path d="M238 122 Q244 112 248 104" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
+                    <path d="M518 122 Q524 112 528 104" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
+                    <path d="M798 122 Q804 112 808 104" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
 
-                    <!-- 跨时间边 H->H -->
-                    <line x1="230" y1="85" x2="350" y2="85" stroke="#9a7d0a" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#arrGray)"/>
-                    <line x1="450" y1="85" x2="570" y2="85" stroke="#9a7d0a" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#arrGray)"/>
+                    <!-- 时间转移 H_t-1 -> H_t -> H_t+1 -->
+                    <line x1="258" y1="160" x2="434" y2="160" stroke="#111827" stroke-width="1.9" stroke-dasharray="6 5" marker-end="url(#dbnArrowDash)"/>
+                    <line x1="538" y1="160" x2="714" y2="160" stroke="#111827" stroke-width="1.9" stroke-dasharray="6 5" marker-end="url(#dbnArrowDash)"/>
+                    <text x="346" y="152" text-anchor="middle" font-size="11" fill="#111827" font-family="Times New Roman, serif">P(H<tspan baseline-shift="sub">t</tspan>|H<tspan baseline-shift="sub">t-1</tspan>)</text>
+                    <text x="626" y="152" text-anchor="middle" font-size="11" fill="#111827" font-family="Times New Roman, serif">P(H<tspan baseline-shift="sub">t+1</tspan>|H<tspan baseline-shift="sub">t</tspan>)</text>
 
                     <!-- 图例 -->
-                    <g transform="translate(20, 155)">
-                      <rect x="0" y="0" width="180" height="55" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1" rx="4"/>
+                    <g transform="translate(32, 246)">
+                      <rect x="0" y="0" width="560" height="54" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1"/>
 
-                      <rect x="10" y="12" width="20" height="12" rx="2" fill="url(#obsGrad)" stroke="#1a5276" stroke-width="1"/>
-                      <text x="40" y="22" font-size="10" fill="#2c3e50" font-family="Arial">Observations</text>
+                      <rect x="14" y="17" width="22" height="15" rx="3" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
+                      <text x="46" y="29" font-size="12" fill="#111827" font-family="Times New Roman, serif">O: observed variables</text>
 
-                      <ellipse cx="110" cy="18" rx="12" ry="8" fill="url(#hiddenGrad)" stroke="#9a7d0a" stroke-width="1"/>
-                      <text x="130" y="22" font-size="10" fill="#2c3e50" font-family="Arial">Hidden</text>
+                      <ellipse cx="302" cy="24" rx="13" ry="9" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
+                      <text x="324" y="29" font-size="12" fill="#111827" font-family="Times New Roman, serif">H: hidden state</text>
 
-                      <rect x="10" y="35" width="18" height="10" rx="5" fill="url(#outGrad)" stroke="#145a32" stroke-width="1"/>
-                      <text x="40" y="43" font-size="10" fill="#2c3e50" font-family="Arial">Risk Output</text>
+                      <circle cx="26" cy="42" r="8" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
+                      <text x="46" y="46" font-size="12" fill="#111827" font-family="Times New Roman, serif">R: risk output</text>
 
-                      <line x1="110" y1="38" x2="125" y2="38" stroke="#9a7d0a" stroke-width="1.5" stroke-dasharray="4,2"/>
-                      <text x="130" y="42" font-size="9" fill="#5d6d7e" font-family="Arial">Temporal</text>
+                      <line x1="290" y1="42" x2="318" y2="42" stroke="#111827" stroke-width="1.8" stroke-dasharray="6 5"/>
+                      <text x="324" y="46" font-size="12" fill="#111827" font-family="Times New Roman, serif">dashed: temporal transition</text>
                     </g>
                   </svg>
                 </div>
               </div>
 
-              <div class="node-types">
+              <div class="node-types dbn-node-types">
                 <div class="node-type"><span class="dot obs"></span>观测节点：微震频次、能量、RSI/BRI/ASI</div>
                 <div class="node-type"><span class="dot hidden"></span>隐状态：风险等级、应力积累程度</div>
                 <div class="node-type"><span class="dot output"></span>输出节点：综合 MPI、风险概率</div>
@@ -1301,7 +1388,95 @@ const algorithms = [
   { key: 'dbn', tag: 'DBN', name: '动态贝叶斯网络' }
 ]
 
-// 图表数据
+const newcomerJourney = [
+  {
+    step: '01',
+    title: '先看输出结论',
+    desc: '先看 MPI 和风险等级，明确这页最终回答的是“哪里更危险、为什么危险”。'
+  },
+  {
+    step: '02',
+    title: '再看证据来源',
+    desc: '回看 RSI/BRI/ASI 三个子指标分别由哪些数据驱动，建立“数据到结论”的因果链。'
+  },
+  {
+    step: '03',
+    title: '最后看公式细节',
+    desc: '只有在需要复核时再阅读公式推导，避免新用户一开始就被数学符号劝退。'
+  }
+]
+
+const termGlossary = [
+  {
+    term: 'RSI',
+    plain: '顶板稳定性评分',
+    cue: '看顶板是否容易产生裂纹和失稳，分数越低风险越高。'
+  },
+  {
+    term: 'BRI',
+    plain: '冲击地压风险评分',
+    cue: '看深部开采条件下的能量积聚和突发风险。'
+  },
+  {
+    term: 'ASI',
+    plain: '支承压力与应力集中评分',
+    cue: '看工作面前方应力峰值与塑性区大小，指导支护强度。'
+  },
+  {
+    term: 'DBN',
+    plain: '动态概率融合模型',
+    cue: '把多个子指标和时序证据融合成最终风险概率。'
+  },
+  {
+    term: '相场变量 φ',
+    plain: '裂纹状态刻度',
+    cue: 'φ 越接近 1 代表材料越接近完全断裂。'
+  },
+  {
+    term: '后验概率',
+    plain: '结合证据后的风险判断',
+    cue: '不是固定值，会随着新观测数据实时更新。'
+  }
+]
+
+const algorithmStoryboards = [
+  {
+    key: 'rsi',
+    tag: 'RSI',
+    name: '相场断裂模型',
+    input: '岩层强度、关键层分布',
+    process: '模拟裂纹起裂与扩展',
+    output: '顶板稳定性评分',
+    watch: 'Fig.1 的裂纹演化 + RSI 指标分解'
+  },
+  {
+    key: 'bri',
+    tag: 'BRI',
+    name: '矩张量反演',
+    input: '微震波形、埋深、岩性',
+    process: '分解 ISO/DC/CLVD 震源机制',
+    output: '冲击地压风险评分',
+    watch: 'Beach Ball 机制图 + 深度风险曲线'
+  },
+  {
+    key: 'asi',
+    tag: 'ASI',
+    name: '统一强度理论',
+    input: '原岩应力、支护参数、UST 参数 b',
+    process: 'Kirsch 应力重分布 + 强度判据',
+    output: '支承压力风险评分',
+    watch: '三联图(a)(b)(c) + ASI 四步计算链'
+  },
+  {
+    key: 'dbn',
+    tag: 'DBN',
+    name: '动态贝叶斯网络',
+    input: 'RSI/BRI/ASI 与实时观测证据',
+    process: '时序概率更新与融合推理',
+    output: 'MPI 概率分布与风险等级',
+    watch: '时间片网络结构 + 后验概率条形图'
+  }
+]
 
 // 证据和推理
 
@@ -1764,6 +1939,231 @@ onMounted(async () => {
   border: 1px solid var(--border-color);
 }
 
+/* 新手导读 */
+.onboarding-card {
+  background:
+    radial-gradient(circle at top right, rgba(90, 99, 120, 0.08), transparent 55%),
+    var(--bg-primary);
+}
+
+.onboarding-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.reading-path {
+  display: grid;
+  gap: 14px;
+}
+
+.reading-step {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.reading-index {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+  background: var(--gradient-primary);
+  flex-shrink: 0;
+}
+
+.reading-body h3 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.reading-body p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.io-map {
+  padding: 16px;
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.io-map h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.io-map-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.io-map-tip {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* 术语速查 */
+.glossary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.glossary-item {
+  padding: 16px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.glossary-item h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.glossary-plain {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.glossary-cue {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+/* 分镜示意 */
+.storyboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.storyboard-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.storyboard-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.storyboard-tag {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.storyboard-head h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.storyboard-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.story-node {
+  min-height: 78px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.story-node.input {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(14, 165, 233, 0.03));
+}
+
+.story-node.process {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0.03));
+}
+
+.story-node.output {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.03));
+}
+
+.story-node-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.story-node-text {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.story-arrow {
+  font-size: 18px;
+  color: var(--text-tertiary);
+  font-weight: 700;
+}
+
+.storyboard-watch {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.storyboard-jump {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.storyboard-jump:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
 /* 流程图 */
 .flow-diagram {
   position: relative;
@@ -2177,6 +2577,11 @@ onMounted(async () => {
 .dbn-container {
   display: flex;
   justify-content: center;
+  overflow-x: auto;
+  padding: 8px 0 4px;
+  border-radius: var(--border-radius-sm);
+  background: #ffffff;
+  border: 1px solid #d1d5db;
 }
 
 /* Depth Curve */
@@ -2211,7 +2616,9 @@ onMounted(async () => {
 }
 
 .sci-svg-dbn {
-  max-width: 600px;
+  width: min(100%, 860px);
+  min-width: 720px;
+  max-width: 860px;
 }
 
 .sci-svg-depth {
@@ -2682,8 +3089,9 @@ onMounted(async () => {
 
 .node-types {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
-  justify-content: center;
+  justify-content: flex-start;
   margin-top: 20px;
   padding-top: 20px;
   border-top: 1px solid var(--border-color);
@@ -2695,6 +3103,10 @@ onMounted(async () => {
   gap: 8px;
   font-size: 13px;
   color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 8px 12px;
 }
 
 .dot {
@@ -2706,6 +3118,21 @@ onMounted(async () => {
 .dot.obs { background: #3b82f6; }
 .dot.hidden { background: #f59e0b; }
 .dot.output { background: #10b981; }
+
+.dbn-node-types .node-type {
+  background: #ffffff;
+  border-color: #d1d5db;
+  font-family: "Times New Roman", serif;
+  color: #111827;
+}
+
+.dbn-node-types .dot {
+  border: 1.4px solid #111827;
+}
+
+.dbn-node-types .dot.obs { background: #e5e7eb; }
+.dbn-node-types .dot.hidden { background: #9ca3af; }
+.dbn-node-types .dot.output { background: #4b5563; }
 
 /* 推理示例 */
 .inference-example {
@@ -3153,6 +3580,21 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
+  .onboarding-grid,
+  .storyboard-grid,
+  .glossary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .storyboard-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .story-arrow {
+    transform: rotate(90deg);
+    justify-self: center;
+  }
+
   .fusion-weights {
     grid-template-columns: 1fr;
   }
@@ -3189,6 +3631,14 @@ onMounted(async () => {
     align-items: flex-start;
   }
 
+  .reading-step {
+    padding: 12px;
+  }
+
+  .io-map {
+    padding: 12px;
+  }
+
   .flow-row {
     flex-direction: column;
   }
@@ -3221,6 +3671,19 @@ onMounted(async () => {
 
   .mode-tab {
     text-align: center;
+  }
+
+  .sci-svg-dbn {
+    min-width: 640px;
+  }
+
+  .node-types {
+    gap: 10px;
+  }
+
+  .node-type {
+    font-size: 12px;
+    padding: 7px 10px;
   }
 }
 
