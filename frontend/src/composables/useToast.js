@@ -9,7 +9,7 @@ export function provideToast(app) {
 }
 
 export function useToast() {
-  const toastRef = inject(toastKey)
+  const toastRef = inject(toastKey, ref(null))
 
   const add = (message, type = 'info', duration = 3000) => {
     toastRef.value?.add(message, type, duration)

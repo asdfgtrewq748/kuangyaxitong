@@ -82,11 +82,13 @@
         <div
           ref="stageContainer"
           class="stage"
-          @mousedown="onPointerDown"
-          @mousemove="onPointerMove"
-          @mouseup="onPointerUp"
-          @mouseleave="onPointerLeave"
+          @pointerdown="onPointerDown"
+          @pointermove="onPointerMove"
+          @pointerup="onPointerUp"
+          @pointercancel="onPointerCancel"
+          @pointerleave="onPointerLeave"
           @wheel.prevent="onWheel"
+          @contextmenu.prevent
           @dblclick="fitStage"
         >
           <canvas ref="heatmapCanvas" class="layer"></canvas>
@@ -288,6 +290,7 @@ const thumbHover = reactive({ visible: false, metric: '', x: 0, y: 0 })
 const evalSourceType = ref('pseudo_threshold')
 const evalSourceFile = ref('')
 const matrixSelection = ref('all')
+const activePointerId = ref(null)
 const exportStaticMode = ref(false)
 const thumbCanvasRefs = {}
 const spatialCache = new Map()
@@ -453,6 +456,8 @@ let renderRaf = 0
 let thumbRaf = 0
 let resizeTimer = null
 let weightDebounceTimer = null
+let latestSpatialRequestId = 0
+let latestEvaluationRequestId = 0
 const onResize = () => {
   window.clearTimeout(resizeTimer)
   resizeTimer = window.setTimeout(() => {
@@ -665,26 +670,33 @@ const buildEvalInputs = () => {
 }
 
 const runEvaluation = async () => {
+  const evaluationRequestId = ++latestEvaluationRequestId
   const inputs = buildEvalInputs()
   if (!inputs) {
+    if (evaluationRequestId !== latestEvaluationRequestId) return
     evalSourceType.value = 'none'
     evalSourceFile.value = ''
     evalData.value = null
     evalMessage.value = '当前煤层钻孔点不足，无法计算评估指标。'
     return
   }
+  if (evaluationRequestId !== latestEvaluationRequestId) return
   evalSourceType.value = inputs.mode || 'pseudo_threshold'
   evalSourceFile.value = inputs.sourceFile || ''
   evalLoading.value = true
   evalMessage.value = ''
   try {
     const resp = await validationEvaluate({ y_true: inputs.y_true || inputs.yTrue, y_prob: inputs.y_prob || inputs.yProb })
+    if (evaluationRequestId !== latestEvaluationRequestId) return
     evalData.value = resp.data
   } catch (error) {
+    if (evaluationRequestId !== latestEvaluationRequestId) return
     evalData.value = null
     evalMessage.value = error?.response?.data?.detail || '评估指标计算失败'
   } finally {
-    evalLoading.value = false
+    if (evaluationRequestId === latestEvaluationRequestId) {
+      evalLoading.value = false
+    }
   }
 }
 
@@ -702,8 +714,10 @@ const applySpatialData = async (payload) => {
 
 const fetchSpatial = async ({ force = false } = {}) => {
   if (!seamName.value) return
+  const requestId = ++latestSpatialRequestId
   const key = cacheKey()
   if (!force && spatialCache.has(key)) {
+    if (requestId !== latestSpatialRequestId) return
     await applySpatialData(spatialCache.get(key))
     return
   }
@@ -711,14 +725,18 @@ const fetchSpatial = async ({ force = false } = {}) => {
   loading.value = true
   try {
     const resp = await validationSpatialOverview(seamName.value, resolution.value, method.value, normalizedWeights.value)
+    if (requestId !== latestSpatialRequestId) return
     const data = resp.data
     spatialCache.set(key, data)
     await applySpatialData(data)
     markStepDone('AlgorithmValidation', { validationReady: true })
   } catch (error) {
+    if (requestId !== latestSpatialRequestId) return
     evalMessage.value = error?.response?.data?.detail || '空间总览加载失败'
   } finally {
-    loading.value = false
+    if (requestId === latestSpatialRequestId) {
+      loading.value = false
+    }
   }
 }
 
@@ -741,18 +759,26 @@ const onKeydown = (event) => {
   }
 }
 
-const onPointerDown = (e) => { if (hasSpatialData.value) startDrag(e.clientX, e.clientY) }
-const onPointerMove = (e) => {
+const onPointerDown = (event) => {
+  if (!hasSpatialData.value || !stageContainer.value) return
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+  if (activePointerId.value !== null && activePointerId.value !== event.pointerId) return
+  activePointerId.value = event.pointerId
+  stageContainer.value.setPointerCapture?.(event.pointerId)
+  startDrag(event.clientX, event.clientY)
+}
+const onPointerMove = (event) => {
+  if (activePointerId.value !== null && event.pointerId !== activePointerId.value) return
   if (!overlayCanvas.value || !hasSpatialData.value) return
   const rect = overlayCanvas.value.getBoundingClientRect()
   const dpr = window.devicePixelRatio || 1
-  const sx = (e.clientX - rect.left) * dpr
-  const sy = (e.clientY - rect.top) * dpr
-  hoverPos.x = e.clientX - rect.left
-  hoverPos.y = e.clientY - rect.top
+  const sx = (event.clientX - rect.left) * dpr
+  const sy = (event.clientY - rect.top) * dpr
+  hoverPos.x = event.clientX - rect.left
+  hoverPos.y = event.clientY - rect.top
 
   if (viewport.isDragging) {
-    dragTo(e.clientX, e.clientY)
+    dragTo(event.clientX, event.clientY)
     queueRender()
     return
   }
@@ -774,8 +800,35 @@ const onPointerMove = (e) => {
   }
   queueRender()
 }
-const onPointerUp = () => endDrag()
-const onPointerLeave = () => { endDrag(); hoverInfo.value = null; queueRender() }
+const onPointerUp = (event) => {
+  if (activePointerId.value !== null && event.pointerId !== activePointerId.value) return
+  if (stageContainer.value?.hasPointerCapture?.(event.pointerId)) {
+    stageContainer.value.releasePointerCapture(event.pointerId)
+  }
+  activePointerId.value = null
+  endDrag()
+}
+const onPointerCancel = (event) => {
+  if (activePointerId.value !== null && event.pointerId !== activePointerId.value) return
+  if (stageContainer.value?.hasPointerCapture?.(event.pointerId)) {
+    stageContainer.value.releasePointerCapture(event.pointerId)
+  }
+  activePointerId.value = null
+  endDrag()
+  hoverInfo.value = null
+  queueRender()
+}
+const onPointerLeave = (event) => {
+  if (activePointerId.value !== null && event.pointerId === activePointerId.value) {
+    const hasCapture = stageContainer.value?.hasPointerCapture?.(event.pointerId)
+    if (hasCapture) return
+    activePointerId.value = null
+    endDrag()
+  }
+  if (viewport.isDragging) return
+  hoverInfo.value = null
+  queueRender()
+}
 const onWheel = (e) => {
   if (!overlayCanvas.value || !hasSpatialData.value) return
   const rect = overlayCanvas.value.getBoundingClientRect()
@@ -1036,6 +1089,10 @@ onBeforeUnmount(() => {
   window.clearTimeout(resizeTimer)
   if (renderRaf) window.cancelAnimationFrame(renderRaf)
   if (thumbRaf) window.cancelAnimationFrame(thumbRaf)
+  if (stageContainer.value && activePointerId.value !== null && stageContainer.value.hasPointerCapture?.(activePointerId.value)) {
+    stageContainer.value.releasePointerCapture(activePointerId.value)
+  }
+  activePointerId.value = null
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKeydown)
 })
@@ -1085,7 +1142,7 @@ onBeforeUnmount(() => {
 .trust-chip.warn { color: #92400e; background: #fffbeb; border-color: #fde68a; }
 .trust-chip.link { color: #1e3a8a; background: #eff6ff; border-color: #bfdbfe; }
 .trust-meta { font-size: 11px; color: #64748b; }
-.stage { position: relative; flex: 1; min-height: 360px; overflow: hidden; background: #f8fafc; }
+.stage { position: relative; flex: 1; min-height: 360px; overflow: hidden; background: #f8fafc; touch-action: none; }
 .layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .loading-mask { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; background: rgba(248,250,252,.92); z-index: 5; }
 .skeleton { width: 72%; height: 14px; border-radius: 999px; background: linear-gradient(90deg, #e2e8f0 10%, #cbd5e1 35%, #e2e8f0 60%); background-size: 200% 100%; animation: skeleton 1.1s linear infinite; }

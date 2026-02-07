@@ -139,7 +139,7 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 
-const API_BASE = "http://localhost:5000/api"
+const API_BASE = (import.meta.env.VITE_LEGACY_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '')
 
 // 状态
 const boreholeNames = ref([])

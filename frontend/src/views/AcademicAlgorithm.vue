@@ -1286,7 +1286,11 @@ import axios from 'axios'
 import { echarts } from '../lib/echarts'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 
-const API_BASE = "http://localhost:5000/api"
+const API_BASE = (import.meta.env.VITE_ACADEMIC_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '')
+const apiClient = axios.create({
+  baseURL: API_BASE,
+  timeout: 15000
+})
 const { markStepDone } = useWorkspaceFlow()
 
 // 当前 Tab 和算法
@@ -1580,7 +1584,7 @@ const progressColor = (v) => {
 const calculateRSI = async () => {
   calculating.rsi = true
   try {
-    const response = await axios.post(`${API_BASE}/rsi/phase-field`, {
+    const response = await apiClient.post('/rsi/phase-field', {
       strata: strataData,
       mesh_size: 50,
       time_steps: 10
@@ -1602,7 +1606,7 @@ const calculateRSI = async () => {
 const calculateBRI = async () => {
   calculating.bri = true
   try {
-    const response = await axios.post(`${API_BASE}/bri/microseismic`, {
+    const response = await apiClient.post('/bri/microseismic', {
       microseismic_events: microseismicData,
       sensor_positions: [[0, 0, 0], [100, 0, 0], [0, 100, 0]],
       time_window_days: 7
@@ -1623,7 +1627,7 @@ const calculateBRI = async () => {
 const calculateASI = async () => {
   calculating.asi = true
   try {
-    const response = await axios.post(`${API_BASE}/asi/ust`, {
+    const response = await apiClient.post('/asi/ust', {
       strata: strataData,
       tunnel_radius: tunnelParams.radius,
       original_stress: tunnelParams.original_stress,
@@ -1650,7 +1654,7 @@ const calculateASI = async () => {
 const calculateComprehensive = async () => {
   calculating.fusion = true
   try {
-    const response = await axios.post(`${API_BASE}/comprehensive-assessment`, {
+    const response = await apiClient.post('/comprehensive-assessment', {
       strata: strataData,
       microseismic_events: microseismicData,
       sensor_positions: [[0, 0, 0], [100, 0, 0], [0, 100, 0]],
@@ -1680,7 +1684,7 @@ const calculateComprehensive = async () => {
 // 图表渲染
 const renderRSIChart = (data) => {
   if (!rsiChart.value) return
-  if (!rsiChartInst) rsiChartInst = echarts.init(rsiChart.value, null, { renderer: 'svg' })
+  if (!rsiChartInst) rsiChartInst = echarts.init(rsiChart.value, null, { renderer: 'canvas' })
   rsiChartInst.setOption({
     title: { text: '相场断裂分布', textStyle: { color: '#5a6378', fontSize: 14 } },
     grid: { left: '10%', right: '10%', top: '20%', bottom: '15%' },
@@ -1697,7 +1701,7 @@ const renderRSIChart = (data) => {
 
 const renderBRIChart = (data) => {
   if (!briChart.value) return
-  if (!briChartInst) briChartInst = echarts.init(briChart.value, null, { renderer: 'svg' })
+  if (!briChartInst) briChartInst = echarts.init(briChart.value, null, { renderer: 'canvas' })
   const tensors = data.moment_tensors || [{ iso_percent: 15, dc_percent: 70, clvd_percent: 15 }]
   briChartInst.setOption({
     title: { text: '矩张量分解', textStyle: { color: '#5a6378', fontSize: 14 } },
@@ -1715,7 +1719,7 @@ const renderBRIChart = (data) => {
 
 const renderASIChart = (data) => {
   if (!asiChart.value) return
-  if (!asiChartInst) asiChartInst = echarts.init(asiChart.value, null, { renderer: 'svg' })
+  if (!asiChartInst) asiChartInst = echarts.init(asiChart.value, null, { renderer: 'canvas' })
   const distances = data.stress_distribution?.radial_distances || [3, 4, 5, 6, 7, 8, 9, 10]
   const radial = data.radial_stress || [5, 7, 8, 8.5, 9, 9.2, 9.5, 10]
   const tangential = data.tangential_stress || [25, 20, 17, 15, 14, 13, 12, 11]

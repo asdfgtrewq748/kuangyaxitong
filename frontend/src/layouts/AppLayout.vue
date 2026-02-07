@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Toast from '../components/Toast.vue'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
@@ -78,6 +78,7 @@ const route = useRoute()
 const router = useRouter()
 const toast = ref(null)
 const { flowOrder, workspaceState, completionRate, resetFlow } = useWorkspaceFlow()
+const appToastRef = getCurrentInstance()?.appContext?.config?.globalProperties?.$toast
 
 const routes = computed(() => (
   router
@@ -150,8 +151,17 @@ const navBadge = (routeItem) => {
 }
 
 onMounted(() => {
-  window.toastRef = toast
+  if (appToastRef && typeof appToastRef === 'object') {
+    appToastRef.value = toast.value
+  }
 })
+
+onBeforeUnmount(() => {
+  if (appToastRef && typeof appToastRef === 'object') {
+    appToastRef.value = null
+  }
+})
+
 </script>
 
 <style scoped>

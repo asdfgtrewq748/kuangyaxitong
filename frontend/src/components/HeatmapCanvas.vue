@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, computed } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   grid: { type: Array, default: () => [] },
@@ -21,6 +21,7 @@ const props = defineProps({
 const canvas = ref(null)
 const minVal = ref(null)
 const maxVal = ref(null)
+let drawRaf = 0
 
 // Modern color palette - cool to warm gradient
 const getColor = (t) => {
@@ -49,6 +50,7 @@ const draw = () => {
   const ctx = canvas.value.getContext('2d')
   const rows = props.grid.length
   const cols = props.grid[0]?.length || 0
+  if (rows === 0 || cols === 0) return
   const cellW = props.size / cols
   const cellH = props.size / rows
 
@@ -56,10 +58,15 @@ const draw = () => {
   let max = -Infinity
   props.grid.forEach((row) => {
     row.forEach((v) => {
+      if (!Number.isFinite(Number(v))) return
       if (v < min) min = v
       if (v > max) max = v
     })
   })
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    min = 0
+    max = 1
+  }
   const range = max - min || 1
 
   minVal.value = min
@@ -70,6 +77,7 @@ const draw = () => {
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
       const v = props.grid[i][j]
+      if (!Number.isFinite(Number(v))) continue
       const t = (v - min) / range
       ctx.fillStyle = getColor(t)
       ctx.fillRect(j * cellW, i * cellH, cellW + 0.5, cellH + 0.5)
@@ -77,8 +85,24 @@ const draw = () => {
   }
 }
 
-onMounted(draw)
-watch(() => props.grid, draw, { deep: true })
+const queueDraw = () => {
+  if (drawRaf) return
+  drawRaf = requestAnimationFrame(() => {
+    drawRaf = 0
+    draw()
+  })
+}
+
+onMounted(queueDraw)
+watch(() => props.grid, queueDraw)
+watch(() => props.size, queueDraw)
+
+onBeforeUnmount(() => {
+  if (drawRaf) {
+    cancelAnimationFrame(drawRaf)
+    drawRaf = 0
+  }
+})
 </script>
 
 <style scoped>

@@ -1,6 +1,7 @@
 import { computed, reactive, watch } from 'vue'
 
 const STORAGE_KEY = 'kuangya_workspace_flow_v1'
+const PERSIST_DEBOUNCE_MS = 120
 
 const flowOrder = ['DataImport', 'Interpolation', 'AcademicAlgorithm', 'AlgorithmValidation', 'Report']
 
@@ -26,6 +27,7 @@ const defaultState = () => ({
 })
 
 const workspaceState = reactive(defaultState())
+let persistTimer = null
 
 const applyState = (source = {}) => {
   const safe = defaultState()
@@ -36,6 +38,7 @@ const applyState = (source = {}) => {
 }
 
 const loadState = () => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return
@@ -46,7 +49,20 @@ const loadState = () => {
 }
 
 const persist = () => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(workspaceState))
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(workspaceState))
+  } catch (_) {
+    // Ignore quota/security errors; in-memory state remains available.
+  }
+}
+
+const schedulePersist = () => {
+  if (persistTimer) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    persist()
+  }, PERSIST_DEBOUNCE_MS)
 }
 
 const markStepDone = (stepName, metrics = null) => {
@@ -73,9 +89,9 @@ loadState()
 watch(
   workspaceState,
   () => {
-    persist()
+    schedulePersist()
   },
-  { deep: true }
+  { deep: true, flush: 'post' }
 )
 
 const completionRate = computed(() => {

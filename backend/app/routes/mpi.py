@@ -12,7 +12,7 @@ MPI (矿压影响指标) API路由
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Dict, List, Optional, Any
 import numpy as np
 
@@ -60,17 +60,16 @@ class RockLayerModel(BaseModel):
     elastic_modulus: Optional[float] = Field(None, description="弹性模量 (GPa)")
     poisson_ratio: Optional[float] = Field(None, description="泊松比")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "thickness": 5.2,
-                "name": "砂岩",
-                "compressive_strength": 65.0,
-                "elastic_modulus": 40.0,
-                "tensile_strength": 5.5,
-                "friction_angle": 32.0
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "thickness": 5.2,
+            "name": "砂岩",
+            "compressive_strength": 65.0,
+            "elastic_modulus": 40.0,
+            "tensile_strength": 5.5,
+            "friction_angle": 32.0
         }
+    })
 
 
 class PointDataModel(BaseModel):
@@ -84,26 +83,25 @@ class PointDataModel(BaseModel):
     z_bottom: float = Field(0.0, description="煤层底板深度 (m)")
     strata: List[RockLayerModel] = Field(default_factory=list, description="顶板岩层数据（从下往上）")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "x": 495394.96,
-                "y": 5404813.13,
-                "borehole": "50-14",
-                "thickness": 8.5,
-                "burial_depth": 450.5,
-                "z_top": 450.0,
-                "z_bottom": 458.5,
-                "strata": [
-                    {
-                        "thickness": 5.2,
-                        "name": "砂岩",
-                        "compressive_strength": 65.0,
-                        "elastic_modulus": 40.0
-                    }
-                ]
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "x": 495394.96,
+            "y": 5404813.13,
+            "borehole": "50-14",
+            "thickness": 8.5,
+            "burial_depth": 450.5,
+            "z_top": 450.0,
+            "z_bottom": 458.5,
+            "strata": [
+                {
+                    "thickness": 5.2,
+                    "name": "砂岩",
+                    "compressive_strength": 65.0,
+                    "elastic_modulus": 40.0
+                }
+            ]
         }
+    })
 
 
 class WeightsModel(BaseModel):
@@ -112,14 +110,13 @@ class WeightsModel(BaseModel):
     burst_risk: float = Field(0.35, ge=0, le=1, description="冲击地压风险权重")
     abutment_stress: float = Field(0.25, ge=0, le=1, description="支承压力分布权重")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "roof_stability": 0.4,
-                "burst_risk": 0.35,
-                "abutment_stress": 0.25
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "roof_stability": 0.4,
+            "burst_risk": 0.35,
+            "abutment_stress": 0.25
         }
+    })
 
 
 class MPICalculateRequest(BaseModel):
@@ -128,24 +125,23 @@ class MPICalculateRequest(BaseModel):
     weights: Optional[WeightsModel] = Field(None, description="自定义权重配置")
     config: Optional[Dict[str, Any]] = Field(None, description="MPI计算配置（可选）")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "point": {
-                    "x": 495394.96,
-                    "y": 5404813.13,
-                    "borehole": "50-14",
-                    "thickness": 8.5,
-                    "burial_depth": 450.5,
-                    "strata": []
-                },
-                "weights": {
-                    "roof_stability": 0.4,
-                    "burst_risk": 0.35,
-                    "abutment_stress": 0.25
-                }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "point": {
+                "x": 495394.96,
+                "y": 5404813.13,
+                "borehole": "50-14",
+                "thickness": 8.5,
+                "burial_depth": 450.5,
+                "strata": []
+            },
+            "weights": {
+                "roof_stability": 0.4,
+                "burst_risk": 0.35,
+                "abutment_stress": 0.25
             }
         }
+    })
 
 
 class MPIBreakdown(BaseModel):

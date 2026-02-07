@@ -442,7 +442,9 @@ const extractCoordinatesFromFiles = async () => {
         }
       }
     } catch (e) {
-      console.log('无法从', file.name, '提取坐标:', e.message)
+      if (import.meta.env.DEV) {
+        console.warn('无法从', file.name, '提取坐标:', e.message)
+      }
     }
   }
 
@@ -602,7 +604,7 @@ const editBoreholeByItem = (item) => {
 }
 
 const onSelectBorehole = (index) => {
-  selectedBorehole.value = index
+  selectedBorehole.value = boreholes.value[index] ?? null
 }
 
 const saveCoordinates = () => {

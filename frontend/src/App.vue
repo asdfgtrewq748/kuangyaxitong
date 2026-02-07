@@ -4,12 +4,6 @@
 
 <script setup>
 import AppLayout from './layouts/AppLayout.vue'
-import { onMounted } from 'vue'
-
-onMounted(() => {
-  // Make toast ref available globally
-  window.toastRef = null
-})
 </script>
 
 <style>

@@ -1500,6 +1500,7 @@ const handleKeyboard = (e) => {
 
 // Cleanup on unmount
 onUnmounted(() => {
+  const stage = stageContainer.value
   if (animationLoopRef.value) {
     cancelAnimationFrame(animationLoopRef.value)
   }
@@ -1510,6 +1511,12 @@ onUnmounted(() => {
   ripples.clear()
   stressParticles.stopAnimation()
   reliefParticles.stopAnimation()
+  if (stage) {
+    stage.removeEventListener('mousedown', handleMouseDown)
+    stage.removeEventListener('wheel', handleWheel)
+  }
+  window.removeEventListener('mousemove', handleMouseMove)
+  window.removeEventListener('mouseup', handleMouseUp)
   // Remove keyboard listener
   window.removeEventListener('keydown', handleKeyboard)
 })
@@ -1519,6 +1526,7 @@ onMounted(() => {
   loadSeams()
 
   const stage = stageContainer.value
+  if (!stage) return
   stage.addEventListener('mousedown', handleMouseDown)
   window.addEventListener('mousemove', handleMouseMove)
   window.addEventListener('mouseup', handleMouseUp)

@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001'
+
 const api = axios.create({
-  baseURL: 'http://localhost:8001'
+  baseURL: API_BASE_URL
 })
 
 // LRU Cache for API responses (server-cache-lru pattern)
@@ -11,8 +13,24 @@ class ApiCache {
     this.maxSize = maxSize
   }
 
+  normalizeParams(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.normalizeParams(item))
+    }
+    if (value && typeof value === 'object') {
+      return Object.keys(value)
+        .sort()
+        .reduce((acc, key) => {
+          acc[key] = this.normalizeParams(value[key])
+          return acc
+        }, {})
+    }
+    return value
+  }
+
   generateKey(url, params) {
-    return `${url}?${JSON.stringify(params)}`
+    const normalizedParams = this.normalizeParams(params || {})
+    return `${url}?${JSON.stringify(normalizedParams)}`
   }
 
   get(url, params) {

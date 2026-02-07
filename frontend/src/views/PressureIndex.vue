@@ -357,7 +357,7 @@ import {
   pressureIndexWorkfaces,
   exportIndex,
   exportPressureIndexWorkfaces,
-  mpiBatch,
+  validationSpatialOverview,
   getMpiWeights,
   setMpiWeights
 } from '../api'
@@ -430,7 +430,9 @@ const mpiWeightTotal = computed(() => {
 
 const isWeightValid = computed(() => {
   const total = mpiWeights.value.roof_stability + mpiWeights.value.burst_risk + mpiWeights.value.abutment_stress
-  return Math.abs(total - 1.0) < 0.01
+  const entries = [mpiWeights.value.roof_stability, mpiWeights.value.burst_risk, mpiWeights.value.abutment_stress]
+  const validEntries = entries.every((value) => Number.isFinite(value) && value >= 0 && value <= 1)
+  return validEntries && Math.abs(total - 1.0) < 0.01
 })
 
 const mpiStats = computed(() => {
@@ -448,22 +450,13 @@ const mpiStats = computed(() => {
 
 const currentMpiGrid = computed(() => {
   if (!mpiGrid.value) return []
-  if (mpiDisplayMode.value === 'mpi') {
-    return mpiGrid.value
-  }
-  // 返回分项指标网格（如果有的话）
-  return mpiGrid.value
+  if (mpiDisplayMode.value === 'mpi') return mpiGrid.value
+  return mpiBreakdown.value[mpiDisplayMode.value] || mpiGrid.value
 })
 
 const mpiDisplayModeLabel = computed(() => {
   const mode = mpiDisplayModes.find(m => m.key === mpiDisplayMode.value)
   return mode ? mode.label : 'MPI'
-  const sum = totalWeight.value
-  return {
-    elastic: (wElastic.value || 0) / sum,
-    density: (wDensity.value || 0) / sum,
-    tensile: (wTensile.value || 0) / sum
-  }
 })
 
 // Save weights to localStorage
@@ -480,9 +473,9 @@ const loadWeights = () => {
     const data = localStorage.getItem('pressure_weights')
     if (data) {
       const parsed = JSON.parse(data)
-      if (parsed.elastic) wElastic.value = parsed.elastic
-      if (parsed.density) wDensity.value = parsed.density
-      if (parsed.tensile) wTensile.value = parsed.tensile
+      if (Number.isFinite(parsed.elastic)) wElastic.value = parsed.elastic
+      if (Number.isFinite(parsed.density)) wDensity.value = parsed.density
+      if (Number.isFinite(parsed.tensile)) wTensile.value = parsed.tensile
     }
   } catch (e) {
     // Ignore
@@ -602,18 +595,36 @@ const saveMpiWeights = async () => {
 }
 
 const handleMpiCalculate = async () => {
+  if (!isWeightValid.value) {
+    toast.add('MPI 权重总和需为 1.00', 'warning')
+    return
+  }
+
   loading.value = true
   try {
-    // 这里简化处理，实际需要从钻孔数据构建点数据
-    // 暂时使用模拟数据演示
-    toast.add('MPI计算功能开发中，请确保已导入钻孔数据', 'info')
+    const seamName = workspaceState.selectedSeam || normalizeQuerySeam(route.query?.seam) || '16-3煤'
+    const weights = {
+      rsi: mpiWeights.value.roof_stability,
+      bri: mpiWeights.value.burst_risk,
+      asi: mpiWeights.value.abutment_stress
+    }
+    const { data } = await validationSpatialOverview(
+      seamName,
+      mpiGridSize.value,
+      mpiMethod.value,
+      weights
+    )
 
-    // TODO: 实际实现需要：
-    // 1. 获取所有钻孔数据
-    // 2. 获取坐标数据
-    // 3. 为每个钻孔构建PointData（包含strata）
-    // 4. 调用mpiInterpolate获取网格
-
+    mpiGrid.value = data?.grids?.mpi || null
+    mpiBreakdown.value = {
+      rsi: data?.grids?.rsi || null,
+      bri: data?.grids?.bri || null,
+      asi: data?.grids?.asi || null
+    }
+    mpiPointCount.value = Number(data?.borehole_count || 0)
+    mpiDisplayMode.value = 'mpi'
+    markStepDone('PressureIndex', { pressureReady: true })
+    toast.add('MPI网格计算完成', 'success')
   } catch (err) {
     toast.add(err.response?.data?.detail || 'MPI计算失败', 'error')
   } finally {
@@ -626,11 +637,22 @@ const handleMpiExport = async () => {
 
   // 导出CSV
   const rows = [['x', 'y', 'mpi', 'rsi', 'bri', 'asi']]
-  const grid = mpiGrid.value
-  const size = grid.length
-  for (let i = 0; i < size; i++) {
-    for (let j = 0; j < size; j++) {
-      rows.push([i, j, grid[i][j], '', '', ''])
+  const grid = mpiGrid.value || []
+  const rsiGrid = mpiBreakdown.value.rsi || []
+  const briGrid = mpiBreakdown.value.bri || []
+  const asiGrid = mpiBreakdown.value.asi || []
+  const rowCount = grid.length
+  for (let i = 0; i < rowCount; i++) {
+    const colCount = Array.isArray(grid[i]) ? grid[i].length : 0
+    for (let j = 0; j < colCount; j++) {
+      rows.push([
+        i,
+        j,
+        grid[i]?.[j] ?? '',
+        rsiGrid[i]?.[j] ?? '',
+        briGrid[i]?.[j] ?? '',
+        asiGrid[i]?.[j] ?? ''
+      ])
     }
   }
   const csv = rows.map(r => r.join(',')).join('\n')

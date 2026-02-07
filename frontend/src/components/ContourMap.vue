@@ -4,11 +4,13 @@
     <div
       ref="imageContainer"
       class="image-container"
-      @mousedown="handleMouseDown"
-      @mousemove="handleMouseMove"
-      @mouseup="handleMouseUp"
-      @mouseleave="handleMouseUp"
+      @pointerdown="handlePointerDown"
+      @pointermove="handlePointerMove"
+      @pointerup="handlePointerUp"
+      @pointercancel="handlePointerUp"
+      @pointerleave="handlePointerLeave"
       @wheel.prevent="handleWheel"
+      @contextmenu.prevent
     >
       <!-- Error state -->
       <div v-if="imageError" class="error-placeholder">
@@ -192,7 +194,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
   imageUrl: { type: String, default: '' },
@@ -218,6 +220,7 @@ const offsetY = ref(0)
 const isDragging = ref(false)
 const isDrawing = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
+const activePointerId = ref(null)
 const hoverInfo = ref(null)
 const hoverPos = ref({ x: 0, y: 0 })
 const showBoreholes = ref(true)
@@ -257,6 +260,8 @@ const boreholesWithCanvas = computed(() => {
   const b = bounds.value
   const w = imageWidth.value
   const h = imageHeight.value
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return []
+  if (!Number.isFinite(b.rangeX) || !Number.isFinite(b.rangeY) || b.rangeX <= 0 || b.rangeY <= 0) return []
 
   // matplotlib subplot position: [left=0.10, bottom=0.10, width=0.85, height=0.80]
   const leftPadding = w * 0.10
@@ -266,16 +271,6 @@ const boreholesWithCanvas = computed(() => {
 
   const plotWidth = w - leftPadding - rightPadding
   const plotHeight = h - bottomPadding - topPadding
-
-  console.log('Image dimensions:', w, 'x', h)
-  console.log('Plot area:', {
-    leftPadding: leftPadding.toFixed(1),
-    rightPadding: rightPadding.toFixed(1),
-    topPadding: topPadding.toFixed(1),
-    bottomPadding: bottomPadding.toFixed(1),
-    plotWidth: plotWidth.toFixed(1),
-    plotHeight: plotHeight.toFixed(1)
-  })
 
   return props.boreholes.map(bh => {
     const x = bh.x ?? bh.borehole_x
@@ -291,14 +286,6 @@ const boreholesWithCanvas = computed(() => {
     // Apply correct padding
     const canvasX = leftPadding + relX * plotWidth
     const canvasY = h - bottomPadding - relY * plotHeight
-
-    if (bh.borehole === 'ZK101' || bh.borehole === 'ZK102') {
-      console.log(`Borehole ${bh.borehole}:`, {
-        world: { x: x.toFixed(1), y: y.toFixed(1) },
-        relative: { x: relX.toFixed(3), y: relY.toFixed(3) },
-        canvas: { x: canvasX.toFixed(1), y: canvasY.toFixed(1) }
-      })
-    }
 
     return {
       ...bh,
@@ -399,26 +386,12 @@ const onImageLoad = (e) => {
   imageHeight.value = e.target.naturalHeight
   imageLoaded.value = true
   imageError.value = null
-  console.log('Image loaded successfully:', imageWidth.value, 'x', imageHeight.value)
-  console.log('Bounds:', props.bounds)
-  console.log('Boreholes count:', props.boreholes.length)
-
-  // Debug: Log first few boreholes
-  if (props.boreholes.length > 0) {
-    console.log('First borehole:', {
-      name: props.boreholes[0].borehole,
-      x: props.boreholes[0].x,
-      y: props.boreholes[0].y,
-      thickness: props.boreholes[0].thickness
-    })
-  }
 }
 
 const onImageError = (e) => {
   imageError.value = '图片加载失败，请检查数据'
   imageLoaded.value = false
-  console.error('Image load error:', e)
-  console.log('ImageUrl:', props.imageUrl?.substring(0, 50) + '...')
+  console.error('Image load error:', e, props.imageUrl?.substring(0, 50) + '...')
 }
 
 const zoomIn = () => {
@@ -484,7 +457,11 @@ const canvasToWorld = (canvasX, canvasY) => {
   return { x: worldX, y: worldY }
 }
 
-const handleMouseDown = (e) => {
+const handlePointerDown = (e) => {
+  if (e.pointerType !== 'touch' && e.button !== 0) return
+  activePointerId.value = e.pointerId
+  imageContainer.value?.setPointerCapture?.(e.pointerId)
+
   if (props.crossSectionMode) {
     // Cross-section drawing mode
     const canvasPos = screenToCanvas(e.clientX, e.clientY)
@@ -528,15 +505,16 @@ const handleMouseDown = (e) => {
   }
 }
 
-const handleMouseUp = () => {
+const handlePointerUp = (e) => {
+  if (activePointerId.value !== null && e.pointerId !== activePointerId.value) return
+  activePointerId.value = null
+  imageContainer.value?.releasePointerCapture?.(e.pointerId)
   isDragging.value = false
 }
 
-const handleMouseMove = (e) => {
+const handlePointerMove = (e) => {
   if (!imageContainer.value) return
   const rect = imageContainer.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
 
   if (props.crossSectionMode && isDrawing.value) {
     // Update drawing preview
@@ -554,7 +532,15 @@ const handleMouseMove = (e) => {
     return
   }
 
-  hoverPos.value = { x: e.clientX, y: e.clientY }
+  if (e.pointerType !== 'touch') {
+    hoverPos.value = { x: e.clientX, y: e.clientY }
+  }
+}
+
+const handlePointerLeave = () => {
+  if (!isDragging.value) {
+    hoverInfo.value = null
+  }
 }
 
 const handleWheel = (e) => {
@@ -563,15 +549,10 @@ const handleWheel = (e) => {
   scale.value = Math.max(0.5, Math.min(3, scale.value * delta))
 }
 
-onMounted(() => {
-  // Initialize
-})
-
-watch(() => props.imageUrl, (newUrl) => {
+watch(() => props.imageUrl, () => {
   resetView()
   imageLoaded.value = false
   imageError.value = null
-  console.log('ImageUrl changed:', newUrl ? newUrl.substring(0, 50) + '...' : 'null')
 })
 
 // Expose methods for external access
@@ -616,6 +597,7 @@ defineExpose({
   justify-content: center;
   cursor: grab;
   overflow: hidden;
+  touch-action: none;
 }
 
 .image-container:active {

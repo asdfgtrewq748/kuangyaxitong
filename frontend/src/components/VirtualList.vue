@@ -8,7 +8,7 @@
     <div class="virtual-list-spacer" :style="spacerStyle">
       <div
         v-for="item in visibleItems"
-        :key="getKey(item.data)"
+        :key="getKey(item)"
         :class="itemClass"
         :style="getItemStyle(item.index)"
       >
@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   items: {
@@ -107,12 +107,14 @@ const visibleItems = computed(() => {
 })
 
 // Get unique key for item
-const getKey = (item) => {
-  if (props.keyField && item[props.keyField] !== undefined) {
-    return item[props.keyField]
+const getKey = (entry) => {
+  if (!entry) return 'virtual-item'
+  const item = entry.data
+  const index = entry.index
+  if (props.keyField && item?.[props.keyField] !== undefined && item?.[props.keyField] !== null) {
+    return `${String(item[props.keyField])}_${index}`
   }
-  // Fallback to index if no key field
-  return visibleItems.value.find(vi => vi.data === item)?.index ?? Math.random()
+  return `index_${index}`
 }
 
 // Scroll handler
@@ -129,13 +131,21 @@ const onScroll = () => {
 defineExpose({
   scrollTo: (index) => {
     if (containerRef.value) {
-      containerRef.value.scrollTop = index * props.itemHeight
+      const safeIndex = Math.max(0, Math.min(props.items.length - 1, Number(index) || 0))
+      containerRef.value.scrollTop = safeIndex * props.itemHeight
     }
   },
   scrollToTop: () => {
     if (containerRef.value) {
       containerRef.value.scrollTop = 0
     }
+  }
+})
+
+onBeforeUnmount(() => {
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
   }
 })
 </script>

@@ -20,6 +20,7 @@ const emit = defineEmits(['chart-click'])
 
 const container = ref(null)
 let chart = null
+let resizeObserver = null
 
 const normalizedHeight = computed(() => {
   if (typeof props.height === 'number') return `${props.height}px`
@@ -28,7 +29,11 @@ const normalizedHeight = computed(() => {
 
 const render = () => {
   if (!chart) return
-  chart.setOption(props.option || {}, true)
+  chart.setOption(props.option || {}, {
+    notMerge: true,
+    lazyUpdate: true,
+    silent: true
+  })
 }
 
 const onResize = () => {
@@ -39,25 +44,55 @@ const onChartClick = (params) => {
   emit('chart-click', params)
 }
 
+const bindResize = () => {
+  if (!container.value) return
+
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => {
+      onResize()
+    })
+    resizeObserver.observe(container.value)
+    return
+  }
+
+  window.addEventListener('resize', onResize)
+}
+
+const unbindResize = () => {
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  } else {
+    window.removeEventListener('resize', onResize)
+  }
+}
+
 onMounted(async () => {
   await nextTick()
   if (!container.value) return
-  chart = echarts.init(container.value, null, { renderer: 'svg' })
+  chart = echarts.init(container.value, null, { renderer: 'canvas' })
   chart.on('click', onChartClick)
   render()
-  window.addEventListener('resize', onResize)
+  bindResize()
 })
 
 watch(
   () => props.option,
   () => {
     render()
-  },
-  { deep: true }
+  }
+)
+
+watch(
+  () => props.height,
+  async () => {
+    await nextTick()
+    onResize()
+  }
 )
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', onResize)
+  unbindResize()
   if (chart) {
     chart.off('click', onChartClick)
     chart.dispose()

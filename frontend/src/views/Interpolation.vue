@@ -520,30 +520,6 @@ const handleInterpolate = async () => {
       contourLevels.value
     )
 
-    console.log('完整API响应:', data)
-    console.log('data.thickness:', data.thickness)
-    console.log('data.depth:', data.depth)
-    
-    if (data.thickness) {
-      console.log('thickness对象的keys:', Object.keys(data.thickness))
-      console.log('thickness.image存在吗?', 'image' in data.thickness)
-      console.log('thickness所有属性:', JSON.stringify(data.thickness, null, 2))
-    }
-    
-    if (data.depth) {
-      console.log('depth对象的keys:', Object.keys(data.depth))
-      console.log('depth.image存在吗?', 'image' in data.depth)
-    }
-
-    console.log('API Response:', {
-      hasThicknessImage: !!data.thickness?.image,
-      hasDepthImage: !!data.depth?.image,
-      thicknessImageLength: data.thickness?.image?.length,
-      depthImageLength: data.depth?.image?.length,
-      thicknessImagePrefix: data.thickness?.image?.substring(0, 50),
-      depthImagePrefix: data.depth?.image?.substring(0, 50)
-    })
-
     seamPoints.value = data.boreholes || []
 
     if (data.thickness?.image) {
@@ -552,9 +528,8 @@ const handleInterpolate = async () => {
         valueRange: data.thickness.value_range,
         bounds: data.bounds
       }
-      console.log('Thickness imageUrl created:', thicknessResult.value.imageUrl.substring(0, 50) + '...')
     } else {
-      console.error('❌ 厚度图片数据缺失!')
+      thicknessResult.value = null
     }
 
     if (data.depth?.image) {
@@ -563,9 +538,8 @@ const handleInterpolate = async () => {
         valueRange: data.depth.value_range,
         bounds: data.bounds
       }
-      console.log('Depth imageUrl created:', depthResult.value.imageUrl.substring(0, 50) + '...')
     } else {
-      console.error('❌ 深度图片数据缺失!')
+      depthResult.value = null
     }
 
     // Calculate uncertainty map and draw other charts after DOM update
@@ -575,8 +549,6 @@ const handleInterpolate = async () => {
     markStepDone('Interpolation', {
       interpolationPoints: seamPoints.value.length || 0
     })
-    console.log('✓ All charts绘制完成')
-
     toast.add('等值线图生成完成', 'success')
   } catch (err) {
     console.error('Interpolate error:', err)
@@ -589,36 +561,36 @@ const handleInterpolate = async () => {
 
 // Calculate uncertainty map - matching 误差分布图绘制.py style
 const calculateUncertainty = () => {
-  console.log('calculateUncertainty called')
-  console.log('seamPoints.value.length:', seamPoints.value.length)
-  console.log('thicknessResult.value:', thicknessResult.value)
-
   if (!seamPoints.value.length || !thicknessResult.value) {
-    console.log('❌ Missing data for uncertainty map')
     return
   }
 
   const canvas = uncertaintyCanvas.value
-  console.log('uncertaintyCanvas.value:', canvas)
-
   if (!canvas) {
-    console.log('❌ uncertaintyCanvas not found')
     return
   }
 
-  console.log('✓ Starting uncertainty map calculation...')
-
   const ctx = canvas.getContext('2d')
+  if (!ctx) return
   const w = canvas.width = 900
   const h = canvas.height = 550
 
-  console.log('Canvas size:', w, 'x', h)
-
   const bounds = thicknessResult.value.bounds
-  const points = seamPoints.value.map(p => ({ x: p.x, y: p.y }))
+  const hasValidBounds = bounds &&
+    Number.isFinite(bounds.min_x) &&
+    Number.isFinite(bounds.max_x) &&
+    Number.isFinite(bounds.min_y) &&
+    Number.isFinite(bounds.max_y) &&
+    bounds.max_x > bounds.min_x &&
+    bounds.max_y > bounds.min_y
 
-  console.log('Bounds:', bounds)
-  console.log('Points count:', points.length)
+  if (!hasValidBounds) return
+
+  const points = seamPoints.value
+    .map((p) => ({ x: Number(p.x), y: Number(p.y) }))
+    .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
+
+  if (points.length === 0) return
 
   // Background
   ctx.fillStyle = '#ffffff'
@@ -867,28 +839,20 @@ const calculateUncertainty = () => {
   ctx.font = '11px Arial, sans-serif'
   ctx.fillText('红色区域表示较高的不确定性；蓝色区域更加可靠。', padding.left + drawW / 2, h - 12)
 
-  console.log('✓ Uncertainty map绘制完成')
 }
 
 // Draw histogram - Nature journal style
 const drawHistogram = () => {
-  console.log('drawHistogram called')
-  console.log('histogramCanvas.value:', histogramCanvas.value)
-  console.log('seamPoints.value.length:', seamPoints.value.length)
-
   const canvas = histogramCanvas.value
   if (!canvas) {
-    console.log('❌ histogramCanvas not found')
     return
   }
   if (seamPoints.value.length === 0) {
-    console.log('❌ No seam points data')
     return
   }
 
-  console.log('✓ Starting histogram drawing...')
-
   const ctx = canvas.getContext('2d')
+  if (!ctx) return
   const dpr = window.devicePixelRatio || 1
   const container = canvas.parentElement
   const cssW = container?.clientWidth || canvas.clientWidth || 500
@@ -912,12 +876,16 @@ const drawHistogram = () => {
   const stdDev = Math.sqrt(variance)
 
   const numBins = 20
-  const binWidthVal = (maxVal - minVal) / numBins
+  const valueSpan = maxVal - minVal
+  const binWidthVal = valueSpan > 0 ? valueSpan / numBins : 1
 
   // Calculate histogram bins
   const bins = Array(numBins).fill(0)
   for (const v of values) {
-    const bin = Math.min(Math.floor((v - minVal) / binWidthVal), numBins - 1)
+    const rawBin = valueSpan > 0
+      ? Math.floor((v - minVal) / binWidthVal)
+      : Math.floor(numBins / 2)
+    const bin = Math.max(0, Math.min(rawBin, numBins - 1))
     bins[bin]++
   }
 
@@ -962,29 +930,32 @@ const drawHistogram = () => {
   ctx.globalAlpha = 1.0
 
   // Draw density fit curve (Normal distribution) - Nature style
-  ctx.strokeStyle = curveColor
-  ctx.lineWidth = 2
-  ctx.beginPath()
+  const canDrawDensityCurve = stdDev > Number.EPSILON && valueSpan > 0
+  if (canDrawDensityCurve) {
+    ctx.strokeStyle = curveColor
+    ctx.lineWidth = 2
+    ctx.beginPath()
 
-  for (let i = 0; i <= 100; i++) {
-    const x = padding.left + (i / 100) * drawW
-    const val = minVal + (i / 100) * (maxVal - minVal)
+    for (let i = 0; i <= 100; i++) {
+      const x = padding.left + (i / 100) * drawW
+      const val = minVal + (i / 100) * valueSpan
 
-    // Normal distribution PDF
-    const pdf = (1 / (stdDev * Math.sqrt(2 * Math.PI))) *
-                Math.exp(-0.5 * ((val - mean) / stdDev) ** 2)
+      // Normal distribution PDF
+      const pdf = (1 / (stdDev * Math.sqrt(2 * Math.PI))) *
+                  Math.exp(-0.5 * ((val - mean) / stdDev) ** 2)
 
-    // Convert PDF to count scale
-    const curveCount = pdf * values.length * binWidthVal
-    const y = h - padding.bottom - curveCount * scaleY
+      // Convert PDF to count scale
+      const curveCount = pdf * values.length * binWidthVal
+      const y = h - padding.bottom - curveCount * scaleY
 
-    if (i === 0) {
-      ctx.moveTo(x, y)
-    } else {
-      ctx.lineTo(x, y)
+      if (i === 0) {
+        ctx.moveTo(x, y)
+      } else {
+        ctx.lineTo(x, y)
+      }
     }
+    ctx.stroke()
   }
-  ctx.stroke()
 
   // Draw axes - Nature style (only left and bottom, no top/right spines)
   ctx.strokeStyle = '#000000'
@@ -1084,16 +1055,18 @@ const drawHistogram = () => {
 
   ctx.fillText('观测值', legendX + 16, legendY + 4)
 
-  // Density fit legend
-  ctx.strokeStyle = curveColor
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  ctx.moveTo(legendX, legendY + 20)
-  ctx.lineTo(legendX + 12, legendY + 20)
-  ctx.stroke()
+  if (canDrawDensityCurve) {
+    // Density fit legend
+    ctx.strokeStyle = curveColor
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(legendX, legendY + 20)
+    ctx.lineTo(legendX + 12, legendY + 20)
+    ctx.stroke()
 
-  ctx.fillStyle = '#000000'
-  ctx.fillText('密度拟合', legendX + 16, legendY + 24)
+    ctx.fillStyle = '#000000'
+    ctx.fillText('密度拟合', legendX + 16, legendY + 24)
+  }
 
   // Statistics annotation (small text below legend)
   ctx.fillStyle = '#666666'
@@ -1102,7 +1075,6 @@ const drawHistogram = () => {
   const statsText = `μ=${mean.toFixed(2)}  σ=${stdDev.toFixed(2)}`
   ctx.fillText(statsText, legendX, legendY + 42)
 
-  console.log('✓ Histogram绘制完成')
 }
 
 // Helper function to draw rounded rectangle

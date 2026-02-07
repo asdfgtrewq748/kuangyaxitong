@@ -19,12 +19,14 @@
         ref="canvas"
         :width="canvasSize"
         :height="canvasSize"
-        @mousedown="startDrag"
-        @mousemove="handleMouseMove"
-        @mouseup="endDrag"
-        @mouseleave="endDrag"
+        @pointerdown="startDrag"
+        @pointermove="handlePointerMove"
+        @pointerup="endDrag"
+        @pointerleave="handlePointerLeave"
+        @pointercancel="handlePointerCancel"
         @wheel.prevent="handleWheel"
         @click="handleClick"
+        @contextmenu.prevent
       ></canvas>
       <div v-if="boreholes.length === 0" class="map-empty">
         <div class="empty-icon">📍</div>
@@ -82,6 +84,7 @@ const offsetX = ref(0)
 const offsetY = ref(0)
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
+let drawRaf = 0
 
 const canvasSize = computed(() => props.size)
 
@@ -163,6 +166,14 @@ const worldToCanvas = (x, y) => {
     x: centerX + (x - worldCenterX) * currentScale + offsetX.value,
     y: centerY + (worldCenterY - y) * currentScale + offsetY.value
   }
+}
+
+const queueDraw = () => {
+  if (drawRaf) return
+  drawRaf = requestAnimationFrame(() => {
+    drawRaf = 0
+    draw()
+  })
 }
 
 const draw = () => {
@@ -476,36 +487,45 @@ const canvasToWorld = (cx, cy) => {
 
 const zoomIn = () => {
   scale.value = Math.min(scale.value * 1.3, 5)
-  draw()
+  queueDraw()
 }
 
 const zoomOut = () => {
   scale.value = Math.max(scale.value / 1.3, 0.2)
-  draw()
+  queueDraw()
 }
 
 const resetView = () => {
   scale.value = 1
   offsetX.value = 0
   offsetY.value = 0
-  draw()
+  queueDraw()
 }
 
 const toggleBoundary = () => {
   showBoundary.value = !showBoundary.value
-  draw()
+  queueDraw()
 }
 
 const startDrag = (e) => {
+  if (!canvas.value) return
+  if (e.pointerType === 'mouse' && e.button !== 0) return
   isDragging.value = true
+  canvas.value.setPointerCapture?.(e.pointerId)
   dragStart.value = { x: e.clientX - offsetX.value, y: e.clientY - offsetY.value }
 }
 
-const endDrag = () => {
+const endDrag = (e) => {
+  if (canvas.value && e?.pointerId !== undefined && canvas.value.hasPointerCapture?.(e.pointerId)) {
+    canvas.value.releasePointerCapture(e.pointerId)
+  }
   isDragging.value = false
+  if (canvas.value) {
+    canvas.value.style.cursor = hoveredBorehole.value ? 'pointer' : 'grab'
+  }
 }
 
-const handleMouseMove = (e) => {
+const handlePointerMove = (e) => {
   if (!canvas.value?.scaledBoreholes) return
   const rect = canvas.value.getBoundingClientRect()
   const x = e.clientX - rect.left
@@ -514,7 +534,7 @@ const handleMouseMove = (e) => {
   if (isDragging.value) {
     offsetX.value = e.clientX - dragStart.value.x
     offsetY.value = e.clientY - dragStart.value.y
-    draw()
+    queueDraw()
     return
   }
 
@@ -526,15 +546,22 @@ const handleMouseMove = (e) => {
       break
     }
   }
-  hoveredBorehole.value = found
+  const prevHoverIndex = hoveredBorehole.value?.index ?? -1
+  const nextHoverIndex = found?.index ?? -1
+  if (prevHoverIndex !== nextHoverIndex) {
+    hoveredBorehole.value = found
+    queueDraw()
+  } else {
+    hoveredBorehole.value = found
+  }
   tooltipPos.value = { x: e.clientX, y: e.clientY }
-  canvas.value.style.cursor = found ? 'pointer' : (isDragging.value ? 'grabbing' : 'grab')
+  canvas.value.style.cursor = found ? 'pointer' : 'grab'
 }
 
 const handleWheel = (e) => {
   const delta = e.deltaY > 0 ? 0.9 : 1.1
   scale.value = Math.max(0.2, Math.min(5, scale.value * delta))
-  draw()
+  queueDraw()
 }
 
 const handleClick = (e) => {
@@ -558,7 +585,23 @@ const handleClick = (e) => {
   } else {
     selectedBorehole.value = null
   }
-  draw()
+  queueDraw()
+}
+
+const handlePointerLeave = (e) => {
+  endDrag(e)
+  if (hoveredBorehole.value) {
+    hoveredBorehole.value = null
+    queueDraw()
+  }
+}
+
+const handlePointerCancel = (e) => {
+  endDrag(e)
+  if (hoveredBorehole.value) {
+    hoveredBorehole.value = null
+    queueDraw()
+  }
 }
 
 onMounted(() => {
@@ -569,14 +612,20 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // Cleanup
+  if (drawRaf) {
+    cancelAnimationFrame(drawRaf)
+    drawRaf = 0
+  }
 })
 
 watch(() => props.boreholes, () => {
   resetView()
 }, { deep: true })
+watch(() => props.size, () => {
+  queueDraw()
+})
 
-watch(showBoundary, draw)
+watch(showBoundary, queueDraw)
 </script>
 
 <style scoped>
@@ -613,6 +662,7 @@ watch(showBoundary, draw)
 .map-wrapper canvas {
   display: block;
   cursor: grab;
+  touch-action: none;
 }
 
 .map-wrapper canvas:active {
