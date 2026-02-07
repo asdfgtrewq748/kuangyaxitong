@@ -1,212 +1,182 @@
-<template>
-  <div class="page">
-    <div class="page-header">
-      <h1 class="page-title">📑 结果报告</h1>
-      <p class="page-subtitle">生成综合分析报告，汇总所有计算结果</p>
-    </div>
-
-    <div class="card">
-      <h3 class="section-title">生成报告</h3>
-      <p class="section-desc">点击生成按钮获取完整的分析报告</p>
-
-      <div class="action-buttons">
-        <button class="btn primary" @click="handleSummary" :disabled="loading">
-          <span v-if="loading" class="spinner sm"></span>
-          {{ loading ? '生成中...' : '生成综合报告' }}
-        </button>
-        <button v-if="summary" class="btn secondary" @click="exportReport">
-          导出报告
-        </button>
-        <button class="btn secondary" @click="goValidation">
-          返回实证页
-        </button>
+﻿<template>
+  <div class="report-page">
+    <header class="card hero">
+      <div>
+        <h1>结果报告中心</h1>
+        <p>默认自动生成报告，进入页面后立即汇总指标统计、MPI专题分析与明细表。</p>
       </div>
-    </div>
-
-    <div v-if="summary" class="report-content">
-      <!-- 概览卡片 -->
-      <div class="summary-cards">
-        <div v-for="item in summary" :key="item.name" class="summary-card">
-          <div class="card-title">{{ item.name }}</div>
-          <div class="card-stats">
-            <div class="card-stat">
-              <span class="stat-label">最小值</span>
-              <span class="stat-value">{{ item.stats.min?.toFixed(3) || '-' }}</span>
-            </div>
-            <div class="card-stat">
-              <span class="stat-label">最大值</span>
-              <span class="stat-value">{{ item.stats.max?.toFixed(3) || '-' }}</span>
-            </div>
-            <div class="card-stat">
-              <span class="stat-label">平均值</span>
-              <span class="stat-value">{{ item.stats.mean?.toFixed(3) || '-' }}</span>
-            </div>
-          </div>
-          <div class="card-additional">
-            <span>标准差: {{ item.stats.std?.toFixed(3) || '-' }}</span>
-            <span>P50: {{ item.stats.p50?.toFixed(3) || '-' }}</span>
-          </div>
-        </div>
+      <div class="hero-actions">
+        <button class="btn primary" :disabled="loading" @click="generateReport(true)">
+          <span v-if="loading" class="spinner"></span>
+          {{ loading ? '刷新中...' : '刷新报告' }}
+        </button>
+        <button class="btn secondary" :disabled="!summary.length" @click="exportReport">导出CSV</button>
+        <button class="btn secondary" @click="goValidation">返回实证页</button>
       </div>
+    </header>
 
-      <!-- MPI专题 -->
-      <div class="card" v-if="mpiSummary">
-        <h3 class="section-title">MPI专题分析（{{ mpiSummary.seamName }}）</h3>
-        <p class="section-desc">综合MPI与分项指标统计，并标注高/低MPI区域</p>
+    <section class="card controls">
+      <div class="control-item">
+        <label>专题煤层</label>
+        <select v-model="selectedSeam" :disabled="!seamOptions.length">
+          <option v-for="item in seamOptions" :key="item.name" :value="item.name">{{ item.name }}</option>
+        </select>
+      </div>
+      <div class="control-item status">
+        <label>报告状态</label>
+        <span class="status-chip" :class="loading ? 'loading' : summary.length ? 'ready' : 'idle'">
+          {{ loading ? '自动计算中' : summary.length ? '已生成' : '暂无数据' }}
+        </span>
+      </div>
+      <div class="control-item status">
+        <label>最近更新</label>
+        <span>{{ generatedAt || '-' }}</span>
+      </div>
+    </section>
 
-        <div class="mpi-summary-grid">
-          <div class="mpi-summary-item">
-            <span class="stat-label">MPI最小值</span>
-            <span class="stat-value">{{ mpiSummary.stats.min?.toFixed(2) || '-' }}</span>
+    <section class="card" v-if="reportError">
+      <p class="error">{{ reportError }}</p>
+    </section>
+
+    <section class="card">
+      <h2>总览统计</h2>
+      <div class="cards-grid" v-if="summary.length">
+        <article class="metric-card" v-for="row in summary" :key="row.name">
+          <h3>{{ row.name }}</h3>
+          <div class="metric-main">{{ formatNumber(row.stats.mean, 3) }}</div>
+          <div class="metric-sub">
+            <span>Min {{ formatNumber(row.stats.min, 3) }}</span>
+            <span>Max {{ formatNumber(row.stats.max, 3) }}</span>
           </div>
-          <div class="mpi-summary-item">
-            <span class="stat-label">MPI最大值</span>
-            <span class="stat-value">{{ mpiSummary.stats.max?.toFixed(2) || '-' }}</span>
+          <div class="metric-sub">
+            <span>Std {{ formatNumber(row.stats.std, 3) }}</span>
+            <span>P50 {{ formatNumber(row.stats.p50, 3) }}</span>
           </div>
-          <div class="mpi-summary-item">
-            <span class="stat-label">MPI平均值</span>
-            <span class="stat-value">{{ mpiSummary.stats.mean?.toFixed(2) || '-' }}</span>
-          </div>
-          <div class="mpi-summary-item">
-            <span class="stat-label">RSI平均值</span>
-            <span class="stat-value">{{ mpiSummary.breakdown.rsi?.toFixed(2) || '-' }}</span>
-          </div>
-          <div class="mpi-summary-item">
-            <span class="stat-label">BRI平均值</span>
-            <span class="stat-value">{{ mpiSummary.breakdown.bri?.toFixed(2) || '-' }}</span>
-          </div>
-          <div class="mpi-summary-item">
-            <span class="stat-label">ASI平均值</span>
-            <span class="stat-value">{{ mpiSummary.breakdown.asi?.toFixed(2) || '-' }}</span>
-          </div>
+        </article>
+      </div>
+      <div v-else class="empty-block">{{ loading ? '正在自动生成总览统计...' : '暂无总览统计数据' }}</div>
+    </section>
+
+    <section class="card">
+      <h2>MPI专题分析</h2>
+      <div v-if="mpiSummary" class="mpi-layout">
+        <div class="mpi-stats">
+          <div class="stat-item"><span>煤层</span><strong>{{ mpiSummary.seamName }}</strong></div>
+          <div class="stat-item"><span>MPI均值</span><strong>{{ formatNumber(mpiSummary.stats.mean, 2) }}</strong></div>
+          <div class="stat-item"><span>MPI最小</span><strong>{{ formatNumber(mpiSummary.stats.min, 2) }}</strong></div>
+          <div class="stat-item"><span>MPI最大</span><strong>{{ formatNumber(mpiSummary.stats.max, 2) }}</strong></div>
+          <div class="stat-item"><span>RSI均值</span><strong>{{ formatNumber(mpiSummary.breakdown.rsi, 2) }}</strong></div>
+          <div class="stat-item"><span>BRI均值</span><strong>{{ formatNumber(mpiSummary.breakdown.bri, 2) }}</strong></div>
+          <div class="stat-item"><span>ASI均值</span><strong>{{ formatNumber(mpiSummary.breakdown.asi, 2) }}</strong></div>
         </div>
 
-        <div class="mpi-markers">
-          <div class="mpi-marker">
-            <div class="mpi-marker-title">高MPI区域（低风险）</div>
+        <div class="mpi-extremes">
+          <article>
+            <h3>高MPI区域（低风险）</h3>
             <ul>
-              <li v-for="item in mpiSummary.high" :key="item.id">
-                {{ item.id }}：MPI {{ item.mpi.toFixed(2) }}
-              </li>
+              <li v-for="item in mpiSummary.high" :key="`high-${item.id}`">{{ item.id }}: {{ formatNumber(item.mpi, 2) }}</li>
             </ul>
-          </div>
-          <div class="mpi-marker">
-            <div class="mpi-marker-title">低MPI区域（高风险）</div>
+          </article>
+          <article>
+            <h3>低MPI区域（高风险）</h3>
             <ul>
-              <li v-for="item in mpiSummary.low" :key="item.id">
-                {{ item.id }}：MPI {{ item.mpi.toFixed(2) }}
-              </li>
+              <li v-for="item in mpiSummary.low" :key="`low-${item.id}`">{{ item.id }}: {{ formatNumber(item.mpi, 2) }}</li>
             </ul>
-          </div>
+          </article>
         </div>
       </div>
+      <div v-else class="empty-block">{{ loading ? '正在自动生成MPI专题分析...' : '暂无MPI专题分析数据' }}</div>
+    </section>
 
-      <!-- 详细数据表格 -->
-      <div class="card">
-        <h3 class="section-title">详细统计数据</h3>
-        <div class="table-wrapper">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>指标</th>
-                <th>最小值</th>
-                <th>最大值</th>
-                <th>平均值</th>
-                <th>标准差</th>
-                <th>P10</th>
-                <th>P50</th>
-                <th>P90</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in summary" :key="row.name">
-                <td><strong>{{ row.name }}</strong></td>
-                <td>{{ row.stats.min?.toFixed(3) || '-' }}</td>
-                <td>{{ row.stats.max?.toFixed(3) || '-' }}</td>
-                <td>{{ row.stats.mean?.toFixed(3) || '-' }}</td>
-                <td>{{ row.stats.std?.toFixed(3) || '-' }}</td>
-                <td>{{ row.stats.p10?.toFixed(3) || '-' }}</td>
-                <td>{{ row.stats.p50?.toFixed(3) || '-' }}</td>
-                <td>{{ row.stats.p90?.toFixed(3) || '-' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <section class="card">
+      <h2>详细统计表</h2>
+      <div class="table-wrap" v-if="summary.length">
+        <table>
+          <thead>
+            <tr>
+              <th>指标</th>
+              <th>最小值</th>
+              <th>最大值</th>
+              <th>平均值</th>
+              <th>标准差</th>
+              <th>P10</th>
+              <th>P50</th>
+              <th>P90</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in summary" :key="`table-${row.name}`">
+              <td>{{ row.name }}</td>
+              <td>{{ formatNumber(row.stats.min, 3) }}</td>
+              <td>{{ formatNumber(row.stats.max, 3) }}</td>
+              <td>{{ formatNumber(row.stats.mean, 3) }}</td>
+              <td>{{ formatNumber(row.stats.std, 3) }}</td>
+              <td>{{ formatNumber(row.stats.p10, 3) }}</td>
+              <td>{{ formatNumber(row.stats.p50, 3) }}</td>
+              <td>{{ formatNumber(row.stats.p90, 3) }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
-
-    <div v-else class="empty-state">
-      <div class="empty-icon">📊</div>
-      <p>暂无报告数据</p>
-      <p class="empty-hint">请先完成数据分析后再生成报告</p>
-    </div>
+      <div v-else class="empty-block">{{ loading ? '正在自动生成明细统计...' : '暂无明细统计数据' }}</div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import {
+  getCoalSeams,
+  getRockParams,
+  getSeamOverburden,
+  mpiBatch,
   summaryIndex,
   summaryIndexWorkfaces,
   summarySteps,
-  summaryStepsWorkfaces,
-  getCoalSeams,
-  getSeamOverburden,
-  getRockParams,
-  mpiBatch
+  summaryStepsWorkfaces
 } from '../api'
 
 const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 const { setSelectedSeam, markStepDone } = useWorkspaceFlow()
+
 const loading = ref(false)
-const summary = ref(null)
+const summary = ref([])
 const mpiSummary = ref(null)
+const reportError = ref('')
+const generatedAt = ref('')
+
+const seamOptions = ref([])
+const selectedSeam = ref('')
+const initialized = ref(false)
+
 const layerParamsCache = new Map()
 
-const handleSummary = async () => {
-  loading.value = true
+const formatNumber = (value, digits = 3) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? n.toFixed(digits) : '-'
+}
+
+const normalizeQuerySeam = (value) => {
+  if (Array.isArray(value)) return value[0] || ''
+  return typeof value === 'string' ? value : ''
+}
+
+const loadSeams = async () => {
   try {
-    const method = 'idw'
-    const gridSize = 60
-    const faceAxis = 'x'
-    const faceCount = 3
-    const faceDirection = 'ascending'
-    const faceMode = 'decrease'
-    const faceDecay = 0.08
-    const stepModel = 'fixed'
-    const stepTarget = 'initial'
-
-    const wElastic = 0.4
-    const wDensity = 0.3
-    const wTensile = 0.3
-
-    const [a, b, c, d] = await Promise.all([
-      summaryIndex(method, gridSize),
-      summaryIndexWorkfaces({ method, grid_size: gridSize, axis: faceAxis, count: faceCount, direction: faceDirection, mode: faceMode, decay: faceDecay, elastic_modulus: wElastic, density: wDensity, tensile_strength: wTensile }),
-      summarySteps(stepModel, stepTarget, gridSize),
-      summaryStepsWorkfaces({ model: stepModel, target: stepTarget, grid_size: gridSize, axis: faceAxis, count: faceCount, direction: faceDirection, mode: faceMode, decay: faceDecay })
-    ])
-
-    summary.value = [
-      { name: '矿压指标', stats: a.data.grid },
-      { name: '矿压指标-工作面', stats: b.data.grid },
-      { name: '来压步距', stats: c.data.grid },
-      { name: '来压步距-工作面', stats: d.data.grid }
-    ]
-
-    mpiSummary.value = await buildMpiReport()
-    markStepDone('Report', { reportGeneratedAt: new Date().toISOString() })
-
-    toast.add('报告生成完成', 'success')
-  } catch (err) {
-    toast.add(err.response?.data?.detail || '生成失败', 'error')
-  } finally {
-    loading.value = false
+    const { data } = await getCoalSeams()
+    seamOptions.value = data?.seams || []
+    const seamFromQuery = normalizeQuerySeam(route.query?.seam)
+    const preferred = seamFromQuery || seamOptions.value[0]?.name || ''
+    selectedSeam.value = preferred
+    if (preferred) setSelectedSeam(preferred)
+  } catch {
+    seamOptions.value = []
+    selectedSeam.value = ''
   }
 }
 
@@ -217,7 +187,7 @@ const getLayerParams = async (name) => {
     const { data } = await getRockParams(name)
     layerParamsCache.set(name, data)
     return data
-  } catch (err) {
+  } catch {
     layerParamsCache.set(name, null)
     return null
   }
@@ -227,8 +197,8 @@ const buildMpiPoints = async (boreholes = [], seamName = '') => {
   const points = []
   for (const borehole of boreholes) {
     const layers = borehole.layers || []
-    const seamLayer = layers.find(l => l.name === seamName)
-    const strataLayers = layers.filter(l => l.name !== seamName)
+    const seamLayer = layers.find((l) => l.name === seamName)
+    const strataLayers = layers.filter((l) => l.name !== seamName)
 
     const strata = []
     for (const layer of strataLayers) {
@@ -265,20 +235,18 @@ const buildMpiPoints = async (boreholes = [], seamName = '') => {
   return points
 }
 
-const buildMpiReport = async () => {
+const buildMpiReport = async (seamName) => {
+  if (!seamName) return null
   try {
-    const { data: seamData } = await getCoalSeams()
-    const seams = seamData.seams || []
-    if (seams.length === 0) return null
-
-    const seamName = seams[0].name
     const { data: overburden } = await getSeamOverburden(seamName)
-    const boreholes = overburden.boreholes || []
-    if (boreholes.length === 0) return null
+    const boreholes = overburden?.boreholes || []
+    if (!boreholes.length) return null
 
     const points = await buildMpiPoints(boreholes, seamName)
     const { data: batch } = await mpiBatch(points)
-    const results = batch.results || []
+
+    const results = batch?.results || []
+    if (!results.length) return null
 
     const breakdown = results.reduce(
       (acc, cur) => {
@@ -289,70 +257,128 @@ const buildMpiReport = async () => {
       },
       { rsi: 0, bri: 0, asi: 0 }
     )
-    const count = results.length || 1
-    const breakdownAvg = {
-      rsi: breakdown.rsi / count,
-      bri: breakdown.bri / count,
-      asi: breakdown.asi / count
-    }
 
+    const count = results.length
     const sorted = [...results].sort((a, b) => a.mpi - b.mpi)
-    const low = sorted.slice(0, 3)
-    const high = sorted.slice(-3).reverse()
 
     return {
       seamName,
-      stats: batch.summary || {},
-      breakdown: breakdownAvg,
-      high,
-      low
+      stats: batch?.summary || {},
+      breakdown: {
+        rsi: breakdown.rsi / count,
+        bri: breakdown.bri / count,
+        asi: breakdown.asi / count
+      },
+      high: sorted.slice(-3).reverse(),
+      low: sorted.slice(0, 3)
     }
-  } catch (err) {
+  } catch {
     return null
   }
 }
 
-const normalizeQuerySeam = (value) => {
-  if (Array.isArray(value)) return value[0] || ''
-  return typeof value === 'string' ? value : ''
+const generateReport = async (notify = false) => {
+  loading.value = true
+  reportError.value = ''
+  try {
+    const method = 'idw'
+    const gridSize = 60
+    const faceAxis = 'x'
+    const faceCount = 3
+    const faceDirection = 'ascending'
+    const faceMode = 'decrease'
+    const faceDecay = 0.08
+    const stepModel = 'fixed'
+    const stepTarget = 'initial'
+
+    const wElastic = 0.4
+    const wDensity = 0.3
+    const wTensile = 0.3
+
+    const [a, b, c, d, mpi] = await Promise.all([
+      summaryIndex(method, gridSize),
+      summaryIndexWorkfaces({
+        method,
+        grid_size: gridSize,
+        axis: faceAxis,
+        count: faceCount,
+        direction: faceDirection,
+        mode: faceMode,
+        decay: faceDecay,
+        elastic_modulus: wElastic,
+        density: wDensity,
+        tensile_strength: wTensile
+      }),
+      summarySteps(stepModel, stepTarget, gridSize),
+      summaryStepsWorkfaces({
+        model: stepModel,
+        target: stepTarget,
+        grid_size: gridSize,
+        axis: faceAxis,
+        count: faceCount,
+        direction: faceDirection,
+        mode: faceMode,
+        decay: faceDecay
+      }),
+      buildMpiReport(selectedSeam.value)
+    ])
+
+    summary.value = [
+      { name: '矿压指标', stats: a.data.grid },
+      { name: '矿压指标-工作面', stats: b.data.grid },
+      { name: '来压步距', stats: c.data.grid },
+      { name: '来压步距-工作面', stats: d.data.grid }
+    ]
+
+    mpiSummary.value = mpi
+    generatedAt.value = new Date().toLocaleString()
+    markStepDone('Report', { reportGeneratedAt: new Date().toISOString() })
+
+    if (notify) toast.add('报告已刷新', 'success')
+  } catch (error) {
+    reportError.value = error?.response?.data?.detail || '报告生成失败'
+    if (notify) toast.add(reportError.value, 'error')
+  } finally {
+    loading.value = false
+  }
 }
 
 const goValidation = () => {
   router.push({
     name: 'AlgorithmValidation',
-    query: normalizeQuerySeam(route.query?.seam) ? { seam: normalizeQuerySeam(route.query?.seam) } : undefined
+    query: selectedSeam.value ? { seam: selectedSeam.value } : undefined
   })
 }
 
 const exportReport = () => {
-  const data = summary.value.map(row => ({
+  if (!summary.value.length) return
+
+  const rows = summary.value.map((row) => ({
     指标: row.name,
-    最小值: row.stats.min?.toFixed(3),
-    最大值: row.stats.max?.toFixed(3),
-    平均值: row.stats.mean?.toFixed(3),
-    标准差: row.stats.std?.toFixed(3),
-    P10: row.stats.p10?.toFixed(3),
-    P50: row.stats.p50?.toFixed(3),
-    P90: row.stats.p90?.toFixed(3)
+    最小值: formatNumber(row.stats.min, 3),
+    最大值: formatNumber(row.stats.max, 3),
+    平均值: formatNumber(row.stats.mean, 3),
+    标准差: formatNumber(row.stats.std, 3),
+    P10: formatNumber(row.stats.p10, 3),
+    P50: formatNumber(row.stats.p50, 3),
+    P90: formatNumber(row.stats.p90, 3)
   }))
 
   if (mpiSummary.value) {
-    data.push({
-      指标: `MPI综合指标（${mpiSummary.value.seamName}）`,
-      最小值: mpiSummary.value.stats.min?.toFixed(3),
-      最大值: mpiSummary.value.stats.max?.toFixed(3),
-      平均值: mpiSummary.value.stats.mean?.toFixed(3),
-      标准差: mpiSummary.value.stats.std?.toFixed(3),
+    rows.push({
+      指标: `MPI综合指标(${mpiSummary.value.seamName})`,
+      最小值: formatNumber(mpiSummary.value.stats.min, 3),
+      最大值: formatNumber(mpiSummary.value.stats.max, 3),
+      平均值: formatNumber(mpiSummary.value.stats.mean, 3),
+      标准差: formatNumber(mpiSummary.value.stats.std, 3),
       P10: '',
       P50: '',
       P90: ''
     })
   }
 
-  const csv = [
-    Object.keys(data[0]).join(','),
-    ...data.map(row => Object.values(row).join(','))
-  ].join('\n')
+  const header = Object.keys(rows[0])
+  const csv = [header.join(','), ...rows.map((row) => header.map((k) => row[k]).join(','))].join('\n')
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -365,251 +391,330 @@ const exportReport = () => {
   toast.add('报告导出成功', 'success')
 }
 
-onMounted(() => {
-  const seamFromQuery = normalizeQuerySeam(route.query?.seam)
-  if (seamFromQuery) setSelectedSeam(seamFromQuery)
+const autoRefreshAfterSeamChange = (() => {
+  let timer = null
+  return () => {
+    if (!initialized.value) return
+    window.clearTimeout(timer)
+    timer = window.setTimeout(() => {
+      if (selectedSeam.value) {
+        setSelectedSeam(selectedSeam.value)
+        generateReport(false)
+      }
+    }, 500)
+  }
+})()
+
+watch(selectedSeam, () => {
+  autoRefreshAfterSeamChange()
+})
+
+watch(
+  () => route.query?.seam,
+  (value) => {
+    const seam = normalizeQuerySeam(value)
+    if (seam && seam !== selectedSeam.value) selectedSeam.value = seam
+  }
+)
+
+onMounted(async () => {
+  await loadSeams()
+  initialized.value = true
+  await generateReport(false)
 })
 </script>
 
 <style scoped>
-.page-title {
-  margin: 0 0 8px 0;
+.report-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.hero h1 {
+  margin: 0;
   font-size: 26px;
-  font-weight: 700;
   color: #0f172a;
 }
 
-.page-subtitle {
-  margin: 0 0 24px 0;
-  font-size: 14px;
-  color: #64748b;
-}
-
-.section-title {
-  margin: 0 0 16px 0;
-  font-size: 17px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.section-desc {
-  margin: 0 0 16px 0;
+.hero p {
+  margin: 8px 0 0;
   font-size: 13px;
   color: #64748b;
 }
 
-.action-buttons {
+.hero-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.control-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.control-item select {
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+.status-chip {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-chip.loading {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-chip.ready {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-chip.idle {
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .btn {
-  padding: 10px 18px;
   border: none;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  padding: 10px 14px;
   cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn.primary {
-  background: linear-gradient(135deg, #667eea 0%, #3b82f6 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
-}
-
-.btn.primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.btn.secondary {
-  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
-  color: white;
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #fff;
+}
+
+.btn.secondary {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .spinner {
   display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  margin-right: 6px;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* Report Content */
-.report-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Summary Cards */
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.mpi-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.mpi-summary-item {
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-
-.mpi-markers {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.mpi-marker {
-  background: #f1f5f9;
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-
-.mpi-marker-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 8px;
-}
-
-.mpi-marker ul {
+.error {
   margin: 0;
-  padding-left: 16px;
-  font-size: 12px;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #fff, #f8fafc);
+}
+
+.metric-card h3 {
+  margin: 0;
+  font-size: 13px;
   color: #334155;
 }
 
-.summary-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.card-stats {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.card-stat {
-  text-align: center;
-}
-
-.stat-label {
-  display: block;
-  font-size: 11px;
-  color: #64748b;
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  display: block;
-  font-size: 16px;
+.metric-main {
+  margin-top: 8px;
+  font-size: 24px;
   font-weight: 700;
   color: #0f172a;
 }
 
-.card-additional {
+.metric-sub {
+  margin-top: 6px;
   display: flex;
   justify-content: space-between;
   font-size: 11px;
   color: #64748b;
-  padding-top: 8px;
-  border-top: 1px dashed #e2e8f0;
 }
 
-/* Table */
-.table-wrapper {
+.mpi-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+}
+
+.mpi-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stat-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.stat-item span {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.stat-item strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.mpi-extremes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mpi-extremes article {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.mpi-extremes h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.mpi-extremes ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.empty-block {
+  min-height: 140px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.table-wrap {
   overflow-x: auto;
 }
 
-.table {
+table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
 
-.table th {
+th,
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
   text-align: left;
-  padding: 12px 16px;
-  background: #f1f5f9;
-  border-bottom: 2px solid #e2e8f0;
-  font-weight: 600;
-  color: #475569;
 }
 
-.table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #0f172a;
-}
-
-.table tbody tr:hover {
+thead th {
   background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
 }
 
-/* Empty State */
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #94a3b8;
-}
+@media (max-width: 1200px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
-.empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-}
-
-.empty-hint {
-  font-size: 13px;
-  color: #94a3b8;
-}
-
-.card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
-}
-
-@media (max-width: 768px) {
-  .summary-cards {
+  .mpi-layout {
     grid-template-columns: 1fr;
   }
 
-  .mpi-summary-grid,
-  .mpi-markers {
+  .mpi-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .controls,
+  .cards-grid,
+  .mpi-stats,
+  .mpi-extremes {
     grid-template-columns: 1fr;
   }
 }

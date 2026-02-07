@@ -361,11 +361,19 @@
 
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
-import JSZip from 'jszip'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 // Lazy load KaTeX - only loads formulas when component is mounted
 let katex = null
+let jsZipCtor = null
 const { markStepDone } = useWorkspaceFlow()
+
+const getJSZipCtor = async () => {
+  if (jsZipCtor) return jsZipCtor
+  const mod = await import('jszip')
+  jsZipCtor = mod?.default || mod?.JSZip || window.JSZip || null
+  if (!jsZipCtor) throw new Error('JSZip 加载失败')
+  return jsZipCtor
+}
 
 // KaTeX渲染函数 - handles lazy loaded KaTeX
 const renderFormula = (formula) => {
@@ -784,6 +792,7 @@ const buildZipName = () => {
 }
 
 const downloadZip = async (files) => {
+  const JSZip = await getJSZipCtor()
   const zip = new JSZip()
   const folder = zip.folder('mpi-figures')
   let completed = 0

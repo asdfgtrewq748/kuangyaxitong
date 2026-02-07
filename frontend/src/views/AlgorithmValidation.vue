@@ -235,7 +235,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import JSZip from 'jszip'
 import { getCoalSeams, validationEvaluate, validationSpatialOverview } from '../api'
 import { useViewport } from '../composables/useViewport'
 import { useIndicatorCanvas } from '../composables/useIndicatorCanvas'
@@ -292,6 +291,15 @@ const matrixSelection = ref('all')
 const exportStaticMode = ref(false)
 const thumbCanvasRefs = {}
 const spatialCache = new Map()
+let jsZipCtor = null
+
+const getJSZipCtor = async () => {
+  if (jsZipCtor) return jsZipCtor
+  const mod = await import('jszip')
+  jsZipCtor = mod?.default || mod?.JSZip || window.JSZip || null
+  if (!jsZipCtor) throw new Error('JSZip 加载失败')
+  return jsZipCtor
+}
 
 const { viewport, worldToScreen, screenToWorld, fitToBounds, startDrag, dragTo, endDrag, zoomAt } = useViewport()
 const { getLegendGradient, drawGrid, drawBoreholes, pickNearestBorehole, sampleGridValue, drawMiniHeatmap } = useIndicatorCanvas()
@@ -881,6 +889,7 @@ const exportSciencePackage = async () => {
   exportNote.value = ''
   try {
     await runWithStaticOverlay(async () => {
+      const JSZip = await getJSZipCtor()
       const zip = new JSZip()
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
