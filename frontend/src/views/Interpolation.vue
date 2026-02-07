@@ -127,6 +127,13 @@
           <button class="btn outline" @click="selectedSeam = null; thicknessResult = null; depthResult = null">
             更换煤层
           </button>
+          <button
+            v-if="thicknessResult || depthResult"
+            class="btn outline"
+            @click="goPressureAnalysis"
+          >
+            下一步：新算法原理
+          </button>
         </div>
       </div>
 
@@ -308,11 +315,16 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
+import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import ContourMap from '../components/ContourMap.vue'
 import { getCoalSeams, getSeamStats, getSeamOverburden, getSeamContourImages } from '../api'
 
 const toast = useToast()
+const route = useRoute()
+const router = useRouter()
+const { workspaceState, setSelectedSeam, markStepDone } = useWorkspaceFlow()
 
 // State
 const loadingSeams = ref(false)
@@ -456,6 +468,7 @@ const normalizeLayers = (layers = []) => {
 
 const selectSeam = async (seam) => {
   selectedSeam.value = seam
+  setSelectedSeam(seam?.name || '')
   thicknessResult.value = null
   depthResult.value = null
 
@@ -485,6 +498,9 @@ const selectSeam = async (seam) => {
     // Draw histogram and stratigraphic column
     await nextTick()
     drawHistogram()
+    markStepDone('Interpolation', {
+      interpolationPoints: seamPoints.value.length || 0
+    })
     drawStratigraphicColumn()
   } catch (err) {
     toast.add('加载煤层详情失败: ' + (err.response?.data?.detail || err.message), 'error')
@@ -556,6 +572,9 @@ const handleInterpolate = async () => {
     await nextTick()
     calculateUncertainty()
     drawHistogram()
+    markStepDone('Interpolation', {
+      interpolationPoints: seamPoints.value.length || 0
+    })
     console.log('✓ All charts绘制完成')
 
     toast.add('等值线图生成完成', 'success')
@@ -1663,8 +1682,26 @@ const resetCrossSection = () => {
   }
 }
 
-onMounted(() => {
-  loadSeams()
+const goPressureAnalysis = () => {
+  router.push({
+    name: 'AcademicAlgorithm',
+    query: selectedSeam.value?.name ? { seam: selectedSeam.value.name } : undefined
+  })
+}
+
+const normalizeQuerySeam = (value) => {
+  if (Array.isArray(value)) return value[0] || ''
+  return typeof value === 'string' ? value : ''
+}
+
+onMounted(async () => {
+  await loadSeams()
+  const preferredName = normalizeQuerySeam(route.query?.seam) || workspaceState.selectedSeam
+  if (!preferredName) return
+  const preferred = availableSeams.value.find((item) => item.name === preferredName)
+  if (preferred) {
+    await selectSeam(preferred)
+  }
 })
 
 // Reset view function

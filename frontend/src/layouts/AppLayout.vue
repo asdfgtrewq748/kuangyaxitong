@@ -1,190 +1,153 @@
 <template>
   <div class="app-layout">
-    <!-- Compact Icon-Only Sidebar -->
     <aside class="sidebar">
-      <!-- Logo Area -->
-      <div class="sidebar-logo">
-        <svg viewBox="0 0 32 32" class="logo-icon">
-          <defs>
-            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#6366f1"/>
-              <stop offset="100%" style="stop-color:#8b5cf6"/>
-            </linearGradient>
-          </defs>
-          <path d="M6 26 L6 12 L12 8 L18 12 L18 22 L24 18 L24 6 L18 2 L6 8 Z" fill="url(#logoGrad)" opacity="0.9"/>
-          <path d="M12 8 L12 18 M18 12 L18 22" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-          <circle cx="6" cy="12" r="2" fill="#fbbf24"/>
-          <circle cx="24" cy="6" r="2" fill="#f472b6"/>
-        </svg>
-      </div>
-
-      <!-- Navigation with Icons -->
+      <div class="sidebar-logo">MPI</div>
       <nav class="sidebar-nav">
         <router-link
-          v-for="route in routes"
-          :key="route.path"
-          :to="route.path"
+          v-for="routeItem in routes"
+          :key="routeItem.path"
+          :to="routeItem.path"
           class="nav-item"
           active-class="active"
         >
-          <component :is="getIcon(route.name)" class="nav-icon" />
-          <span class="nav-tooltip">{{ route.meta.title }}</span>
+          <span class="nav-badge">{{ navBadge(routeItem) }}</span>
+          <span class="nav-text">{{ routeItem.meta.title }}</span>
         </router-link>
       </nav>
-
-      <!-- Footer -->
-      <div class="sidebar-footer">
-        <div class="footer-dot"></div>
-      </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
       <div class="content-wrapper">
+        <section class="workflow-strip">
+          <div class="workflow-head">
+            <strong>Product Flow</strong>
+            <span>{{ Math.round(completionRate * 100) }}%</span>
+          </div>
+
+          <div class="workflow-track">
+            <button
+              v-for="(item, index) in flowRoutes"
+              :key="item.path"
+              type="button"
+              class="workflow-step"
+              :class="{ active: item.name === activeRouteName, done: isFlowDone(item.name) }"
+              @click="goFlowRoute(item)"
+            >
+              <span class="step-index">{{ index + 1 }}</span>
+              <span class="step-title">{{ item.meta.title }}</span>
+            </button>
+          </div>
+
+          <div class="workflow-actions">
+            <span v-if="workspaceState.selectedSeam" class="workflow-seam">Seam {{ workspaceState.selectedSeam }}</span>
+            <button v-if="recommendedFlowRoute" type="button" class="workflow-btn" @click="goRecommendedFlow">
+              Next: {{ recommendedFlowRoute.meta.title }}
+            </button>
+            <button type="button" class="workflow-btn ghost" @click="resetFlow">Reset</button>
+          </div>
+
+          <div v-if="flowGuard" class="workflow-guard">
+            <div class="workflow-guard-text">
+              <strong>Flow guard</strong>
+              <span>
+                Previous step {{ flowGuard.blockedBy.meta.title }} is not done. You can stay here,
+                but completing it first is recommended.
+              </span>
+            </div>
+            <button type="button" class="workflow-btn guard" @click="goFlowRoute(flowGuard.blockedBy)">
+              Go to {{ flowGuard.blockedBy.meta.title }}
+            </button>
+          </div>
+        </section>
+
         <router-view />
       </div>
     </main>
+
     <Toast ref="toast" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Toast from '../components/Toast.vue'
+import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 
+const route = useRoute()
 const router = useRouter()
 const toast = ref(null)
-const routes = computed(() => router.getRoutes().filter(r => r.meta?.title))
+const { flowOrder, workspaceState, completionRate, resetFlow } = useWorkspaceFlow()
 
-// Premium SVG Icons - lucide-style refined paths
-const icons = {
-  DataImport: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }),
-    h('polyline', { points: '17 8 12 3 7 8' }),
-    h('line', { x1: '12', y1: '3', x2: '12', y2: '15' })
-  ]),
+const routes = computed(() => (
+  router
+    .getRoutes()
+    .filter((r) => r.meta?.title && r.meta?.nav !== false)
+    .sort((a, b) => Number(a.meta?.navOrder || 999) - Number(b.meta?.navOrder || 999))
+))
 
-  Interpolation: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('path', { d: 'M3 3v18h18' }),
-    h('path', { d: 'M18.7 8l-5.1 5.2-2.8-2.7L7 14.3' })
-  ]),
+const flowRoutes = computed(() => {
+  const routeMap = new Map(router.getRoutes().map((item) => [item.name, item]))
+  return flowOrder.map((name) => routeMap.get(name)).filter(Boolean)
+})
 
-  PressureIndex: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('path', { d: 'M12 20V10' }),
-    h('path', { d: 'M18 20V4' }),
-    h('path', { d: 'M6 20v-4' }),
-    h('path', { d: 'M3 20h18' })
-  ]),
+const activeRouteName = computed(() => String(route.name || ''))
+const seamQuery = computed(() => (workspaceState.selectedSeam ? { seam: workspaceState.selectedSeam } : undefined))
 
-  MpiHeatmap: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('path', { d: 'M12 2c0 3-2 5-5 5s-5 2-5 5 2 5 5 5 5-2 5-5 2-5 5-5-2-5-5-5z' }),
-    h('path', { d: 'M12 22v-8' }),
-    h('path', { d: 'M22 12h-8' }),
-    h('circle', { cx: '12', cy: '12', r: '2' })
-  ]),
+const isFlowDone = (name) => Boolean(workspaceState.steps?.[name])
 
-  MpiHeatmapPro: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('polygon', { points: '13 2 3 14 12 14 11 22 21 10 12 10 13 2' }),
-    h('path', { d: 'M13 2l3 4' }),
-    h('path', { d: 'M21 10l-3 4' })
-  ]),
+const recommendedFlowRoute = computed(() => {
+  if (flowRoutes.value.length === 0) return null
 
-  MpiAlgorithm: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('path', { d: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z' }),
-    h('polyline', { points: '3.27 6.96 12 12.01 20.73 6.96' }),
-    h('line', { x1: '12', y1: '22.08', x2: '12', y2: '12' })
-  ]),
+  const currentIndex = flowRoutes.value.findIndex((item) => item.name === activeRouteName.value)
+  if (currentIndex >= 0) {
+    const current = flowRoutes.value[currentIndex]
+    if (!isFlowDone(current.name)) return current
 
-  AlgorithmValidation: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('path', { d: 'M9 3h6' }),
-    h('path', { d: 'M10 3v3l-4 6a5 5 0 0 0 4.3 7.5h3.4A5 5 0 0 0 18 12l-4-6V3' }),
-    h('path', { d: 'M8.5 13h7' }),
-    h('path', { d: 'M9.5 16h5' })
-  ]),
+    for (let i = currentIndex + 1; i < flowRoutes.value.length; i += 1) {
+      if (!isFlowDone(flowRoutes.value[i].name)) return flowRoutes.value[i]
+    }
+  }
 
-  Steps: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('path', { d: 'M3 6h18' }),
-    h('path', { d: 'M3 12h18' }),
-    h('path', { d: 'M3 18h18' }),
-    h('path', { d: 'M6 6v12' }),
-    h('path', { d: 'M12 6v12' }),
-    h('path', { d: 'M18 6v12' })
-  ]),
+  return flowRoutes.value.find((item) => !isFlowDone(item.name)) || flowRoutes.value[flowRoutes.value.length - 1]
+})
 
-  Report: () => h('svg', {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round'
-  }, [
-    h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
-    h('polyline', { points: '14 2 14 8 20 8' }),
-    h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
-    h('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
-    h('polyline', { points: '10 9 9 9 8 9' })
-  ])
+const findMissingPrerequisite = (targetName) => {
+  const targetIndex = flowRoutes.value.findIndex((item) => item.name === targetName)
+  if (targetIndex <= 0) return null
+  return flowRoutes.value.find((item, index) => index < targetIndex && !isFlowDone(item.name)) || null
 }
 
-const getIcon = (name) => icons[name] || icons.DataImport
+const flowGuard = computed(() => {
+  const currentName = activeRouteName.value
+  if (!currentName) return null
+  const missing = findMissingPrerequisite(currentName)
+  if (!missing) return null
+  const current = flowRoutes.value.find((item) => item.name === currentName)
+  if (!current) return null
+  return { blockedBy: missing, current }
+})
+
+const goFlowRoute = (item) => {
+  if (!item?.name) return
+
+  const missing = findMissingPrerequisite(item.name)
+  if (missing && toast.value?.add) {
+    toast.value.add(`Flow hint: finish ${missing.meta?.title || missing.name} first`, 'warning', 2600)
+  }
+
+  router.push({ name: item.name, query: seamQuery.value })
+}
+
+const goRecommendedFlow = () => {
+  if (!recommendedFlowRoute.value?.name) return
+  router.push({ name: recommendedFlowRoute.value.name, query: seamQuery.value })
+}
+
+const navBadge = (routeItem) => {
+  const title = String(routeItem?.meta?.title || '')
+  return title.slice(0, 1) || '•'
+}
 
 onMounted(() => {
   window.toastRef = toast
@@ -192,295 +155,314 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================== App Layout ==================== */
 .app-layout {
-  display: flex;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 50%, #f0fdf4 100%);
+  display: flex;
+  background: linear-gradient(140deg, #f4f6fb 0%, #f8fafc 55%, #edf8f1 100%);
 }
 
-/* ==================== Compact Sidebar ==================== */
 .sidebar {
-  width: 68px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0;
+  width: 92px;
   position: fixed;
   left: 0;
   top: 0;
   bottom: 0;
-  z-index: 100;
-  border-right: 1px solid rgba(99, 102, 241, 0.12);
-  box-shadow: 4px 0 24px rgba(99, 102, 241, 0.08), 0 0 60px rgba(99, 102, 241, 0.04);
-}
-
-/* Subtle animated border glow */
-.sidebar::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(180deg,
-    transparent 0%,
-    rgba(99, 102, 241, 0.4) 50%,
-    transparent 100%);
-  animation: borderPulse 4s ease-in-out infinite;
-}
-
-@keyframes borderPulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-
-/* ==================== Logo Area ==================== */
-.sidebar-logo {
-  padding: 20px 0;
+  border-right: 1px solid #dbe3ef;
+  background: #ffffff;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.12);
+  z-index: 10;
 }
 
-.logo-icon {
-  width: 36px;
-  height: 36px;
-  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));
-  animation: logoGlow 3s ease-in-out infinite;
+.sidebar-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  margin-top: 16px;
+  margin-bottom: 18px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
-@keyframes logoGlow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3)); }
-  50% { filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.4)); }
-}
-
-/* ==================== Navigation ==================== */
 .sidebar-nav {
-  flex: 1;
-  padding: 20px 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  padding: 8px;
 }
 
 .nav-item {
-  width: 48px;
-  height: 48px;
+  width: 76px;
+  min-height: 56px;
+  border-radius: 12px;
+  text-decoration: none;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  gap: 4px;
   color: #64748b;
-  text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
-/* Icon styling */
-.nav-item .nav-icon {
-  width: 22px;
-  height: 22px;
-  stroke-width: 1.75;
-  transition: all 0.3s ease;
-}
-
-/* Tooltip */
-.nav-tooltip {
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%) translateX(-8px);
-  margin-left: 12px;
-  padding: 8px 14px;
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 8px;
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2),
-              0 0 0 1px rgba(99, 102, 241, 0.2);
-}
-
-.nav-tooltip::before {
-  content: "";
-  position: absolute;
-  left: -5px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-right: 5px solid #312e81;
-}
-
-/* Hover state */
 .nav-item:hover {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.06) 100%);
-  color: #1e293b;
-  transform: translateX(2px);
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
 }
 
-.nav-item:hover .nav-icon {
-  stroke-width: 2.25;
-  filter: drop-shadow(0 0 4px rgba(99, 102, 241, 0.3));
-}
-
-.nav-item:hover .nav-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(-50%) translateX(0);
-}
-
-/* Active state */
 .nav-item.active {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25), 0 0 0 1px rgba(99, 102, 241, 0.1);
-  transform: translateX(2px);
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
-.nav-item.active .nav-icon {
-  stroke-width: 2.25;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-}
-
-.nav-item.active .nav-tooltip {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-}
-
-.nav-item.active .nav-tooltip::before {
-  border-right-color: #7c3aed;
-}
-
-/* Active indicator glow */
-.nav-item.active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.2) 100%);
-  border-radius: 0 3px 3px 0;
-}
-
-/* ==================== Sidebar Footer ==================== */
-.sidebar-footer {
-  padding: 20px 0;
-  display: flex;
+.nav-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  border-top: 1px solid rgba(99, 102, 241, 0.12);
-  background: linear-gradient(180deg, rgba(99, 102, 241, 0.02) 0%, transparent 100%);
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.footer-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
-  animation: dotPulse 2s ease-in-out infinite;
+.nav-item.active .nav-badge {
+  background: #bfdbfe;
 }
 
-@keyframes dotPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
+.nav-text {
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  max-width: 64px;
+  word-break: break-word;
 }
 
-/* ==================== Main Content ==================== */
 .main-content {
-  margin-left: 68px;
-  flex: 1;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f8f9ff 0%, #fafbff 50%, #f0fdf9 100%);
-  position: relative;
-}
-
-/* Ambient background effects */
-.main-content::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 68px;
-  right: 0;
-  height: 100vh;
-  background:
-    radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.03) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
+  margin-left: 92px;
+  width: calc(100% - 92px);
 }
 
 .content-wrapper {
-  padding: 32px;
-  position: relative;
-  z-index: 1;
   max-width: 1600px;
   margin: 0 auto;
+  padding: 20px 24px 28px;
 }
 
-/* ==================== Page Styles ==================== */
-.page-header {
-  margin-bottom: 32px;
+.workflow-strip {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
 }
 
-.page-title {
-  margin: 0 0 8px 0;
-  font-size: 28px;
-  font-weight: 700;
+.workflow-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.workflow-head strong {
+  font-size: 13px;
   color: #0f172a;
-  letter-spacing: -0.02em;
 }
 
-.page-subtitle {
-  margin: 0;
-  font-size: 14px;
+.workflow-track {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #dbe5f1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #475569;
+  padding: 7px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.workflow-step:hover {
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+.workflow-step.done {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.workflow-step.active {
+  border-color: #60a5fa;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.step-index {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.workflow-step.done .step-index {
+  background: #bbf7d0;
+  color: #166534;
+}
+
+.workflow-step.active .step-index {
+  background: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.step-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workflow-actions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.workflow-seam {
+  font-size: 12px;
+  color: #475569;
+  background: rgba(148, 163, 184, 0.16);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.workflow-btn {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.workflow-btn:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.workflow-btn.ghost {
   color: #64748b;
 }
 
-/* ==================== Responsive ==================== */
+.workflow-btn.guard {
+  border-color: #fbbf24;
+  background: #fff7ed;
+  color: #92400e;
+}
+
+.workflow-btn.guard:hover {
+  border-color: #f59e0b;
+  background: #ffedd5;
+}
+
+.workflow-guard {
+  margin-top: 8px;
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workflow-guard-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: #9a3412;
+}
+
+.workflow-guard-text strong {
+  color: #7c2d12;
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .workflow-track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar {
-    width: 56px;
+    width: 62px;
   }
 
-  .main-content {
-    margin-left: 56px;
-  }
-
-  .main-content::before {
-    left: 56px;
+  .sidebar-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    font-size: 11px;
   }
 
   .nav-item {
-    width: 42px;
-    height: 42px;
+    width: 50px;
+    min-height: 42px;
   }
 
-  .nav-item .nav-icon {
-    width: 20px;
-    height: 20px;
+  .nav-text {
+    display: none;
+  }
+
+  .main-content {
+    margin-left: 62px;
+    width: calc(100% - 62px);
   }
 
   .content-wrapper {
-    padding: 20px;
+    padding: 14px;
   }
 
-  .nav-tooltip {
-    display: none;
+  .workflow-track {
+    grid-template-columns: 1fr;
   }
 }
 </style>

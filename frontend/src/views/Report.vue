@@ -17,6 +17,9 @@
         <button v-if="summary" class="btn secondary" @click="exportReport">
           导出报告
         </button>
+        <button class="btn secondary" @click="goValidation">
+          返回实证页
+        </button>
       </div>
     </div>
 
@@ -141,8 +144,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
+import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import {
   summaryIndex,
   summaryIndexWorkfaces,
@@ -155,6 +160,9 @@ import {
 } from '../api'
 
 const toast = useToast()
+const route = useRoute()
+const router = useRouter()
+const { setSelectedSeam, markStepDone } = useWorkspaceFlow()
 const loading = ref(false)
 const summary = ref(null)
 const mpiSummary = ref(null)
@@ -192,6 +200,7 @@ const handleSummary = async () => {
     ]
 
     mpiSummary.value = await buildMpiReport()
+    markStepDone('Report', { reportGeneratedAt: new Date().toISOString() })
 
     toast.add('报告生成完成', 'success')
   } catch (err) {
@@ -303,6 +312,18 @@ const buildMpiReport = async () => {
   }
 }
 
+const normalizeQuerySeam = (value) => {
+  if (Array.isArray(value)) return value[0] || ''
+  return typeof value === 'string' ? value : ''
+}
+
+const goValidation = () => {
+  router.push({
+    name: 'AlgorithmValidation',
+    query: normalizeQuerySeam(route.query?.seam) ? { seam: normalizeQuerySeam(route.query?.seam) } : undefined
+  })
+}
+
 const exportReport = () => {
   const data = summary.value.map(row => ({
     指标: row.name,
@@ -343,6 +364,11 @@ const exportReport = () => {
 
   toast.add('报告导出成功', 'success')
 }
+
+onMounted(() => {
+  const seamFromQuery = normalizeQuerySeam(route.query?.seam)
+  if (seamFromQuery) setSelectedSeam(seamFromQuery)
+})
 </script>
 
 <style scoped>

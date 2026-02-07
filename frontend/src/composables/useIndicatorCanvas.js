@@ -8,6 +8,21 @@ const METRIC_PALETTES = {
 }
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v))
+const colorToRgb = (color) => {
+  const text = String(color || '')
+  const m = text.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i)
+  if (m) {
+    return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) }
+  }
+  return null
+}
+const toMutedGray = (color, ratio = 0.8) => {
+  const rgb = colorToRgb(color)
+  if (!rgb) return '#94a3b8'
+  const gray = Math.round(rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114)
+  const blended = Math.round(gray * ratio + 235 * (1 - ratio))
+  return `rgb(${blended},${blended},${blended})`
+}
 
 const safeStats = (stats) => {
   const min = Number(stats?.min ?? 0)
@@ -136,19 +151,45 @@ export function useIndicatorCanvas() {
     }
   }
 
-  const drawBoreholes = (ctx, boreholes, metric, stats, bounds, worldToScreen, hoveredName = '') => {
+  const drawBoreholes = (ctx, boreholes, metric, stats, bounds, worldToScreen, hoveredName = '', focus = null) => {
     if (!ctx || !Array.isArray(boreholes) || !bounds) return
-    for (const b of boreholes) {
+    const hasFocus = !!(focus?.active && focus?.indexSet instanceof Set && focus.indexSet.size > 0)
+    const accent = String(focus?.accent || '#111827')
+    const animatePulse = !!focus?.animate
+    const pulseT = Number(focus?.pulseT || 0)
+    for (let i = 0; i < boreholes.length; i += 1) {
+      const b = boreholes[i]
       const p = worldToScreen(b.x, b.y, bounds)
       const isHover = hoveredName && hoveredName === b.borehole_name
-      const radius = isHover ? 7.5 : 5.8
-      ctx.fillStyle = getColor(metric, b[metric], stats)
-      ctx.strokeStyle = isHover ? '#111827' : 'rgba(255,255,255,0.95)'
+      const isSelected = !hasFocus || focus.indexSet.has(i)
+      const pulse = animatePulse && hasFocus && isSelected ? (Math.sin(pulseT * 5 + i * 0.35) + 1) / 2 : 0
+      const radius = isHover ? 7.5 : (isSelected && hasFocus ? 6.6 : 5.8)
+      ctx.save()
+      const baseColor = getColor(metric, b[metric], stats)
+      ctx.globalAlpha = hasFocus && !isSelected ? 0.24 : 1
+      ctx.fillStyle = hasFocus && !isSelected ? toMutedGray(baseColor, 0.84) : baseColor
+      ctx.strokeStyle = isHover ? '#111827' : (isSelected && hasFocus ? accent : 'rgba(255,255,255,0.95)')
       ctx.lineWidth = isHover ? 2.4 : 1.8
       ctx.beginPath()
       ctx.arc(p.x, p.y, radius, 0, Math.PI * 2)
       ctx.fill()
       ctx.stroke()
+      if (isSelected && hasFocus && !isHover) {
+        ctx.globalAlpha = 0.95
+        ctx.strokeStyle = accent
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, radius + 3.6, 0, Math.PI * 2)
+        ctx.stroke()
+        if (animatePulse) {
+          ctx.globalAlpha = 0.35 + pulse * 0.45
+          ctx.lineWidth = 1.6 + pulse * 0.9
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, radius + 6 + pulse * 5.5, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+      }
+      ctx.restore()
     }
   }
 

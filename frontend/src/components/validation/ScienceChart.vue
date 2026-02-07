@@ -4,7 +4,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '../../lib/echarts'
 
 const props = defineProps({
   option: {
@@ -16,6 +16,7 @@ const props = defineProps({
     default: 320
   }
 })
+const emit = defineEmits(['chart-click'])
 
 const container = ref(null)
 let chart = null
@@ -34,10 +35,15 @@ const onResize = () => {
   if (chart) chart.resize()
 }
 
+const onChartClick = (params) => {
+  emit('chart-click', params)
+}
+
 onMounted(async () => {
   await nextTick()
   if (!container.value) return
   chart = echarts.init(container.value, null, { renderer: 'svg' })
+  chart.on('click', onChartClick)
   render()
   window.addEventListener('resize', onResize)
 })
@@ -53,6 +59,7 @@ watch(
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   if (chart) {
+    chart.off('click', onChartClick)
     chart.dispose()
     chart = null
   }

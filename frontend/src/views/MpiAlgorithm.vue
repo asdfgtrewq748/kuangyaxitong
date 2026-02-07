@@ -73,7 +73,7 @@
         </div>
       </div>
       <div class="flow-figure">
-        <img :src="useBwFigures ? '/mpi-algorithm/flow_overview_bw.svg' : '/mpi-algorithm/flow_overview.svg'" alt="MPI流程图" class="flow-image" />
+        <img :src="useBwFigures ? '/mpi-algorithm/flow_overview_bw.svg' : '/mpi-algorithm/flow_overview.svg'" alt="MPI流程图" class="flow-image" loading="lazy" decoding="async" />
         <p class="figure-caption">图1 | MPI 计算流程示意</p>
       </div>
       <div class="flow-steps">
@@ -109,7 +109,7 @@
             <li>含义：描述顶板破坏敏感性</li>
           </ul>
           <div class="figure-block">
-            <img :src="useBwFigures ? '/mpi-algorithm/rsi_stability_bw.svg' : '/mpi-algorithm/rsi_stability.svg'" alt="RSI顶板稳定性示意" />
+            <img :src="useBwFigures ? '/mpi-algorithm/rsi_stability_bw.svg' : '/mpi-algorithm/rsi_stability.svg'" alt="RSI顶板稳定性示意" loading="lazy" decoding="async" />
             <span>图2 | 顶板稳定性构成</span>
           </div>
           <div class="formula">
@@ -137,7 +137,7 @@
             <li>含义：描述深度与硬层带来的能量积累</li>
           </ul>
           <div class="figure-block">
-            <img :src="useBwFigures ? '/mpi-algorithm/bri_depth_curve_bw.svg' : '/mpi-algorithm/bri_depth_curve.svg'" alt="BRI采深影响曲线" />
+            <img :src="useBwFigures ? '/mpi-algorithm/bri_depth_curve_bw.svg' : '/mpi-algorithm/bri_depth_curve.svg'" alt="BRI采深影响曲线" loading="lazy" decoding="async" />
             <span>图3 | 采深影响曲线</span>
           </div>
 
@@ -196,7 +196,7 @@
             <li>含义：描述应力传递与集中程度</li>
           </ul>
           <div class="figure-block">
-            <img :src="useBwFigures ? '/mpi-algorithm/asi_stress_profile_bw.svg' : '/mpi-algorithm/asi_stress_profile.svg'" alt="ASI应力传递示意" />
+            <img :src="useBwFigures ? '/mpi-algorithm/asi_stress_profile_bw.svg' : '/mpi-algorithm/asi_stress_profile.svg'" alt="ASI应力传递示意" loading="lazy" decoding="async" />
             <span>图4 | 应力传递剖面</span>
           </div>
           <div class="formula">
@@ -362,8 +362,10 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
 import JSZip from 'jszip'
+import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 // Lazy load KaTeX - only loads formulas when component is mounted
 let katex = null
+const { markStepDone } = useWorkspaceFlow()
 
 // KaTeX渲染函数 - handles lazy loaded KaTeX
 const renderFormula = (formula) => {
@@ -411,6 +413,7 @@ const renderedFormulas = reactive({
 })
 
 onMounted(async () => {
+  markStepDone('MpiAlgorithm')
   // Lazy load KaTeX only when this component mounts
   try {
     const katexModule = await import('katex')

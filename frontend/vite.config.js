@@ -7,36 +7,33 @@ export default defineConfig({
     port: 5173
   },
   build: {
-    // Performance optimizations - use esbuild for faster builds
     minify: 'esbuild',
-    // Chunk splitting for better caching
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks for better caching
-          'vue-vendor': ['vue', 'vue-router'],
-          // D3 is large, separate it
-          'd3': ['d3'],
-          // Math rendering - lazy loaded separately
-          'katex': ['katex']
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+
+          if (id.includes('node_modules/vue-router/')) return 'vue-router'
+          if (id.includes('node_modules/echarts/')) return 'echarts'
+          if (id.includes('node_modules/d3/')) return 'd3'
+          if (id.includes('node_modules/katex/')) return 'katex'
+          if (id.includes('node_modules/jszip/')) return 'jszip'
+          if (id.includes('node_modules/axios/')) return 'network'
+
+          return 'vendor'
         },
-        // Asset naming for cache busting
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     },
-    // Enable source code transformation for smaller bundles
     target: 'es2015',
-    // Chunk size warning threshold
     chunkSizeWarningLimit: 500
   },
-  // Optimize dependency pre-bundling
   optimizeDeps: {
-    include: ['vue', 'vue-router', 'd3'],
-    exclude: ['katex'] // Load KaTeX on-demand only
+    include: ['vue', 'vue-router', 'd3', 'axios', 'jszip'],
+    exclude: ['katex', 'echarts']
   },
-  // CSS code splitting
   css: {
     devSourcemap: true
   }

@@ -27,6 +27,8 @@
         ref="imageRef"
         :src="imageUrl"
         class="heatmap-image"
+        loading="lazy"
+        decoding="async"
         @load="syncCanvas"
         @error="handleImageError"
         alt="MPI热力图"

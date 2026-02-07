@@ -312,11 +312,13 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import { useToast } from '../composables/useToast'
+import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import BoreholeMap from '../components/BoreholeMap.vue'
 import VirtualList from '../components/VirtualList.vue'
 import { scanBoreholes, uploadBoreholes, previewBorehole } from '../api'
 
 const toast = useToast()
+const { markStepDone } = useWorkspaceFlow()
 const fileInput = ref(null)
 const coordInput = ref(null)
 const files = ref([])
@@ -453,6 +455,7 @@ const handleUpload = async () => {
     await uploadBoreholes(files.value)
     const { data } = await scanBoreholes()
     scanResult.value = data
+    markStepDone('DataImport')
     toast.add(`已上传 ${files.value.length} 个文件`, 'success')
 
     // 尝试从文件中提取坐标
@@ -604,6 +607,7 @@ const onSelectBorehole = (index) => {
 
 const saveCoordinates = () => {
   localStorage.setItem('borehole_coordinates', JSON.stringify(boreholes.value))
+  markStepDone('DataImport', { boreholes: boreholes.value.length || 0 })
   toast.add('坐标已保存', 'success')
 }
 

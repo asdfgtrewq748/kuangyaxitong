@@ -233,3 +233,30 @@ def test_validation_spatial_overview_returns_four_grids(tmp_path, monkeypatch):
     for borehole in data["boreholes"]:
         for metric in ("rsi", "bri", "asi", "mpi"):
             assert 0 <= borehole[metric] <= 100
+
+
+def test_validation_spatial_overview_includes_real_label_stream(tmp_path, monkeypatch):
+    seam_name = "16-3煤"
+    _write_spatial_seam_files(tmp_path, seam_name=seam_name)
+    labels_csv = (
+        "borehole_name,seam_name,y_true,y_prob\n"
+        "BH01,16-3煤,1,0.82\n"
+        "BH02,16-3煤,0,0.21\n"
+        "BH03,16-3煤,1,0.76\n"
+        "BH04,16-3煤,0,0.33\n"
+        "BH01,15-4煤,0,0.11\n"
+    )
+    (tmp_path / "validation_labels.csv").write_text(labels_csv, encoding="utf-8")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+
+    resp = client.get(
+        "/api/algorithm-validation/spatial-overview",
+        params={"seam_name": seam_name, "resolution": 30, "method": "idw"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    eval_inputs = data["evaluation_inputs"]
+    assert eval_inputs["source"] == "validation_labels.csv"
+    assert eval_inputs["mode"] == "real_label_stream"
+    assert eval_inputs["y_true"] == [1, 0, 1, 0]
+    assert eval_inputs["y_prob"] == [0.82, 0.21, 0.76, 0.33]

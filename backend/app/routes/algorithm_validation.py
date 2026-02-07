@@ -373,6 +373,68 @@ def _load_label_stream(dataset_id: str) -> Dict[str, Any]:
     return {"available": False, "source": "", "y_true": [], "y_prob": []}
 
 
+def _filter_spatial_label_df(
+    df: pd.DataFrame,
+    seam_name: str,
+    borehole_names: List[str],
+) -> pd.DataFrame:
+    scoped = df
+
+    seam_col = _candidate_column(
+        scoped,
+        ["seam_name", "seam", "coal_seam", "layer_name", "layer", "煤层", "煤层名称"],
+    )
+    if seam_col:
+        scoped = scoped[scoped[seam_col].astype(str).str.strip() == str(seam_name).strip()]
+
+    borehole_col = _candidate_column(
+        scoped,
+        ["borehole_name", "borehole", "hole", "drillhole", "钻孔名", "钻孔", "孔号"],
+    )
+    if borehole_col:
+        normalized_names = {str(name).strip() for name in borehole_names if str(name).strip()}
+        scoped = scoped[scoped[borehole_col].astype(str).str.strip().isin(normalized_names)]
+
+    return scoped
+
+
+def _load_spatial_label_stream(seam_name: str, borehole_names: List[str]) -> Dict[str, Any]:
+    data_dir = get_data_dir()
+    label_files: List[Path] = []
+
+    global_label_path = data_dir / "validation_labels.csv"
+    if global_label_path.exists():
+        label_files.append(global_label_path)
+
+    label_files.extend(
+        sorted(
+            p
+            for p in data_dir.glob("*_labels.csv")
+            if p.is_file() and p.name != "validation_labels.csv"
+        )
+    )
+
+    for label_path in label_files:
+        try:
+            df = read_csv_robust(label_path)
+        except Exception:
+            continue
+        scoped = _filter_spatial_label_df(df, seam_name, borehole_names)
+        stream = _extract_label_stream(scoped)
+        if stream.get("available"):
+            stream["source"] = label_path.name
+            stream["mode"] = "real_label_stream"
+            return stream
+
+    return {
+        "available": False,
+        "source": "",
+        "mode": "pseudo_threshold",
+        "y_true": [],
+        "y_prob": [],
+    }
+
+
 def _build_point(layers: List[ValidationLayer], dataset_id: str) -> PointData:
     strata: List[RockLayer] = []
     coal_thickness = 0.0
@@ -749,6 +811,11 @@ def get_algorithm_validation_spatial_overview(
         grids[metric] = interp["grid"].tolist()
         stats[metric] = _summary_stats(values)
 
+    label_stream = _load_spatial_label_stream(
+        seam_name=seam_name,
+        borehole_names=[record["borehole_name"] for record in boreholes],
+    )
+
     return {
         "seam_name": seam_name,
         "resolution": resolution,
@@ -759,6 +826,13 @@ def get_algorithm_validation_spatial_overview(
         "grids": grids,
         "bounds": bounds,
         "statistics": stats,
+        "evaluation_inputs": {
+            "available": bool(label_stream.get("available")),
+            "mode": str(label_stream.get("mode", "pseudo_threshold")),
+            "source": str(label_stream.get("source", "")),
+            "y_true": label_stream.get("y_true", []),
+            "y_prob": label_stream.get("y_prob", []),
+        },
     }
 
 

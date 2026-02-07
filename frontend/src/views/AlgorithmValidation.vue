@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div ref="pageRoot" class="validation-page">
     <nav class="top-nav">
       <div class="nav-left">
@@ -25,6 +25,7 @@
         <button class="tool-btn" type="button" :class="{ active: showEvalPanel }" @click="showEvalPanel = !showEvalPanel">评估</button>
         <button class="tool-btn" type="button" @click="exportCurrentFigure">导出高清图</button>
         <button class="tool-btn" type="button" :disabled="exportingPack || !hasSpatialData" @click="exportSciencePackage">{{ exportingPack ? '打包中...' : '导出图组包' }}</button>
+        <button class="tool-btn" type="button" :disabled="!hasSpatialData" @click="goReport">下一步：结果报告</button>
         <button class="tool-btn" type="button" @click="toggleFullscreen">全屏</button>
       </div>
     </nav>
@@ -54,6 +55,7 @@
           </div>
           <div class="canvas-controls">
             <label>分辨率<input v-model.number="resolution" type="number" min="20" max="120" step="5"></label>
+            <label>线级<input v-model.number="contourLevels" type="number" min="5" max="24" step="1"></label>
             <label>插值
               <select v-model="method">
                 <option value="idw">反距离权重</option>
@@ -63,8 +65,19 @@
               </select>
             </label>
             <label class="check"><input v-model="showContours" type="checkbox">等值线</label>
+            <label class="check"><input v-model="useFixedScale" type="checkbox">固定量程(0-100)</label>
           </div>
         </header>
+
+        <div v-if="hasSpatialData" class="trust-banner">
+          <span class="trust-chip real">空间图：真实钻孔与坐标数据</span>
+          <span class="trust-chip warn">评估：{{ evalSourceLabel }}</span>
+          <span v-if="matrixSelection !== 'all' && matrixSelectionCount > 0" class="trust-chip link">
+            联动高亮 {{ matrixRoleLabel(matrixSelection) }} · {{ matrixSelectionCount }}点
+          </span>
+          <span v-if="evalSourceFile" class="trust-meta">标签源 {{ evalSourceFile }}</span>
+          <span class="trust-meta">钻孔 {{ spatialData?.borehole_count || 0 }} 个 · 坐标源 zuobiao.csv</span>
+        </div>
 
         <div
           ref="stageContainer"
@@ -88,9 +101,9 @@
         <footer class="legend-wrap">
           <div class="legend-track" :style="{ background: legendGradient(activeMetric) }"></div>
           <div class="legend-labels">
-            <span>{{ fmt(spatialData?.statistics?.[activeMetric]?.min) }}</span>
-            <span>{{ fmt(spatialData?.statistics?.[activeMetric]?.mean) }}</span>
-            <span>{{ fmt(spatialData?.statistics?.[activeMetric]?.max) }}</span>
+            <span>{{ fmt(legendStats.min) }}</span>
+            <span>{{ fmt(legendStats.mean) }}</span>
+            <span>{{ fmt(legendStats.max) }}</span>
           </div>
         </footer>
       </div>
@@ -192,14 +205,23 @@
       <header>
         <h3>期刊级图组（自动生成）</h3>
         <p>全部图件已直接展示，满足对比、消融、校准、判别与机制解释需求。</p>
+        <p class="data-note">说明：评估与部分机制曲线目前为模型推导/示意，不等同于真实标签实验结果。</p>
+        <p class="data-note">
+          图11支持点击 TP/TN/FP/FN 联动主图高亮。
+          <template v-if="matrixSelection !== 'all'">可按 Esc 快速清除筛选。</template>
+          <template v-if="!matrixLinkable">当前样本与钻孔点未一一对齐，联动高亮不可用。</template>
+        </p>
+        <p class="data-note">导出高清图与图组包时会自动冻结脉冲动画，保证稿件图件为静态一致版。</p>
+        <button v-if="matrixSelection !== 'all'" type="button" class="tool-btn small" @click="clearMatrixSelection">清除联动高亮</button>
         <p v-if="exportNote" class="export-note">{{ exportNote }}</p>
       </header>
-      <ValidationScienceFigures :result="scienceResult" :evaluation="evalData" />
+      <ValidationScienceFigures :result="scienceResult" :evaluation="evalData" @matrix-select="onMatrixSelect" />
     </section>
 
     <div v-if="hoverInfo && hasSpatialData" class="hover-tooltip" :style="{ left: `${hoverPos.x + 14}px`, top: `${hoverPos.y + 14}px` }">
       <p>坐标：{{ fmt(hoverInfo.worldX, 2) }}, {{ fmt(hoverInfo.worldY, 2) }}</p>
       <p>{{ metricLabel(activeMetric) }}插值：{{ fmt(hoverInfo.gridValue, 3) }}</p>
+      <p>最近钻孔：{{ hoverInfo.nearestBorehole?.borehole_name || '--' }}（{{ fmt(hoverInfo.nearestDistance, 1) }} m）</p>
       <template v-if="hoverInfo.borehole">
         <p><strong>{{ hoverInfo.borehole.borehole_name }}</strong></p>
         <p>RSI {{ fmt(hoverInfo.borehole.rsi, 2) }} | BRI {{ fmt(hoverInfo.borehole.bri, 2) }}</p>
@@ -212,20 +234,29 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import JSZip from 'jszip'
 import { getCoalSeams, validationEvaluate, validationSpatialOverview } from '../api'
 import { useViewport } from '../composables/useViewport'
 import { useIndicatorCanvas } from '../composables/useIndicatorCanvas'
+import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import ValidationScienceFigures from '../components/validation/ValidationScienceFigures.vue'
 
+const route = useRoute()
 const router = useRouter()
+const { workspaceState, setSelectedSeam, markStepDone } = useWorkspaceFlow()
 const metricDefs = [
   { key: 'mpi', label: 'MPI', desc: '综合指标' },
   { key: 'rsi', label: 'RSI', desc: '顶板稳定' },
   { key: 'bri', label: 'BRI', desc: '冲击风险' },
   { key: 'asi', label: 'ASI', desc: '支承应力' }
 ]
+const matrixRoleMeta = {
+  tp: { label: 'TP 真阳性', color: '#15803d' },
+  tn: { label: 'TN 真阴性', color: '#1d4ed8' },
+  fp: { label: 'FP 假阳性', color: '#d97706' },
+  fn: { label: 'FN 假阴性', color: '#b91c1c' }
+}
 
 const pageRoot = ref(null)
 const stageContainer = ref(null)
@@ -235,8 +266,10 @@ const overlayCanvas = ref(null)
 const seamOptions = ref([])
 const seamName = ref('')
 const resolution = ref(50)
+const contourLevels = ref(9)
 const method = ref('idw')
 const showContours = ref(true)
+const useFixedScale = ref(true)
 const activeMetric = ref('mpi')
 const loading = ref(false)
 const hasInitialized = ref(false)
@@ -253,6 +286,10 @@ const exportNote = ref('')
 const hoverInfo = ref(null)
 const hoverPos = reactive({ x: 0, y: 0 })
 const thumbHover = reactive({ visible: false, metric: '', x: 0, y: 0 })
+const evalSourceType = ref('pseudo_threshold')
+const evalSourceFile = ref('')
+const matrixSelection = ref('all')
+const exportStaticMode = ref(false)
 const thumbCanvasRefs = {}
 const spatialCache = new Map()
 
@@ -269,6 +306,16 @@ const currentMetricStats = computed(() => spatialData.value?.statistics?.[active
 const currentMpiMean = computed(() => Number(spatialData.value?.statistics?.mpi?.mean || 0))
 const baselineMpi = computed(() => Math.max(0, currentMpiMean.value - 4.5))
 const currentHighRiskCount = computed(() => highRiskCount(activeMetric.value))
+const evalSourceLabel = computed(() => {
+  if (evalSourceType.value === 'real_label_stream') return '真实标签流'
+  if (evalSourceType.value === 'pseudo_threshold') return '伪标签估计（阈值构造）'
+  if (evalSourceType.value === 'none') return '无可评估样本'
+  return '未知来源'
+})
+const legendStats = computed(() => {
+  if (useFixedScale.value) return { min: 0, mean: 50, max: 100 }
+  return spatialData.value?.statistics?.[activeMetric.value] || { min: 0, mean: 0, max: 0 }
+})
 const metricStats = computed(() => {
   const result = {}
   for (const item of metricDefs) {
@@ -345,6 +392,55 @@ const scienceResult = computed(() => {
   }
 })
 
+const matrixRoleLabel = (role) => matrixRoleMeta[String(role || '').toLowerCase()]?.label || '全部'
+const matrixSelectionMap = computed(() => {
+  const rows = spatialData.value?.boreholes || []
+  const evalInputs = scienceResult.value?.evaluation_inputs || {}
+  const yTrue = Array.isArray(evalInputs.y_true) ? evalInputs.y_true : (Array.isArray(evalInputs.yTrue) ? evalInputs.yTrue : [])
+  const yProb = Array.isArray(evalInputs.y_prob) ? evalInputs.y_prob : (Array.isArray(evalInputs.yProb) ? evalInputs.yProb : [])
+  if (!rows.length || yTrue.length !== rows.length || yProb.length !== rows.length) {
+    return { available: false, roles: [], counts: { tp: 0, tn: 0, fp: 0, fn: 0 } }
+  }
+
+  const roles = []
+  const counts = { tp: 0, tn: 0, fp: 0, fn: 0 }
+  for (let i = 0; i < rows.length; i += 1) {
+    const y = Number(yTrue[i]) >= 1 ? 1 : 0
+    const pred = Number(yProb[i]) >= 0.5 ? 1 : 0
+    const key = y === 1 ? (pred === 1 ? 'tp' : 'fn') : (pred === 1 ? 'fp' : 'tn')
+    roles.push(key)
+    counts[key] += 1
+  }
+  return { available: true, roles, counts }
+})
+
+const matrixLinkable = computed(() => matrixSelectionMap.value.available)
+const matrixSelectionCount = computed(() => {
+  if (matrixSelection.value === 'all') return 0
+  const key = String(matrixSelection.value).toLowerCase()
+  return Number(matrixSelectionMap.value.counts?.[key] || 0)
+})
+const matrixSelectedIndexes = computed(() => {
+  const key = String(matrixSelection.value || '').toLowerCase()
+  if (!matrixSelectionMap.value.available || !['tp', 'tn', 'fp', 'fn'].includes(key)) return []
+  const result = []
+  for (let i = 0; i < matrixSelectionMap.value.roles.length; i += 1) {
+    if (matrixSelectionMap.value.roles[i] === key) result.push(i)
+  }
+  return result
+})
+const matrixSelectedSet = computed(() => new Set(matrixSelectedIndexes.value))
+const boreholeFocus = computed(() => {
+  const key = String(matrixSelection.value || '').toLowerCase()
+  if (!['tp', 'tn', 'fp', 'fn'].includes(key)) return null
+  return {
+    active: true,
+    indexSet: matrixSelectedSet.value,
+    accent: matrixRoleMeta[key]?.color || '#111827'
+  }
+})
+const pulseAnimationEnabled = computed(() => matrixSelection.value !== 'all' && matrixLinkable.value && !exportStaticMode.value)
+
 let renderRaf = 0
 let thumbRaf = 0
 let resizeTimer = null
@@ -373,6 +469,32 @@ const riskLabelZh = (label) => {
 }
 const barWidth = (v) => `${clamp(Number(v || 0), 0, 100) * 3.6}`
 const highRiskCount = (metric) => (spatialData.value?.boreholes || []).filter((item) => Number(item[metric]) < 50).length
+const getRenderStats = (metric) => (
+  useFixedScale.value
+    ? { min: 0, mean: 50, max: 100 }
+    : (spatialData.value?.statistics?.[metric] || { min: 0, mean: 0, max: 0 })
+)
+const clampContourLevels = () => {
+  const v = Number(contourLevels.value)
+  contourLevels.value = Number.isFinite(v) ? Math.max(5, Math.min(24, Math.round(v))) : 9
+}
+const nearestByWorld = (wx, wy, boreholes) => {
+  if (!Array.isArray(boreholes) || boreholes.length === 0) {
+    return { borehole: null, distance: null }
+  }
+  let nearest = null
+  let minDist = Number.POSITIVE_INFINITY
+  for (const b of boreholes) {
+    const dx = Number(b.x) - wx
+    const dy = Number(b.y) - wy
+    const dist = Math.hypot(dx, dy)
+    if (dist < minDist) {
+      minDist = dist
+      nearest = b
+    }
+  }
+  return { borehole: nearest, distance: Number.isFinite(minDist) ? minDist : null }
+}
 
 const cacheKey = () => {
   const w = normalizedWeights.value
@@ -407,6 +529,23 @@ const fitStage = () => {
   queueRender()
 }
 
+const drawMatrixSelectionOverlay = (ctx, boreholes, bounds) => {
+  const key = String(matrixSelection.value || '').toLowerCase()
+  if (!['tp', 'tn', 'fp', 'fn'].includes(key)) return
+  if (!matrixSelectionMap.value.available) return
+  const meta = matrixRoleMeta[key]
+  const selected = matrixSelectedIndexes.value
+  if (!selected.length) return
+
+  ctx.save()
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.88)'
+  ctx.fillRect(12, 10, 250, 28)
+  ctx.fillStyle = '#f8fafc'
+  ctx.font = "600 12px 'Noto Sans SC', 'Segoe UI', sans-serif"
+  ctx.fillText(`联动筛选: ${meta.label} (${selected.length})  Esc清除`, 22, 29)
+  ctx.restore()
+}
+
 const renderMain = () => {
   renderRaf = 0
   if (!heatmapCanvas.value || !overlayCanvas.value) return
@@ -418,11 +557,25 @@ const renderMain = () => {
   if (!data) return
 
   const metric = activeMetric.value
-  drawGrid(bgCtx, data.grids?.[metric], data.bounds, viewport, metric, data.statistics?.[metric], worldToScreen, {
+  const renderStats = getRenderStats(metric)
+  drawGrid(bgCtx, data.grids?.[metric], data.bounds, viewport, metric, renderStats, worldToScreen, {
     showContours: showContours.value,
-    contourLevels: 9
+    contourLevels: contourLevels.value
   })
-  drawBoreholes(ovCtx, data.boreholes, metric, data.statistics?.[metric], data.bounds, worldToScreen, hoverInfo.value?.borehole?.borehole_name || '')
+  const drawFocus = boreholeFocus.value
+    ? { ...boreholeFocus.value, animate: pulseAnimationEnabled.value, pulseT: performance.now() / 1000 }
+    : null
+  drawBoreholes(
+    ovCtx,
+    data.boreholes,
+    metric,
+    renderStats,
+    data.bounds,
+    worldToScreen,
+    hoverInfo.value?.borehole?.borehole_name || '',
+    drawFocus
+  )
+  drawMatrixSelectionOverlay(ovCtx, data.boreholes || [], data.bounds)
 
   if (hoverInfo.value) {
     ovCtx.strokeStyle = 'rgba(15, 23, 42, 0.55)'
@@ -436,6 +589,8 @@ const renderMain = () => {
     ovCtx.stroke()
     ovCtx.setLineDash([])
   }
+
+  if (pulseAnimationEnabled.value) queueRender()
 }
 
 const renderThumbs = () => {
@@ -445,7 +600,7 @@ const renderThumbs = () => {
   for (const item of metricDefs) {
     const canvas = thumbCanvasRefs[item.key]
     if (!canvas) continue
-    drawMiniHeatmap(canvas, data.grids?.[item.key], item.key, data.statistics?.[item.key])
+    drawMiniHeatmap(canvas, data.grids?.[item.key], item.key, getRenderStats(item.key))
   }
 }
 
@@ -459,6 +614,28 @@ const queueThumbRender = () => {
 }
 
 const buildEvalInputs = () => {
+  const upstream = spatialData.value?.evaluation_inputs
+  if (upstream?.mode === 'real_label_stream') {
+    const rawTrue = Array.isArray(upstream.y_true) ? upstream.y_true : []
+    const rawProb = Array.isArray(upstream.y_prob) ? upstream.y_prob : []
+    if (rawTrue.length === rawProb.length && rawTrue.length >= 2) {
+      const yTrue = rawTrue.map((v) => (Number(v) >= 1 ? 1 : 0))
+      const yProb = rawProb.map((v) => clamp(Number(v), 0, 1))
+      const finiteProb = yProb.every((v) => Number.isFinite(v))
+      if (finiteProb && new Set(yTrue).size > 1) {
+        return {
+          mode: 'real_label_stream',
+          source: String(upstream.source || ''),
+          sourceFile: String(upstream.source || ''),
+          y_true: yTrue,
+          y_prob: yProb,
+          yTrue,
+          yProb
+        }
+      }
+    }
+  }
+
   const rows = spatialData.value?.boreholes || []
   if (rows.length < 4) return null
   let yTrue = rows.map((item) => ((item.rsi < 50 || item.bri < 50 || item.asi < 50) ? 1 : 0))
@@ -468,20 +645,32 @@ const buildEvalInputs = () => {
     const median = sorted[Math.floor(sorted.length / 2)]
     yTrue = rows.map((item) => (Number(item.mpi || 0) <= median ? 1 : 0))
   }
-  return { yTrue, yProb }
+  return {
+    mode: 'pseudo_threshold',
+    source: '',
+    sourceFile: '',
+    y_true: yTrue,
+    y_prob: yProb,
+    yTrue,
+    yProb
+  }
 }
 
 const runEvaluation = async () => {
   const inputs = buildEvalInputs()
   if (!inputs) {
+    evalSourceType.value = 'none'
+    evalSourceFile.value = ''
     evalData.value = null
     evalMessage.value = '当前煤层钻孔点不足，无法计算评估指标。'
     return
   }
+  evalSourceType.value = inputs.mode || 'pseudo_threshold'
+  evalSourceFile.value = inputs.sourceFile || ''
   evalLoading.value = true
   evalMessage.value = ''
   try {
-    const resp = await validationEvaluate({ y_true: inputs.yTrue, y_prob: inputs.yProb })
+    const resp = await validationEvaluate({ y_true: inputs.y_true || inputs.yTrue, y_prob: inputs.y_prob || inputs.yProb })
     evalData.value = resp.data
   } catch (error) {
     evalData.value = null
@@ -494,6 +683,7 @@ const runEvaluation = async () => {
 const applySpatialData = async (payload) => {
   spatialData.value = payload
   hoverInfo.value = null
+  matrixSelection.value = 'all'
   await nextTick()
   resizeStage()
   fitStage()
@@ -516,10 +706,30 @@ const fetchSpatial = async ({ force = false } = {}) => {
     const data = resp.data
     spatialCache.set(key, data)
     await applySpatialData(data)
+    markStepDone('AlgorithmValidation', { validationReady: true })
   } catch (error) {
     evalMessage.value = error?.response?.data?.detail || '空间总览加载失败'
   } finally {
     loading.value = false
+  }
+}
+
+const onMatrixSelect = (role) => {
+  const key = String(role || '').toLowerCase()
+  if (!['tp', 'tn', 'fp', 'fn'].includes(key)) return
+  if (!matrixLinkable.value) return
+  matrixSelection.value = matrixSelection.value === key ? 'all' : key
+  queueRender()
+}
+
+const clearMatrixSelection = () => {
+  matrixSelection.value = 'all'
+  queueRender()
+}
+
+const onKeydown = (event) => {
+  if (event.key === 'Escape' && matrixSelection.value !== 'all') {
+    clearMatrixSelection()
   }
 }
 
@@ -542,6 +752,7 @@ const onPointerMove = (e) => {
   const bounds = spatialData.value?.bounds
   const world = screenToWorld(sx, sy, bounds)
   const metric = activeMetric.value
+  const nearestWorld = nearestByWorld(world.x, world.y, spatialData.value?.boreholes || [])
   const nearest = pickNearestBorehole(sx, sy, spatialData.value?.boreholes || [], bounds, worldToScreen)
   hoverInfo.value = {
     sx,
@@ -549,7 +760,9 @@ const onPointerMove = (e) => {
     worldX: world.x,
     worldY: world.y,
     gridValue: sampleGridValue(spatialData.value?.grids?.[metric], bounds, world.x, world.y),
-    borehole: nearest
+    borehole: nearest,
+    nearestBorehole: nearestWorld.borehole,
+    nearestDistance: nearestWorld.distance
   }
   queueRender()
 }
@@ -622,44 +835,31 @@ const svgStringToPngBlob = async (svgText, width, height, scale = 3) => {
   }
 }
 
-const exportCurrentFigure = () => {
-  if (!heatmapCanvas.value || !overlayCanvas.value) return
-  const scale = 3
-  const sourceW = heatmapCanvas.value.width
-  const sourceH = heatmapCanvas.value.height
-  const merged = document.createElement('canvas')
-  merged.width = Math.round(sourceW * scale)
-  merged.height = Math.round(sourceH * scale)
-  const ctx = merged.getContext('2d')
-  ctx.scale(scale, scale)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, sourceW, sourceH)
-  ctx.drawImage(heatmapCanvas.value, 0, 0)
-  ctx.drawImage(overlayCanvas.value, 0, 0)
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'
-  ctx.font = "14px 'Times New Roman', 'Noto Serif SC', serif"
-  ctx.fillText(`煤层：${seamName.value || '--'} | 指标：${metricLabel(activeMetric.value)} | 分辨率：${resolution.value}`, 16, 26)
-  const link = document.createElement('a')
-  link.href = merged.toDataURL('image/png', 1)
-  link.download = `algorithm_validation_${seamName.value || 'seam'}_${activeMetric.value}_hd.png`
-  link.click()
+const waitNextFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve))
+const runWithStaticOverlay = async (job) => {
+  const prev = exportStaticMode.value
+  exportStaticMode.value = true
+  renderMain()
+  await waitNextFrame()
+  try {
+    return await job()
+  } finally {
+    exportStaticMode.value = prev
+    renderMain()
+    if (pulseAnimationEnabled.value) queueRender()
+  }
 }
 
-const exportSciencePackage = async () => {
-  if (!pageRoot.value || !hasSpatialData.value || exportingPack.value) return
-  exportingPack.value = true
-  exportNote.value = ''
-  try {
-    const zip = new JSZip()
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-
-    const mainCanvas = document.createElement('canvas')
+const exportCurrentFigure = async () => {
+  if (!heatmapCanvas.value || !overlayCanvas.value) return
+  await runWithStaticOverlay(async () => {
     const scale = 3
     const sourceW = heatmapCanvas.value.width
     const sourceH = heatmapCanvas.value.height
-    mainCanvas.width = Math.round(sourceW * scale)
-    mainCanvas.height = Math.round(sourceH * scale)
-    const ctx = mainCanvas.getContext('2d')
+    const merged = document.createElement('canvas')
+    merged.width = Math.round(sourceW * scale)
+    merged.height = Math.round(sourceH * scale)
+    const ctx = merged.getContext('2d')
     ctx.scale(scale, scale)
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, sourceW, sourceH)
@@ -668,46 +868,78 @@ const exportSciencePackage = async () => {
     ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'
     ctx.font = "14px 'Times New Roman', 'Noto Serif SC', serif"
     ctx.fillText(`煤层：${seamName.value || '--'} | 指标：${metricLabel(activeMetric.value)} | 分辨率：${resolution.value}`, 16, 26)
-    zip.file('figures/main_heatmap_hd.png', await canvasToBlob(mainCanvas, 'image/png', 1))
-
-    const cards = pageRoot.value.querySelectorAll('.science-section .figure-card')
-    let cardIndex = 0
-    for (const card of cards) {
-      cardIndex += 1
-      const title = card.querySelector('h4')?.textContent?.trim() || `图${cardIndex}`
-      const svg = card.querySelector('.science-chart svg')
-      if (!svg) continue
-      const rect = svg.getBoundingClientRect()
-      const viewBox = svg.viewBox?.baseVal
-      const width = viewBox?.width || rect.width || 960
-      const height = viewBox?.height || rect.height || 540
-      const svgText = serializeSvg(svg)
-      const base = safeFilename(`${String(cardIndex).padStart(2, '0')}_${title}`)
-      zip.file(`figures/${base}.svg`, svgText)
-      zip.file(`figures/${base}.png`, await svgStringToPngBlob(svgText, width, height, 3))
-    }
-
-    zip.file('data/spatial_statistics.json', JSON.stringify(metricStats.value, null, 2))
-    zip.file('data/evaluation.json', JSON.stringify(evalData.value || {}, null, 2))
-    zip.file('data/science_result.json', JSON.stringify(scienceResult.value || {}, null, 2))
-    zip.file('README.txt', [
-      '新算法实证图组导出包',
-      `时间: ${new Date().toLocaleString()}`,
-      `煤层: ${seamName.value || '--'}`,
-      `主图指标: ${metricLabel(activeMetric.value)}`,
-      '',
-      '内容说明:',
-      '- figures/: 主热力图和图2-图11（SVG+PNG）',
-      '- data/: 统计与评估原始数据'
-    ].join('\n'))
-
-    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
-    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = url
-    link.download = `新算法实证图组_${safeFilename(seamName.value || 'seam')}_${timestamp}.zip`
+    link.href = merged.toDataURL('image/png', 1)
+    link.download = `algorithm_validation_${seamName.value || 'seam'}_${activeMetric.value}_hd.png`
     link.click()
-    URL.revokeObjectURL(url)
+  })
+}
+
+const exportSciencePackage = async () => {
+  if (!pageRoot.value || !hasSpatialData.value || exportingPack.value) return
+  exportingPack.value = true
+  exportNote.value = ''
+  try {
+    await runWithStaticOverlay(async () => {
+      const zip = new JSZip()
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+
+      const mainCanvas = document.createElement('canvas')
+      const scale = 3
+      const sourceW = heatmapCanvas.value.width
+      const sourceH = heatmapCanvas.value.height
+      mainCanvas.width = Math.round(sourceW * scale)
+      mainCanvas.height = Math.round(sourceH * scale)
+      const ctx = mainCanvas.getContext('2d')
+      ctx.scale(scale, scale)
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, sourceW, sourceH)
+      ctx.drawImage(heatmapCanvas.value, 0, 0)
+      ctx.drawImage(overlayCanvas.value, 0, 0)
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'
+      ctx.font = "14px 'Times New Roman', 'Noto Serif SC', serif"
+      ctx.fillText(`煤层：${seamName.value || '--'} | 指标：${metricLabel(activeMetric.value)} | 分辨率：${resolution.value}`, 16, 26)
+      zip.file('figures/main_heatmap_hd.png', await canvasToBlob(mainCanvas, 'image/png', 1))
+
+      const cards = pageRoot.value.querySelectorAll('.science-section .figure-card')
+      let cardIndex = 0
+      for (const card of cards) {
+        cardIndex += 1
+        const title = card.querySelector('h4')?.textContent?.trim() || `图${cardIndex}`
+        const svg = card.querySelector('.science-chart svg')
+        if (!svg) continue
+        const rect = svg.getBoundingClientRect()
+        const viewBox = svg.viewBox?.baseVal
+        const width = viewBox?.width || rect.width || 960
+        const height = viewBox?.height || rect.height || 540
+        const svgText = serializeSvg(svg)
+        const base = safeFilename(`${String(cardIndex).padStart(2, '0')}_${title}`)
+        zip.file(`figures/${base}.svg`, svgText)
+        zip.file(`figures/${base}.png`, await svgStringToPngBlob(svgText, width, height, 3))
+      }
+
+      zip.file('data/spatial_statistics.json', JSON.stringify(metricStats.value, null, 2))
+      zip.file('data/evaluation.json', JSON.stringify(evalData.value || {}, null, 2))
+      zip.file('data/science_result.json', JSON.stringify(scienceResult.value || {}, null, 2))
+      zip.file('README.txt', [
+        '新算法实证图组导出包',
+        `时间: ${new Date().toLocaleString()}`,
+        `煤层: ${seamName.value || '--'}`,
+        `主图指标: ${metricLabel(activeMetric.value)}`,
+        '',
+        '内容说明:',
+        '- figures/: 主热力图和图2-图11（SVG+PNG）',
+        '- data/: 统计与评估原始数据'
+      ].join('\n'))
+
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `新算法实证图组_${safeFilename(seamName.value || 'seam')}_${timestamp}.zip`
+      link.click()
+      URL.revokeObjectURL(url)
+    })
     exportNote.value = '图组包导出完成。'
   } catch (error) {
     exportNote.value = error?.message || '图组包导出失败'
@@ -733,14 +965,28 @@ const toggleFullscreen = async () => {
   else await document.exitFullscreen()
 }
 
+const normalizeQuerySeam = (value) => {
+  if (Array.isArray(value)) return value[0] || ''
+  return typeof value === 'string' ? value : ''
+}
+
+const goReport = () => {
+  router.push({
+    name: 'Report',
+    query: seamName.value ? { seam: seamName.value } : undefined
+  })
+}
+
 const loadSeams = async () => {
   try {
     const resp = await getCoalSeams()
     const seams = resp?.data?.seams || []
     seamOptions.value = seams
     if (seams.length === 0) return
-    const preferred = seams.find((item) => item.name === '16-3煤')
+    const preferredName = normalizeQuerySeam(route.query?.seam) || workspaceState.selectedSeam || '16-3煤'
+    const preferred = seams.find((item) => item.name === preferredName)
     seamName.value = preferred?.name || seams[0].name
+    setSelectedSeam(seamName.value)
   } catch (error) {
     evalMessage.value = error?.response?.data?.detail || '煤层列表加载失败'
   }
@@ -748,8 +994,19 @@ const loadSeams = async () => {
 
 watch(activeMetric, () => queueRender())
 watch(showContours, () => queueRender())
+watch(contourLevels, () => { clampContourLevels(); queueRender() })
+watch(useFixedScale, () => { queueRender(); queueThumbRender() })
 watch([resolution, method], () => { if (hasInitialized.value) fetchSpatial({ force: false }) })
-watch(seamName, () => { if (hasInitialized.value) fetchSpatial({ force: false }) })
+watch(seamName, () => {
+  setSelectedSeam(seamName.value || '')
+  if (hasInitialized.value) fetchSpatial({ force: false })
+})
+watch(matrixLinkable, (ok) => {
+  if (!ok && matrixSelection.value !== 'all') {
+    matrixSelection.value = 'all'
+    queueRender()
+  }
+})
 watch(() => [weights.rsi, weights.bri, weights.asi], () => {
   if (!hasInitialized.value) return
   window.clearTimeout(weightDebounceTimer)
@@ -757,10 +1014,12 @@ watch(() => [weights.rsi, weights.bri, weights.asi], () => {
 })
 
 onMounted(async () => {
+  clampContourLevels()
   await loadSeams()
   if (seamName.value) await fetchSpatial({ force: true })
   hasInitialized.value = true
   window.addEventListener('resize', onResize)
+  window.addEventListener('keydown', onKeydown)
 })
 
 onBeforeUnmount(() => {
@@ -769,6 +1028,7 @@ onBeforeUnmount(() => {
   if (renderRaf) window.cancelAnimationFrame(renderRaf)
   if (thumbRaf) window.cancelAnimationFrame(thumbRaf)
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('keydown', onKeydown)
 })
 </script>
 
@@ -810,6 +1070,12 @@ onBeforeUnmount(() => {
 .canvas-controls label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #334155; }
 .canvas-controls input, .canvas-controls select { width: 84px; border: 1px solid var(--border-color-light); border-radius: 8px; padding: 4px 6px; font-size: 12px; background: #fff; }
 .canvas-controls .check input { width: auto; }
+.trust-banner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--border-color-light); background: #f8fafc; }
+.trust-chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 10px; font-size: 11px; border: 1px solid transparent; font-weight: 600; }
+.trust-chip.real { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
+.trust-chip.warn { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+.trust-chip.link { color: #1e3a8a; background: #eff6ff; border-color: #bfdbfe; }
+.trust-meta { font-size: 11px; color: #64748b; }
 .stage { position: relative; flex: 1; min-height: 360px; overflow: hidden; background: #f8fafc; }
 .layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .loading-mask { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; background: rgba(248,250,252,.92); z-index: 5; }
@@ -859,6 +1125,7 @@ onBeforeUnmount(() => {
 .science-section header { margin-bottom: 10px; }
 .science-section h3 { margin: 0; font-size: 16px; font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif; color: #111827; }
 .science-section p { margin: 5px 0 0; font-size: 12px; color: #475569; }
+.science-section .data-note { color: #92400e; }
 .science-section .export-note { color: #065f46; font-weight: 600; }
 .hover-tooltip { position: absolute; z-index: 30; pointer-events: none; min-width: 200px; border: 1px solid rgba(15,23,42,.2); border-radius: 10px; background: rgba(255,255,255,.95); box-shadow: 0 12px 24px rgba(15,23,42,.15); padding: 8px 10px; font-size: 12px; color: #1f2937; }
 .hover-tooltip p { margin: 2px 0; }

@@ -67,6 +67,9 @@
           <button v-if="indexGrid" class="btn secondary" @click="handleExport" :disabled="loading">
             导出指标
           </button>
+          <button v-if="indexGrid" class="btn secondary" @click="goValidation" :disabled="loading">
+            下一步：实证验证
+          </button>
         </div>
       </div>
 
@@ -345,7 +348,9 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
+import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
 import {
   pressureIndexGrid,
@@ -358,6 +363,9 @@ import {
 } from '../api'
 
 const toast = useToast()
+const route = useRoute()
+const router = useRouter()
+const { workspaceState, setSelectedSeam, markStepDone } = useWorkspaceFlow()
 
 // 选项卡
 const tabs = [
@@ -492,6 +500,7 @@ const handleIndexGrid = async () => {
       normalizedWeights.value.tensile
     )
     indexGrid.value = data.grid
+    markStepDone('PressureIndex', { pressureReady: true })
     toast.add('指标网格计算完成', 'success')
   } catch (err) {
     toast.add(err.response?.data?.detail || '计算失败', 'error')
@@ -516,6 +525,7 @@ const handleWorkfaces = async () => {
       tensile_strength: normalizedWeights.value.tensile
     })
     workfaceGrid.value = data.workfaces.adjusted
+    markStepDone('PressureIndex', { pressureReady: true })
     toast.add('工作面调整完成', 'success')
   } catch (err) {
     toast.add(err.response?.data?.detail || '计算失败', 'error')
@@ -634,8 +644,22 @@ const handleMpiExport = async () => {
   toast.add('导出成功', 'success')
 }
 
+const normalizeQuerySeam = (value) => {
+  if (Array.isArray(value)) return value[0] || ''
+  return typeof value === 'string' ? value : ''
+}
+
+const goValidation = () => {
+  router.push({
+    name: 'AlgorithmValidation',
+    query: workspaceState.selectedSeam ? { seam: workspaceState.selectedSeam } : undefined
+  })
+}
+
 watch([wElastic, wDensity, wTensile], saveWeights)
 onMounted(() => {
+  const querySeam = normalizeQuerySeam(route.query?.seam)
+  if (querySeam) setSelectedSeam(querySeam)
   loadWeights()
   loadMpiWeights()
 })

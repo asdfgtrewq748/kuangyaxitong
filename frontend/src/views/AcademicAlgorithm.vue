@@ -1283,9 +1283,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
-import * as echarts from 'echarts'
+import { echarts } from '../lib/echarts'
+import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 
 const API_BASE = "http://localhost:5000/api"
+const { markStepDone } = useWorkspaceFlow()
 
 // 当前 Tab 和算法
 const activeTab = ref('principle')
@@ -1678,7 +1680,7 @@ const calculateComprehensive = async () => {
 // 图表渲染
 const renderRSIChart = (data) => {
   if (!rsiChart.value) return
-  if (!rsiChartInst) rsiChartInst = echarts.init(rsiChart.value)
+  if (!rsiChartInst) rsiChartInst = echarts.init(rsiChart.value, null, { renderer: 'svg' })
   rsiChartInst.setOption({
     title: { text: '相场断裂分布', textStyle: { color: '#5a6378', fontSize: 14 } },
     grid: { left: '10%', right: '10%', top: '20%', bottom: '15%' },
@@ -1695,7 +1697,7 @@ const renderRSIChart = (data) => {
 
 const renderBRIChart = (data) => {
   if (!briChart.value) return
-  if (!briChartInst) briChartInst = echarts.init(briChart.value)
+  if (!briChartInst) briChartInst = echarts.init(briChart.value, null, { renderer: 'svg' })
   const tensors = data.moment_tensors || [{ iso_percent: 15, dc_percent: 70, clvd_percent: 15 }]
   briChartInst.setOption({
     title: { text: '矩张量分解', textStyle: { color: '#5a6378', fontSize: 14 } },
@@ -1713,7 +1715,7 @@ const renderBRIChart = (data) => {
 
 const renderASIChart = (data) => {
   if (!asiChart.value) return
-  if (!asiChartInst) asiChartInst = echarts.init(asiChart.value)
+  if (!asiChartInst) asiChartInst = echarts.init(asiChart.value, null, { renderer: 'svg' })
   const distances = data.stress_distribution?.radial_distances || [3, 4, 5, 6, 7, 8, 9, 10]
   const radial = data.radial_stress || [5, 7, 8, 8.5, 9, 9.2, 9.5, 10]
   const tangential = data.tangential_stress || [25, 20, 17, 15, 14, 13, 12, 11]
@@ -1731,6 +1733,7 @@ const renderASIChart = (data) => {
 }
 
 onMounted(async () => {
+  markStepDone('AcademicAlgorithm')
   // 加载 KaTeX
   try {
     const katexModule = await import('katex')

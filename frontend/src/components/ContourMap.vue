@@ -28,6 +28,8 @@
         class="contour-image"
         :style="imageStyle"
         alt="Contour Map"
+        loading="lazy"
+        decoding="async"
         @load="onImageLoad"
         @error="onImageError"
       />
