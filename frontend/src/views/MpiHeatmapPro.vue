@@ -323,7 +323,7 @@ const hoverStyle = computed(() => ({
   top: `${hoverPos.value.y + 15}px`
 }))
 
-const gradeColors = ['#4e79a7', '#9bb7c7', '#f6f0a4', '#f4a261', '#d62828']
+const gradeColors = ['#0e7490', '#14b8a6', '#facc15', '#fb923c', '#dc2626']
 
 const gradeThresholds = computed(() => {
   if (!stats.value || !Number.isFinite(stats.value.min) || !Number.isFinite(stats.value.max)) return []
@@ -1159,9 +1159,9 @@ const simulateMiningEffect = (progress) => {
     (sFrontStart.x + sFrontEnd.x) / 2,
     (sFrontStart.y + sFrontEnd.y) / 2
   )
-  reliefGradient.addColorStop(0, `rgba(59, 130, 246, ${reliefIntensity * 0.5})`)
-  reliefGradient.addColorStop(0.7, `rgba(96, 165, 250, ${reliefIntensity * 0.3})`)
-  reliefGradient.addColorStop(1, `rgba(59, 130, 246, 0)`)
+  reliefGradient.addColorStop(0, `rgba(14, 116, 144, ${reliefIntensity * 0.5})`)
+  reliefGradient.addColorStop(0.7, `rgba(20, 184, 166, ${reliefIntensity * 0.3})`)
+  reliefGradient.addColorStop(1, `rgba(14, 116, 144, 0)`)
 
   ctx.fillStyle = reliefGradient
   ctx.beginPath()
@@ -1578,7 +1578,10 @@ const resetView = () => {
 .mpi-pro-page {
   position: fixed;
   inset: 0;
-  background: #f0f2f5;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(15, 118, 110, 0.12) 0%, transparent 42%),
+    radial-gradient(circle at 90% 85%, rgba(180, 83, 9, 0.1) 0%, transparent 45%),
+    linear-gradient(145deg, #edf4f2 0%, #f7fbfa 58%, #fbf7ef 100%);
   overflow: hidden;
   font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
 }
@@ -1621,8 +1624,8 @@ const resetView = () => {
   transition: all 0.15s;
 }
 .back-btn-mini:hover {
-  background: #f1f5f9;
-  color: #334155;
+  background: #e8f3f1;
+  color: #0f766e;
 }
 .back-btn-mini svg {
   width: 18px;
@@ -1638,7 +1641,7 @@ const resetView = () => {
 .nav-separator {
   width: 1px;
   height: 20px;
-  background: #e2e8f0;
+  background: #d8e6e3;
 }
 
 .nav-select {
@@ -1652,11 +1655,11 @@ const resetView = () => {
   transition: background 0.15s;
 }
 .nav-select:hover {
-  background: #f1f5f9;
+  background: #edf6f4;
 }
 .nav-select:focus {
   outline: none;
-  background: #e2e8f0;
+  background: #dcefeb;
 }
 
 .mini-stats {
@@ -1696,11 +1699,11 @@ const resetView = () => {
   transition: all 0.15s;
 }
 .nav-tool:hover {
-  background: #f1f5f9;
-  color: #334155;
+  background: #e8f3f1;
+  color: #0f766e;
 }
 .nav-tool.active {
-  background: #3b82f6;
+  background: var(--color-primary);
   color: white;
 }
 .nav-tool svg {
@@ -1728,8 +1731,8 @@ const resetView = () => {
   transition: all 0.15s;
 }
 .nav-btn:hover {
-  background: #f1f5f9;
-  color: #334155;
+  background: #e8f3f1;
+  color: #0f766e;
 }
 .nav-btn svg {
   width: 16px;
@@ -1769,8 +1772,8 @@ const resetView = () => {
 .loading-spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #3b82f6;
+  border: 3px solid #d8e6e3;
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -1833,8 +1836,8 @@ const resetView = () => {
   justify-content: center;
 }
 .panel-close:hover {
-  background: #f1f5f9;
-  color: #64748b;
+  background: #e8f3f1;
+  color: #0f766e;
 }
 .panel-close svg {
   width: 14px;
@@ -1884,7 +1887,7 @@ const resetView = () => {
   flex: 1;
   height: 6px;
   border-radius: 3px;
-  background: #e2e8f0;
+  background: #d8e6e3;
   outline: none;
   -webkit-appearance: none;
   cursor: pointer;
@@ -1894,9 +1897,9 @@ const resetView = () => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--color-primary);
   cursor: grab;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 2px 6px rgba(14, 116, 144, 0.4);
   transition: transform 0.15s;
 }
 .range-input::-webkit-slider-thumb:hover {
@@ -1910,10 +1913,10 @@ const resetView = () => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--color-primary);
   cursor: grab;
   border: none;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 2px 6px rgba(14, 116, 144, 0.4);
 }
 
 .range-value {
@@ -1940,7 +1943,7 @@ const resetView = () => {
 .layer-toggle input {
   width: 16px;
   height: 16px;
-  accent-color: #3b82f6;
+  accent-color: var(--color-primary);
 }
 
 .mini-legend {
@@ -1952,7 +1955,7 @@ const resetView = () => {
 .legend-gradient {
   height: 12px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #22c55e, #84cc16, #eab308, #f97316, #ef4444, #7c2d12);
+  background: linear-gradient(90deg, #0e7490, #14b8a6, #84cc16, #facc15, #fb923c, #dc2626);
 }
 
 .legend-labels {
@@ -1990,7 +1993,7 @@ const resetView = () => {
   width: 36px;
   height: 36px;
   border: none;
-  background: #3b82f6;
+  background: var(--gradient-primary);
   color: white;
   cursor: pointer;
   border-radius: 8px;
@@ -2001,7 +2004,7 @@ const resetView = () => {
   flex-shrink: 0;
 }
 .play-btn-mini:hover {
-  background: #2563eb;
+  background: #0d5f59;
   transform: scale(1.05);
 }
 .play-btn-mini.playing {
@@ -2023,7 +2026,7 @@ const resetView = () => {
   width: 100%;
   height: 4px;
   border-radius: 2px;
-  background: #e2e8f0;
+  background: #d8e6e3;
   outline: none;
   -webkit-appearance: none;
   cursor: pointer;
@@ -2033,7 +2036,7 @@ const resetView = () => {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--color-primary);
   cursor: grab;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
@@ -2057,7 +2060,7 @@ const resetView = () => {
 .speed-btn {
   width: 28px;
   height: 24px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d8e6e3;
   background: white;
   color: #64748b;
   cursor: pointer;
@@ -2067,19 +2070,19 @@ const resetView = () => {
   transition: all 0.15s;
 }
 .speed-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 .speed-btn.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: white;
 }
 
 .step-btn {
   width: 28px;
   height: 28px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d8e6e3;
   background: white;
   color: #64748b;
   cursor: pointer;
@@ -2090,8 +2093,8 @@ const resetView = () => {
   transition: all 0.15s;
 }
 .step-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 .step-btn svg {
   width: 14px;
@@ -2135,7 +2138,7 @@ const resetView = () => {
 }
 
 .dash-value.relief {
-  color: #3b82f6;
+  color: #0e7490;
 }
 
 .dash-value.phase {
@@ -2152,7 +2155,7 @@ const resetView = () => {
   background: rgba(255, 255, 255, 0.9);
   padding: 6px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(14, 116, 144, 0.16);
   pointer-events: none;
   z-index: 50;
 }

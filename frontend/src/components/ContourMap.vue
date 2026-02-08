@@ -158,9 +158,9 @@
         class="control-btn"
         :class="{ active: showBoreholes }"
         @click="showBoreholes = !showBoreholes"
-        title="钻孔点"
+        title="显示或隐藏钻孔点"
       >
-        <span>📍</span>
+        <span>◉</span>
       </button>
     </div>
 
@@ -177,6 +177,7 @@
         </div>
         <span class="legend-max">{{ valueRange.max?.toFixed(2) }}m</span>
       </div>
+      <div class="legend-mid">中值 {{ legendMidValue.toFixed(2) }} m</div>
     </div>
 
     <!-- Hover tooltip -->
@@ -379,6 +380,13 @@ const gradientStyle = computed(() => {
   } else {
     return 'background: linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)'
   }
+})
+
+const legendMidValue = computed(() => {
+  const min = Number(props.valueRange?.min)
+  const max = Number(props.valueRange?.max)
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return 0
+  return (min + max) / 2
 })
 
 const onImageLoad = (e) => {
@@ -607,7 +615,10 @@ defineExpose({
 .contour-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  image-rendering: auto;
+  image-rendering: -webkit-optimize-contrast;
+  background: #ffffff;
   border-radius: 0;
   display: block;
 }
@@ -664,7 +675,7 @@ defineExpose({
   width: 28px;
   height: 28px;
   border: 2.5px solid #E2E8F0;
-  border-top-color: #2563EB;
+  border-top-color: #0f766e;
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
 }
@@ -737,10 +748,10 @@ defineExpose({
 }
 
 .control-btn:hover {
-  background: #2563EB;
+  background: #0f766e;
   color: white;
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.25);
 }
 
 .control-btn:active {
@@ -748,7 +759,7 @@ defineExpose({
 }
 
 .control-btn.active {
-  background: #2563EB;
+  background: #0f766e;
   color: white;
 }
 
@@ -770,8 +781,8 @@ defineExpose({
 
 .legend-title {
   font-size: 11px;
-  font-weight: 600;
-  color: #475569;
+  font-weight: 700;
+  color: #1f2937;
   margin-bottom: 8px;
 }
 
@@ -787,6 +798,14 @@ defineExpose({
   font-family: 'SF Mono', 'JetBrains Mono', monospace;
   color: #64748B;
   min-width: 38px;
+}
+
+.legend-mid {
+  margin-top: 6px;
+  font-size: 10px;
+  color: #475569;
+  text-align: center;
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
 }
 
 .legend-bar {

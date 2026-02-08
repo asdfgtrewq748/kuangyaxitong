@@ -727,7 +727,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: #f8fafc;
+  background: #f3f8f7;
   border-radius: 10px;
 }
 
@@ -741,7 +741,7 @@ onMounted(() => {
 .weight-input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d8e5e2;
   border-radius: 8px;
   font-size: 14px;
 }
@@ -770,7 +770,7 @@ onMounted(() => {
 .param-input {
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d8e5e2;
   border-radius: 10px;
   font-size: 14px;
   background: white;
@@ -779,8 +779,8 @@ onMounted(() => {
 .param-select:focus,
 .param-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
 }
 
 /* Actions */
@@ -793,7 +793,7 @@ onMounted(() => {
 
 .btn {
   padding: 10px 18px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
@@ -802,18 +802,25 @@ onMounted(() => {
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #667eea 0%, #3b82f6 100%);
+  background: var(--gradient-primary);
   color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 4px 14px rgba(14, 116, 144, 0.28);
 }
 
 .btn.primary:hover:not(:disabled) {
   transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(14, 116, 144, 0.34);
 }
 
 .btn.secondary {
-  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
-  color: white;
+  background: #e8f0ee;
+  border-color: rgba(15, 118, 110, 0.22);
+  color: #1f2937;
+}
+
+.btn.secondary:hover:not(:disabled) {
+  background: #deebe8;
+  border-color: rgba(15, 118, 110, 0.34);
 }
 
 .btn:disabled {
@@ -853,7 +860,7 @@ onMounted(() => {
 .legend-bar {
   height: 8px;
   border-radius: 4px;
-  background: linear-gradient(to right, #1e40af, #2563eb, #3b82f6, #06b6d4, #10b981, #f59e0b);
+  background: linear-gradient(to right, #0e7490, #14b8a6, #22c55e, #eab308, #f97316, #dc2626);
   position: relative;
 }
 
@@ -879,7 +886,7 @@ onMounted(() => {
   gap: 24px;
   margin-top: 16px;
   padding: 12px;
-  background: #f8fafc;
+  background: #f3f8f7;
   border-radius: 10px;
 }
 
@@ -932,10 +939,11 @@ onMounted(() => {
 }
 
 .card {
-  background: white;
+  background: linear-gradient(145deg, #ffffff 0%, #f7fbfa 100%);
+  border: 1px solid rgba(14, 116, 144, 0.14);
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
 }
 
 @media (max-width: 768px) {
@@ -959,7 +967,7 @@ onMounted(() => {
   gap: 8px;
   margin-bottom: 20px;
   padding: 6px;
-  background: #f1f5f9;
+  background: #e8f1ef;
   border-radius: 14px;
 }
 
@@ -984,8 +992,8 @@ onMounted(() => {
 
 .tab.active {
   background: white;
-  color: #3b82f6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(14, 116, 144, 0.18);
 }
 
 .tab-icon {
@@ -1039,7 +1047,7 @@ onMounted(() => {
 
 .mpi-legend-tab {
   padding: 6px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d6e6e2;
   border-radius: 8px;
   background: white;
   font-size: 12px;
@@ -1050,13 +1058,13 @@ onMounted(() => {
 }
 
 .mpi-legend-tab:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .mpi-legend-tab.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: white;
 }
 
@@ -1070,7 +1078,7 @@ onMounted(() => {
   gap: 20px;
   margin-top: 12px;
   padding: 10px;
-  background: #f8fafc;
+  background: #f3f8f7;
   border-radius: 10px;
   font-size: 12px;
   color: #64748b;
@@ -1090,9 +1098,9 @@ onMounted(() => {
 
 .mpi-def-item {
   padding: 16px;
-  background: #f8fafc;
+  background: #f4f9f8;
   border-radius: 12px;
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--color-primary);
 }
 
 .mpi-def-header {
@@ -1148,12 +1156,12 @@ onMounted(() => {
 
 .risk-level.low {
   background: #f0fdf4;
-  border-left-color: #22c55e;
+  border-left-color: #16a34a;
 }
 
 .risk-level.medium {
-  background: #fffbeb;
-  border-left-color: #f59e0b;
+  background: #fff8ed;
+  border-left-color: #d97706;
 }
 
 .risk-level.high {

@@ -233,10 +233,10 @@ const hoverInfo = ref(null)
 const layerParamsCache = new Map()
 
 const odiPalette = [
-  '#3b82f6',
+  '#0e7490',
+  '#14b8a6',
   '#facc15',
   '#fb923c',
-  '#f87171',
   '#dc2626'
 ]
 
@@ -637,7 +637,7 @@ onMounted(() => {
 .upload-box:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(90, 99, 120, 0.1);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .upload-box:focus-visible {
@@ -855,7 +855,7 @@ onMounted(() => {
   outline: none;
   border-color: var(--color-primary);
   background: var(--bg-primary);
-  box-shadow: 0 0 0 3px rgba(90, 99, 120, 0.1);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .param-input:disabled,
@@ -1033,7 +1033,7 @@ onMounted(() => {
 
 .tag {
   background: var(--color-info-light);
-  color: #4a6b8a;
+  color: var(--color-info);
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;

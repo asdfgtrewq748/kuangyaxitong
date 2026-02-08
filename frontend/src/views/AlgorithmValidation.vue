@@ -72,6 +72,7 @@
         <div v-if="hasSpatialData" class="trust-banner">
           <span class="trust-chip real">空间图：真实钻孔与坐标数据</span>
           <span class="trust-chip warn">评估：{{ evalSourceLabel }}</span>
+          <span v-if="showLowContrastHint" class="trust-chip hint">当前指标范围 {{ fmt(currentMetricRange) }}，固定量程会压缩色差</span>
           <span v-if="matrixSelection !== 'all' && matrixSelectionCount > 0" class="trust-chip link">
             联动高亮 {{ matrixRoleLabel(matrixSelection) }} · {{ matrixSelectionCount }}点
           </span>
@@ -254,7 +255,7 @@ const metricDefs = [
 ]
 const matrixRoleMeta = {
   tp: { label: 'TP 真阳性', color: '#15803d' },
-  tn: { label: 'TN 真阴性', color: '#1d4ed8' },
+  tn: { label: 'TN 真阴性', color: '#0e7490' },
   fp: { label: 'FP 假阳性', color: '#d97706' },
   fn: { label: 'FN 假阴性', color: '#b91c1c' }
 }
@@ -270,7 +271,7 @@ const resolution = ref(50)
 const contourLevels = ref(9)
 const method = ref('idw')
 const showContours = ref(true)
-const useFixedScale = ref(true)
+const useFixedScale = ref(false)
 const activeMetric = ref('mpi')
 const loading = ref(false)
 const hasInitialized = ref(false)
@@ -314,6 +315,18 @@ const normalizedWeights = computed(() => {
 
 const hasSpatialData = computed(() => !!(spatialData.value?.grids && spatialData.value?.statistics && spatialData.value?.boreholes))
 const currentMetricStats = computed(() => spatialData.value?.statistics?.[activeMetric.value] || {})
+const currentMetricRange = computed(() => {
+  const stats = currentMetricStats.value
+  const min = Number(stats?.min)
+  const max = Number(stats?.max)
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return 0
+  return Math.max(0, max - min)
+})
+const showLowContrastHint = computed(() => (
+  hasSpatialData.value &&
+  useFixedScale.value &&
+  currentMetricRange.value < 20
+))
 const currentMpiMean = computed(() => Number(spatialData.value?.statistics?.mpi?.mean || 0))
 const baselineMpi = computed(() => Math.max(0, currentMpiMean.value - 4.5))
 const currentHighRiskCount = computed(() => highRiskCount(activeMetric.value))
@@ -553,7 +566,7 @@ const drawMatrixSelectionOverlay = (ctx, boreholes, bounds) => {
   ctx.save()
   ctx.fillStyle = 'rgba(15, 23, 42, 0.88)'
   ctx.fillRect(12, 10, 250, 28)
-  ctx.fillStyle = '#f8fafc'
+  ctx.fillStyle = '#f4f9f8'
   ctx.font = "600 12px 'Noto Sans SC', 'Segoe UI', sans-serif"
   ctx.fillText(`联动筛选: ${meta.label} (${selected.length})  Esc清除`, 22, 29)
   ctx.restore()
@@ -1099,28 +1112,31 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.validation-page { position: relative; display: flex; flex-direction: column; gap: var(--spacing-md); min-height: calc(100vh - 18px); padding: var(--spacing-md); background: radial-gradient(circle at 14% 10%, rgba(59,130,246,.14), transparent 40%), radial-gradient(circle at 86% 100%, rgba(220,38,38,.1), transparent 42%), var(--bg-secondary); }
-.top-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 64px; padding: 10px 14px; border-radius: var(--border-radius-md); border: 1px solid rgba(255,255,255,.12); background: linear-gradient(135deg, #1a1f2e 0%, #2a2f3e 100%); box-shadow: var(--shadow-md); color: #f8fafc; }
+.validation-page { position: relative; display: flex; flex-direction: column; gap: var(--spacing-md); min-height: calc(100vh - 18px); padding: var(--spacing-md); background: radial-gradient(circle at 14% 10%, rgba(15,118,110,.14), transparent 40%), radial-gradient(circle at 86% 100%, rgba(180,83,9,.1), transparent 42%), var(--bg-secondary); }
+.top-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 64px; padding: 10px 14px; border-radius: var(--border-radius-md); border: 1px solid rgba(255,255,255,.12); background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%); box-shadow: var(--shadow-md); color: #f8fafc; }
 .nav-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .nav-left h1 { margin: 0; font-size: 22px; font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif; }
 .divider { width: 1px; height: 26px; background: rgba(255,255,255,.22); }
 .icon-btn { border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.1); color: #f8fafc; border-radius: 8px; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; }
+.icon-btn:hover { border-color: rgba(45,212,191,.5); background: rgba(45,212,191,.2); }
 .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
 .icon-btn.mini { width: auto; height: 28px; padding: 0 8px; font-size: 12px; }
 .seam-select { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
 .seam-select select { min-width: 120px; border-radius: 8px; border: 1px solid rgba(255,255,255,.24); background: rgba(255,255,255,.12); color: #f8fafc; padding: 5px 8px; }
+.seam-select select:focus { outline: none; border-color: rgba(45,212,191,.7); box-shadow: 0 0 0 3px rgba(45,212,191,.2); }
 .seam-select select option { color: #0f172a; }
 .mini-stats { display: inline-flex; gap: 10px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.1); font-size: 12px; }
 .mini-stats .danger b { color: #fca5a5; }
 .nav-right { display: flex; align-items: center; gap: 8px; }
 .tool-btn { border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.12); color: #f8fafc; border-radius: 8px; font-size: 12px; padding: 7px 11px; cursor: pointer; }
-.tool-btn.active { background: rgba(99,102,241,.45); border-color: rgba(167,180,255,.6); }
+.tool-btn:hover { background: rgba(45,212,191,.16); border-color: rgba(45,212,191,.36); }
+.tool-btn.active { background: rgba(15,118,110,.52); border-color: rgba(45,212,191,.58); }
 .tool-btn:disabled { opacity: .6; cursor: not-allowed; }
 .tool-btn.small { color: #111827; border-color: var(--border-color-light); background: #f8fafc; }
 .metric-dashboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--spacing-md); }
 .metric-card { border: 1px solid var(--border-color-light); border-radius: var(--border-radius-md); background: var(--bg-elevated); box-shadow: var(--shadow-sm); padding: 10px 12px; text-align: left; cursor: pointer; transition: all var(--transition-normal); }
 .metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.metric-card.active { border-color: #334155; box-shadow: 0 0 0 2px rgba(51,65,85,.12); }
+.metric-card.active { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(15,118,110,.18); }
 .metric-card .head { display: flex; justify-content: space-between; gap: 8px; }
 .metric-card .head span { font-size: 11px; color: var(--text-tertiary); }
 .metric-card .value { margin-top: 5px; font-size: 24px; font-family: 'Times New Roman', serif; color: #111827; }
@@ -1129,7 +1145,7 @@ onBeforeUnmount(() => {
 .main-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr); gap: var(--spacing-md); }
 .main-canvas-card, .thumb-panel { border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: var(--bg-elevated); }
 .main-canvas-card { display: flex; flex-direction: column; min-height: 0; box-shadow: var(--shadow-md); overflow: hidden; }
-.canvas-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border-color-light); background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); }
+.canvas-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border-color-light); background: linear-gradient(135deg, #f1f8f6 0%, #e4f3ef 100%); }
 .canvas-head h2 { margin: 0; font-size: 16px; font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif; }
 .canvas-head p { margin: 3px 0 0; font-size: 12px; color: #64748b; }
 .canvas-controls { display: flex; gap: 8px; }
@@ -1140,9 +1156,10 @@ onBeforeUnmount(() => {
 .trust-chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 10px; font-size: 11px; border: 1px solid transparent; font-weight: 600; }
 .trust-chip.real { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
 .trust-chip.warn { color: #92400e; background: #fffbeb; border-color: #fde68a; }
-.trust-chip.link { color: #1e3a8a; background: #eff6ff; border-color: #bfdbfe; }
+.trust-chip.hint { color: #7c2d12; background: #fff7ed; border-color: #fdba74; }
+.trust-chip.link { color: #0e7490; background: #e7f8f3; border-color: #99ead7; }
 .trust-meta { font-size: 11px; color: #64748b; }
-.stage { position: relative; flex: 1; min-height: 360px; overflow: hidden; background: #f8fafc; touch-action: none; }
+.stage { position: relative; flex: 1; min-height: 360px; overflow: hidden; background: #f4f9f8; touch-action: none; }
 .layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .loading-mask { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; background: rgba(248,250,252,.92); z-index: 5; }
 .skeleton { width: 72%; height: 14px; border-radius: 999px; background: linear-gradient(90deg, #e2e8f0 10%, #cbd5e1 35%, #e2e8f0 60%); background-size: 200% 100%; animation: skeleton 1.1s linear infinite; }
@@ -1156,7 +1173,7 @@ onBeforeUnmount(() => {
 .thumb-panel h3 { margin: 0; font-size: 14px; }
 .thumb-list { overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
 .thumb-item { border: 1px solid var(--border-color-light); border-radius: 10px; background: #fff; padding: 8px; display: flex; flex-direction: column; gap: 7px; cursor: pointer; }
-.thumb-item.active { border-color: #334155; box-shadow: 0 0 0 2px rgba(51,65,85,.1); }
+.thumb-item.active { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(15,118,110,.14); }
 .thumb-canvas { width: 100%; height: 110px; border-radius: 8px; border: 1px solid #e2e8f0; }
 .thumb-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; font-size: 12px; color: #4b5563; }
 .thumb-meta strong { text-align: left; }
@@ -1168,18 +1185,19 @@ onBeforeUnmount(() => {
 .floating-panel h3 { margin: 0; font-size: 15px; }
 .floating-panel p { margin: 0 0 10px; font-size: 12px; color: #4b5563; }
 .weight-row { display: grid; grid-template-columns: 44px 1fr 46px; align-items: center; gap: 10px; margin-bottom: 10px; }
-.close-btn { border: 1px solid #cbd5e1; background: #f8fafc; color: #1f2937; border-radius: 8px; width: 28px; height: 28px; font-size: 17px; line-height: 1; cursor: pointer; }
+.close-btn { border: 1px solid #cbd5e1; background: #f1f8f6; color: #1f2937; border-radius: 8px; width: 28px; height: 28px; font-size: 17px; line-height: 1; cursor: pointer; }
+.close-btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: #e8f5f2; }
 .eval-drawer { position: relative; z-index: 4; border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: #fff; box-shadow: var(--shadow-md); padding: 12px; }
 .eval-drawer header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .eval-drawer h3 { margin: 0; font-size: 15px; }
 .eval-drawer .actions { display: flex; gap: 8px; }
-.panel-empty { margin-top: 12px; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 14px; font-size: 13px; color: #475569; }
+.panel-empty { margin-top: 12px; border: 1px dashed #bfd3d9; border-radius: 10px; padding: 14px; font-size: 13px; color: #475569; background: #f5faf9; }
 .eval-grid { margin-top: 10px; display: grid; grid-template-columns: repeat(5, minmax(90px, 1fr)); gap: 8px; }
-.eval-grid .metric { border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding: 8px; }
+.eval-grid .metric { border: 1px solid #d8e6e3; border-radius: 10px; background: #f3f8f7; padding: 8px; }
 .eval-grid .metric span { display: block; font-size: 11px; color: #64748b; }
 .eval-grid .metric strong { font-size: 18px; font-family: 'Times New Roman', serif; color: #111827; }
 .eval-content { margin-top: 10px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; }
-.cm-card, .baseline-card { border: 1px solid #e2e8f0; border-radius: 10px; background: #fcfdff; padding: 10px; }
+.cm-card, .baseline-card { border: 1px solid #d8e6e3; border-radius: 10px; background: #f7fbfa; padding: 10px; }
 .cm-card h4, .baseline-card h4 { margin: 0 0 8px; font-size: 13px; }
 .cm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .cm-cell { border: 1px solid #cbd5e1; border-radius: 8px; background: #ecfdf5; padding: 8px; text-align: center; }

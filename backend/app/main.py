@@ -5,6 +5,8 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from typing import List, Optional
+from collections import OrderedDict
+import threading
 
 from app.core.config import get_data_dir
 from app.services.csv_loader import analyze_csv_file, read_csv_robust
@@ -43,6 +45,46 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Lightweight in-memory cache for expensive seam contour image generation.
+_CONTOUR_CACHE_MAXSIZE = 24
+_contour_cache: OrderedDict[tuple, dict] = OrderedDict()
+_contour_cache_lock = threading.Lock()
+
+
+def _build_contour_data_signature(data_dir: Path) -> str:
+    files = sorted([p for p in data_dir.glob("*.csv") if p.is_file()])
+    latest_mtime_ns = 0
+    for file_path in files:
+        try:
+            mtime_ns = file_path.stat().st_mtime_ns
+            if mtime_ns > latest_mtime_ns:
+                latest_mtime_ns = mtime_ns
+        except OSError:
+            continue
+    return f"{len(files)}:{latest_mtime_ns}"
+
+
+def _get_cached_contour_response(cache_key: tuple) -> Optional[dict]:
+    with _contour_cache_lock:
+        cached = _contour_cache.get(cache_key)
+        if cached is None:
+            return None
+        _contour_cache.move_to_end(cache_key)
+        return cached
+
+
+def _set_cached_contour_response(cache_key: tuple, payload: dict) -> None:
+    with _contour_cache_lock:
+        _contour_cache[cache_key] = payload
+        _contour_cache.move_to_end(cache_key)
+        while len(_contour_cache) > _CONTOUR_CACHE_MAXSIZE:
+            _contour_cache.popitem(last=False)
+
+
+def _clear_contour_cache() -> None:
+    with _contour_cache_lock:
+        _contour_cache.clear()
 
 
 @app.get("/health")
@@ -101,6 +143,8 @@ async def upload_boreholes(files: List[UploadFile] = File(...)) -> dict:
         dest.write_bytes(content)
         saved.append(dest.name)
 
+    # Uploaded data can change seam interpolation results.
+    _clear_contour_cache()
     return {"saved": saved, "count": len(saved)}
 
 
@@ -115,6 +159,7 @@ def fix_encoding() -> dict:
     for p in files:
         result = fix_csv_encoding(p)
         results.append(result)
+    _clear_contour_cache()
     return {"data_dir": str(data_dir), "files": results}
 
 
@@ -825,6 +870,20 @@ def get_seam_contour_images_api(
     if not data_dir.exists():
         raise HTTPException(status_code=404, detail="data dir not found")
 
+    data_signature = _build_contour_data_signature(data_dir)
+    cache_key = (
+        seam_name,
+        method,
+        int(grid_size),
+        int(num_levels),
+        int(dpi),
+        round(float(smooth_sigma), 3),
+        data_signature,
+    )
+    cached_payload = _get_cached_contour_response(cache_key)
+    if cached_payload is not None:
+        return cached_payload
+
     coord_path = data_dir / "zuobiao.csv"
     if not coord_path.exists():
         raise HTTPException(status_code=404, detail="zuobiao.csv not found")
@@ -904,7 +963,7 @@ def get_seam_contour_images_api(
         error_detail = f"Contour generation failed: {str(e)}\n{traceback.format_exc()}"
         raise HTTPException(status_code=500, detail=error_detail)
 
-    return {
+    response_payload = {
         "seam_name": seam_name,
         "method": method,
         "grid_size": grid_size,
@@ -914,6 +973,8 @@ def get_seam_contour_images_api(
         "depth": images["depth"],
         "boreholes": seam_data.get("points", [])
     }
+    _set_cached_contour_response(cache_key, response_payload)
+    return response_payload
 
 
 @app.get("/seams/test-contour")

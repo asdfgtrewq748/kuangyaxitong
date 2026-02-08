@@ -1,10 +1,10 @@
 import * as d3 from 'd3'
 
 const METRIC_PALETTES = {
-  mpi: ['#3b82f6', '#facc15', '#fb923c', '#f87171', '#dc2626'],
+  mpi: ['#0e7490', '#14b8a6', '#facc15', '#fb923c', '#dc2626'],
   rsi: ['#dc2626', '#fb923c', '#facc15', '#84cc16', '#16a34a'],
   bri: ['#dc2626', '#fb923c', '#facc15', '#84cc16', '#16a34a'],
-  asi: ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#dc2626']
+  asi: ['#0e7490', '#14b8a6', '#84cc16', '#f59e0b', '#dc2626']
 }
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v))

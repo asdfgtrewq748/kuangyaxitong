@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 import json
@@ -27,7 +28,7 @@ from app.services.mpi_calculator import (
     calc_burst_risk,
     calc_roof_stability,
 )
-from app.services.rock_params_db import get_default_params
+from app.services.rock_params_db import get_database, get_default_params
 
 
 router = APIRouter(
@@ -46,6 +47,8 @@ class TimeWindow(BaseModel):
 class ValidationLayer(BaseModel):
     name: str
     thickness: float
+    density: Optional[float] = None
+    cohesion: Optional[float] = None
     tensile_strength: Optional[float] = None
     elastic_modulus: Optional[float] = None
     compressive_strength: Optional[float] = None
@@ -73,6 +76,164 @@ class ValidationEvaluateRequest(BaseModel):
 
 
 _RUN_RESULTS: Dict[str, Dict[str, Any]] = {}
+
+_MECH_PARAM_KEYS = (
+    "density",
+    "cohesion",
+    "friction_angle",
+    "tensile_strength",
+    "compressive_strength",
+    "elastic_modulus",
+)
+
+# Prefer substitution by similar lithology before generic defaults.
+_LITHOLOGY_REPLACEMENTS: Dict[str, str] = {
+    "含碳泥岩": "泥岩",
+    "砂岩黏土": "砂质泥岩",
+    "砂纸砾岩": "砂质砾岩",
+    "黏土": "表土",
+    "腐殖土": "表土",
+    "粗砾岩": "砾岩",
+    "中砾岩": "砾岩",
+    "细砾岩": "砾岩",
+    "含砾粉砂岩": "粉砂岩",
+    "含砾细砂岩": "细砂岩",
+    "含砾粗砂岩": "粗砂岩",
+}
+
+_EMERGENCY_PARAMS: Dict[str, float] = {
+    "density": 2500.0,
+    "cohesion": 2.0,
+    "friction_angle": 28.0,
+    "tensile_strength": 1.5,
+    "compressive_strength": 25.0,
+    "elastic_modulus": 8.0,
+}
+
+
+def _normalize_lithology(name: str) -> str:
+    text = str(name or "").strip()
+    if "煤" in text:
+        return "煤层"
+    return text
+
+
+def _choose_col_by_keywords(df: pd.DataFrame, keywords: List[str]) -> Optional[str]:
+    for col in df.columns:
+        label = str(col).strip()
+        if all(word in label for word in keywords):
+            return str(col)
+    return None
+
+
+def _build_lithology_candidates(name: str) -> List[str]:
+    normalized = _normalize_lithology(name)
+    candidates: List[str] = []
+
+    def _push(value: str) -> None:
+        key = str(value or "").strip()
+        if key and key not in candidates:
+            candidates.append(key)
+
+    _push(normalized)
+    _push(_LITHOLOGY_REPLACEMENTS.get(normalized, ""))
+
+    if "泥岩" in normalized:
+        _push("泥岩")
+    if "砂质泥岩" in normalized:
+        _push("砂质泥岩")
+    if "砂岩" in normalized:
+        _push("细砂岩")
+    if "砾岩" in normalized:
+        _push("砾岩")
+    if "土" in normalized:
+        _push("表土")
+    if "煤" in normalized:
+        _push("煤层")
+
+    return candidates
+
+
+@lru_cache(maxsize=1)
+def _build_lithology_median_profiles() -> Dict[str, Dict[str, Dict[str, float]]]:
+    db = get_database()
+    df = db.data.copy()
+    if df.empty:
+        return {"by_lithology": {}, "global": {}}
+
+    lith_col = _candidate_column(df, ["岩性", "lithology"]) or _choose_col_by_keywords(df, ["岩性"])
+    if not lith_col:
+        return {"by_lithology": {}, "global": {}}
+
+    col_map: Dict[str, Optional[str]] = {
+        "density": _candidate_column(df, ["density", "密度（kg*m3）", "密度"]),
+        "cohesion": _candidate_column(df, ["cohesion", "内聚力（MPa）", "内聚力"]),
+        "friction_angle": _candidate_column(df, ["friction_angle", "内摩擦角"]),
+        "tensile_strength": _candidate_column(df, ["tensile_strength", "抗拉强度（MPa）", "抗拉强度"]),
+        "compressive_strength": _candidate_column(df, ["compressive_strength", "抗压强度/MPa", "抗压强度"]),
+        "elastic_modulus": _candidate_column(df, ["elastic_modulus", "弹性模量（Gpa）", "弹性模量"]),
+    }
+
+    work = pd.DataFrame()
+    work["lithology"] = df[lith_col].astype(str).str.strip().map(_normalize_lithology)
+    work = work[work["lithology"] != ""]
+
+    for key, col in col_map.items():
+        if col and col in df.columns:
+            work[key] = pd.to_numeric(df[col], errors="coerce")
+        else:
+            work[key] = np.nan
+
+    grouped = work.groupby("lithology")[list(_MECH_PARAM_KEYS)].median(numeric_only=True)
+
+    by_lithology: Dict[str, Dict[str, float]] = {}
+    for lithology, row in grouped.iterrows():
+        item: Dict[str, float] = {}
+        for key in _MECH_PARAM_KEYS:
+            val = _to_float_or_none(row.get(key))
+            if val is not None:
+                item[key] = val
+        by_lithology[str(lithology)] = item
+
+    global_median: Dict[str, float] = {}
+    for key in _MECH_PARAM_KEYS:
+        series = pd.to_numeric(work[key], errors="coerce")
+        val = _to_float_or_none(series.median(skipna=True))
+        if val is not None:
+            global_median[key] = val
+
+    return {"by_lithology": by_lithology, "global": global_median}
+
+
+def _resolve_mech_params(lithology: str, measured: Dict[str, Any]) -> Dict[str, float]:
+    profiles = _build_lithology_median_profiles()
+    by_lithology = profiles.get("by_lithology", {})
+    global_median = profiles.get("global", {})
+    defaults = get_default_params(lithology)
+
+    candidate_rows = [
+        by_lithology.get(candidate, {})
+        for candidate in _build_lithology_candidates(lithology)
+    ]
+
+    resolved: Dict[str, float] = {}
+    for key in _MECH_PARAM_KEYS:
+        value = _to_float_or_none(measured.get(key))
+        if value is None:
+            for row in candidate_rows:
+                row_val = _to_float_or_none(row.get(key))
+                if row_val is not None:
+                    value = row_val
+                    break
+        if value is None:
+            value = _to_float_or_none(global_median.get(key))
+        if value is None:
+            value = _to_float_or_none(defaults.get(key))
+        if value is None:
+            value = _EMERGENCY_PARAMS[key]
+        resolved[key] = float(value)
+
+    return resolved
 
 
 def _clamp(value: float, lo: float, hi: float) -> float:
@@ -249,6 +410,8 @@ def _load_strata_from_dataset(dataset_id: str) -> List[ValidationLayer]:
     df = _load_dataset_df(dataset_id)
     name_col = _candidate_column(df, ["name", "名称", "岩性", "宀╂€?"])
     thickness_col = _candidate_column(df, ["thickness", "厚度/m", "厚度", "鍘氬害/m", "鍘氬害"])
+    density_col = _candidate_column(df, ["density", "容重", "容重/kN*m-3"])
+    cohesion_col = _candidate_column(df, ["cohesion", "内聚力/MPa", "内聚力"])
     tensile_col = _candidate_column(df, ["tensile_strength", "抗拉强度/MPa", "抗拉强度"])
     elastic_col = _candidate_column(df, ["elastic_modulus", "弹性模量/Gpa", "弹性模量", "寮规€фā閲?Gpa", "寮规€фā閲?"])
     compressive_col = _candidate_column(df, ["compressive_strength", "抗压强度/MPa", "抗压强度"])
@@ -264,23 +427,25 @@ def _load_strata_from_dataset(dataset_id: str) -> List[ValidationLayer]:
         if not name or thickness is None or thickness <= 0:
             continue
 
-        defaults = get_default_params(name)
+        measured = {
+            "density": _to_float_or_none(row.get(density_col)) if density_col else None,
+            "cohesion": _to_float_or_none(row.get(cohesion_col)) if cohesion_col else None,
+            "tensile_strength": _to_float_or_none(row.get(tensile_col)) if tensile_col else None,
+            "elastic_modulus": _to_float_or_none(row.get(elastic_col)) if elastic_col else None,
+            "compressive_strength": _to_float_or_none(row.get(compressive_col)) if compressive_col else None,
+            "friction_angle": _to_float_or_none(row.get(friction_col)) if friction_col else None,
+        }
+        resolved = _resolve_mech_params(name, measured)
         layer = ValidationLayer(
             name=name,
             thickness=float(thickness),
-            tensile_strength=_to_float_or_none(row.get(tensile_col)) if tensile_col else defaults.get("tensile_strength"),
-            elastic_modulus=_to_float_or_none(row.get(elastic_col)) if elastic_col else defaults.get("elastic_modulus"),
-            compressive_strength=_to_float_or_none(row.get(compressive_col)) if compressive_col else defaults.get("compressive_strength"),
-            friction_angle=_to_float_or_none(row.get(friction_col)) if friction_col else defaults.get("friction_angle"),
+            density=resolved["density"],
+            cohesion=resolved["cohesion"],
+            tensile_strength=resolved["tensile_strength"],
+            elastic_modulus=resolved["elastic_modulus"],
+            compressive_strength=resolved["compressive_strength"],
+            friction_angle=resolved["friction_angle"],
         )
-        if layer.tensile_strength is None:
-            layer.tensile_strength = defaults.get("tensile_strength")
-        if layer.elastic_modulus is None:
-            layer.elastic_modulus = defaults.get("elastic_modulus")
-        if layer.compressive_strength is None:
-            layer.compressive_strength = defaults.get("compressive_strength")
-        if layer.friction_angle is None:
-            layer.friction_angle = defaults.get("friction_angle")
         layers.append(layer)
 
     if not layers:
@@ -445,6 +610,8 @@ def _build_point(layers: List[ValidationLayer], dataset_id: str) -> PointData:
             RockLayer(
                 thickness=float(layer.thickness),
                 name=layer.name,
+                density=layer.density,
+                cohesion=layer.cohesion,
                 tensile_strength=layer.tensile_strength,
                 elastic_modulus=layer.elastic_modulus,
                 compressive_strength=layer.compressive_strength,
@@ -744,15 +911,25 @@ def get_algorithm_validation_spatial_overview(
             thickness = _to_float_or_none(layer.get("thickness"))
             if not name or thickness is None or thickness <= 0:
                 continue
-            defaults = get_default_params(name)
+            measured = {
+                "density": _to_float_or_none(layer.get("density")),
+                "cohesion": _to_float_or_none(layer.get("cohesion")),
+                "tensile_strength": _to_float_or_none(layer.get("tensile_strength")),
+                "elastic_modulus": _to_float_or_none(layer.get("elastic_modulus")),
+                "compressive_strength": _to_float_or_none(layer.get("compressive_strength")),
+                "friction_angle": _to_float_or_none(layer.get("friction_angle")),
+            }
+            resolved = _resolve_mech_params(name, measured)
             layers.append(
                 ValidationLayer(
                     name=name,
                     thickness=float(thickness),
-                    tensile_strength=defaults.get("tensile_strength"),
-                    elastic_modulus=defaults.get("elastic_modulus"),
-                    compressive_strength=defaults.get("compressive_strength"),
-                    friction_angle=defaults.get("friction_angle"),
+                    density=resolved["density"],
+                    cohesion=resolved["cohesion"],
+                    tensile_strength=resolved["tensile_strength"],
+                    elastic_modulus=resolved["elastic_modulus"],
+                    compressive_strength=resolved["compressive_strength"],
+                    friction_angle=resolved["friction_angle"],
                 )
             )
 

@@ -10,6 +10,7 @@ const api = axios.create({
 class ApiCache {
   constructor(maxSize = 50) {
     this.cache = new Map()
+    this.pending = new Map()
     this.maxSize = maxSize
   }
 
@@ -68,19 +69,43 @@ class ApiCache {
 
   clear() {
     this.cache.clear()
+    this.pending.clear()
   }
 
   // Cache GET requests for static data
-  cachedGet(url, config = {}) {
+  cachedGet(url, config = {}, options = {}) {
     const params = config.params || {}
-    const cached = this.get(url, params)
-    if (cached) {
-      return Promise.resolve({ data: cached })
+    const bypassCache = Boolean(options?.bypassCache)
+    const key = this.generateKey(url, params)
+
+    if (!bypassCache) {
+      const cached = this.get(url, params)
+      if (cached) {
+        return Promise.resolve({ data: cached })
+      }
+
+      const pendingRequest = this.pending.get(key)
+      if (pendingRequest) {
+        return pendingRequest
+      }
     }
-    return api.get(url, config).then(response => {
-      this.set(url, params, response.data)
-      return response
-    })
+
+    const requestPromise = api.get(url, config)
+      .then((response) => {
+        if (!bypassCache) {
+          this.set(url, params, response.data)
+        }
+        return response
+      })
+      .finally(() => {
+        this.pending.delete(key)
+      })
+
+    if (!bypassCache) {
+      this.pending.set(key, requestPromise)
+    }
+
+    return requestPromise
   }
 }
 
@@ -177,8 +202,16 @@ export const exportSeamInterpolation = (seamName, property, method, gridSize) =>
     params: { seam_name: seamName, property, method, grid_size: gridSize },
     responseType: 'blob'
   })
-export const getSeamContourImages = (seamName, method = 'kriging', gridSize = 80, numLevels = 12, dpi = 150, smoothSigma = 1.0) =>
-  api.get('/seams/contour-images', {
+export const getSeamContourImages = (
+  seamName,
+  method = 'kriging',
+  gridSize = 80,
+  numLevels = 12,
+  dpi = 150,
+  smoothSigma = 1.0,
+  options = {}
+) => {
+  const config = {
     params: {
       seam_name: seamName,
       method,
@@ -187,7 +220,14 @@ export const getSeamContourImages = (seamName, method = 'kriging', gridSize = 80
       dpi,
       smooth_sigma: smoothSigma
     }
-  })
+  }
+
+  if (options?.forceRefresh) {
+    return api.get('/seams/contour-images', config)
+  }
+
+  return apiCache.cachedGet('/seams/contour-images', config)
+}
 
 // MPI (矿压影响指标) APIs
 export const mpiCalculate = (point, weights = null, config = null) =>

@@ -1031,7 +1031,7 @@ const openDownloads = () => {
 .export-select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(90, 99, 120, 0.1);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .export-toggle {
@@ -1056,7 +1056,7 @@ const openDownloads = () => {
 }
 
 .export-toggle input {
-  accent-color: #6366f1;
+  accent-color: var(--color-primary);
   width: 16px;
   height: 16px;
 }
@@ -1064,23 +1064,23 @@ const openDownloads = () => {
 /* Ghost Button Style */
 .btn.ghost {
   background: rgba(255, 255, 255, 0.95);
-  color: #6366f1;
-  border: 2px solid rgba(99, 102, 241, 0.3);
+  color: var(--color-primary);
+  border: 2px solid rgba(15, 118, 110, 0.28);
   padding: 10px 20px;
   font-size: 13px;
   font-weight: 700;
 }
 
 .btn.ghost:hover:not(:disabled) {
-  background: #6366f1;
+  background: var(--color-primary);
   color: #fff;
-  border-color: #6366f1;
+  border-color: var(--color-primary);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 6px 20px rgba(14, 116, 144, 0.35);
 }
 
 .export-toggle input {
-  accent-color: #6366f1;
+  accent-color: var(--color-primary);
 }
 
 .btn.highlight {
@@ -1542,11 +1542,11 @@ const openDownloads = () => {
 }
 
 .stack-segment.rsi {
-  background: #6366f1;
+  background: #0f766e;
 }
 
 .stack-segment.bri {
-  background: #8b5cf6;
+  background: #0e7490;
 }
 
 .stack-segment.asi {
@@ -1568,9 +1568,9 @@ const openDownloads = () => {
   margin-right: 6px;
 }
 
-.dot.rsi { background: #6366f1; }
-.dot.bri { background: #7a7cb0; }
-.dot.asi { background: #5b8c6e; }
+.dot.rsi { background: #0f766e; }
+.dot.bri { background: #0e7490; }
+.dot.asi { background: #15803d; }
 
 /* BRI深度交互控件 */
 .interactive-control {

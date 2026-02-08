@@ -34,6 +34,14 @@ LITHOLOGY_COLORS = {
 }
 
 
+def _float_or_none(value: object) -> Optional[float]:
+    """Safely convert values from CSV rows to float."""
+    parsed = pd.to_numeric(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return float(parsed)
+
+
 def is_coal_seam(name: str) -> bool:
     """Check if a layer name indicates a coal seam."""
     if not name or not isinstance(name, str):
@@ -309,29 +317,48 @@ def get_overburden_lithology(
             layers = []
             for _, row in overburden_rows.iterrows():
                 layer_name = str(row.get("name", "")).strip()
-                thickness = pd.to_numeric(row.get("thickness"), errors="coerce")
-                z_top = pd.to_numeric(row.get("z_top"), errors="coerce")
-                z_bottom = pd.to_numeric(row.get("z_bottom"), errors="coerce")
+                thickness = _float_or_none(row.get("thickness"))
+                z_top = _float_or_none(row.get("z_top"))
+                z_bottom = _float_or_none(row.get("z_bottom"))
+                tensile_strength = _float_or_none(row.get("tensile_strength"))
+                elastic_modulus = _float_or_none(row.get("elastic_modulus"))
+                compressive_strength = _float_or_none(row.get("compressive_strength"))
+                friction_angle = _float_or_none(row.get("friction_angle"))
+                density = _float_or_none(row.get("density"))
+                cohesion = _float_or_none(row.get("cohesion"))
 
                 # Get color for this lithology
                 color = LITHOLOGY_COLORS.get(layer_name, "#CCCCCC")
 
                 layers.append({
                     "name": layer_name,
-                    "thickness": float(thickness) if pd.notna(thickness) else 0.0,
-                    "z_top": float(z_top) if pd.notna(z_top) else 0.0,
-                    "z_bottom": float(z_bottom) if pd.notna(z_bottom) else 0.0,
-                    "color": color
+                    "thickness": thickness if thickness is not None else 0.0,
+                    "z_top": z_top if z_top is not None else 0.0,
+                    "z_bottom": z_bottom if z_bottom is not None else 0.0,
+                    "color": color,
+                    "tensile_strength": tensile_strength,
+                    "elastic_modulus": elastic_modulus,
+                    "compressive_strength": compressive_strength,
+                    "friction_angle": friction_angle,
+                    "density": density,
+                    "cohesion": cohesion,
                 })
 
             # Add the seam itself as a layer
-            seam_thickness = pd.to_numeric(seam_row.get("thickness"), errors="coerce")
+            seam_thickness = _float_or_none(seam_row.get("thickness"))
+            seam_z_bottom = _float_or_none(seam_row.get("z_bottom"))
             layers.append({
                 "name": seam_name,
-                "thickness": float(seam_thickness) if pd.notna(seam_thickness) else 0.0,
+                "thickness": seam_thickness if seam_thickness is not None else 0.0,
                 "z_top": float(seam_z_top) if pd.notna(seam_z_top) else 0.0,
-                "z_bottom": float(seam_row.get("z_bottom")) if pd.notna(seam_row.get("z_bottom")) else 0.0,
-                "color": LITHOLOGY_COLORS.get("煤", "#2C2C2C")
+                "z_bottom": seam_z_bottom if seam_z_bottom is not None else 0.0,
+                "color": LITHOLOGY_COLORS.get("煤", "#2C2C2C"),
+                "tensile_strength": _float_or_none(seam_row.get("tensile_strength")),
+                "elastic_modulus": _float_or_none(seam_row.get("elastic_modulus")),
+                "compressive_strength": _float_or_none(seam_row.get("compressive_strength")),
+                "friction_angle": _float_or_none(seam_row.get("friction_angle")),
+                "density": _float_or_none(seam_row.get("density")),
+                "cohesion": _float_or_none(seam_row.get("cohesion")),
             })
 
             boreholes.append({

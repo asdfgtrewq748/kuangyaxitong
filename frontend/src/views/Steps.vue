@@ -520,11 +520,11 @@ onMounted(async () => {
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(145deg, #ffffff 0%, #f7fbfa 100%);
+  border: 1px solid rgba(14, 116, 144, 0.16);
   border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
 }
 
 .hero {
@@ -554,12 +554,13 @@ onMounted(async () => {
 }
 
 .btn {
-  border: none;
+  border: 1px solid transparent;
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
   padding: 10px 14px;
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
 .btn:disabled {
@@ -568,13 +569,26 @@ onMounted(async () => {
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: var(--gradient-primary);
   color: #fff;
+  box-shadow: 0 6px 16px rgba(14, 116, 144, 0.3);
+}
+
+.btn.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(14, 116, 144, 0.34);
 }
 
 .btn.secondary {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: #e9f0ee;
+  border-color: rgba(15, 118, 110, 0.18);
+  color: #1f2937;
+}
+
+.btn.secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.32);
+  background: #deebe8;
 }
 
 .spinner {
@@ -615,11 +629,18 @@ onMounted(async () => {
 
 .params-grid input,
 .params-grid select {
-  border: 1px solid #dbe3ef;
+  border: 1px solid #d5e4e1;
   border-radius: 10px;
   padding: 9px 10px;
   font-size: 13px;
   background: #fff;
+}
+
+.params-grid input:focus,
+.params-grid select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .kpi-grid {
@@ -629,10 +650,10 @@ onMounted(async () => {
 }
 
 .kpi-item {
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(14, 116, 144, 0.16);
   border-radius: 12px;
   padding: 12px;
-  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  background: linear-gradient(135deg, #ffffff, #f2f8f7);
 }
 
 .kpi-item span {
@@ -649,7 +670,7 @@ onMounted(async () => {
 }
 
 .kpi-item small {
-  color: #2563eb;
+  color: var(--color-info);
   font-size: 11px;
 }
 
@@ -686,8 +707,8 @@ onMounted(async () => {
   font-size: 11px;
   border-radius: 999px;
   padding: 4px 10px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: rgba(14, 116, 144, 0.14);
+  color: #0e7490;
 }
 
 .panel-body {
@@ -701,11 +722,11 @@ onMounted(async () => {
   min-height: 260px;
   display: grid;
   place-items: center;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed #bfd3d9;
   border-radius: 12px;
   font-size: 13px;
   color: #64748b;
-  background: #f8fafc;
+  background: #f4f9f8;
 }
 
 .stats-row {
@@ -715,9 +736,10 @@ onMounted(async () => {
 }
 
 .stat-item {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d8e6e3;
   border-radius: 10px;
   padding: 10px;
+  background: #fafdfc;
 }
 
 .stat-item span {
@@ -734,8 +756,8 @@ onMounted(async () => {
 }
 
 .suggestion {
-  border: 1px solid #dbeafe;
-  background: #eff6ff;
+  border: 1px solid #bde8de;
+  background: linear-gradient(135deg, #ecfdf8, #ddf7ef);
   border-radius: 12px;
   padding: 10px 12px;
 }
@@ -743,13 +765,13 @@ onMounted(async () => {
 .suggestion h4 {
   margin: 0 0 4px;
   font-size: 13px;
-  color: #1e3a8a;
+  color: #0f766e;
 }
 
 .suggestion p {
   margin: 0;
   font-size: 12px;
-  color: #1e40af;
+  color: #0f766e;
 }
 
 .table-wrap {
@@ -765,12 +787,12 @@ table {
 th,
 td {
   padding: 10px 12px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #d9e6e3;
   text-align: left;
 }
 
 thead th {
-  background: #f8fafc;
+  background: #eff6f4;
   color: #475569;
   font-weight: 700;
 }
