@@ -54,6 +54,12 @@ const routes = [
     meta: { title: '新算法实证', icon: 'flask', navOrder: 50, flowOrder: 40 }
   },
   {
+    path: '/research-workbench',
+    name: 'ResearchWorkbench',
+    component: () => import('../views/ResearchWorkbench.vue'),
+    meta: { title: '科研工作台', icon: 'book', navOrder: 55 }
+  },
+  {
     path: '/steps',
     name: 'Steps',
     component: () => import('../views/Steps.vue'),
@@ -73,4 +79,3 @@ const router = createRouter({
 })
 
 export default router
-

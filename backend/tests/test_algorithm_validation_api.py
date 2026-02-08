@@ -216,6 +216,8 @@ def test_validation_spatial_overview_returns_four_grids(tmp_path, monkeypatch):
     data = resp.json()
     assert data["seam_name"] == seam_name
     assert data["borehole_count"] == 4
+    assert data["evidence_level"] in {"none", "pseudo", "real"}
+    assert isinstance(data["label_mode_strict"], bool)
     assert set(data["grids"].keys()) == {"rsi", "bri", "asi", "mpi"}
     assert set(data["statistics"].keys()) == {"rsi", "bri", "asi", "mpi"}
     assert len(data["boreholes"]) == 4
@@ -255,6 +257,8 @@ def test_validation_spatial_overview_includes_real_label_stream(tmp_path, monkey
     )
     assert resp.status_code == 200
     data = resp.json()
+    assert data["evidence_level"] == "real"
+    assert data["label_mode_strict"] is True
     eval_inputs = data["evaluation_inputs"]
     assert eval_inputs["source"] == "validation_labels.csv"
     assert eval_inputs["mode"] == "real_label_stream"

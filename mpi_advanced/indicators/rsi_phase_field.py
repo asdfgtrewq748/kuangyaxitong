@@ -46,6 +46,7 @@ class PhaseFieldResult:
     strain_energy: np.ndarray # 应变能密度
     crack_tips: List[CrackTip]  # 裂纹尖端列表
     damage_index: float       # 整体损伤度
+    solver_info: Dict[str, Any]
 
 
 class PhaseFieldFractureModel:
@@ -108,6 +109,80 @@ class PhaseFieldFractureModel:
             phi = phi * (1 - damage_factor) + damage_factor
 
         return np.clip(phi, 0, 1)
+
+    def solve_phase_field_2d_fd(
+        self,
+        nx: int = 80,
+        ny: int = 80,
+        load_ratio: float = 1.0,
+        max_iter: int = 400,
+        tol: float = 1e-4,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """
+        二维有限差分相场求解（轻量实现）
+
+        近似方程：
+            -l0^2 * Δphi + phi = 1 - alpha * S(x, y)
+        """
+        nx = max(20, int(nx))
+        ny = max(20, int(ny))
+        dx = 1.0 / (nx - 1)
+        dy = 1.0 / (ny - 1)
+        dx2 = dx * dx
+        dy2 = dy * dy
+
+        x = np.linspace(0.0, 1.0, nx)
+        y = np.linspace(0.0, 1.0, ny)
+        X, Y = np.meshgrid(x, y, indexing="xy")
+
+        sigma = max(0.03, min(0.18, self.l_0 / 5.0))
+        source = np.exp(-((X - 0.5) ** 2 + (Y - 0.5) ** 2) / (2 * sigma * sigma))
+        source = source / (np.max(source) + 1e-12)
+
+        alpha = float(np.clip((load_ratio - 0.7) / 0.8, 0.0, 1.2))
+        rhs = np.clip(1.0 - alpha * source, 0.0, 1.0)
+
+        phi = np.ones((ny, nx), dtype=float)
+        phi_new = phi.copy()
+
+        coef_center = 1.0 + 2.0 * (self.l_0 ** 2 / dx2 + self.l_0 ** 2 / dy2)
+        coef_x = self.l_0 ** 2 / dx2
+        coef_y = self.l_0 ** 2 / dy2
+
+        residual = float("inf")
+        converged = False
+        it = 0
+        for it in range(1, max_iter + 1):
+            phi_new[:, :] = phi
+            for j in range(1, ny - 1):
+                for i in range(1, nx - 1):
+                    laplace_term = (
+                        coef_x * (phi[j, i - 1] + phi[j, i + 1]) +
+                        coef_y * (phi[j - 1, i] + phi[j + 1, i])
+                    )
+                    phi_new[j, i] = (laplace_term + rhs[j, i]) / coef_center
+
+            phi_new[0, :] = 1.0
+            phi_new[-1, :] = 1.0
+            phi_new[:, 0] = 1.0
+            phi_new[:, -1] = 1.0
+
+            np.clip(phi_new, 0.0, 1.0, out=phi_new)
+            residual = float(np.max(np.abs(phi_new - phi)))
+            phi[:, :] = phi_new
+            if residual < tol:
+                converged = True
+                break
+
+        return phi, {
+            "converged": converged,
+            "iterations": it,
+            "residual": residual,
+            "grid_shape": [ny, nx],
+            "load_ratio": float(load_ratio),
+            "alpha": alpha,
+            "tolerance": tol,
+        }
 
     def compute_phase_field_2d_analytical(self,
                                           X: np.ndarray,
@@ -314,7 +389,8 @@ class RSIIndicatorPhaseField(RSIIndicator):
                     'phase_field': {
                         'phi_field_shape': phase_field_result.phi_field.shape,
                         'damage_index': phase_field_result.damage_index,
-                        'crack_count': len(phase_field_result.crack_tips)
+                        'crack_count': len(phase_field_result.crack_tips),
+                        'solver': phase_field_result.solver_info,
                     },
                     'crack_tips': [
                         {
@@ -359,44 +435,53 @@ class RSIIndicatorPhaseField(RSIIndicator):
         # 临界应力
         sigma_c = pf_model._compute_critical_load()
 
-        # 判断是否开裂
-        if sigma_max < sigma_c:
-            # 未开裂，相场=1 (完好)
-            phi_field = np.ones(100)
-            damage_index = 0.0
-            crack_tips = []
-        else:
-            # 开裂，计算相场分布
-            # 裂纹从梁底部中点开始
-            x = np.linspace(0, span, 100)
+        load_ratio = sigma_max / (sigma_c + 1e-12)
+        phi_field, solver_info = pf_model.solve_phase_field_2d_fd(
+            nx=80,
+            ny=80,
+            load_ratio=float(load_ratio),
+            max_iter=500,
+            tol=1e-4,
+        )
 
-            # 初始裂纹位置
-            crack_pos = span / 2
+        damage = 1.0 - phi_field
+        damage_index = float(np.mean(damage))
+        crack_tips: List[CrackTip] = []
 
-            # 计算相场
-            phi_field = pf_model.compute_phase_field_1d(
-                x, crack_position=crack_pos, loading=sigma_max
-            )
-
-            # 计算损伤指标
-            damage_index = 1 - np.mean(phi_field)
-
-            # 识别裂纹尖端
-            crack_tips = [CrackTip(
-                position=np.array([crack_pos, 0]),
-                direction=np.array([0, 1]),
-                energy_release_rate=pf_model.compute_crack_driving_force(
-                    sigma_max**2 / (2*E_eq), 1.0, 1.0
-                ),
-                stress_intensity=sigma_max * np.sqrt(np.pi * pf_model.l_0)
-            )]
+        if load_ratio > 0.85:
+            gy, gx = np.gradient(damage)
+            grad = np.hypot(gx, gy)
+            threshold = np.percentile(grad, 99)
+            candidates = np.argwhere(grad >= threshold)
+            if candidates.size > 0:
+                best = candidates[np.argmax(grad[candidates[:, 0], candidates[:, 1]])]
+                by, bx = int(best[0]), int(best[1])
+                direction = np.array([float(gx[by, bx]), float(gy[by, bx])], dtype=float)
+                norm = float(np.linalg.norm(direction))
+                if norm > 1e-12:
+                    direction = direction / norm
+                else:
+                    direction = np.array([0.0, 1.0], dtype=float)
+                crack_tips.append(
+                    CrackTip(
+                        position=np.array([bx / max(phi_field.shape[1] - 1, 1), by / max(phi_field.shape[0] - 1, 1), 0.0]),
+                        direction=np.array([direction[0], direction[1], 0.0]),
+                        energy_release_rate=pf_model.compute_crack_driving_force(
+                            sigma_max**2 / max(2 * E_eq, 1e-12),
+                            max(pf_model.l_0, 1e-6),
+                            max(h_eq, 1e-6),
+                        ),
+                        stress_intensity=sigma_max * np.sqrt(np.pi * pf_model.l_0),
+                    )
+                )
 
         return PhaseFieldResult(
             phi_field=phi_field,
             displacement=np.zeros_like(phi_field),
             strain_energy=np.zeros_like(phi_field),
             crack_tips=crack_tips,
-            damage_index=damage_index
+            damage_index=damage_index,
+            solver_info=solver_info,
         )
 
     def _compute_fem_phase_field(self,
@@ -429,15 +514,12 @@ class RSIIndicatorPhaseField(RSIIndicator):
         # 基于相场的RSI计算
         # 考虑：损伤程度、裂纹数量、裂纹活跃度
 
-        if damage < 0.1:
-            # 轻微损伤
-            rsi = 90 - damage * 100
-        elif damage < 0.5:
-            # 中度损伤
-            rsi = 80 - damage * 120
+        if damage < 0.08:
+            rsi = 92 - damage * 110
+        elif damage < 0.3:
+            rsi = 84 - damage * 140
         else:
-            # 严重损伤
-            rsi = 20 - (damage - 0.5) * 40
+            rsi = 42 - (damage - 0.3) * 90
 
         rsi = max(0, min(100, rsi))
 
@@ -452,7 +534,10 @@ class RSIIndicatorPhaseField(RSIIndicator):
             'phase_field_min': float(np.min(pf_result.phi_field)),
             'phase_field_mean': float(np.mean(pf_result.phi_field)),
             'length_scale': self.length_scale,
-            'method': 'analytical' if not self.use_fenics else 'fem'
+            'method': 'fd2d' if not self.use_fenics else 'fem',
+            'solver_converged': bool(pf_result.solver_info.get('converged', False)),
+            'solver_iterations': int(pf_result.solver_info.get('iterations', 0)),
+            'solver_residual': float(pf_result.solver_info.get('residual', 0.0)),
         }
 
         # 如果有裂纹，添加详细信息
@@ -510,25 +595,39 @@ class RSIIndicatorPhaseField(RSIIndicator):
 
             # 相场分布
             ax1 = axes[0]
-            x = np.linspace(0, 1, len(pf_result.phi_field))
-            ax1.plot(x, pf_result.phi_field, 'b-', linewidth=2)
-            ax1.axhline(y=0.5, color='r', linestyle='--', label='损伤阈值')
-            ax1.set_xlabel('归一化位置')
-            ax1.set_ylabel('相场变量 φ')
-            ax1.set_title('相场分布 (φ=0断裂, φ=1完好)')
-            ax1.legend()
-            ax1.grid(True, alpha=0.3)
+            if pf_result.phi_field.ndim == 2:
+                im = ax1.imshow(pf_result.phi_field, cmap='viridis', vmin=0, vmax=1, origin='lower', aspect='auto')
+                ax1.set_title('相场分布 (φ=0断裂, φ=1完好)')
+                ax1.set_xlabel('x')
+                ax1.set_ylabel('y')
+                plt.colorbar(im, ax=ax1, fraction=0.046, pad=0.04)
+            else:
+                x = np.linspace(0, 1, len(pf_result.phi_field))
+                ax1.plot(x, pf_result.phi_field, 'b-', linewidth=2)
+                ax1.axhline(y=0.5, color='r', linestyle='--', label='损伤阈值')
+                ax1.set_xlabel('归一化位置')
+                ax1.set_ylabel('相场变量 φ')
+                ax1.set_title('相场分布 (φ=0断裂, φ=1完好)')
+                ax1.legend()
+                ax1.grid(True, alpha=0.3)
 
             # 损伤状态
             ax2 = axes[1]
             damage = 1 - pf_result.phi_field
-            colors = ['green' if d < 0.3 else 'orange' if d < 0.7 else 'red'
-                     for d in damage]
-            ax1.bar(range(len(damage)), damage, color=colors, alpha=0.6)
-            ax2.set_xlabel('位置索引')
-            ax2.set_ylabel('损伤度 (1-φ)')
-            ax2.set_title('损伤分布')
-            ax2.set_ylim(0, 1)
+            if damage.ndim == 2:
+                im2 = ax2.imshow(damage, cmap='inferno', vmin=0, vmax=1, origin='lower', aspect='auto')
+                ax2.set_title('损伤分布')
+                ax2.set_xlabel('x')
+                ax2.set_ylabel('y')
+                plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
+            else:
+                colors = ['green' if d < 0.3 else 'orange' if d < 0.7 else 'red'
+                         for d in damage]
+                ax2.bar(range(len(damage)), damage, color=colors, alpha=0.6)
+                ax2.set_xlabel('位置索引')
+                ax2.set_ylabel('损伤度 (1-φ)')
+                ax2.set_title('损伤分布')
+                ax2.set_ylim(0, 1)
 
             plt.tight_layout()
 

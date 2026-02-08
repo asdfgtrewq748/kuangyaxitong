@@ -992,11 +992,24 @@ def get_algorithm_validation_spatial_overview(
         seam_name=seam_name,
         borehole_names=[record["borehole_name"] for record in boreholes],
     )
+    label_mode = str(label_stream.get("mode", "pseudo_threshold"))
+    has_labels = bool(label_stream.get("available"))
+    if has_labels and label_mode == "real_label_stream":
+        evidence_level = "real"
+        label_mode_strict = True
+    elif has_labels:
+        evidence_level = "pseudo"
+        label_mode_strict = False
+    else:
+        evidence_level = "none"
+        label_mode_strict = False
 
     return {
         "seam_name": seam_name,
         "resolution": resolution,
         "method": method_key,
+        "evidence_level": evidence_level,
+        "label_mode_strict": label_mode_strict,
         "weights": norm_weights,
         "borehole_count": len(boreholes),
         "boreholes": boreholes,

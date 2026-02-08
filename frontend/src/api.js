@@ -288,3 +288,23 @@ export const validationSpatialOverview = (seamName = '16-3煤', resolution = 50,
   }
   return apiCache.cachedGet('/api/algorithm-validation/spatial-overview', { params })
 }
+
+// Research Reproducibility APIs
+export const researchRegisterDataset = (payload) =>
+  api.post('/api/research/dataset/register', payload)
+export const researchGetDataset = (datasetId) =>
+  api.get(`/api/research/dataset/${datasetId}`)
+export const researchSplitDataset = (datasetId, payload) =>
+  api.post(`/api/research/dataset/${datasetId}/split`, payload)
+export const researchRunExperiment = (payload) =>
+  api.post('/api/research/experiments/run', payload)
+export const researchGetExperiment = (expId) =>
+  api.get(`/api/research/experiments/${expId}`)
+export const researchGetArtifacts = (expId) =>
+  api.get(`/api/research/experiments/${expId}/artifacts`)
+export const researchDownloadArtifact = (expId, artifactName) =>
+  api.get(`/api/research/experiments/${expId}/artifacts/${encodeURIComponent(artifactName)}`, { responseType: 'blob' })
+export const researchListExperimentTemplates = () =>
+  api.get('/api/research/experiments/templates')
+export const researchRunExperimentSuite = (payload) =>
+  api.post('/api/research/experiments/run-suite', payload)

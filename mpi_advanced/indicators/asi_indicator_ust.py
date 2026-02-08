@@ -17,7 +17,7 @@ Abutment Stress Index based on Unified Strength Theory (UST)
 """
 
 import numpy as np
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional, List
 from scipy.optimize import fsolve
 
 from .asi_indicator import ASIIndicator
@@ -418,6 +418,100 @@ class ASIIndicatorUST(ASIIndicator):
             confidence += 0.1
 
         return min(0.95, confidence)
+
+    def calibrate_b_parameter(
+        self,
+        calibration_samples: List[Dict[str, Any]],
+        b_grid: Optional[List[float]] = None,
+        bootstrap_rounds: int = 200,
+        seed: int = 42,
+    ) -> Dict[str, Any]:
+        """
+        使用实测ASI样本校准UST参数 b，并给出不确定性区间。
+
+        calibration_samples 元素格式：
+            {
+              "geology": GeologyModel,
+              "target_asi": float
+            }
+        """
+        if not calibration_samples:
+            raise ValueError("calibration_samples is empty")
+
+        b_candidates = b_grid or [round(v, 2) for v in np.linspace(0.0, 1.0, 21)]
+        if not b_candidates:
+            raise ValueError("empty b grid")
+
+        valid_samples = []
+        for sample in calibration_samples:
+            geology = sample.get("geology")
+            target = sample.get("target_asi")
+            if geology is None or target is None:
+                continue
+            valid_samples.append((geology, float(target)))
+        if not valid_samples:
+            raise ValueError("no valid calibration samples")
+
+        def _rmse_for_b(b_value: float, pairs: List[Tuple[GeologyModel, float]]) -> float:
+            preds: List[float] = []
+            gts: List[float] = []
+            tmp_indicator = ASIIndicatorUST(b=float(b_value))
+            for geology, target in pairs:
+                result = tmp_indicator.compute(geology)
+                if not result.is_valid:
+                    continue
+                preds.append(float(result.value))
+                gts.append(float(target))
+            if not preds:
+                return float("inf")
+            err = np.asarray(preds) - np.asarray(gts)
+            return float(np.sqrt(np.mean(err ** 2)))
+
+        scores = []
+        for b_value in b_candidates:
+            rmse = _rmse_for_b(float(b_value), valid_samples)
+            scores.append({"b": float(b_value), "rmse": rmse})
+        scores = sorted(scores, key=lambda x: x["rmse"])
+        best = scores[0]
+
+        # Bootstrap for b uncertainty
+        rng = np.random.default_rng(seed)
+        n = len(valid_samples)
+        bootstrap_bs: List[float] = []
+        if n >= 2 and bootstrap_rounds > 0:
+            for _ in range(int(bootstrap_rounds)):
+                idx = rng.integers(0, n, size=n)
+                sampled = [valid_samples[i] for i in idx]
+                local_scores = [
+                    (float(b_value), _rmse_for_b(float(b_value), sampled))
+                    for b_value in b_candidates
+                ]
+                local_scores.sort(key=lambda x: x[1])
+                bootstrap_bs.append(local_scores[0][0])
+
+        if bootstrap_bs:
+            b_low, b_high = np.percentile(np.asarray(bootstrap_bs), [2.5, 97.5])
+        else:
+            b_low = best["b"]
+            b_high = best["b"]
+
+        self.b = float(best["b"])
+        self.config["ust_parameter_b"] = self.b
+        self.config["b_calibration"] = {
+            "best_b": self.b,
+            "ci95": [float(b_low), float(b_high)],
+            "sample_count": len(valid_samples),
+            "seed": int(seed),
+        }
+
+        return {
+            "best_b": self.b,
+            "rmse": float(best["rmse"]),
+            "ci95": [float(b_low), float(b_high)],
+            "sample_count": len(valid_samples),
+            "scores": scores,
+            "bootstrap_rounds": int(bootstrap_rounds),
+        }
 
     def compare_with_mohr_coulomb(self, geology: GeologyModel) -> Dict:
         """

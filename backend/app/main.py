@@ -30,6 +30,7 @@ from app.services.contour_generator import generate_matplotlib_contour_image, ge
 from app.routes.mpi import router as mpi_router
 from app.routes.rock_params import router as rock_params_router
 from app.routes.algorithm_validation import router as validation_router
+from app.routes.research import router as research_router
 
 app = FastAPI(title="Mining Pressure System API", version="0.1.0")
 
@@ -37,6 +38,7 @@ app = FastAPI(title="Mining Pressure System API", version="0.1.0")
 app.include_router(mpi_router)
 app.include_router(rock_params_router)
 app.include_router(validation_router)
+app.include_router(research_router)
 
 app.add_middleware(
     CORSMiddleware,
