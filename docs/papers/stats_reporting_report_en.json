@@ -1,0 +1,43 @@
+{
+  "summary": {
+    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_Science_Style_Draft_EN.docx",
+    "generated_at_utc": "2026-02-09T15:34:37.189710+00:00",
+    "missing_categories": [
+      "significance",
+      "effect_size"
+    ],
+    "missing_count": 2
+  },
+  "report": {
+    "categories": {
+      "metrics": {
+        "found": true,
+        "example": "er calibration: best_b=0.600, RMSE=0.000, 95%CI=\\[0.600, 0.600\\], samples="
+      },
+      "uncertainty": {
+        "found": true,
+        "example": " parameter b calibration with bootstrap CI; Eq. (2), (5)).  BRI module: microse"
+      },
+      "significance": {
+        "found": false,
+        "example": ""
+      },
+      "effect_size": {
+        "found": false,
+        "example": ""
+      },
+      "sample_size": {
+        "found": true,
+        "example": ".000, 95%CI=\\[0.600, 0.600\\], samples=4.  Note: This table validates the new"
+      },
+      "split_leakage": {
+        "found": true,
+        "example": "fference solver, boundary constraints, convergence checks; Eq. (3)-(4)).  A"
+      }
+    },
+    "missing": [
+      "significance",
+      "effect_size"
+    ]
+  }
+}

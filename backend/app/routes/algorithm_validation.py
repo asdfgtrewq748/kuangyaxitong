@@ -23,11 +23,8 @@ from app.services.interpolate import interpolate_from_points
 from app.services.mpi_calculator import (
     PointData,
     RockLayer,
-    calc_all_indicators,
-    calc_abutment_stress,
-    calc_burst_risk,
-    calc_roof_stability,
 )
+from app.services.mpi_new_algorithm import calc_all_indicators_new
 from app.services.rock_params_db import get_database, get_default_params
 
 
@@ -325,6 +322,60 @@ def _risk_label(level: str) -> str:
     if level == "medium":
         return "medium risk"
     return "high risk"
+
+
+def _status_rank(status: str) -> int:
+    return {"ok": 0, "warn": 1, "error": 2}.get(str(status), 0)
+
+
+def _merge_status(current: str, incoming: str) -> str:
+    return incoming if _status_rank(incoming) > _status_rank(current) else current
+
+
+def _build_indicator_diagnostic_summary(
+    boreholes: List[Dict[str, Any]],
+    stats: Dict[str, Dict[str, float]],
+) -> Dict[str, Any]:
+    summary: Dict[str, Dict[str, Any]] = {
+        "rsi": {"status": "ok", "issues": [], "problem_count": 0},
+        "bri": {"status": "ok", "issues": [], "problem_count": 0},
+        "asi": {"status": "ok", "issues": [], "problem_count": 0},
+        "mpi": {"status": "ok", "issues": [], "problem_count": 0},
+    }
+
+    for row in boreholes:
+        diagnostics = row.get("diagnostics") or {}
+        for metric in ("rsi", "bri", "asi"):
+            item = diagnostics.get(metric) or {}
+            status = str(item.get("status", "ok"))
+            summary[metric]["status"] = _merge_status(summary[metric]["status"], status)
+            issues = item.get("issues") or []
+            if status != "ok":
+                summary[metric]["problem_count"] += 1
+            for code in issues:
+                if code not in summary[metric]["issues"]:
+                    summary[metric]["issues"].append(code)
+
+    for metric in ("rsi", "bri", "asi", "mpi"):
+        metric_std = _to_float_or_none((stats.get(metric) or {}).get("std"))
+        if metric_std is not None and metric_std < 0.05:
+            summary[metric]["status"] = _merge_status(summary[metric]["status"], "warn")
+            if "low_spatial_variance" not in summary[metric]["issues"]:
+                summary[metric]["issues"].append("low_spatial_variance")
+
+    summary["mpi"]["status"] = "ok"
+    for metric in ("rsi", "bri", "asi"):
+        if summary[metric]["status"] != "ok":
+            summary["mpi"]["status"] = _merge_status(summary["mpi"]["status"], "warn")
+            summary["mpi"]["problem_count"] += summary[metric]["problem_count"]
+    if summary["mpi"]["status"] != "ok" and "upstream_indicator_issue" not in summary["mpi"]["issues"]:
+        summary["mpi"]["issues"].append("upstream_indicator_issue")
+
+    for metric in summary:
+        summary[metric]["issues"] = sorted(summary[metric]["issues"])
+
+    problem_indicators = [metric for metric, item in summary.items() if item["status"] != "ok"]
+    return {"summary": summary, "problem_indicators": problem_indicators}
 
 
 def _runs_dir() -> Path:
@@ -703,15 +754,29 @@ def _build_validation_result(run_id: str, payload: ValidationRunRequest) -> Dict
     else:
         events = _load_microseismic_events(payload.dataset_id)
 
-    point = _build_point(layers, payload.dataset_id)
-    rsi = _clamp(calc_roof_stability(point), 0.0, 100.0)
-    bri = _clamp(calc_burst_risk(point), 0.0, 100.0)
-    asi = _clamp(calc_abutment_stress(point), 0.0, 100.0)
-
     dbn_weights = payload.params.get("dbn", {}).get("weights", {})
     weights = _normalize_weights(dbn_weights if isinstance(dbn_weights, dict) else {})
+    point = _build_point(layers, payload.dataset_id)
+    event_payloads = [
+        {
+            "time": evt.time,
+            "location": evt.location,
+            "magnitude": evt.magnitude,
+        }
+        for evt in events
+    ]
+    indicator_payload = calc_all_indicators_new(
+        point=point,
+        weights=weights,
+        microseismic_events=event_payloads,
+        config=payload.params if isinstance(payload.params, dict) else {},
+    )
+    rsi = _clamp(float(indicator_payload["rsi"]), 0.0, 100.0)
+    bri = _clamp(float(indicator_payload["bri"]), 0.0, 100.0)
+    asi = _clamp(float(indicator_payload["asi"]), 0.0, 100.0)
+    mpi = _clamp(float(indicator_payload["mpi"]), 0.0, 100.0)
+    indicator_diagnostics = indicator_payload.get("diagnostics", {})
 
-    mpi = weights["rsi"] * rsi + weights["bri"] * bri + weights["asi"] * asi
     level = _risk_level(mpi)
     baseline_mpi = _clamp(mpi - 4.5, 0.0, 100.0)
     improvement = ((mpi - baseline_mpi) / baseline_mpi * 100.0) if baseline_mpi > 0 else 0.0
@@ -726,10 +791,19 @@ def _build_validation_result(run_id: str, payload: ValidationRunRequest) -> Dict
     errors: List[str] = []
     if not label_stream.get("available"):
         errors.append("no real label stream found for dataset")
+    for metric in ("rsi", "bri", "asi"):
+        diag = indicator_diagnostics.get(metric) or {}
+        status = str(diag.get("status", "ok"))
+        if status != "ok":
+            msg = str(diag.get("message", "")).strip()
+            issues = ",".join(diag.get("issues") or [])
+            errors.append(f"{metric}:{status}:{issues}:{msg}")
 
     return {
         "run_id": run_id,
         "status": "completed",
+        "algorithm_mode": str(indicator_payload.get("algorithm_mode", "advanced_v2")),
+        "indicator_diagnostics": indicator_diagnostics,
         "dataset_id": payload.dataset_id,
         "time_window": payload.time_window.model_dump() if payload.time_window else None,
         "kpi": {
@@ -740,15 +814,21 @@ def _build_validation_result(run_id: str, payload: ValidationRunRequest) -> Dict
             "improvement_vs_baseline_pct": round(improvement, 3),
         },
         "modules": {
-            "rsi": {"value": round(rsi, 3), "input_layers": len(layers)},
+            "rsi": {
+                "value": round(rsi, 3),
+                "input_layers": len(layers),
+                "diagnostics": indicator_diagnostics.get("rsi", {}),
+            },
             "bri": {
                 "value": round(bri, 3),
                 "event_count": len(events),
                 "avg_magnitude": round(_safe_mean([evt.magnitude for evt in events], 0.0), 3),
+                "diagnostics": indicator_diagnostics.get("bri", {}),
             },
             "asi": {
                 "value": round(asi, 3),
                 "avg_friction_angle": round(_safe_mean([layer.friction_angle or 30.0 for layer in layers], 30.0), 3),
+                "diagnostics": indicator_diagnostics.get("asi", {}),
             },
         },
         "fusion": {
@@ -946,7 +1026,11 @@ def get_algorithm_validation_spatial_overview(
         if seam_depth is not None and seam_depth > 0:
             point.burial_depth = seam_depth
 
-        indicator = calc_all_indicators(point, weights=norm_weights)
+        indicator = calc_all_indicators_new(
+            point=point,
+            weights=norm_weights,
+            microseismic_events=[],
+        )
         risk_level = _risk_level(indicator["mpi"])
 
         record = {
@@ -959,6 +1043,7 @@ def get_algorithm_validation_spatial_overview(
             "mpi": float(indicator["mpi"]),
             "risk_level": risk_level,
             "risk_label": _risk_label(risk_level),
+            "diagnostics": indicator.get("diagnostics", {}),
         }
 
         boreholes.append(record)
@@ -1004,10 +1089,13 @@ def get_algorithm_validation_spatial_overview(
         evidence_level = "none"
         label_mode_strict = False
 
+    diagnostics_payload = _build_indicator_diagnostic_summary(boreholes=boreholes, stats=stats)
+
     return {
         "seam_name": seam_name,
         "resolution": resolution,
         "method": method_key,
+        "algorithm_mode": "advanced_v2",
         "evidence_level": evidence_level,
         "label_mode_strict": label_mode_strict,
         "weights": norm_weights,
@@ -1016,6 +1104,8 @@ def get_algorithm_validation_spatial_overview(
         "grids": grids,
         "bounds": bounds,
         "statistics": stats,
+        "indicator_diagnostics": diagnostics_payload["summary"],
+        "problem_indicators": diagnostics_payload["problem_indicators"],
         "evaluation_inputs": {
             "available": bool(label_stream.get("available")),
             "mode": str(label_stream.get("mode", "pseudo_threshold")),

@@ -277,11 +277,14 @@ export const validationEvaluate = (payload) =>
   api.post('/api/algorithm-validation/evaluate', payload)
 export const validationExport = (runId) =>
   api.get(`/api/algorithm-validation/export/${runId}`, { responseType: 'blob' })
+const VALIDATION_SPATIAL_MODEL_REV = 'advanced_v2_asi_calibrated_v1'
+
 export const validationSpatialOverview = (seamName = '16-3煤', resolution = 50, method = 'idw', weights = null) => {
   const params = {
     seam_name: seamName,
     resolution,
-    method
+    method,
+    model_rev: VALIDATION_SPATIAL_MODEL_REV
   }
   if (weights && typeof weights === 'object') {
     params.weights = JSON.stringify(weights)
@@ -308,3 +311,11 @@ export const researchListExperimentTemplates = () =>
   api.get('/api/research/experiments/templates')
 export const researchRunExperimentSuite = (payload) =>
   api.post('/api/research/experiments/run-suite', payload)
+export const researchPapersOverview = () =>
+  api.get('/api/research/papers/overview')
+export const researchDownloadPaperAsset = (paperId, kind) =>
+  api.get(`/api/research/papers/${paperId}/download`, { params: { kind }, responseType: 'blob' })
+export const researchDownloadPaperBundle = (paperId) =>
+  api.get(`/api/research/papers/${paperId}/bundle`, { responseType: 'blob' })
+export const researchExperimentLeaderboard = (metric = 'auc', limit = 20) =>
+  api.get('/api/research/leaderboard/experiments', { params: { metric, limit } })

@@ -356,25 +356,33 @@ class ASIIndicatorUST(ASIIndicator):
         # 综合ASI计算
         # 相比原方法，UST考虑了中间主应力，结果更保守
 
-        # 归一化各指标
-        w1, w2, w3, w4 = 0.3, 0.25, 0.25, 0.2
+        # 使用无量纲风险分量避免线性放大导致的长期饱和。
+        w1, w2, w3, w4 = 0.35, 0.20, 0.20, 0.25
 
-        # 应力集中 (目标: < 2.5)
-        sci_norm = min(100, stress_concentration * 35)
+        # 应力集中风险：2.6附近为风险增长转折点。
+        sci_risk = 1.0 / (1.0 + np.exp(-(stress_concentration - 2.6) / 0.5))
 
-        # 塑性区 (目标: < 3倍半径)
-        pzr_norm = min(100, plastic_zone_ratio * 30)
+        # 塑性区风险：2.2倍半径附近进入明显风险区。
+        pzr_risk = 1.0 / (1.0 + np.exp(-(plastic_zone_ratio - 2.2) / 0.6))
 
-        # 高应力范围 (目标: < 10m)
-        hsr_norm = min(100, high_stress_range * 8)
+        # 高应力范围风险：按工作面尺度归一化。
+        high_stress_ratio = high_stress_range / max(6.0 * R0, 1e-6)
+        hsr_risk = min(1.0, max(0.0, high_stress_ratio))
 
-        # 应变能 (目标: 低)
-        sed_norm = min(100, max_strain_energy * 5e6)
+        # 应变能风险：相对当前地应力-弹性模量的参考应变能。
+        ref_strain_energy = max((P0 ** 2) / (2.0 * max(E, 1e-6)), 1e-6)
+        strain_energy_ratio = max_strain_energy / ref_strain_energy
+        sed_risk = 1.0 / (1.0 + np.exp(-(strain_energy_ratio - 6.0) / 2.0))
 
         # UST修正因子 (考虑中间主应力效应)
         ust_factor = 0.9 + 0.1 * self.b  # b越大，评估越保守
 
-        asi = 100 - (w1*sci_norm + w2*pzr_norm + w3*hsr_norm + w4*sed_norm) * ust_factor
+        risk_index = (w1 * sci_risk + w2 * pzr_risk + w3 * hsr_risk + w4 * sed_risk) * ust_factor
+        risk_index = min(1.0, max(0.0, risk_index))
+
+        # 将理论风险值映射到工程常用展示量程，避免长期“偏低压缩”。
+        asi_raw = 100.0 * (1.0 - risk_index)
+        asi = 15.0 + 0.85 * asi_raw
 
         details = {
             'stress_concentration': stress_concentration,
@@ -384,6 +392,21 @@ class ASIIndicatorUST(ASIIndicator):
             'max_strain_energy': max_strain_energy,
             'ust_parameter_b': self.b,
             'ust_factor': ust_factor,
+            'risk_components': {
+                'sci_risk': float(sci_risk),
+                'pzr_risk': float(pzr_risk),
+                'hsr_risk': float(hsr_risk),
+                'sed_risk': float(sed_risk),
+                'high_stress_ratio': float(high_stress_ratio),
+                'strain_energy_ratio': float(strain_energy_ratio),
+                'risk_index': float(risk_index),
+                'asi_raw': float(asi_raw),
+            },
+            'asi_calibration': {
+                'offset': 15.0,
+                'gain': 0.85,
+                'note': 'engineering_range_adjustment',
+            },
             'peak_stress_location': r[np.argmax(sigma_theta)] - R0,
             'equivalent_strength_parameters': {
                 'phi_ust_deg': np.degrees(ust.phi_ust),

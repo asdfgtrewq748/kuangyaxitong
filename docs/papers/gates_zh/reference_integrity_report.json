@@ -1,0 +1,32 @@
+{
+  "summary": {
+    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+    "generated_at_utc": "2026-02-10T09:08:29.610233+00:00",
+    "total": 2,
+    "verified": 2,
+    "unresolved": 0,
+    "strict": true
+  },
+  "results": [
+    {
+      "idx": 1,
+      "raw": "1\\. Francfort G A, Marigo J J. Revisiting brittle fracture as an energy minimization problem. DOI:10.1016/S0022-5096(98)00034-9.",
+      "identifier_type": "doi",
+      "identifier": "10.1016/S0022-5096(98)00034-9",
+      "status": "verified",
+      "resolved_title": "Revisiting brittle fracture as an energy minimization problem",
+      "resolved_source": "crossref",
+      "detail": ""
+    },
+    {
+      "idx": 2,
+      "raw": "2\\. Miehe C, Hofacker M, Welschinger F. A phase field model for rate-independent crack propagation. DOI:10.1016/j.cma.2010.04.011.",
+      "identifier_type": "doi",
+      "identifier": "10.1016/j.cma.2010.04.011",
+      "status": "verified",
+      "resolved_title": "A phase field model for rate-independent crack propagation: Robust algorithmic implementation based on operator splits",
+      "resolved_source": "crossref",
+      "detail": ""
+    }
+  ]
+}

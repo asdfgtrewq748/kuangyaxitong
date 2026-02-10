@@ -1,0 +1,64 @@
+{
+  "summary": {
+    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+    "generated_at_utc": "2026-02-10T09:08:30.052586+00:00",
+    "counts": {
+      "strong": 0,
+      "moderate": 2,
+      "exploratory": 3
+    },
+    "risky_strong_claim_count": 0,
+    "unlabeled_claim_candidate_count": 0
+  },
+  "report": {
+    "counts": {
+      "strong": 0,
+      "moderate": 2,
+      "exploratory": 3
+    },
+    "explicit_label_counts": {
+      "strong": 0,
+      "moderate": 2,
+      "exploratory": 3
+    },
+    "flags": [
+      {
+        "sentence": "**基于新MPI算法的论文初稿（RSI相场 + ASI-UST）**  作者甲，作者乙，作者丙  （单位名称，城市 邮编）  摘 要：  本文初稿完全基于新MPI算法体系，不再使用旧版经验公式。RSI采用相场断裂模型与二维有限差分求解，显式输出收敛信息；ASI采用统一强度理论（UST）解析模型，并支持参数b校准与置信区间估计；BRI采用微震驱动架构，在无微震流条件下自动降级到物理约束分支。系统与研究接口联动，实现数据版本固定、切分审计、实验归档与结果追溯。探索性结论：文中给出基于新算法的演示性场景结果和当前图件，用于支撑中英文论文排版与结构成稿。",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "$$MPI\\  = \\ w\\_ RSI\\ *\\ RSI\\  + \\ w\\_ BRI\\ *\\ BRI\\  + \\ w\\_ ASI\\ *\\ ASI$$  （1）  $$F\\_ UST\\  = \\ \\sigma ₁\\  - \\ (\\sigma ₂\\  + \\ b\\ *\\ \\sigma ₃)/(1\\  + \\ b)\\  - \\ f\\_ t$$  （2）  $$- \\ l₀²\\ *\\ \\nabla ²\\phi\\  + \\ \\phi\\  = \\ 1\\  - \\ \\alpha\\ *\\ S(x,y)$$  （3）  $$D\\  = \\ 1\\  - \\ \\phi$$  （4）  $$CI95(b)\\  = \\ ",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "中等结论：统计报告将覆盖显著性（p-value）与效应量，并在正式实验中给出相对提升（relative improvement）。",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "## 4 新算法演示结果    场景                RSI     BRI     ASI     MPI   ------------------- ------- ------- ------- -------   Scenario-LowRisk    86.87   93.61   39.41   77.36   Scenario-MidRisk    86.87   87.91   40.27   75.58   Scenario-HighRisk   86.87   69.70   41.02   69.40  探索性结论：UST参数b校准结果：best_b=0.6",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "探索性结论：当前演示数据未进行正式显著性检验（p-value），最终实证将报告显著性与效应量，并给出相对提升（relative improvement）与Cohen指标。",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      }
+    ],
+    "risky_strong_claims": [],
+    "unlabeled_claim_candidates": []
+  }
+}

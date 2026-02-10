@@ -113,6 +113,8 @@ def test_validation_run_and_result():
 
     result = result_resp.json()
     assert result["status"] == "completed"
+    assert result["algorithm_mode"] == "advanced_v2"
+    assert "indicator_diagnostics" in result
     assert "kpi" in result
     assert "modules" in result
     assert "fusion" in result
@@ -215,11 +217,13 @@ def test_validation_spatial_overview_returns_four_grids(tmp_path, monkeypatch):
 
     data = resp.json()
     assert data["seam_name"] == seam_name
+    assert data["algorithm_mode"] == "advanced_v2"
     assert data["borehole_count"] == 4
     assert data["evidence_level"] in {"none", "pseudo", "real"}
     assert isinstance(data["label_mode_strict"], bool)
     assert set(data["grids"].keys()) == {"rsi", "bri", "asi", "mpi"}
     assert set(data["statistics"].keys()) == {"rsi", "bri", "asi", "mpi"}
+    assert set(data["indicator_diagnostics"].keys()) == {"rsi", "bri", "asi", "mpi"}
     assert len(data["boreholes"]) == 4
 
     for metric in ("rsi", "bri", "asi", "mpi"):

@@ -25,7 +25,7 @@
 
     <main class="main-content">
       <div class="content-wrapper">
-        <section class="workflow-strip">
+        <section v-if="showWorkflowStrip" class="workflow-strip">
           <div class="workflow-head">
             <div class="workflow-progress" :title="`娴佺▼杩涘害 ${Math.round(completionRate * 100)}%`" :aria-label="`娴佺▼杩涘害 ${Math.round(completionRate * 100)}%`">
               <span class="progress-dot" aria-hidden="true"></span>
@@ -144,6 +144,7 @@ const flowRoutes = computed(() => {
 
 const activeRouteName = computed(() => String(route.name || ''))
 const seamQuery = computed(() => (workspaceState.selectedSeam ? { seam: workspaceState.selectedSeam } : undefined))
+const showWorkflowStrip = computed(() => route.meta?.workflow !== false)
 
 const isFlowDone = (name) => Boolean(workspaceState.steps?.[name])
 

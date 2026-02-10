@@ -561,6 +561,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   researchDownloadArtifact,
   researchGetArtifacts,
@@ -575,6 +576,8 @@ import {
 import { useToast } from '../composables/useToast'
 
 const toast = useToast()
+const route = useRoute()
+const router = useRouter()
 
 const comparisonMetricOrder = ['auc', 'pr_auc', 'f1', 'brier', 'mae', 'rmse', 'paired_significance_p']
 const higherBetterMetrics = new Set(['auc', 'pr_auc', 'f1'])
@@ -904,6 +907,28 @@ const saveBlob = (blob, filename) => {
 }
 
 const safeStamp = () => new Date().toISOString().replace(/[:.]/g, '-')
+const syncRouteExpId = (expId) => {
+  const nextExpId = String(expId || '').trim()
+  if (!nextExpId) return
+  const currentExpId = String(route.query?.exp_id || '').trim()
+  if (currentExpId === nextExpId) return
+  router.replace({
+    path: '/research-workbench',
+    query: {
+      ...route.query,
+      exp_id: nextExpId
+    }
+  }).catch(() => {})
+}
+
+const bootstrapExpFromRoute = async () => {
+  const expId = String(route.query?.exp_id || '').trim()
+  if (!expId) return
+  resultQueryExpId.value = expId
+  await loadExperimentResult()
+  await loadArtifacts()
+}
+
 const getJSZipCtor = async () => {
   if (jsZipCtor) return jsZipCtor
   const mod = await import('jszip')
@@ -1102,6 +1127,7 @@ const runExperiment = async () => {
     experimentResult.value = data
     loadedResult.value = data
     resultQueryExpId.value = data.exp_id
+    syncRouteExpId(data.exp_id)
     artifacts.value = []
     toast.success(`实验完成：${data.exp_id}`)
   } catch (error) {
@@ -1140,7 +1166,10 @@ const runSuite = async () => {
     const { data } = await researchRunExperimentSuite(payload)
     suiteResult.value = data
     const firstExpId = data?.runs?.[0]?.exp_id
-    if (firstExpId) resultQueryExpId.value = firstExpId
+    if (firstExpId) {
+      resultQueryExpId.value = firstExpId
+      syncRouteExpId(firstExpId)
+    }
     toast.success(`模板实验完成：${data.suite_id}`)
   } catch (error) {
     toast.error(getErrorMessage(error, '模板实验运行失败'))
@@ -1155,6 +1184,7 @@ const loadExperimentResult = async () => {
   try {
     const { data } = await researchGetExperiment(resultQueryExpId.value)
     loadedResult.value = data
+    syncRouteExpId(data.exp_id)
     toast.success(`已加载结果：${data.exp_id}`)
   } catch (error) {
     toast.error(getErrorMessage(error, '实验结果查询失败'))
@@ -1218,6 +1248,7 @@ const loadComparison = async () => {
     if (okRows.length > 0) {
       loadedResult.value = okRows[0]
       resultQueryExpId.value = okRows[0].exp_id
+      syncRouteExpId(okRows[0].exp_id)
     }
     if (failed.length > 0) {
       toast.warning(`部分实验加载失败：${failed.join(', ')}`)
@@ -1347,6 +1378,7 @@ const exportEvidenceBundle = async () => {
 
 onMounted(async () => {
   await loadTemplates()
+  await bootstrapExpFromRoute()
 })
 </script>
 
@@ -1737,3 +1769,4 @@ onMounted(async () => {
   }
 }
 </style>
+

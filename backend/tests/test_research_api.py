@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
+from zipfile import ZipFile
 
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.routes import research as research_routes
 
 
 client = TestClient(app)
@@ -171,3 +174,144 @@ def test_research_experiment_run_and_artifacts(tmp_path, monkeypatch):
     suite = suite_resp.json()
     assert suite["template_name"] == "rsi_paper_core"
     assert len(suite["runs"]) >= 2
+
+
+def test_research_papers_overview_and_download(tmp_path, monkeypatch):
+    papers_dir = tmp_path / "papers"
+    gates_en = papers_dir / "gates_en"
+    gates_zh = papers_dir / "gates_zh"
+    gates_en.mkdir(parents=True, exist_ok=True)
+    gates_zh.mkdir(parents=True, exist_ok=True)
+
+    en_doc = papers_dir / "en.docx"
+    zh_doc = papers_dir / "zh.docx"
+    en_doc.write_bytes(b"en-draft")
+    zh_doc.write_bytes(b"zh-draft")
+    (gates_en / "manuscript_gates_report.json").write_text(
+        '{"summary":{"overall_pass":true,"total_gates":4,"passed":4,"failed":0}}',
+        encoding="utf-8",
+    )
+    (gates_zh / "manuscript_gates_report.json").write_text(
+        '{"summary":{"overall_pass":false,"total_gates":4,"passed":3,"failed":1}}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(research_routes, "_PAPERS_DIR", papers_dir)
+    monkeypatch.setattr(
+        research_routes,
+        "_PAPER_SPECS",
+        {
+            "science_en": {
+                "title": "EN",
+                "language": "en",
+                "manuscript": "en.docx",
+                "gates_dir": "gates_en",
+            },
+            "coal_zh": {
+                "title": "ZH",
+                "language": "zh",
+                "manuscript": "zh.docx",
+                "gates_dir": "gates_zh",
+            },
+        },
+    )
+
+    overview_resp = client.get("/api/research/papers/overview")
+    assert overview_resp.status_code == 200
+    overview = overview_resp.json()
+    assert len(overview["papers"]) == 2
+    en_item = next(item for item in overview["papers"] if item["paper_id"] == "science_en")
+    assert en_item["manuscript"]["exists"] is True
+    assert en_item["gate_summary"]["overall_pass"] is True
+
+    download_resp = client.get("/api/research/papers/science_en/download", params={"kind": "manuscript"})
+    assert download_resp.status_code == 200
+    assert download_resp.content == b"en-draft"
+
+    bad_kind_resp = client.get("/api/research/papers/science_en/download", params={"kind": "unknown"})
+    assert bad_kind_resp.status_code == 400
+
+    bundle_resp = client.get("/api/research/papers/science_en/bundle")
+    assert bundle_resp.status_code == 200
+    with ZipFile(BytesIO(bundle_resp.content)) as zf:
+        names = set(zf.namelist())
+        assert "README.txt" in names
+        assert any(name.endswith("manuscript_en.docx") for name in names)
+
+
+def test_research_experiment_leaderboard(tmp_path, monkeypatch):
+    dataset_id = "research_demo"
+    _write_dataset(tmp_path, dataset_id=dataset_id)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+
+    register_payload = {
+        "dataset_id": dataset_id,
+        "label_schema": {
+            "label_column": "label",
+            "positive_values": [1],
+            "event_definition": "roof_pressure_event",
+            "time_window_hours": 24,
+        },
+    }
+    register_resp = client.post("/api/research/dataset/register", json=register_payload)
+    assert register_resp.status_code == 200
+    dataset_version = register_resp.json()["dataset_version"]
+
+    split_resp = client.post(
+        f"/api/research/dataset/{dataset_id}/split",
+        json={
+            "strategy": "borehole_block",
+            "borehole_column": "borehole_name",
+            "train_ratio": 0.5,
+            "val_ratio": 0.25,
+            "test_ratio": 0.25,
+            "seed": 13,
+        },
+    )
+    assert split_resp.status_code == 200
+    split_id = split_resp.json()["split_id"]
+
+    run1 = client.post(
+        "/api/research/experiments/run",
+        json={
+            "dataset_id": dataset_id,
+            "dataset_version": dataset_version,
+            "split_id": split_id,
+            "experiment_name": "baseline_a",
+            "model_type": "baseline",
+            "target_label_column": "label",
+            "seed": 100,
+        },
+    )
+    run2 = client.post(
+        "/api/research/experiments/run",
+        json={
+            "dataset_id": dataset_id,
+            "dataset_version": dataset_version,
+            "split_id": split_id,
+            "experiment_name": "rsi_a",
+            "model_type": "rsi_phase_field",
+            "target_label_column": "label",
+            "seed": 101,
+        },
+    )
+    assert run1.status_code == 200
+    assert run2.status_code == 200
+
+    lb_auc = client.get("/api/research/leaderboard/experiments", params={"metric": "auc", "limit": 10})
+    assert lb_auc.status_code == 200
+    payload_auc = lb_auc.json()
+    assert payload_auc["metric"] == "auc"
+    assert payload_auc["higher_is_better"] is True
+    assert payload_auc["total_runs"] >= 2
+    assert len(payload_auc["rows"]) >= 2
+    assert len(payload_auc["model_summary"]) >= 1
+    for item in payload_auc["model_summary"]:
+        assert "best_exp_id" in item
+        assert "dataset_count" in item
+
+    lb_brier = client.get("/api/research/leaderboard/experiments", params={"metric": "brier", "limit": 10})
+    assert lb_brier.status_code == 200
+    payload_brier = lb_brier.json()
+    assert payload_brier["higher_is_better"] is False
+    assert payload_brier["total_runs"] >= 2

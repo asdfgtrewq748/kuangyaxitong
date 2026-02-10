@@ -1,0 +1,64 @@
+{
+  "summary": {
+    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_Science_Style_Draft_EN.docx",
+    "generated_at_utc": "2026-02-10T09:08:30.063308+00:00",
+    "counts": {
+      "strong": 0,
+      "moderate": 2,
+      "exploratory": 3
+    },
+    "risky_strong_claim_count": 0,
+    "unlabeled_claim_candidate_count": 0
+  },
+  "report": {
+    "counts": {
+      "strong": 0,
+      "moderate": 2,
+      "exploratory": 3
+    },
+    "explicit_label_counts": {
+      "strong": 0,
+      "moderate": 2,
+      "exploratory": 3
+    },
+    "flags": [
+      {
+        "sentence": "\\[Moderate\\] ASI is computed by a unified-strength-theory (UST) analytical model with calibratable parameter b and uncertainty interval output.",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] We provide draft-level scenario results and current figures to support immediate manuscript writing, while reserving strict real-label field validation for final claims.",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Statistical reporting protocol includes uncertainty, significance (p-value), and effect size requirements for submission-stage experiments.",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "New-Algorithm Demonstration Results    Scenario            RSI     BRI     ASI     MPI   ------------------- ------- ------- ------- -------   Scenario-LowRisk    86.87   93.61   39.41   77.36   Scenario-MidRisk    86.87   87.91   40.27   75.58   Scenario-HighRisk   86.87   69.70   41.02   69.40  \\[",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] No formal significance test (p-value) is claimed for draft scenarios; final field-label runs will report significance and effect size, including relative improvement and Cohen\\'s d.",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      }
+    ],
+    "risky_strong_claims": [],
+    "unlabeled_claim_candidates": []
+  }
+}

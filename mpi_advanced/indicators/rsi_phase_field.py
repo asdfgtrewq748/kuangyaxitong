@@ -523,6 +523,22 @@ class RSIIndicatorPhaseField(RSIIndicator):
 
         rsi = max(0, min(100, rsi))
 
+        # Load-ratio correction: prevent high-load saturation from collapsing
+        # spatial RSI contrast into a near-constant field.
+        load_ratio = float(pf_result.solver_info.get('load_ratio', 1.0))
+        overload = max(0.0, load_ratio - 1.0)
+        overload_penalty = min(18.0, 7.5 * np.log1p(2.0 * overload))
+        if overload_penalty > 0:
+            rsi -= overload_penalty
+
+        # Mild bonus under low load keeps response symmetric around threshold.
+        underload = max(0.0, 0.9 - load_ratio)
+        underload_bonus = min(4.0, 12.0 * underload)
+        if underload_bonus > 0:
+            rsi += underload_bonus
+
+        rsi = max(0, min(100, rsi))
+
         # 裂纹惩罚
         crack_penalty = min(20, crack_count * 5)
         rsi -= crack_penalty
@@ -531,6 +547,9 @@ class RSIIndicatorPhaseField(RSIIndicator):
             'damage_index': damage,
             'crack_count': crack_count,
             'crack_penalty': crack_penalty,
+            'load_ratio': load_ratio,
+            'overload_penalty': float(overload_penalty),
+            'underload_bonus': float(underload_bonus),
             'phase_field_min': float(np.min(pf_result.phi_field)),
             'phase_field_mean': float(np.mean(pf_result.phi_field)),
             'length_scale': self.length_scale,
@@ -651,3 +670,7 @@ def create_phase_field_analytical(length_scale: float = 0.5) -> RSIIndicatorPhas
 def create_phase_field_fem(length_scale: float = 0.5) -> RSIIndicatorPhaseField:
     """创建有限元相场版本的RSI指标 (需要FEniCS)"""
     return RSIIndicatorPhaseField(length_scale=length_scale, use_fenics=True)
+
+def create_rsi_phase_field_standard(length_scale: float = 0.5) -> RSIIndicatorPhaseField:
+    """Compatibility factory for legacy API imports."""
+    return create_phase_field_analytical(length_scale=length_scale)

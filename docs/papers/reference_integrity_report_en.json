@@ -1,0 +1,62 @@
+{
+  "summary": {
+    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_Science_Style_Draft_EN.docx",
+    "generated_at_utc": "2026-02-09T15:23:51.264623+00:00",
+    "total": 5,
+    "verified": 2,
+    "unresolved": 3,
+    "strict": false
+  },
+  "results": [
+    {
+      "idx": 1,
+      "raw": "1\\. Francfort, G. A., & Marigo, J.-J. (1998). Revisiting brittle",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 2,
+      "raw": "DOI:10.1016/S0022-5096(98)00034-9.",
+      "identifier_type": "doi",
+      "identifier": "10.1016/S0022-5096(98)00034-9",
+      "status": "verified",
+      "resolved_title": "Revisiting brittle fracture as an energy minimization problem",
+      "resolved_source": "crossref",
+      "detail": ""
+    },
+    {
+      "idx": 3,
+      "raw": "2\\. Miehe, C., Hofacker, M., & Welschinger, F. (2010). A phase field",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 4,
+      "raw": "DOI:10.1016/j.cma.2010.04.011.",
+      "identifier_type": "doi",
+      "identifier": "10.1016/j.cma.2010.04.011",
+      "status": "verified",
+      "resolved_title": "A phase field model for rate-independent crack propagation: Robust algorithmic implementation based on operator splits",
+      "resolved_source": "crossref",
+      "detail": ""
+    },
+    {
+      "idx": 5,
+      "raw": "3\\. Yu, M. H. (1998). Twin-shear theory and its applications.",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    }
+  ]
+}

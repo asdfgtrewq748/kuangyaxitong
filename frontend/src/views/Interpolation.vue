@@ -819,24 +819,27 @@ const calculateUncertainty = () => {
   // Second pass: apply Gaussian smoothing (simplified)
   const smoothedMap = []
   const sigma = renderQuality.value === 'high' ? 3 : (renderQuality.value === 'standard' ? 2.4 : 2)
+  const kernelRadius = Math.max(1, Math.ceil(sigma * 2))
   for (let py = 0; py < resolution; py++) {
     smoothedMap[py] = []
     for (let px = 0; px < resolution; px++) {
       let sum = 0
       let weightSum = 0
-      for (let dy = -sigma; dy <= sigma; dy++) {
-        for (let dx = -sigma; dx <= sigma; dx++) {
+      for (let dy = -kernelRadius; dy <= kernelRadius; dy++) {
+        for (let dx = -kernelRadius; dx <= kernelRadius; dx++) {
           const ny = py + dy
           const nx = px + dx
           if (ny >= 0 && ny < resolution && nx >= 0 && nx < resolution) {
             const dist = Math.sqrt(dx*dx + dy*dy)
             const weight = Math.exp(-(dist*dist) / (2*sigma*sigma))
-            sum += uncertaintyMap[ny][nx] * weight
+            const sample = uncertaintyMap[ny]?.[nx]
+            if (!Number.isFinite(sample)) continue
+            sum += sample * weight
             weightSum += weight
           }
         }
       }
-      smoothedMap[py][px] = sum / weightSum
+      smoothedMap[py][px] = weightSum > 0 ? (sum / weightSum) : uncertaintyMap[py][px]
     }
   }
 

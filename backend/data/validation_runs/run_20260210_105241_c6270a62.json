@@ -1,0 +1,211 @@
+{
+  "run_id": "run_20260210_105241_c6270a62",
+  "status": "completed",
+  "algorithm_mode": "advanced_v2",
+  "indicator_diagnostics": {
+    "rsi": {
+      "status": "ok",
+      "issues": [],
+      "message": "",
+      "value": 86.8666,
+      "confidence": 0.95,
+      "uncertainty_range": [
+        78.3666,
+        95.3666
+      ],
+      "indicator_name": "RSI-PhaseField"
+    },
+    "bri": {
+      "status": "ok",
+      "issues": [],
+      "message": "",
+      "value": 1.9822,
+      "confidence": 0.6568,
+      "uncertainty_range": [
+        0.0,
+        17.1309
+      ],
+      "indicator_name": "BRI-Microseismic"
+    },
+    "asi": {
+      "status": "ok",
+      "issues": [],
+      "message": "",
+      "value": 30.9281,
+      "confidence": 0.95,
+      "uncertainty_range": [
+        22.3281,
+        39.5281
+      ],
+      "indicator_name": "ASI-UST"
+    }
+  },
+  "dataset_id": "demo_dataset",
+  "time_window": {
+    "train_start": "2025-01-01",
+    "train_end": "2025-10-31",
+    "test_start": "2025-11-01",
+    "test_end": "2025-12-31"
+  },
+  "kpi": {
+    "mpi_mean": 43.172,
+    "high_risk_ratio": 0.5683,
+    "auc": 0.619,
+    "brier_score": 0.2865,
+    "improvement_vs_baseline_pct": 11.636
+  },
+  "modules": {
+    "rsi": {
+      "value": 86.867,
+      "input_layers": 2,
+      "diagnostics": {
+        "status": "ok",
+        "issues": [],
+        "message": "",
+        "value": 86.8666,
+        "confidence": 0.95,
+        "uncertainty_range": [
+          78.3666,
+          95.3666
+        ],
+        "indicator_name": "RSI-PhaseField"
+      }
+    },
+    "bri": {
+      "value": 1.982,
+      "event_count": 1,
+      "avg_magnitude": 2.5,
+      "diagnostics": {
+        "status": "ok",
+        "issues": [],
+        "message": "",
+        "value": 1.9822,
+        "confidence": 0.6568,
+        "uncertainty_range": [
+          0.0,
+          17.1309
+        ],
+        "indicator_name": "BRI-Microseismic"
+      }
+    },
+    "asi": {
+      "value": 30.928,
+      "avg_friction_angle": 30.0,
+      "diagnostics": {
+        "status": "ok",
+        "issues": [],
+        "message": "",
+        "value": 30.9281,
+        "confidence": 0.95,
+        "uncertainty_range": [
+          22.3281,
+          39.5281
+        ],
+        "indicator_name": "ASI-UST"
+      }
+    }
+  },
+  "fusion": {
+    "mpi": 43.172,
+    "risk_level": "high",
+    "risk_label": "high risk",
+    "dynamic_weights": {
+      "rsi": 0.4,
+      "bri": 0.35,
+      "asi": 0.25
+    },
+    "baseline": {
+      "name": "old_mpi_v1",
+      "mpi": 38.672
+    }
+  },
+  "figures": {
+    "fig1_overview": {
+      "title": "Data coverage and quality overview",
+      "borehole_count": 2,
+      "microseismic_count": 1,
+      "label_samples": 0,
+      "label_source": ""
+    },
+    "fig5_dbn": {
+      "title": "DBN posterior trend",
+      "posterior": [
+        {
+          "t": "t-2",
+          "high_risk_prob": 0.4883
+        },
+        {
+          "t": "t-1",
+          "high_risk_prob": 0.5383
+        },
+        {
+          "t": "t",
+          "high_risk_prob": 0.5683
+        }
+      ]
+    },
+    "fig6_baseline_compare": {
+      "title": "New algorithm vs baseline",
+      "new_mpi": 43.172,
+      "baseline_mpi": 38.672
+    }
+  },
+  "tables": {
+    "table1_dataset_stats": {
+      "dataset_id": "demo_dataset",
+      "layer_count": 2,
+      "event_count": 1,
+      "label_count": 0
+    },
+    "table2_main_results": {
+      "auc": 0.619,
+      "brier_score": 0.2865,
+      "risk_level": "high",
+      "mpi_mean": 43.172
+    }
+  },
+  "config_snapshot": {
+    "dataset_id": "demo_dataset",
+    "time_window": {
+      "train_start": "2025-01-01",
+      "train_end": "2025-10-31",
+      "test_start": "2025-11-01",
+      "test_end": "2025-12-31"
+    },
+    "params": {
+      "rsi": {
+        "mesh_size": 50,
+        "time_steps": 10
+      },
+      "bri": {
+        "time_window_days": 7
+      },
+      "asi": {
+        "tunnel_radius": 3.0,
+        "original_stress": 10.0,
+        "support_pressure": 0.5,
+        "ust_parameter_b": 0.5
+      },
+      "dbn": {
+        "weights": {
+          "rsi": 0.4,
+          "bri": 0.35,
+          "asi": 0.25
+        }
+      }
+    },
+    "baseline": {
+      "name": "old_mpi_v1"
+    }
+  },
+  "evaluation_inputs": {
+    "source": "",
+    "y_true": [],
+    "y_prob": []
+  },
+  "errors": [
+    "no real label stream found for dataset"
+  ],
+  "created_at": "2026-02-10T10:52:42.225022+00:00",
+  "updated_at": "2026-02-10T10:52:42.225022+00:00"
+}

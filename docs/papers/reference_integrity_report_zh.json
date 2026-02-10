@@ -1,0 +1,112 @@
+{
+  "summary": {
+    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+    "generated_at_utc": "2026-02-09T15:24:42.754830+00:00",
+    "total": 10,
+    "verified": 2,
+    "unresolved": 8,
+    "strict": false
+  },
+  "results": [
+    {
+      "idx": 1,
+      "raw": "![](media/image1.png){width=\"6.102362204724409in\"",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 2,
+      "raw": "height=\"4.880610236220472in\"}",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 3,
+      "raw": "![](media/image2.png){width=\"6.102362204724409in\"",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 4,
+      "raw": "height=\"4.561986001749781in\"}",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 5,
+      "raw": "![](media/image3.png){width=\"6.102362204724409in\"",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 6,
+      "raw": "![](media/image4.png){width=\"6.102362204724409in\"",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 7,
+      "raw": "![](media/image5.png){width=\"6.102362204724409in\"",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    },
+    {
+      "idx": 8,
+      "raw": "minimization problem. DOI:10.1016/S0022-5096(98)00034-9.",
+      "identifier_type": "doi",
+      "identifier": "10.1016/S0022-5096(98)00034-9",
+      "status": "verified",
+      "resolved_title": "Revisiting brittle fracture as an energy minimization problem",
+      "resolved_source": "crossref",
+      "detail": ""
+    },
+    {
+      "idx": 9,
+      "raw": "rate-independent crack propagation. DOI:10.1016/j.cma.2010.04.011.",
+      "identifier_type": "doi",
+      "identifier": "10.1016/j.cma.2010.04.011",
+      "status": "verified",
+      "resolved_title": "A phase field model for rate-independent crack propagation: Robust algorithmic implementation based on operator splits",
+      "resolved_source": "crossref",
+      "detail": ""
+    },
+    {
+      "idx": 10,
+      "raw": "俞茂宏. 双剪理论及其应用. 科学出版社, 1998.",
+      "identifier_type": "none",
+      "identifier": "",
+      "status": "missing_identifier",
+      "resolved_title": "",
+      "resolved_source": "",
+      "detail": "no DOI/PMID/arXiv found in reference text"
+    }
+  ]
+}

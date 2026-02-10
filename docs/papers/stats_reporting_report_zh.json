@@ -1,0 +1,43 @@
+{
+  "summary": {
+    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+    "generated_at_utc": "2026-02-09T15:34:37.418768+00:00",
+    "missing_categories": [
+      "significance",
+      "effect_size"
+    ],
+    "missing_count": 2
+  },
+  "report": {
+    "categories": {
+      "metrics": {
+        "found": true,
+        "example": ".40  UST参数b校准结果：best_b=0.600, RMSE=0.000, 95%CI=\\[0.600, 0.600\\], 样本数=4。  "
+      },
+      "uncertainty": {
+        "found": true,
+        "example": "-UST模块  采用统一强度理论解析解，支持参数b网格搜索与Bootstrap置信区间，见式（2）与式（5）。  ## 2.3 BRI模块  采用微震驱动架构"
+      },
+      "significance": {
+        "found": false,
+        "example": ""
+      },
+      "effect_size": {
+        "found": false,
+        "example": ""
+      },
+      "sample_size": {
+        "found": true,
+        "example": ".000, 95%CI=\\[0.600, 0.600\\], 样本数=4。  注：上述结果用于验证新算法流程与排版结构，不作为最终投稿结论。  #"
+      },
+      "split_leakage": {
+        "found": true,
+        "example": "动降级到物理约束分支。系统与研究接口联动，实现数据版本固定、切分审计、实验归档与结果追溯。文中给出基于新算法的演示性场景结果和当前图件，用于支撑"
+      }
+    },
+    "missing": [
+      "significance",
+      "effect_size"
+    ]
+  }
+}

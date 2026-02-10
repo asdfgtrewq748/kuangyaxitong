@@ -35,11 +35,15 @@
         v-for="item in metricDefs"
         :key="item.key"
         class="metric-card"
-        :class="{ active: activeMetric === item.key }"
+        :class="{ active: activeMetric === item.key, problematic: isIndicatorProblem(item.key) }"
         type="button"
         @click="activeMetric = item.key"
       >
-        <div class="head"><strong>{{ item.label }}</strong><span>{{ item.desc }}</span></div>
+        <div class="head">
+          <strong>{{ item.label }}</strong>
+          <span>{{ item.desc }}</span>
+          <em v-if="isIndicatorProblem(item.key)" class="problem-dot">! 异常</em>
+        </div>
         <div class="value">{{ fmt(spatialData?.statistics?.[item.key]?.mean) }}</div>
         <div class="meta"><span>最低 {{ fmt(spatialData?.statistics?.[item.key]?.min) }}</span><span>最高 {{ fmt(spatialData?.statistics?.[item.key]?.max) }}</span></div>
         <div class="risk-bar" :style="{ background: legendGradient(item.key) }"></div>
@@ -72,6 +76,10 @@
         <div v-if="hasSpatialData" class="trust-banner">
           <span class="trust-chip real">空间图：真实钻孔与坐标数据</span>
           <span class="trust-chip warn">评估：{{ evalSourceLabel }}</span>
+          <span class="trust-chip info">算法：{{ algorithmModeLabel }}</span>
+          <span v-if="problemIndicatorLabels.length" class="trust-chip danger">
+            指标异常：{{ problemIndicatorLabels.join('、') }}
+          </span>
           <span v-if="showLowContrastHint" class="trust-chip hint">当前指标范围 {{ fmt(currentMetricRange) }}，固定量程会压缩色差</span>
           <span v-if="matrixSelection !== 'all' && matrixSelectionCount > 0" class="trust-chip link">
             联动高亮 {{ matrixRoleLabel(matrixSelection) }} · {{ matrixSelectionCount }}点
@@ -295,6 +303,7 @@ const activePointerId = ref(null)
 const exportStaticMode = ref(false)
 const thumbCanvasRefs = {}
 const spatialCache = new Map()
+const SPATIAL_CACHE_MODEL_REV = 'advanced_v2_asi_calibrated_v1'
 let jsZipCtor = null
 
 const getJSZipCtor = async () => {
@@ -314,6 +323,21 @@ const normalizedWeights = computed(() => {
 })
 
 const hasSpatialData = computed(() => !!(spatialData.value?.grids && spatialData.value?.statistics && spatialData.value?.boreholes))
+const algorithmModeLabel = computed(() => {
+  const mode = String(spatialData.value?.algorithm_mode || '')
+  if (mode === 'advanced_v2') return '新算法(advanced_v2)'
+  if (!mode) return '未标记'
+  return mode
+})
+const problemIndicators = computed(() => {
+  const items = spatialData.value?.problem_indicators
+  if (Array.isArray(items)) return items
+  const diagnostics = spatialData.value?.indicator_diagnostics || {}
+  return Object.keys(diagnostics).filter((key) => diagnostics?.[key]?.status && diagnostics[key].status !== 'ok')
+})
+const problemIndicatorLabels = computed(() => (
+  problemIndicators.value.map((key) => metricLabel(key))
+))
 const currentMetricStats = computed(() => spatialData.value?.statistics?.[activeMetric.value] || {})
 const currentMetricRange = computed(() => {
   const stats = currentMetricStats.value
@@ -482,6 +506,7 @@ const onResize = () => {
 }
 
 const metricLabel = (metric) => metricDefs.find((item) => item.key === metric)?.label || metric.toUpperCase()
+const isIndicatorProblem = (metric) => problemIndicators.value.includes(metric)
 const legendGradient = (metric) => getLegendGradient(metric)
 const fmt = (value, digit = 2) => (value === undefined || value === null || Number.isNaN(Number(value)) ? '--' : Number(value).toFixed(digit))
 const pct = (value) => `${(Number(value || 0) * 100).toFixed(0)}%`
@@ -524,7 +549,15 @@ const nearestByWorld = (wx, wy, boreholes) => {
 
 const cacheKey = () => {
   const w = normalizedWeights.value
-  return [seamName.value, resolution.value, method.value, w.rsi.toFixed(3), w.bri.toFixed(3), w.asi.toFixed(3)].join('|')
+  return [
+    SPATIAL_CACHE_MODEL_REV,
+    seamName.value,
+    resolution.value,
+    method.value,
+    w.rsi.toFixed(3),
+    w.bri.toFixed(3),
+    w.asi.toFixed(3)
+  ].join('|')
 }
 
 const setThumbCanvasRef = (metric) => (el) => {
@@ -1137,8 +1170,10 @@ onBeforeUnmount(() => {
 .metric-card { border: 1px solid var(--border-color-light); border-radius: var(--border-radius-md); background: var(--bg-elevated); box-shadow: var(--shadow-sm); padding: 10px 12px; text-align: left; cursor: pointer; transition: all var(--transition-normal); }
 .metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .metric-card.active { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(15,118,110,.18); }
+.metric-card.problematic { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, .2); }
 .metric-card .head { display: flex; justify-content: space-between; gap: 8px; }
 .metric-card .head span { font-size: 11px; color: var(--text-tertiary); }
+.metric-card .head .problem-dot { margin-left: auto; font-style: normal; font-size: 10px; color: #b45309; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 999px; padding: 1px 6px; }
 .metric-card .value { margin-top: 5px; font-size: 24px; font-family: 'Times New Roman', serif; color: #111827; }
 .metric-card .meta { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--text-secondary); }
 .risk-bar { margin-top: 8px; height: 7px; border-radius: 999px; }
@@ -1156,6 +1191,8 @@ onBeforeUnmount(() => {
 .trust-chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 10px; font-size: 11px; border: 1px solid transparent; font-weight: 600; }
 .trust-chip.real { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
 .trust-chip.warn { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+.trust-chip.info { color: #0c4a6e; background: #ecfeff; border-color: #a5f3fc; }
+.trust-chip.danger { color: #991b1b; background: #fef2f2; border-color: #fca5a5; }
 .trust-chip.hint { color: #7c2d12; background: #fff7ed; border-color: #fdba74; }
 .trust-chip.link { color: #0e7490; background: #e7f8f3; border-color: #99ead7; }
 .trust-meta { font-size: 11px; color: #64748b; }

@@ -866,3 +866,7 @@ def create_dbn_fusion_basic() -> DBNFusionAdvanced:
 def create_dbn_fusion_temporal() -> DBNFusionAdvanced:
     """创建完整DBN融合器 (有时序)"""
     return DBNFusionAdvanced(use_temporal=True)
+
+def create_dbn_fusion_standard() -> DBNFusionAdvanced:
+    """Compatibility factory for legacy API imports."""
+    return create_dbn_fusion_basic()

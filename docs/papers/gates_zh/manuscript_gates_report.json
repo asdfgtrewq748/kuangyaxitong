@@ -1,0 +1,85 @@
+{
+  "summary": {
+    "input_docx": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+    "lang": "zh",
+    "generated_at_utc": "2026-02-10T09:08:30.500737+00:00",
+    "total_gates": 4,
+    "passed": 4,
+    "failed": 0,
+    "overall_pass": true
+  },
+  "gates": [
+    {
+      "name": "docx_formula_qa",
+      "command": [
+        "D:\\Anaconda\\python.exe",
+        "C:\\Users\\刘浩天\\.codex\\skills\\arp\\scripts\\docx_research_qa.py",
+        "--docx",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+        "--lang",
+        "zh",
+        "--min-equations",
+        "5"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "stdout": "[PASS] d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx\n  equation_count=10\n  numbering_ok=True\n  message=QA passed",
+      "stderr": ""
+    },
+    {
+      "name": "reference_integrity",
+      "command": [
+        "D:\\Anaconda\\python.exe",
+        "C:\\Users\\刘浩天\\.codex\\skills\\arp\\scripts\\reference_integrity_check.py",
+        "--input",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+        "--out-json",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\reference_integrity_report.json",
+        "--out-md",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\reference_integrity_report.md",
+        "--strict"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "stdout": "[INFO] total=2 verified=2 unresolved=0\n[INFO] report_json=d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\reference_integrity_report.json\n[INFO] report_md=d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\reference_integrity_report.md",
+      "stderr": ""
+    },
+    {
+      "name": "claim_strength",
+      "command": [
+        "D:\\Anaconda\\python.exe",
+        "C:\\Users\\刘浩天\\.codex\\skills\\arp\\scripts\\claim_strength_audit.py",
+        "--input",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+        "--out-json",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\claim_strength_report.json",
+        "--out-md",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\claim_strength_report.md",
+        "--strict",
+        "--require-labels"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "stdout": "[INFO] strong=0 moderate=2 exploratory=3\n[INFO] explicit_labels=0/2/3\n[INFO] risky_strong_claims=0\n[INFO] unlabeled_claim_candidates=0\n[INFO] report_json=d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\claim_strength_report.json\n[INFO] report_md=d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\claim_strength_report.md",
+      "stderr": ""
+    },
+    {
+      "name": "stats_reporting",
+      "command": [
+        "D:\\Anaconda\\python.exe",
+        "C:\\Users\\刘浩天\\.codex\\skills\\arp\\scripts\\stats_reporting_check.py",
+        "--input",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_煤炭学报格式_中文初稿.docx",
+        "--out-json",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\stats_reporting_report.json",
+        "--out-md",
+        "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\stats_reporting_report.md",
+        "--strict"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "stdout": "[INFO] missing_count=0\n[INFO] missing_categories=[]\n[INFO] report_json=d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\stats_reporting_report.json\n[INFO] report_md=d:\\xiangmu\\kuangyaxitong\\docs\\papers\\gates_zh\\stats_reporting_report.md",
+      "stderr": ""
+    }
+  ]
+}

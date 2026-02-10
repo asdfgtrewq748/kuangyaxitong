@@ -1,14 +1,13 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-import os
 import sys
-import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from zipfile import ZipFile
 
 from docx import Document
-from docx.enum.section import WD_SECTION_START
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
@@ -23,40 +22,41 @@ ZH_OUT = OUT_DIR / "MPI_煤炭学报格式_中文初稿.docx"
 FIGURES = [
     {
         "path": ROOT / "frontend" / "public" / "mpi-algorithm" / "flow_overview.png",
-        "en": "Figure 1. End-to-end workflow of the current MPI prototype.",
-        "zh": "图1 当前MPI原型系统流程总览。",
+        "en": "Figure 1. Workflow of the new MPI research pipeline.",
+        "zh": "图1 新MPI科研流程总览。",
     },
     {
         "path": ROOT / "frontend" / "public" / "mpi-algorithm" / "rsi_stability.png",
-        "en": "Figure 2. RSI stability response under roof-mechanical scenarios.",
-        "zh": "图2 RSI顶板稳定性响应曲线。",
+        "en": "Figure 2. RSI-PhaseField stability behavior.",
+        "zh": "图2 RSI相场稳定性响应。",
     },
     {
         "path": ROOT / "frontend" / "public" / "mpi-algorithm" / "bri_depth_curve.png",
-        "en": "Figure 3. BRI trend with mining depth and energy accumulation factors.",
-        "zh": "图3 BRI随埋深与能量因子变化曲线。",
+        "en": "Figure 3. BRI trend under depth and energy factors.",
+        "zh": "图3 BRI随埋深与能量因子变化趋势。",
     },
     {
         "path": ROOT / "frontend" / "public" / "mpi-algorithm" / "asi_stress_profile.png",
-        "en": "Figure 4. ASI-UST stress distribution profile.",
-        "zh": "图4 ASI-UST应力分布剖面。",
+        "en": "Figure 4. ASI-UST stress profile.",
+        "zh": "图4 ASI-UST应力剖面。",
     },
     {
         "path": ROOT / "frontend" / "public" / "mpi-algorithm" / "mpi_panels.png",
-        "en": "Figure 5. Multi-indicator panels (RSI/BRI/ASI/MPI).",
-        "zh": "图5 多指标综合面板（RSI/BRI/ASI/MPI）。",
+        "en": "Figure 5. RSI/BRI/ASI/MPI panels.",
+        "zh": "图5 RSI/BRI/ASI/MPI综合面板。",
     },
 ]
 
 
-def _set_style_font(style, ascii_font: str, east_asia_font: str, size_pt: int, bold: bool = False) -> None:
+def _set_style_font(style: Any, ascii_font: str, east_asia_font: str, size_pt: int, bold: bool = False) -> None:
     style.font.name = ascii_font
     style.font.size = Pt(size_pt)
     style.font.bold = bold
     style._element.rPr.rFonts.set(qn("w:eastAsia"), east_asia_font)
 
 
-def _setup_page(doc: Document, *, a4: bool = True) -> None:
+
+def _setup_page(doc: Document, a4: bool = True) -> None:
     for section in doc.sections:
         section.top_margin = Cm(2.5)
         section.bottom_margin = Cm(2.5)
@@ -65,6 +65,7 @@ def _setup_page(doc: Document, *, a4: bool = True) -> None:
         if a4:
             section.page_width = Cm(21.0)
             section.page_height = Cm(29.7)
+
 
 
 def _configure_en_styles(doc: Document) -> None:
@@ -78,6 +79,7 @@ def _configure_en_styles(doc: Document) -> None:
         p.space_after = Pt(6)
 
 
+
 def _configure_zh_styles(doc: Document) -> None:
     _set_style_font(doc.styles["Normal"], "Times New Roman", "宋体", 12)
     _set_style_font(doc.styles["Heading 1"], "Times New Roman", "黑体", 14, bold=True)
@@ -89,7 +91,8 @@ def _configure_zh_styles(doc: Document) -> None:
         p.space_after = Pt(6)
 
 
-def _add_center_paragraph(doc: Document, text: str, size: int = 12, bold: bool = False, east_asia_font: str = "宋体") -> None:
+
+def _add_center_text(doc: Document, text: str, size: int = 12, bold: bool = False, east_asia_font: str = "宋体") -> None:
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = p.add_run(text)
@@ -99,310 +102,433 @@ def _add_center_paragraph(doc: Document, text: str, size: int = 12, bold: bool =
     run._element.rPr.rFonts.set(qn("w:eastAsia"), east_asia_font)
 
 
-def _add_figure(doc: Document, image_path: Path, caption: str) -> None:
-    if not image_path.exists():
+
+def _add_figure(doc: Document, path: Path, caption: str) -> None:
+    if not path.exists():
         return
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = p.add_run()
-    run.add_picture(str(image_path), width=Cm(15.8))
-    cap = doc.add_paragraph(caption)
-    cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run.add_picture(str(path), width=Cm(15.5))
+    cp = doc.add_paragraph(caption)
+    cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 
-def _run_demo_experiments() -> Optional[Dict]:
+
+def _add_omml_equation(doc: Document, equation_text: str, number: Optional[str] = None) -> None:
     """
-    Build a tiny reproducible demo split and collect current pipeline metrics.
-    This is for draft-table scaffolding only, not publication-grade claims.
+    Insert a Word OMML equation object instead of plain pseudo-formula text.
     """
-    try:
-        sys.path.insert(0, str(ROOT / "backend"))
-        from app.services.research_manager import (
-            create_split_manifest,
-            register_dataset_manifest,
-            run_experiment,
-        )
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        base = Path(tempfile.mkdtemp(prefix="mpi_paper_demo_"))
-        os.environ["DATA_DIR"] = str(base)
-        dataset_id = "paper_demo"
-        csv_path = base / f"{dataset_id}.csv"
-        csv_path.write_text(
-            "sample_id,borehole_name,event_time,elastic_modulus,friction_angle,cohesion,thickness,label\n"
-            "1,BH01,2025-01-01,18,28,2.5,8,1\n"
-            "2,BH01,2025-01-02,17,29,2.3,7,0\n"
-            "3,BH02,2025-01-03,23,33,3.0,10,1\n"
-            "4,BH02,2025-01-04,22,32,3.1,9,1\n"
-            "5,BH03,2025-01-05,14,26,1.8,6,0\n"
-            "6,BH03,2025-01-06,13,25,1.7,5,0\n"
-            "7,BH04,2025-01-07,21,31,2.9,9,1\n"
-            "8,BH04,2025-01-08,20,30,2.8,8,0\n",
-            encoding="utf-8",
-        )
+    omath_para = OxmlElement("m:oMathPara")
+    omath = OxmlElement("m:oMath")
+    mr = OxmlElement("m:r")
+    mt = OxmlElement("m:t")
+    mt.text = equation_text
+    mr.append(mt)
+    omath.append(mr)
+    omath_para.append(omath)
+    p._p.append(omath_para)
 
-        manifest = register_dataset_manifest(
-            dataset_id=dataset_id,
-            label_schema={
-                "label_column": "label",
-                "positive_values": [1],
-                "event_definition": "roof_pressure_event",
-                "time_window_hours": 24,
-            },
-            description="draft table demo only",
-        )
-        split = create_split_manifest(
-            dataset_id=dataset_id,
-            strategy="borehole_block",
-            train_ratio=0.5,
-            val_ratio=0.25,
-            test_ratio=0.25,
-            seed=11,
-            time_column="event_time",
-            borehole_column="borehole_name",
-        )
+    if number:
+        n = doc.add_paragraph(number)
+        n.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-        def _exp(model_type: str, name: str) -> Dict:
-            return run_experiment(
+
+def _build_demo_point(name: str, depth: float, coal_thickness: float, roof_e: float, roof_tensile: float, friction: float) -> Dict[str, Any]:
+    return {
+        "name": name,
+        "depth": depth,
+        "point": {
+            "x": 0.0,
+            "y": 0.0,
+            "borehole": name,
+            "thickness": coal_thickness,
+            "burial_depth": depth,
+            "strata": [
                 {
-                    "dataset_id": dataset_id,
-                    "dataset_version": manifest["dataset_version"],
-                    "split_id": split["split_id"],
-                    "experiment_name": name,
-                    "model_type": model_type,
-                    "target_label_column": "label",
-                    "seed": 123,
-                }
-            )
-
-        baseline = _exp("baseline", "baseline_v1")
-        rsi = _exp("rsi_phase_field", "rsi_phasefield_v1")
-        asi = _exp("asi_ust", "asi_ust_v1")
-        return {
-            "dataset_note": f"demo split with {manifest['row_count']} samples",
-            "rows": [
-                ("Baseline", baseline["metrics"]),
-                ("RSI-PhaseField", rsi["metrics"]),
-                ("ASI-UST", asi["metrics"]),
+                    "name": "sandstone_roof",
+                    "thickness": 7.0,
+                    "elastic_modulus": roof_e,
+                    "tensile_strength": roof_tensile,
+                    "cohesion": 4.0,
+                    "friction_angle": friction,
+                    "compressive_strength": 65.0,
+                },
+                {
+                    "name": "mudstone_interlayer",
+                    "thickness": 4.0,
+                    "elastic_modulus": 9.0,
+                    "tensile_strength": 1.3,
+                    "cohesion": 2.0,
+                    "friction_angle": 27.0,
+                    "compressive_strength": 30.0,
+                },
             ],
+        },
+    }
+
+
+
+def _run_new_algorithm_demo() -> Optional[Dict[str, Any]]:
+    try:
+        if str(ROOT / "backend") not in sys.path:
+            sys.path.insert(0, str(ROOT / "backend"))
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+
+        from app.services.mpi_calculator import MPIConfig, PointData, RockLayer, calc_all_indicators
+        from mpi_advanced.core.data_models import GeologyLayer, GeologyLayerType, GeologyModel, MiningParameters
+        from mpi_advanced.indicators.asi_indicator_ust import ASIIndicatorUST
+
+        cfg = MPIConfig(ust_parameter_b=0.5, phase_field_length_scale=0.5)
+        scenarios = [
+            _build_demo_point("Scenario-LowRisk", 380.0, 3.2, 24.0, 3.8, 34.0),
+            _build_demo_point("Scenario-MidRisk", 460.0, 3.8, 18.0, 2.8, 30.0),
+            _build_demo_point("Scenario-HighRisk", 580.0, 4.6, 12.0, 1.8, 26.0),
+        ]
+
+        rows: List[Tuple[str, Dict[str, float]]] = []
+        for item in scenarios:
+            p = item["point"]
+            point = PointData(
+                x=float(p["x"]),
+                y=float(p["y"]),
+                borehole=str(p["borehole"]),
+                thickness=float(p["thickness"]),
+                burial_depth=float(p["burial_depth"]),
+                strata=[RockLayer(**layer) for layer in p["strata"]],
+            )
+            rows.append((item["name"], calc_all_indicators(point, config=cfg)))
+
+        def _geo(roof_thickness: float, support_pressure: float) -> GeologyModel:
+            layers = [
+                GeologyLayer(
+                    name="Coal",
+                    layer_type=GeologyLayerType.COAL,
+                    thickness=3.5,
+                    depth_top=0.0,
+                    depth_bottom=3.5,
+                    elastic_modulus=3e9,
+                    poisson_ratio=0.30,
+                    cohesion=2e6,
+                    friction_angle=20.0,
+                    tensile_strength=0.8e6,
+                    fracture_toughness=0.5,
+                    density=1400,
+                ),
+                GeologyLayer(
+                    name="Roof",
+                    layer_type=GeologyLayerType.SANDSTONE,
+                    thickness=roof_thickness,
+                    depth_top=3.5,
+                    depth_bottom=3.5 + roof_thickness,
+                    elastic_modulus=20e9,
+                    poisson_ratio=0.25,
+                    cohesion=6e6,
+                    friction_angle=32.0,
+                    tensile_strength=2.5e6,
+                    fracture_toughness=1.2,
+                    density=2500,
+                ),
+            ]
+            mining = MiningParameters(
+                panel_length=180.0,
+                panel_width=140.0,
+                mining_height=3.5,
+                mining_depth=450.0,
+                advance_rate=4.0,
+                support_pressure=support_pressure,
+            )
+            return GeologyModel(layers=layers, mining_params=mining)
+
+        target = ASIIndicatorUST(b=0.6)
+        geos = [_geo(5.0, 0.22e6), _geo(6.0, 0.28e6), _geo(7.2, 0.35e6), _geo(8.5, 0.42e6)]
+        samples = [{"geology": g, "target_asi": float(target.compute(g).value)} for g in geos]
+        cal = ASIIndicatorUST(b=0.1).calibrate_b_parameter(samples, bootstrap_rounds=60, seed=2026)
+
+        return {
+            "rows": rows,
+            "calibration": {
+                "best_b": float(cal["best_b"]),
+                "rmse": float(cal["rmse"]),
+                "ci95": [float(cal["ci95"][0]), float(cal["ci95"][1])],
+                "sample_count": int(cal["sample_count"]),
+            },
+            "note": "Deterministic synthetic scenarios generated by the new MPI algorithm stack.",
         }
     except Exception:
         return None
 
 
-def _add_metrics_table(doc: Document, title: str, metrics_data: Optional[Dict], zh: bool = False) -> None:
+
+def _add_indicator_table(doc: Document, title: str, demo_data: Optional[Dict[str, Any]], zh: bool = False) -> None:
     doc.add_heading(title, level=2)
-    headers = ["Model", "AUC", "PR-AUC", "Brier", "F1", "MAE", "RMSE", "p"]
+    headers = ["Scenario", "RSI", "BRI", "ASI", "MPI"] if not zh else ["场景", "RSI", "BRI", "ASI", "MPI"]
     table = doc.add_table(rows=1, cols=len(headers))
     table.style = "Table Grid"
-    for idx, h in enumerate(headers):
-        table.rows[0].cells[idx].text = h if not zh else {
-            "Model": "模型",
-            "AUC": "AUC",
-            "PR-AUC": "PR-AUC",
-            "Brier": "Brier",
-            "F1": "F1",
-            "MAE": "MAE",
-            "RMSE": "RMSE",
-            "p": "显著性p",
-        }[h]
+    for i, h in enumerate(headers):
+        table.rows[0].cells[i].text = h
 
-    if metrics_data:
-        for model_name, m in metrics_data["rows"]:
+    if demo_data:
+        for scenario, values in demo_data["rows"]:
             row = table.add_row().cells
-            row[0].text = model_name
-            row[1].text = f"{m.get('auc', 0):.4f}"
-            row[2].text = f"{m.get('pr_auc', 0):.4f}"
-            row[3].text = f"{m.get('brier', 0):.4f}"
-            row[4].text = f"{m.get('f1', 0):.4f}"
-            row[5].text = f"{m.get('mae', 0):.4f}"
-            row[6].text = f"{m.get('rmse', 0):.4f}"
-            p_val = m.get("paired_significance_p")
-            row[7].text = "-" if p_val is None or str(p_val) == "nan" else f"{float(p_val):.4g}"
-        note = (
-            f"Note: The table reports preliminary reproducibility results ({metrics_data['dataset_note']}) for draft structure only."
-            if not zh
-            else f"注：该表为当前可复现实验流水线的演示结果（{metrics_data['dataset_note']}），仅用于初稿结构展示。"
-        )
-        doc.add_paragraph(note)
+            row[0].text = scenario
+            row[1].text = f"{values['rsi']:.2f}"
+            row[2].text = f"{values['bri']:.2f}"
+            row[3].text = f"{values['asi']:.2f}"
+            row[4].text = f"{values['mpi']:.2f}"
+
+        cal = demo_data["calibration"]
+        if zh:
+            doc.add_paragraph(
+                f"探索性结论：UST参数b校准结果：best_b={cal['best_b']:.3f}, RMSE={cal['rmse']:.3f}, "
+                f"95%CI=[{cal['ci95'][0]:.3f}, {cal['ci95'][1]:.3f}], 样本数={cal['sample_count']}。"
+            )
+            doc.add_paragraph(
+                "探索性结论：当前演示数据未进行正式显著性检验（p-value），最终实证将报告显著性与效应量，"
+                "并给出相对提升（relative improvement）与Cohen指标。"
+            )
+            doc.add_paragraph("注：上述结果用于验证新算法流程与排版结构，不作为最终投稿结论。")
+        else:
+            doc.add_paragraph(
+                f"[Exploratory] UST b-parameter calibration: best_b={cal['best_b']:.3f}, RMSE={cal['rmse']:.3f}, "
+                f"95%CI=[{cal['ci95'][0]:.3f}, {cal['ci95'][1]:.3f}], samples={cal['sample_count']}."
+            )
+            doc.add_paragraph(
+                "[Exploratory] No formal significance test (p-value) is claimed for draft scenarios; final field-label runs "
+                "will report significance and effect size, including relative improvement and Cohen's d."
+            )
+            doc.add_paragraph("Note: This table validates the new algorithm pipeline and manuscript structure only.")
     else:
-        fallback = (
-            "Preliminary metric table placeholder. Replace with strict real-label runs before submission."
+        doc.add_paragraph(
+            "Placeholder table. Rerun with local dependencies to generate new-algorithm scenario values."
             if not zh
-            else "预留结果表：投稿前请替换为真实标签严格实验结果。"
+            else "结果占位。请在本地依赖完整时重跑脚本以生成新算法演示结果。"
         )
-        doc.add_paragraph(fallback)
 
 
-def build_en_doc(metrics_data: Optional[Dict]) -> None:
+
+def build_en_doc(demo_data: Optional[Dict[str, Any]]) -> None:
     doc = Document()
     _setup_page(doc, a4=False)
     _configure_en_styles(doc)
 
-    _add_center_paragraph(
+    _add_center_text(
         doc,
-        "Physics-Informed Multi-Indicator Framework for Mine Pressure Assessment: "
-        "A Reproducible RSI-PhaseField and ASI-UST Prototype",
+        "New MPI Algorithm Draft for SCI Submission: RSI-PhaseField and ASI-UST Integration",
         size=16,
         bold=True,
         east_asia_font="Times New Roman",
     )
-    _add_center_paragraph(doc, "Author A1, Author B2, Author C1,*", size=12, east_asia_font="Times New Roman")
-    _add_center_paragraph(doc, "1 School/Institute Name; 2 Industry Partner; *Corresponding author", size=11, east_asia_font="Times New Roman")
-    _add_center_paragraph(doc, "One-sentence Summary: A reproducible prototype links roof, burst, and abutment mechanics into a unified MPI workflow.", size=11, east_asia_font="Times New Roman")
+    _add_center_text(doc, "Author A, Author B, Author C", size=12, east_asia_font="Times New Roman")
+    _add_center_text(doc, "Affiliation 1; Affiliation 2", size=11, east_asia_font="Times New Roman")
+    _add_center_text(doc, "One-sentence summary: A reproducible MPI pipeline built on new phase-field and UST algorithms.", size=11, east_asia_font="Times New Roman")
 
     doc.add_heading("Abstract", level=1)
     doc.add_paragraph(
-        "This draft presents a reproducible mine-pressure assessment prototype that integrates roof stability "
-        "(RSI), burst risk (BRI), and abutment stress (ASI) into a weighted MPI framework. The current implementation "
-        "combines a finite-difference phase-field module for RSI and a unified-strength-theory (UST) analytical module "
-        "for ASI, while preserving a transparent baseline engine for comparison. A dedicated research API fixes "
-        "dataset versions, split manifests, leakage audits, experiment specs, and artifact archiving, enabling "
-        "traceable evidence chains for manuscript preparation. We summarize the present algorithmic basis, reproducibility "
-        "protocol, and preliminary demonstration results on a development split. Although the present data scale is not "
-        "sufficient for publication claims, the system-level architecture and evaluation contract establish a practical "
-        "foundation for strict real-label validation and near-term SCI submissions."
+        "This manuscript draft is fully based on the new MPI algorithm stack. RSI is computed by a phase-field fracture "
+        "formulation with a lightweight 2D finite-difference solver and explicit convergence diagnostics. [Moderate] ASI is computed by "
+        "a unified-strength-theory (UST) analytical model with calibratable parameter b and uncertainty interval output. "
+        "BRI is handled by a microseismic-ready module that falls back to deterministic physics-aware scoring when no "
+        "microseismic stream is available. The implementation is connected to reproducibility endpoints for dataset manifesting, "
+        "split auditing, experiment tracking, and artifact archiving. [Exploratory] We provide draft-level scenario results and current figures "
+        "to support immediate manuscript writing, while reserving strict real-label field validation for final claims."
     )
     doc.add_paragraph("Keywords: mine pressure; phase-field fracture; unified strength theory; reproducibility; risk assessment")
 
     doc.add_heading("Main Text", level=1)
     doc.add_heading("1. Introduction", level=2)
     doc.add_paragraph(
-        "Conventional mine-pressure assessment pipelines often mix empirical formulas with undocumented assumptions, "
-        "which limits repeatability and weakens scientific claims. The current work targets a reproducible intermediate "
-        "stage: preserving engineering usability while progressively upgrading physical consistency and experiment traceability."
+        "The previous empirical MPI formulas have been retired in this draft. The present version only uses the new research-oriented "
+        "algorithm implementations from the mpi_advanced module."
     )
 
-    doc.add_heading("2. Algorithmic Basis of the Current Prototype", level=2)
-    doc.add_paragraph("The baseline MPI engine computes sub-indicators in [0,100] and combines them using weighted summation:")
-    doc.add_paragraph("MPI = w_RSI * RSI + w_BRI * BRI + w_ASI * ASI, with default weights (0.40, 0.35, 0.25).")
-    doc.add_paragraph("RSI baseline combines immediate-roof tensile score, key-layer count score, and soft-rock proportion score.")
-    doc.add_paragraph("BRI baseline follows depth penalty, hard-thick energy accumulation, and seam-thickness terms.")
-    doc.add_paragraph("ASI baseline combines stiffness and friction-angle scores; ASI-UST extends this with UST parameter b and analytical stress fields.")
-    doc.add_paragraph("The RSI advanced track uses a 2D finite-difference phase-field solver with explicit boundary conditions, convergence tolerance, and solver metadata.")
-    doc.add_paragraph("The ASI advanced track includes calibrate_b_parameter(...) to estimate b and 95% CI from labeled samples.")
+    doc.add_heading("2. New MPI Algorithm Stack", level=2)
+    doc.add_paragraph("RSI module: RSI-PhaseField (2D finite-difference solver, boundary constraints, convergence checks; Eq. (3)-(4)).")
+    doc.add_paragraph("ASI module: ASI-UST (analytical stress field, parameter b calibration with bootstrap CI; Eq. (2), (5)).")
+    doc.add_paragraph("BRI module: microseismic-driven architecture with no-signal fallback branch.")
+    doc.add_paragraph("Fusion module: weighted MPI synthesis under explicit reproducibility metadata (Eq. (1)).")
+    _add_omml_equation(
+        doc,
+        "MPI = w_RSI * RSI + w_BRI * BRI + w_ASI * ASI",
+        number="(1)",
+    )
+    _add_omml_equation(
+        doc,
+        "F_UST = σ₁ - (σ₂ + b * σ₃)/(1 + b) - f_t",
+        number="(2)",
+    )
+    _add_omml_equation(
+        doc,
+        "- l₀² * ∇²ϕ + ϕ = 1 - α * S(x,y)",
+        number="(3)",
+    )
+    _add_omml_equation(
+        doc,
+        "D = 1 - ϕ",
+        number="(4)",
+    )
+    _add_omml_equation(
+        doc,
+        "CI95(b) = [Q_2.5%(b*), Q_97.5%(b*)]",
+        number="(5)",
+    )
 
-    doc.add_heading("3. Reproducibility Protocol and Evidence Contract", level=2)
+    doc.add_heading("3. Reproducibility and Evidence Protocol", level=2)
     doc.add_paragraph(
-        "The research API standardizes dataset registration, split generation, experiment execution, and artifact retrieval. "
-        "Mandatory metrics include AUC, PR-AUC, F1, Brier, ECE, MAE, RMSE, with bootstrap 95% CI and paired significance tests."
+        "All experiments are designed to bind dataset version, split manifest, seed, and model spec. Metrics and artifacts are archived "
+        "for traceability and manuscript reconstruction."
     )
     doc.add_paragraph(
-        "Every run is bound to dataset_id, dataset_version (hash), split_id, and seed. Leakage audits explicitly report "
-        "borehole overlap and time ranges across train/validation/test."
+        "[Moderate] Statistical reporting protocol includes uncertainty, significance (p-value), and effect size requirements "
+        "for submission-stage experiments."
     )
+    doc.add_paragraph("Calibration uncertainty is reported by Eq. (5), and all risk fusion outputs are tied to Eq. (1).")
 
-    _add_metrics_table(doc, "4. Preliminary Demonstration Results", metrics_data, zh=False)
+    _add_indicator_table(doc, "4. New-Algorithm Demonstration Results", demo_data, zh=False)
 
-    doc.add_heading("5. Current Figures from the Prototype", level=2)
+    doc.add_heading("5. Current Figures", level=2)
     for fig in FIGURES:
         _add_figure(doc, fig["path"], fig["en"])
 
-    doc.add_heading("6. Limitations and Near-Term Submission Plan", level=2)
+    doc.add_heading("6. Limitations and Next Submission Step", level=2)
     doc.add_paragraph(
-        "The present quantitative table is generated from a small development split and should not be interpreted as final efficacy. "
-        "Primary claims in manuscript submission must rely on strict real-label runs and larger field-scale validation. "
-        "The next step is to freeze dataset manifests and complete RSI-phase-field and ASI-UST core experiment suites on production data."
+        "Current values are scenario demonstrations for pipeline verification. Final paper claims must be based on strict field-label "
+        "experiments using frozen dataset manifests and leakage-safe splits."
     )
 
     doc.add_heading("References", level=1)
     refs = [
-        "Francfort, G. A., & Marigo, J.-J. (1998). Revisiting brittle fracture as an energy minimization problem.",
-        "Miehe, C., Hofacker, M., & Welschinger, F. (2010). A phase field model for rate-independent crack propagation.",
-        "Yu, M. H. (1998). Twin-shear theory and its applications.",
-        "Project codebase: backend/app/services/mpi_calculator.py",
-        "Project codebase: mpi_advanced/indicators/rsi_phase_field.py",
-        "Project codebase: mpi_advanced/indicators/asi_indicator_ust.py",
-        "Project protocol: docs/research_evaluation_protocol.md",
+        "Francfort, G. A., & Marigo, J.-J. (1998). Revisiting brittle fracture as an energy minimization problem. DOI:10.1016/S0022-5096(98)00034-9.",
+        "Miehe, C., Hofacker, M., & Welschinger, F. (2010). A phase field model for rate-independent crack propagation. DOI:10.1016/j.cma.2010.04.011.",
     ]
-    for idx, ref in enumerate(refs, 1):
-        doc.add_paragraph(f"{idx}. {ref}")
+    for i, ref in enumerate(refs, 1):
+        doc.add_paragraph(f"{i}. {ref}")
 
     doc.save(str(EN_OUT))
 
 
-def build_zh_doc(metrics_data: Optional[Dict]) -> None:
+
+def build_zh_doc(demo_data: Optional[Dict[str, Any]]) -> None:
     doc = Document()
     _setup_page(doc, a4=True)
     _configure_zh_styles(doc)
 
-    _add_center_paragraph(doc, "基于当前基础算法的矿压影响指标（MPI）科研化初稿", size=18, bold=True, east_asia_font="黑体")
-    _add_center_paragraph(doc, "作者1，作者2，作者3", size=12, east_asia_font="宋体")
-    _add_center_paragraph(doc, "（单位名称，城市 邮编）", size=11, east_asia_font="宋体")
+    _add_center_text(doc, "基于新MPI算法的论文初稿（RSI相场 + ASI-UST）", size=18, bold=True, east_asia_font="黑体")
+    _add_center_text(doc, "作者甲，作者乙，作者丙", size=12, east_asia_font="宋体")
+    _add_center_text(doc, "（单位名称，城市 邮编）", size=11, east_asia_font="宋体")
 
     doc.add_paragraph("摘  要：")
     doc.add_paragraph(
-        "针对现阶段矿压评估系统在“可复现证据链”与“物理机制可解释性”方面的提升需求，本文基于当前代码库的基础算法与新近升级模块，"
-        "构建了一个面向论文产出的科研化原型。方法上，在保留RSI/BRI/ASI传统可解释框架的基础上，引入RSI相场有限差分求解器与ASI统一强度理论（UST）解析模型，"
-        "并通过研究接口实现数据版本固化、切分防泄漏审计、实验归档与产物追溯。系统统一输出AUC、PR-AUC、F1、Brier、ECE、MAE、RMSE及95%置信区间，"
-        "支持与基线方法进行配对显著性检验。给出了基于当前开发数据切分的演示性结果与图件，用于验证流程闭环与投稿材料组织能力。"
-        "结果表明：现有系统已具备“方法-数据-实验-图表”一体化初稿支撑能力，为后续真实矿压标签条件下的严格实证与SCI投稿奠定了工程基础。"
+        "本文初稿完全基于新MPI算法体系，不再使用旧版经验公式。RSI采用相场断裂模型与二维有限差分求解，"
+        "显式输出收敛信息；ASI采用统一强度理论（UST）解析模型，并支持参数b校准与置信区间估计；BRI采用微震驱动架构，"
+        "在无微震流条件下自动降级到物理约束分支。系统与研究接口联动，实现数据版本固定、切分审计、实验归档与结果追溯。"
+        "探索性结论：文中给出基于新算法的演示性场景结果和当前图件，用于支撑中英文论文排版与结构成稿。"
     )
     doc.add_paragraph("关键词：矿压影响指标；相场断裂；统一强度理论；可复现性；风险评估")
 
     doc.add_heading("1 引言", level=1)
-    doc.add_paragraph(
-        "煤矿矿压风险评估长期存在模型离散、数据治理薄弱与实验复现困难等问题。当前项目目标并非直接给出最终投稿结论，"
-        "而是先建立符合学术审稿要求的“可追溯实证平台”，并在该平台上推进RSI相场与ASI-UST两条创新主线。"
+    doc.add_paragraph("旧版MPI经验公式已在本轮中退出主流程，当前后端计算与论文材料统一切换到新MPI算法实现。")
+
+    doc.add_heading("2 新MPI算法体系", level=1)
+    doc.add_heading("2.1 RSI相场模块", level=2)
+    doc.add_paragraph("采用二维有限差分相场求解器，包含边界条件、迭代收敛判据与损伤指标提取，见式（3）-（4）。")
+
+    doc.add_heading("2.2 ASI-UST模块", level=2)
+    doc.add_paragraph("采用统一强度理论解析解，支持参数b网格搜索与Bootstrap置信区间，见式（2）与式（5）。")
+
+    doc.add_heading("2.3 BRI模块", level=2)
+    doc.add_paragraph("采用微震驱动架构，在缺失微震流时走受约束降级分支，保证工程可用性与模型一致性。")
+    _add_omml_equation(
+        doc,
+        "MPI = w_RSI * RSI + w_BRI * BRI + w_ASI * ASI",
+        number="（1）",
+    )
+    _add_omml_equation(
+        doc,
+        "F_UST = σ₁ - (σ₂ + b * σ₃)/(1 + b) - f_t",
+        number="（2）",
+    )
+    _add_omml_equation(
+        doc,
+        "- l₀² * ∇²ϕ + ϕ = 1 - α * S(x,y)",
+        number="（3）",
+    )
+    _add_omml_equation(
+        doc,
+        "D = 1 - ϕ",
+        number="（4）",
+    )
+    _add_omml_equation(
+        doc,
+        "CI95(b) = [Q_2.5%(b*), Q_97.5%(b*)]",
+        number="（5）",
     )
 
-    doc.add_heading("2 当前基础算法与升级路径", level=1)
-    doc.add_heading("2.1 基础MPI加权框架", level=2)
-    doc.add_paragraph("MPI = w_RSI×RSI + w_BRI×BRI + w_ASI×ASI，默认权重分别为0.40、0.35、0.25。")
-    doc.add_paragraph("RSI由直接顶抗拉强度、关键层数量与软岩比例综合得到；BRI由埋深、硬厚岩层能量与煤层厚度项构成；ASI由刚度与摩擦角项构成。")
-
-    doc.add_heading("2.2 RSI相场模块（当前实现）", level=2)
+    doc.add_heading("3 可复现性协议", level=1)
+    doc.add_paragraph("中等结论：通过 /api/research/* 接口完成数据注册、切分、实验运行与产物追踪，保证图表和结论可追溯。")
     doc.add_paragraph(
-        "在现有版本中，RSI高级模块已具备二维有限差分求解能力，支持边界条件、迭代收敛判据与求解器信息输出，"
-        "可用于裂纹损伤指标与风险评分的耦合验证。"
+        "中等结论：统计报告将覆盖显著性（p-value）与效应量，并在正式实验中给出相对提升（relative improvement）。"
     )
 
-    doc.add_heading("2.3 ASI-UST模块（当前实现）", level=2)
-    doc.add_paragraph(
-        "ASI高级模块采用统一强度理论解析解，显式考虑中间主应力影响，并提供参数b校准函数（含Bootstrap置信区间）。"
-    )
+    _add_indicator_table(doc, "4 新算法演示结果", demo_data, zh=True)
 
-    doc.add_heading("3 科研评估协议与可复现性设计", level=1)
-    doc.add_paragraph(
-        "系统通过 /api/research/* 接口完成数据注册、版本哈希绑定、切分审计、实验运行与产物下载。"
-        "评估指标统一为AUC、PR-AUC、F1、Brier、ECE、MAE、RMSE，并输出95%CI与配对显著性检验结果。"
-    )
-    doc.add_paragraph(
-        "切分策略优先采用time_borehole_block或borehole_block，要求训练/验证/测试在钻孔维度无交叉，"
-        "并记录时间窗信息，避免信息泄漏导致的结果高估。"
-    )
-
-    _add_metrics_table(doc, "4 演示性实验结果（流程验证）", metrics_data, zh=True)
-
-    doc.add_heading("5 当前基础图件", level=1)
+    doc.add_heading("5 当前图件", level=1)
     for fig in FIGURES:
         _add_figure(doc, fig["path"], fig["zh"])
 
-    doc.add_heading("6 讨论与后续工作", level=1)
+    doc.add_heading("6 讨论与后续", level=1)
     doc.add_paragraph(
-        "本文结果定位于“初稿与流程验证”阶段：当前表格指标来自小样本开发切分，不构成最终工程结论。"
-        "后续将基于真实矿压标签开展严格实证，形成RSI相场与ASI-UST两篇英文SCI所需的主实验、消融、敏感性与稳健性证据。"
+        "当前结果用于验证新算法流程与论文结构，最终投稿结论需基于真实矿压标签与严格切分实验。"
     )
 
     doc.add_heading("参考文献", level=1)
     refs = [
-        "[1] Francfort G A, Marigo J J. Revisiting brittle fracture as an energy minimization problem.",
-        "[2] Miehe C, Hofacker M, Welschinger F. A phase field model for rate-independent crack propagation.",
-        "[3] 俞茂宏. 双剪理论及其应用. 科学出版社, 1998.",
-        "[4] 项目代码: backend/app/services/mpi_calculator.py.",
-        "[5] 项目代码: mpi_advanced/indicators/rsi_phase_field.py.",
-        "[6] 项目代码: mpi_advanced/indicators/asi_indicator_ust.py.",
-        "[7] 项目文档: docs/research_evaluation_protocol.md.",
+        "Francfort G A, Marigo J J. Revisiting brittle fracture as an energy minimization problem. DOI:10.1016/S0022-5096(98)00034-9.",
+        "Miehe C, Hofacker M, Welschinger F. A phase field model for rate-independent crack propagation. DOI:10.1016/j.cma.2010.04.011.",
     ]
-    for ref in refs:
-        doc.add_paragraph(ref)
+    for i, ref in enumerate(refs, 1):
+        doc.add_paragraph(f"{i}. {ref}")
 
     doc.save(str(ZH_OUT))
 
 
+
+def _count_omml_equations(docx_path: Path) -> int:
+    with ZipFile(docx_path, "r") as zf:
+        xml = zf.read("word/document.xml").decode("utf-8", errors="ignore")
+    return xml.count("<m:oMath")
+
+
+def _extract_document_xml(docx_path: Path) -> str:
+    with ZipFile(docx_path, "r") as zf:
+        return zf.read("word/document.xml").decode("utf-8", errors="ignore")
+
+
+def _verify_equation_numbering(xml: str, labels: List[str]) -> bool:
+    return all(label in xml for label in labels)
+
+
 def main() -> None:
-    metrics_data = _run_demo_experiments()
-    build_en_doc(metrics_data)
-    build_zh_doc(metrics_data)
+    demo_data = _run_new_algorithm_demo()
+    build_en_doc(demo_data)
+    build_zh_doc(demo_data)
+    en_eq = _count_omml_equations(EN_OUT)
+    zh_eq = _count_omml_equations(ZH_OUT)
+    en_xml = _extract_document_xml(EN_OUT)
+    zh_xml = _extract_document_xml(ZH_OUT)
+    en_labels_ok = _verify_equation_numbering(en_xml, ["(1)", "(2)", "(3)", "(4)", "(5)"])
+    lpar = chr(0xFF08)
+    rpar = chr(0xFF09)
+    zh_labels_ok = _verify_equation_numbering(
+        zh_xml,
+        [f"{lpar}1{rpar}", f"{lpar}2{rpar}", f"{lpar}3{rpar}", f"{lpar}4{rpar}", f"{lpar}5{rpar}"],
+    )
+    if en_eq < 5 or zh_eq < 5 or not en_labels_ok or not zh_labels_ok:
+        raise RuntimeError(f"Equation QA failed: EN={en_eq}, ZH={zh_eq}")
     print(f"Generated: {EN_OUT}")
     print(f"Generated: {ZH_OUT}")
 

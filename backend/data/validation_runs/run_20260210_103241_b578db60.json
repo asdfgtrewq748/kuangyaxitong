@@ -1,0 +1,136 @@
+{
+  "run_id": "run_20260210_103241_b578db60",
+  "status": "completed",
+  "dataset_id": "demo_dataset",
+  "time_window": {
+    "train_start": "2025-01-01",
+    "train_end": "2025-10-31",
+    "test_start": "2025-11-01",
+    "test_end": "2025-12-31"
+  },
+  "kpi": {
+    "mpi_mean": 49.743,
+    "high_risk_ratio": 0.5026,
+    "auc": 0.6488,
+    "brier_score": 0.273,
+    "improvement_vs_baseline_pct": 9.946
+  },
+  "modules": {
+    "rsi": {
+      "value": 28.438,
+      "input_layers": 2
+    },
+    "bri": {
+      "value": 91.0,
+      "event_count": 1,
+      "avg_magnitude": 2.5
+    },
+    "asi": {
+      "value": 26.071,
+      "avg_friction_angle": 30.0
+    }
+  },
+  "fusion": {
+    "mpi": 49.743,
+    "risk_level": "high",
+    "risk_label": "high risk",
+    "dynamic_weights": {
+      "rsi": 0.4,
+      "bri": 0.35,
+      "asi": 0.25
+    },
+    "baseline": {
+      "name": "old_mpi_v1",
+      "mpi": 45.243
+    }
+  },
+  "figures": {
+    "fig1_overview": {
+      "title": "Data coverage and quality overview",
+      "borehole_count": 2,
+      "microseismic_count": 1,
+      "label_samples": 0,
+      "label_source": ""
+    },
+    "fig5_dbn": {
+      "title": "DBN posterior trend",
+      "posterior": [
+        {
+          "t": "t-2",
+          "high_risk_prob": 0.4226
+        },
+        {
+          "t": "t-1",
+          "high_risk_prob": 0.4726
+        },
+        {
+          "t": "t",
+          "high_risk_prob": 0.5026
+        }
+      ]
+    },
+    "fig6_baseline_compare": {
+      "title": "New algorithm vs baseline",
+      "new_mpi": 49.743,
+      "baseline_mpi": 45.243
+    }
+  },
+  "tables": {
+    "table1_dataset_stats": {
+      "dataset_id": "demo_dataset",
+      "layer_count": 2,
+      "event_count": 1,
+      "label_count": 0
+    },
+    "table2_main_results": {
+      "auc": 0.6488,
+      "brier_score": 0.273,
+      "risk_level": "high",
+      "mpi_mean": 49.743
+    }
+  },
+  "config_snapshot": {
+    "dataset_id": "demo_dataset",
+    "time_window": {
+      "train_start": "2025-01-01",
+      "train_end": "2025-10-31",
+      "test_start": "2025-11-01",
+      "test_end": "2025-12-31"
+    },
+    "params": {
+      "rsi": {
+        "mesh_size": 50,
+        "time_steps": 10
+      },
+      "bri": {
+        "time_window_days": 7
+      },
+      "asi": {
+        "tunnel_radius": 3.0,
+        "original_stress": 10.0,
+        "support_pressure": 0.5,
+        "ust_parameter_b": 0.5
+      },
+      "dbn": {
+        "weights": {
+          "rsi": 0.4,
+          "bri": 0.35,
+          "asi": 0.25
+        }
+      }
+    },
+    "baseline": {
+      "name": "old_mpi_v1"
+    }
+  },
+  "evaluation_inputs": {
+    "source": "",
+    "y_true": [],
+    "y_prob": []
+  },
+  "errors": [
+    "no real label stream found for dataset"
+  ],
+  "created_at": "2026-02-10T10:32:41.702293+00:00",
+  "updated_at": "2026-02-10T10:32:41.702293+00:00"
+}

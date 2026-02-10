@@ -1,0 +1,36 @@
+{
+  "summary": {
+    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_Science_Style_Draft_EN.docx",
+    "generated_at_utc": "2026-02-09T15:42:58.047301+00:00",
+    "counts": {
+      "strong": 0,
+      "moderate": 0,
+      "exploratory": 0
+    },
+    "risky_strong_claim_count": 0,
+    "unlabeled_claim_candidate_count": 1
+  },
+  "report": {
+    "counts": {
+      "strong": 0,
+      "moderate": 0,
+      "exploratory": 0
+    },
+    "explicit_label_counts": {
+      "strong": 0,
+      "moderate": 0,
+      "exploratory": 0
+    },
+    "flags": [],
+    "risky_strong_claims": [],
+    "unlabeled_claim_candidates": [
+      {
+        "sentence": "We provide draft-level scenario results and current figures",
+        "level": "none",
+        "has_evidence_marker": true,
+        "has_explicit_label": false,
+        "is_claim_candidate": true
+      }
+    ]
+  }
+}

@@ -797,3 +797,7 @@ def create_bri_microseismic_basic() -> BRIIndicatorMicroseismic:
         use_energy_field=True,
         use_deep_learning=False
     )
+
+def create_bri_microseismic_standard() -> BRIIndicatorMicroseismic:
+    """Compatibility factory for legacy API imports."""
+    return create_bri_microseismic_full()

@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
@@ -27,7 +27,7 @@ const routes = [
     path: '/mpi-heatmap',
     name: 'MpiHeatmap',
     component: () => import('../views/MpiHeatmap.vue'),
-    meta: { title: 'MPI 热力图（旧版）', icon: 'legacy', nav: false, legacy: true }
+    meta: { title: 'MPI 热力图(旧版)', icon: 'legacy', nav: false, legacy: true }
   },
   {
     path: '/mpi-heatmap-pro',
@@ -52,6 +52,12 @@ const routes = [
     name: 'AlgorithmValidation',
     component: () => import('../views/AlgorithmValidation.vue'),
     meta: { title: '新算法实证', icon: 'flask', navOrder: 50, flowOrder: 40 }
+  },
+  {
+    path: '/research-portal',
+    name: 'ResearchPortal',
+    component: () => import('../views/ResearchPortal.vue'),
+    meta: { title: 'Research Portal', icon: 'book', navOrder: 54, workflow: false }
   },
   {
     path: '/research-workbench',
