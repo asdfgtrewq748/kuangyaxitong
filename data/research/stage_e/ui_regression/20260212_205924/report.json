@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-02-12T21:00:03.136351",
+  "base_url": "http://127.0.0.1:5173",
+  "api_base": "http://127.0.0.1:8001",
+  "results": [
+    {
+      "item": "precheck",
+      "status": "PASS",
+      "detail": "backend healthy; prepared dataset=research_demo exp_ids=['exp_20260212_125925_0341ba', 'exp_20260212_125926_4af2bb']"
+    },
+    {
+      "item": "3.1 Interpolation",
+      "status": "PASS",
+      "detail": "job=b2db5ef0a91a; status=completed; artifact=interpolation_layer_中砾岩.vtp"
+    },
+    {
+      "item": "3.2 MpiHeatmapPro",
+      "status": "PASS",
+      "detail": "geo-aware compare shown; jump carried geomodel_job_id and auto-loaded status"
+    },
+    {
+      "item": "3.3 AlgorithmValidation",
+      "status": "PASS",
+      "detail": "geo result panel reset confirmed after seam change"
+    },
+    {
+      "item": "3.4 Steps",
+      "status": "FAIL",
+      "detail": "missing zone risk blocks"
+    },
+    {
+      "item": "3.5 Report",
+      "status": "FAIL",
+      "detail": "Locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(\".geomodel-input-row button\")\n    - locator resolved to JSHandle@<button data-v-eb61a2b3=\"\" class=\"btn secondary small\">读取质量</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <section data-v-eb61a2b3=\"\" class=\"card controls\">…</section> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <section data-v-eb61a2b3=\"\" class=\"card controls\">…</section> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    19 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <section data-v-eb61a2b3=\"\" class=\"card controls\">…</section> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "item": "3.6 ResearchWorkbench",
+      "status": "FAIL",
+      "detail": "missing evidence files: ['manifests/dataset_quality_report.json']"
+    }
+  ]
+}

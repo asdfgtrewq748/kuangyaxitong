@@ -1,0 +1,182 @@
+{
+  "exp_id": "exp_20260212_130435_48d38d",
+  "status": "completed",
+  "dataset_id": "research_demo",
+  "dataset_version": "cc09630e88f352cc",
+  "split_id": "split_20260212_130435_79af72",
+  "spec": {
+    "dataset_id": "research_demo",
+    "dataset_version": "cc09630e88f352cc",
+    "split_id": "split_20260212_130435_79af72",
+    "experiment_name": "geomodel_full",
+    "model_type": "geomodel_aware",
+    "metrics": [
+      "auc",
+      "pr_auc",
+      "brier",
+      "ece",
+      "f1",
+      "mae",
+      "rmse",
+      "paired_significance_p"
+    ],
+    "seed": 42
+  },
+  "metrics": {
+    "auc": 0.296296,
+    "pr_auc": 0.344658,
+    "brier": 0.313413,
+    "f1": 0.285714,
+    "mae": 0.544819,
+    "rmse": 0.559833,
+    "paired_significance_p": 0.97796255
+  },
+  "calibration": {
+    "ece": 0.2773302765183656,
+    "mce": 0.6865593862722417,
+    "bin_count": 10,
+    "bins": [
+      {
+        "bin": 0,
+        "range": [
+          0.0,
+          0.1
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 1,
+        "range": [
+          0.1,
+          0.2
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 2,
+        "range": [
+          0.2,
+          0.30000000000000004
+        ],
+        "count": 2,
+        "acc": 0.5,
+        "conf": 0.2360596019043184,
+        "gap": 0.2639403980956816
+      },
+      {
+        "bin": 3,
+        "range": [
+          0.30000000000000004,
+          0.4
+        ],
+        "count": 1,
+        "acc": 1.0,
+        "conf": 0.3134406137277583,
+        "gap": 0.6865593862722417
+      },
+      {
+        "bin": 4,
+        "range": [
+          0.4,
+          0.5
+        ],
+        "count": 4,
+        "acc": 0.5,
+        "conf": 0.4530360530676767,
+        "gap": 0.04696394693232331
+      },
+      {
+        "bin": 5,
+        "range": [
+          0.5,
+          0.6000000000000001
+        ],
+        "count": 5,
+        "acc": 0.4,
+        "conf": 0.5594807101556596,
+        "gap": 0.15948071015565957
+      },
+      {
+        "bin": 6,
+        "range": [
+          0.6000000000000001,
+          0.7000000000000001
+        ],
+        "count": 3,
+        "acc": 0.0,
+        "conf": 0.6534182089347627,
+        "gap": 0.6534182089347627
+      },
+      {
+        "bin": 7,
+        "range": [
+          0.7000000000000001,
+          0.8
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 8,
+        "range": [
+          0.8,
+          0.9
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 9,
+        "range": [
+          0.9,
+          1.0
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      }
+    ]
+  },
+  "ci95": {
+    "auc": [
+      0.045318181818181806,
+      0.616666666666667
+    ],
+    "pr_auc": [
+      0.16111111111111115,
+      0.6290537240537242
+    ],
+    "brier": [
+      0.24349362302454658,
+      0.3814834799749187
+    ],
+    "f1": [
+      0.0,
+      0.5882352941176471
+    ],
+    "mae": [
+      0.4894878238542248,
+      0.6000652661272077
+    ],
+    "rmse": [
+      0.4964877047332969,
+      0.6218923100788715
+    ]
+  },
+  "traceability": {
+    "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\backend\\data\\research\\datasets\\research_demo\\dataset_manifest.json",
+    "split_manifest": "D:\\xiangmu\\kuangyaxitong\\backend\\data\\research\\datasets\\research_demo\\splits\\split_20260212_130435_79af72.json"
+  },
+  "created_at": "2026-02-12T13:04:35.985363+00:00"
+}

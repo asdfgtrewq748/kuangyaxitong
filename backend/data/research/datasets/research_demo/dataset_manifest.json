@@ -1,0 +1,62 @@
+{
+  "dataset_id": "research_demo",
+  "dataset_file": "research_demo.csv",
+  "dataset_version": "cc09630e88f352cc",
+  "dataset_sha256": "cc09630e88f352cc28a7509bee00e5b97fa0e07e19b53f87191491c1ea3f2951",
+  "row_count": 120,
+  "column_count": 10,
+  "columns": [
+    "sample_id",
+    "borehole_name",
+    "event_time",
+    "label",
+    "thickness",
+    "burial_depth",
+    "elastic_modulus",
+    "friction_angle",
+    "cohesion",
+    "tensile_strength"
+  ],
+  "description": "auto-generated dataset for stage E UI regression",
+  "label_schema": {
+    "label_column": "label",
+    "positive_values": [
+      1
+    ],
+    "event_definition": "roof_pressure_event",
+    "time_window_hours": 24,
+    "threshold": null,
+    "notes": ""
+  },
+  "quality_report": {
+    "row_count": 120,
+    "column_count": 10,
+    "missing_ratio": {
+      "sample_id": 0.0,
+      "borehole_name": 0.0,
+      "event_time": 0.0,
+      "label": 0.0,
+      "thickness": 0.0,
+      "burial_depth": 0.0,
+      "elastic_modulus": 0.0,
+      "friction_angle": 0.0,
+      "cohesion": 0.0,
+      "tensile_strength": 0.0
+    },
+    "numeric_columns": [
+      "label",
+      "thickness",
+      "burial_depth",
+      "elastic_modulus",
+      "friction_angle",
+      "cohesion",
+      "tensile_strength"
+    ],
+    "required_columns": {
+      "label_column": "label",
+      "has_label_column": true
+    }
+  },
+  "registered_at": "2026-02-12T12:59:25.164317+00:00",
+  "updated_at": "2026-02-12T12:59:25.164332+00:00"
+}

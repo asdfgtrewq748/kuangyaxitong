@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-02-12T21:07:04.993138",
+  "base_url": "http://127.0.0.1:5173",
+  "api_base": "http://127.0.0.1:8001",
+  "results": [
+    {
+      "item": "precheck",
+      "status": "PASS",
+      "detail": "backend healthy; prepared dataset=research_demo exp_ids=['exp_20260212_130435_48d38d', 'exp_20260212_130436_3880fa']"
+    },
+    {
+      "item": "3.1 Interpolation",
+      "status": "PASS",
+      "detail": "job=69f794225b68; status=completed; artifact=interpolation_layer_中砾岩.vtp"
+    },
+    {
+      "item": "3.2 MpiHeatmapPro",
+      "status": "PASS",
+      "detail": "geo-aware compare shown; jump carried geomodel_job_id and auto-loaded status"
+    },
+    {
+      "item": "3.3 AlgorithmValidation",
+      "status": "PASS",
+      "detail": "geo result panel reset confirmed after seam change"
+    },
+    {
+      "item": "3.4 Steps",
+      "status": "PASS",
+      "detail": "geo summary + MPI suggestion visible; zone ratio sum=100.00%"
+    },
+    {
+      "item": "3.5 Report",
+      "status": "FAIL",
+      "detail": "Page.wait_for_selector: Timeout 120000ms exceeded.\nCall log:\n  - waiting for locator(\".geomodel-quality-grid\") to be visible\n  - waiting for locator(\".geomodel-quality-grid\")\n"
+    },
+    {
+      "item": "3.6 ResearchWorkbench",
+      "status": "FAIL",
+      "detail": "missing template options: ['pinchout_effect', 'rk_vs_kriging']"
+    }
+  ]
+}

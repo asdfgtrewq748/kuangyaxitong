@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-02-12T20:57:53.455663",
+  "base_url": "http://127.0.0.1:5173",
+  "api_base": "http://127.0.0.1:8001",
+  "results": [
+    {
+      "item": "precheck",
+      "status": "FAIL",
+      "detail": "HTTP 404 /api/research/dataset/register: {\"detail\":\"dataset csv not found: research_demo.csv\"}"
+    }
+  ]
+}

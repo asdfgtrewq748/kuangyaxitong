@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">
+  <PolyData>
+    <Piece NumberOfPoints="15" NumberOfVerts="15" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0">
+      <PointData Scalars="thickness">
+        <DataArray type="Float32" Name="thickness" format="ascii">0.800000 23.430000 9.250000 8.500000 67.250000 11.830000 1.600000 11.400000 5.440000 47.150000 24.680000 4.310000 13.730000 4.530000 10.800000</DataArray>
+      </PointData>
+      <Points>
+        <DataArray type="Float32" NumberOfComponents="3" format="ascii">495558.870000 5404339.030000 0.000000 496022.310000 5404502.090000 0.000000 496166.570000 5404015.050000 0.000000 496497.740000 5404659.170000 0.000000 496675.160000 5405766.010000 0.000000 497291.620000 5403856.010000 0.000000 497934.730000 5405121.270000 0.000000 498232.970000 5404152.170000 0.000000 497464.390000 5404959.310000 0.000000 499027.939100 5404918.190000 0.000000 498695.790000 5404381.000000 0.000000 496173.390000 5405602.250000 0.000000 496830.860000 5405285.470000 0.000000 497760.290000 5405592.220000 0.000000 28.000000 0.000000 0.000000</DataArray>
+      </Points>
+      <Verts>
+        <DataArray type="Int32" Name="connectivity" format="ascii">0 1 2 3 4 5 6 7 8 9 10 11 12 13 14</DataArray>
+        <DataArray type="Int32" Name="offsets" format="ascii">1 2 3 4 5 6 7 8 9 10 11 12 13 14 15</DataArray>
+      </Verts>
+    </Piece>
+  </PolyData>
+</VTKFile>

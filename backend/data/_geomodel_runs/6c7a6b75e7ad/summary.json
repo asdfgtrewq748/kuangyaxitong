@@ -1,0 +1,159 @@
+{
+  "job_id": "6c7a6b75e7ad",
+  "method": "thickness",
+  "seam_name": "15-1上煤",
+  "resolution": 20.0,
+  "layer_order_method": "position_based",
+  "pinchout_strategy": "smooth",
+  "borehole_count": 30,
+  "unique_layer_count": 65,
+  "thickness_stats": {
+    "min": 95.4,
+    "max": 649.4,
+    "mean": 458.0433,
+    "std": 98.2186
+  },
+  "top_layers": [
+    {
+      "layer_name": "粉砂岩",
+      "samples": 323,
+      "appearance_ratio": 0.9667,
+      "mean_thickness": 9.1918,
+      "std_thickness": 11.053
+    },
+    {
+      "layer_name": "泥岩",
+      "samples": 206,
+      "appearance_ratio": 0.9333,
+      "mean_thickness": 6.6728,
+      "std_thickness": 6.7532
+    },
+    {
+      "layer_name": "砂质泥岩",
+      "samples": 147,
+      "appearance_ratio": 0.4333,
+      "mean_thickness": 7.1197,
+      "std_thickness": 7.9045
+    },
+    {
+      "layer_name": "细砂岩",
+      "samples": 129,
+      "appearance_ratio": 0.9333,
+      "mean_thickness": 11.4343,
+      "std_thickness": 15.5473
+    },
+    {
+      "layer_name": "中砾岩",
+      "samples": 119,
+      "appearance_ratio": 0.7333,
+      "mean_thickness": 15.5378,
+      "std_thickness": 14.5939
+    },
+    {
+      "layer_name": "炭质泥岩",
+      "samples": 98,
+      "appearance_ratio": 0.8,
+      "mean_thickness": 1.5262,
+      "std_thickness": 2.3955
+    },
+    {
+      "layer_name": "煤",
+      "samples": 98,
+      "appearance_ratio": 0.4667,
+      "mean_thickness": 1.4598,
+      "std_thickness": 1.3496
+    },
+    {
+      "layer_name": "粉砂质泥岩",
+      "samples": 52,
+      "appearance_ratio": 0.2667,
+      "mean_thickness": 7.7123,
+      "std_thickness": 7.0442
+    },
+    {
+      "layer_name": "砂砾岩",
+      "samples": 40,
+      "appearance_ratio": 0.3333,
+      "mean_thickness": 13.1002,
+      "std_thickness": 10.6641
+    },
+    {
+      "layer_name": "砾岩",
+      "samples": 33,
+      "appearance_ratio": 0.4,
+      "mean_thickness": 15.4485,
+      "std_thickness": 17.1067
+    },
+    {
+      "layer_name": "砂质砾岩",
+      "samples": 32,
+      "appearance_ratio": 0.2,
+      "mean_thickness": 18.4262,
+      "std_thickness": 11.6714
+    },
+    {
+      "layer_name": "粗砂岩",
+      "samples": 30,
+      "appearance_ratio": 0.5,
+      "mean_thickness": 8.1567,
+      "std_thickness": 8.223
+    },
+    {
+      "layer_name": "16-3煤",
+      "samples": 28,
+      "appearance_ratio": 0.9333,
+      "mean_thickness": 24.8175,
+      "std_thickness": 9.3695
+    },
+    {
+      "layer_name": "15-7煤",
+      "samples": 19,
+      "appearance_ratio": 0.6333,
+      "mean_thickness": 1.4953,
+      "std_thickness": 0.8177
+    },
+    {
+      "layer_name": "腐殖土",
+      "samples": 18,
+      "appearance_ratio": 0.6,
+      "mean_thickness": 0.5694,
+      "std_thickness": 0.126
+    },
+    {
+      "layer_name": "中砂岩",
+      "samples": 18,
+      "appearance_ratio": 0.4,
+      "mean_thickness": 10.2083,
+      "std_thickness": 21.0113
+    },
+    {
+      "layer_name": "16-2下煤",
+      "samples": 18,
+      "appearance_ratio": 0.6,
+      "mean_thickness": 2.05,
+      "std_thickness": 1.5609
+    },
+    {
+      "layer_name": "16-3上煤",
+      "samples": 18,
+      "appearance_ratio": 0.6,
+      "mean_thickness": 8.515,
+      "std_thickness": 6.4453
+    },
+    {
+      "layer_name": "15-4煤",
+      "samples": 17,
+      "appearance_ratio": 0.5667,
+      "mean_thickness": 1.8706,
+      "std_thickness": 1.5819
+    },
+    {
+      "layer_name": "15-5下煤",
+      "samples": 16,
+      "appearance_ratio": 0.5333,
+      "mean_thickness": 2.6875,
+      "std_thickness": 2.2268
+    }
+  ],
+  "generated_at": "2026-02-12T13:13:42.906297+00:00"
+}
