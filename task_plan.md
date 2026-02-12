@@ -1,6 +1,6 @@
 ﻿# 任务计划：地质建模融合 MPI 系统
 
-**更新日期：** 2026-02-10  
+**更新日期：** 2026-02-12  
 **项目：** 地质建模融合矿压 MPI 系统  
 **当前阶段：** 阶段 E（验证、压测与上线）进行中  
 **总周期：** 6-8 周
@@ -108,7 +108,7 @@
 - [ ] 后端接口压测与性能基线（任务队列、产物下载、大网格计算）
 - [ ] 前端联调回归测试（核心页面）
 - [ ] 科研模板端到端验证（至少 2 套样本数据）
-- [ ] 发布说明与用户指南更新
+- [x] 发布说明与用户指南更新
 - [ ] 上线检查清单执行
 
 **本轮进展：**
@@ -120,6 +120,10 @@
 - [x] 已新增上线与回滚清单 `docs/plans/2026-02-11-阶段E-上线与回滚检查清单.md`
 - [x] 已新增联调回归记录模板 `docs/plans/2026-02-11-阶段E-联调回归记录模板.md`
 - [x] 已新增科研模板端到端验证脚本 `scripts/research/validate_template_e2e.py`
+- [x] 已新增阶段 E 一键执行脚本 `scripts/stage_e/run_stage_e_checks.py`
+- [x] 已新增发布说明 `docs/release/2026-02-12-geomodel-mpi-release-notes.md`
+- [x] 已新增用户指南 `docs/guides/geomodel-mpi-user-guide.md`
+- [x] 已新增运维交接手册 `docs/ops/geomodel-mpi-ops-handover.md`
 - [x] 已完成脚本自验证（2套临时样本 + `geomodel_ablation` / `rk_vs_kriging` 模板通过）
 - [ ] 待在目标部署环境完成三轮基线采样并固化阈值
 - [ ] 待按联调清单完成核心页面逐项验收
@@ -175,3 +179,7 @@
 9. 阶段 E 上线与回滚清单：`docs/plans/2026-02-11-阶段E-上线与回滚检查清单.md`  
 10. 阶段 E 联调记录模板：`docs/plans/2026-02-11-阶段E-联调回归记录模板.md`  
 11. 模块执行清单：`docs/plans/2026-02-10-地质建模融合MPI-模块级执行清单.md`
+12. 阶段 E 发布说明：`docs/release/2026-02-12-geomodel-mpi-release-notes.md`
+13. 阶段 E 用户指南：`docs/guides/geomodel-mpi-user-guide.md`
+14. 阶段 E 运维交接：`docs/ops/geomodel-mpi-ops-handover.md`
+15. 阶段 E 自动检查脚本说明：`scripts/stage_e/README.md`
