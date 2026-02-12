@@ -30,6 +30,8 @@ from app.services.mpi_calculator import (
 from app.services.interpolate import interpolate_from_points
 from app.services.contour_generator import generate_matplotlib_contour_image
 from app.services.workface_parser import parse_workface_file
+from app.services.geomodel_features import DEFAULT_GEOMODEL_FEATURES, extract_geomodel_features
+from app.services.mpi_new_algorithm import calc_mpi_geology_aware
 
 
 ODI_GRADIENT_COLORS = [
@@ -157,6 +159,54 @@ class MPIResponse(BaseModel):
     breakdown: MPIBreakdown = Field(..., description="分项指标")
     risk_level: str = Field(..., description="风险等级: 低/中/高")
     recommendation: str = Field(..., description="支护建议")
+
+
+class MPIGeoCalculateRequest(BaseModel):
+    """地质约束增强 MPI 请求"""
+    point: PointDataModel = Field(..., description="坐标点数据")
+    weights: Optional[WeightsModel] = Field(None, description="自定义权重配置")
+    geomodel_job_id: Optional[str] = Field(None, description="Geomodel 任务ID")
+    feature_overrides: Dict[str, float] = Field(default_factory=dict, description="特征覆写")
+    include_baseline: bool = Field(True, description="是否返回 baseline 结果")
+
+
+class MPIGeoResult(BaseModel):
+    mpi: float
+    breakdown: MPIBreakdown
+    risk_level: str
+    recommendation: str
+
+
+class MPIGeoCalculateResponse(BaseModel):
+    algorithm_mode: str
+    geology_aware: MPIGeoResult
+    baseline: Optional[MPIGeoResult] = None
+    feature_trace: Dict[str, Any]
+    fallback_used: bool
+
+
+class MPIGeoInterpolateRequest(BaseModel):
+    points: List[PointDataModel] = Field(..., description="坐标点数据列表")
+    resolution: int = Field(50, ge=10, le=200, description="网格分辨率")
+    method: str = Field("idw", description="插值方法: idw, linear, nearest")
+    weights: Optional[WeightsModel] = Field(None, description="自定义权重配置")
+    bounds: Optional[Dict[str, float]] = Field(None, description="边界范围 {min_x, max_x, min_y, max_y}")
+    geomodel_job_id: Optional[str] = Field(None, description="Geomodel 任务ID")
+    feature_overrides: Dict[str, float] = Field(default_factory=dict, description="特征覆写")
+    include_baseline_grid: bool = Field(True, description="是否返回baseline网格")
+
+
+class MPIGeoInterpolateResponse(BaseModel):
+    method: str
+    grid_size: int
+    bounds: Dict[str, float]
+    geology_aware_grid: List[List[float]]
+    geology_aware_statistics: Dict[str, float]
+    baseline_grid: Optional[List[List[float]]] = None
+    baseline_statistics: Optional[Dict[str, float]] = None
+    feature_trace: Dict[str, Any]
+    algorithm_mode: str
+    fallback_used: bool
 
 
 class MPIBatchRequest(BaseModel):
@@ -307,6 +357,16 @@ def _get_recommendation(mpi: float, breakdown: Dict[str, float]) -> str:
     return "".join(recommendations)
 
 
+def _weights_to_dict(weights: Optional[WeightsModel]) -> Optional[Dict[str, float]]:
+    if not weights:
+        return None
+    return {
+        "roof_stability": weights.roof_stability,
+        "burst_risk": weights.burst_risk,
+        "abutment_stress": weights.abutment_stress,
+    }
+
+
 # =============================================================================
 # API Endpoints
 # =============================================================================
@@ -331,13 +391,7 @@ def calculate_mpi(request: MPICalculateRequest) -> MPIResponse:
     point = _parse_point_data(request.point)
 
     # 构建权重字典
-    weights = None
-    if request.weights:
-        weights = {
-            "roof_stability": request.weights.roof_stability,
-            "burst_risk": request.weights.burst_risk,
-            "abutment_stress": request.weights.abutment_stress,
-        }
+    weights = _weights_to_dict(request.weights)
 
     # 计算MPI
     result = calc_mpi(point, weights=weights)
@@ -351,6 +405,198 @@ def calculate_mpi(request: MPICalculateRequest) -> MPIResponse:
         breakdown=MPIBreakdown(**result["breakdown"]),
         risk_level=risk_level,
         recommendation=recommendation
+    )
+
+
+@router.post("/calculate-geo", response_model=MPIGeoCalculateResponse, summary="地质约束增强MPI计算")
+def calculate_mpi_geo(request: MPIGeoCalculateRequest) -> MPIGeoCalculateResponse:
+    """
+    基于 Geomodel 产物特征进行 geology-aware MPI 计算。
+
+    - 若 `geomodel_job_id` 不可用，则自动回退到 baseline。
+    - 可通过 `feature_overrides` 覆盖特征值做敏感性分析。
+    """
+    point = _parse_point_data(request.point)
+    weights = _weights_to_dict(request.weights)
+
+    baseline_result = calc_mpi(point, weights=weights)
+    baseline_payload = MPIGeoResult(
+        mpi=baseline_result["mpi"],
+        breakdown=MPIBreakdown(**baseline_result["breakdown"]),
+        risk_level=_get_risk_level(baseline_result["mpi"]),
+        recommendation=_get_recommendation(baseline_result["mpi"], baseline_result["breakdown"]),
+    )
+
+    feature_values = dict(DEFAULT_GEOMODEL_FEATURES)
+    feature_trace: Dict[str, Any] = {
+        "source": {"mode": "default"},
+        "quality_flags": [],
+        "values": dict(feature_values),
+    }
+    fallback_used = True
+
+    if request.geomodel_job_id:
+        try:
+            extracted = extract_geomodel_features(request.geomodel_job_id)
+            feature_values.update(extracted.get("values") or {})
+            feature_trace = extracted
+            fallback_used = False
+        except Exception as exc:
+            feature_trace = {
+                "source": {"mode": "fallback_default", "job_id": request.geomodel_job_id, "reason": str(exc)},
+                "quality_flags": ["feature_load_failed"],
+                "values": dict(feature_values),
+            }
+            fallback_used = True
+
+    if request.feature_overrides:
+        for key, value in request.feature_overrides.items():
+            if key in feature_values:
+                feature_values[key] = float(value)
+        feature_trace["overrides"] = dict(request.feature_overrides)
+        feature_trace["values"] = dict(feature_values)
+        fallback_used = False
+
+    geo_result = calc_mpi_geology_aware(baseline_result, feature_values)
+    if fallback_used:
+        geo_result = {
+            "mpi": baseline_result["mpi"],
+            "breakdown": baseline_result["breakdown"],
+            "feature_contribution": {
+                "continuity_term": 0.0,
+                "pinchout_term": 0.0,
+                "variability_term": 0.0,
+                "span_term": 0.0,
+                "adjustment_ratio": 0.0,
+            },
+            "algorithm_mode": "baseline_fallback",
+        }
+
+    geology_payload = MPIGeoResult(
+        mpi=geo_result["mpi"],
+        breakdown=MPIBreakdown(**geo_result["breakdown"]),
+        risk_level=_get_risk_level(geo_result["mpi"]),
+        recommendation=_get_recommendation(geo_result["mpi"], geo_result["breakdown"]),
+    )
+    feature_trace["values"] = dict(feature_values)
+    feature_trace["contribution"] = geo_result.get("feature_contribution", {})
+
+    return MPIGeoCalculateResponse(
+        algorithm_mode=str(geo_result.get("algorithm_mode", "geology_aware_v1")),
+        geology_aware=geology_payload,
+        baseline=baseline_payload if request.include_baseline else None,
+        feature_trace=feature_trace,
+        fallback_used=fallback_used,
+    )
+
+
+@router.post("/interpolate-geo", response_model=MPIGeoInterpolateResponse, summary="地质约束增强MPI网格插值")
+def interpolate_mpi_geo(request: MPIGeoInterpolateRequest) -> MPIGeoInterpolateResponse:
+    if len(request.points) < 3:
+        raise HTTPException(status_code=400, detail="至少需要3个坐标点才能进行插值")
+
+    weights = _weights_to_dict(request.weights)
+    points = []
+    baseline_values = []
+    geo_values = []
+
+    feature_values = dict(DEFAULT_GEOMODEL_FEATURES)
+    feature_trace: Dict[str, Any] = {
+        "source": {"mode": "default"},
+        "quality_flags": [],
+        "values": dict(feature_values),
+    }
+    fallback_used = True
+
+    if request.geomodel_job_id:
+        try:
+            extracted = extract_geomodel_features(request.geomodel_job_id)
+            feature_values.update(extracted.get("values") or {})
+            feature_trace = extracted
+            fallback_used = False
+        except Exception as exc:
+            feature_trace = {
+                "source": {"mode": "fallback_default", "job_id": request.geomodel_job_id, "reason": str(exc)},
+                "quality_flags": ["feature_load_failed"],
+                "values": dict(feature_values),
+            }
+            fallback_used = True
+
+    if request.feature_overrides:
+        for key, value in request.feature_overrides.items():
+            if key in feature_values:
+                feature_values[key] = float(value)
+        feature_trace["overrides"] = dict(request.feature_overrides)
+        feature_trace["values"] = dict(feature_values)
+        fallback_used = False
+
+    for point_model in request.points:
+        point = _parse_point_data(point_model)
+        baseline_result = calc_mpi(point, weights=weights)
+        baseline_values.append(float(baseline_result["mpi"]))
+
+        geo_result = calc_mpi_geology_aware(baseline_result, feature_values)
+        if fallback_used:
+            geo_values.append(float(baseline_result["mpi"]))
+        else:
+            geo_values.append(float(geo_result["mpi"]))
+        points.append([point_model.x, point_model.y])
+
+    pts_array = np.asarray(points, dtype=float)
+    baseline_array = np.asarray(baseline_values, dtype=float)
+    geo_array = np.asarray(geo_values, dtype=float)
+
+    baseline_grid = interpolate_from_points(
+        points=pts_array,
+        values=baseline_array,
+        method=request.method,
+        grid_size=request.resolution,
+        bounds=request.bounds
+    )
+    if "error" in baseline_grid:
+        raise HTTPException(status_code=400, detail=baseline_grid["error"])
+
+    geo_grid = interpolate_from_points(
+        points=pts_array,
+        values=geo_array,
+        method=request.method,
+        grid_size=request.resolution,
+        bounds=request.bounds
+    )
+    if "error" in geo_grid:
+        raise HTTPException(status_code=400, detail=geo_grid["error"])
+
+    geo_grid_arr = np.asarray(geo_grid["grid"], dtype=float)
+    geo_stats = {
+        "min": float(np.nanmin(geo_grid_arr)),
+        "max": float(np.nanmax(geo_grid_arr)),
+        "mean": float(np.nanmean(geo_grid_arr)),
+        "std": float(np.nanstd(geo_grid_arr)),
+    }
+
+    baseline_stats = None
+    baseline_payload_grid = None
+    if request.include_baseline_grid:
+        baseline_grid_arr = np.asarray(baseline_grid["grid"], dtype=float)
+        baseline_stats = {
+            "min": float(np.nanmin(baseline_grid_arr)),
+            "max": float(np.nanmax(baseline_grid_arr)),
+            "mean": float(np.nanmean(baseline_grid_arr)),
+            "std": float(np.nanstd(baseline_grid_arr)),
+        }
+        baseline_payload_grid = baseline_grid["grid"]
+
+    return MPIGeoInterpolateResponse(
+        method=request.method,
+        grid_size=request.resolution,
+        bounds=request.bounds or geo_grid.get("bounds"),
+        geology_aware_grid=geo_grid["grid"],
+        geology_aware_statistics=geo_stats,
+        baseline_grid=baseline_payload_grid,
+        baseline_statistics=baseline_stats,
+        feature_trace=feature_trace,
+        algorithm_mode="baseline_fallback" if fallback_used else "geology_aware_v1",
+        fallback_used=fallback_used,
     )
 
 
@@ -371,13 +617,7 @@ def calculate_mpi_batch(request: MPIBatchRequest) -> MPIBatchResponse:
         raise HTTPException(status_code=400, detail="至少提供一个坐标点")
 
     # 构建权重字典
-    weights = None
-    if request.weights:
-        weights = {
-            "roof_stability": request.weights.roof_stability,
-            "burst_risk": request.weights.burst_risk,
-            "abutment_stress": request.weights.abutment_stress,
-        }
+    weights = _weights_to_dict(request.weights)
 
     # 构建批量计算数据
     points_data = {}
@@ -447,13 +687,7 @@ def interpolate_mpi(request: MPIInterpolateRequest) -> MPIInterpolateResponse:
         raise HTTPException(status_code=400, detail="至少需要3个坐标点才能进行插值")
 
     # 构建权重字典
-    weights = None
-    if request.weights:
-        weights = {
-            "roof_stability": request.weights.roof_stability,
-            "burst_risk": request.weights.burst_risk,
-            "abutment_stress": request.weights.abutment_stress,
-        }
+    weights = _weights_to_dict(request.weights)
 
     # 计算各点MPI值
     points_data = {}

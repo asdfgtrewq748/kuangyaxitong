@@ -101,6 +101,19 @@
             <option value="nearest">Nearest</option>
           </select>
         </label>
+
+        <label class="geo-toggle">
+          地质约束
+          <span class="geo-toggle-line">
+            <input v-model="geoAwareEnabled" type="checkbox">
+            <span>{{ geoAwareEnabled ? '已开启' : '未开启' }}</span>
+          </span>
+        </label>
+
+        <label v-if="geoAwareEnabled">
+          Geomodel任务ID（可选）
+          <input v-model.trim="geoModelJobId" type="text" placeholder="例如 gm_20260210_xxx">
+        </label>
       </div>
     </section>
 
@@ -166,6 +179,38 @@
             <h4>步距建议</h4>
             <p>{{ mpiSuggestion }}</p>
           </div>
+
+          <div v-if="geoCompareSummary" class="geo-summary">
+            <h4>地质约束对照</h4>
+            <div class="stats-row geo-summary-row">
+              <div class="stat-item">
+                <span>Baseline均值</span>
+                <strong>{{ formatNumber(geoCompareSummary.baselineMean, 2) }}</strong>
+              </div>
+              <div class="stat-item">
+                <span>Geo-aware均值</span>
+                <strong>{{ formatNumber(geoCompareSummary.geoMean, 2) }}</strong>
+              </div>
+              <div class="stat-item">
+                <span>均值变化</span>
+                <strong>{{ formatNumber(geoCompareSummary.delta, 2) }}</strong>
+              </div>
+            </div>
+            <p class="geo-meta">
+              模式：{{ geoCompareSummary.algorithmMode }} · 回退：{{ geoCompareSummary.fallbackUsed ? '是' : '否' }}
+            </p>
+            <p v-if="geoFeatureSummary" class="geo-feature">{{ geoFeatureSummary }}</p>
+          </div>
+
+          <div class="zone-card" v-if="zoneRiskSummary.length">
+            <h4>分区风险说明</h4>
+            <div class="zone-grid">
+              <div v-for="zone in zoneRiskSummary" :key="zone.key" class="zone-item" :class="zone.key">
+                <span>{{ zone.label }}</span>
+                <strong>{{ zone.count }}格 / {{ zone.ratio }}%</strong>
+              </div>
+            </div>
+          </div>
         </div>
       </article>
     </section>
@@ -213,6 +258,7 @@ import {
   getRockParams,
   getSeamOverburden,
   mpiInterpolate,
+  mpiInterpolateGeo,
   pressureSteps,
   pressureStepsBatch,
   pressureStepsGrid
@@ -235,6 +281,8 @@ const mpiSeams = ref([])
 const mpiSeam = ref('')
 const mpiGridSize = ref(60)
 const mpiMethod = ref('idw')
+const geoAwareEnabled = ref(false)
+const geoModelJobId = ref('')
 
 const refreshing = ref(false)
 const initialized = ref(false)
@@ -249,6 +297,7 @@ const stepGrid = ref(null)
 const stepBatch = ref(null)
 const mpiGrid = ref(null)
 const mpiStats = ref({})
+const mpiGeoCompare = ref(null)
 
 const stepResultError = ref('')
 const stepGridError = ref('')
@@ -266,9 +315,87 @@ const formatNumber = (value, digits = 2, suffix = '') => {
 const mpiSuggestion = computed(() => {
   const mean = Number(mpiStats.value?.mean)
   if (!Number.isFinite(mean)) return '暂无建议，等待MPI结果自动计算完成。'
+
+  if (geoAwareEnabled.value && mpiGeoCompare.value) {
+    const baselineMean = Number(mpiGeoCompare.value?.baseline_statistics?.mean)
+    const geoMean = Number(mpiGeoCompare.value?.geology_aware_statistics?.mean)
+    const delta = geoMean - baselineMean
+    if (mpiGeoCompare.value?.fallback_used) {
+      return '地质约束已开启，但当前任务ID不可用或特征缺失，系统已回退默认特征；建议核查建模任务状态。'
+    }
+    if (Number.isFinite(delta) && delta <= -3) {
+      return `地质约束后MPI均值下降 ${delta.toFixed(2)}，建议缩小步距并加强低值区支护。`
+    }
+    if (Number.isFinite(delta) && delta >= 3) {
+      return `地质约束后MPI均值上升 ${delta.toFixed(2)}，整体可维持当前步距并优化巡检资源投入。`
+    }
+    return '地质约束前后差异较小，建议维持当前步距并持续监测局部异常区。'
+  }
+
   if (mean < 60) return 'MPI偏低，建议适当减小步距并提高支护强度。'
   if (mean < 80) return 'MPI中等，建议按当前步距执行并重点监测局部异常区。'
   return 'MPI较高，整体风险较低，可在安全条件下适度增大步距。'
+})
+
+const geoCompareSummary = computed(() => {
+  if (!mpiGeoCompare.value) return null
+  const baselineMean = Number(mpiGeoCompare.value?.baseline_statistics?.mean)
+  const geoMean = Number(mpiGeoCompare.value?.geology_aware_statistics?.mean)
+  if (!Number.isFinite(baselineMean) || !Number.isFinite(geoMean)) return null
+  return {
+    baselineMean,
+    geoMean,
+    delta: geoMean - baselineMean,
+    fallbackUsed: Boolean(mpiGeoCompare.value?.fallback_used),
+    algorithmMode: mpiGeoCompare.value?.algorithm_mode || 'unknown'
+  }
+})
+
+const geoFeatureSummary = computed(() => {
+  const features = mpiGeoCompare.value?.feature_trace?.features
+  if (!features) return ''
+  const continuity = Number(features.continuity_score)
+  const pinchout = Number(features.pinchout_ratio)
+  const layerCv = Number(features.layer_cv)
+  const span = Number(features.key_layer_span)
+  const tokens = []
+  if (Number.isFinite(continuity)) tokens.push(`连续性=${continuity.toFixed(3)}`)
+  if (Number.isFinite(pinchout)) tokens.push(`尖灭比例=${pinchout.toFixed(3)}`)
+  if (Number.isFinite(layerCv)) tokens.push(`层厚变异=${layerCv.toFixed(3)}`)
+  if (Number.isFinite(span)) tokens.push(`关键层跨度=${span.toFixed(1)}`)
+  return tokens.length ? `特征引用：${tokens.join('，')}` : ''
+})
+
+const zoneRiskSummary = computed(() => {
+  const grid = mpiGrid.value
+  if (!Array.isArray(grid) || !grid.length) return []
+  let high = 0
+  let medium = 0
+  let low = 0
+  let total = 0
+
+  for (const row of grid) {
+    if (!Array.isArray(row)) continue
+    for (const raw of row) {
+      const value = Number(raw)
+      if (!Number.isFinite(value)) continue
+      total += 1
+      if (value < 60) {
+        high += 1
+      } else if (value < 80) {
+        medium += 1
+      } else {
+        low += 1
+      }
+    }
+  }
+  if (!total) return []
+  const ratio = (count) => ((count / total) * 100).toFixed(1)
+  return [
+    { key: 'high', label: '高风险区(MPI<60)', count: high, ratio: ratio(high) },
+    { key: 'medium', label: '关注区(60-80)', count: medium, ratio: ratio(medium) },
+    { key: 'low', label: '低风险区(>=80)', count: low, ratio: ratio(low) }
+  ]
 })
 
 const createDebouncer = (fn, delay = 600) => {
@@ -390,26 +517,44 @@ const runMpiGrid = async (notifyError = false) => {
   if (!mpiSeam.value) {
     mpiGrid.value = null
     mpiStats.value = {}
+    mpiGeoCompare.value = null
     return
   }
 
   loadingMpi.value = true
   mpiError.value = ''
+  mpiGeoCompare.value = null
   try {
     const { data } = await getSeamOverburden(mpiSeam.value)
     const boreholes = data?.boreholes || []
     if (!boreholes.length) {
       mpiGrid.value = null
       mpiStats.value = {}
+      mpiGeoCompare.value = null
       mpiError.value = '当前煤层没有可用钻孔数据'
       if (notifyError) toast.add(mpiError.value, 'warning')
       return
     }
 
     const points = await buildMpiPoints(boreholes)
-    const { data: mpiData } = await mpiInterpolate(points, mpiGridSize.value, mpiMethod.value)
-    mpiGrid.value = mpiData?.grid || null
-    mpiStats.value = mpiData?.statistics || {}
+    if (geoAwareEnabled.value) {
+      const payload = {
+        points,
+        resolution: mpiGridSize.value,
+        method: mpiMethod.value
+      }
+      if (geoModelJobId.value) {
+        payload.geomodel_job_id = geoModelJobId.value
+      }
+      const { data: geoData } = await mpiInterpolateGeo(payload)
+      mpiGrid.value = geoData?.geology_aware_grid || null
+      mpiStats.value = geoData?.geology_aware_statistics || {}
+      mpiGeoCompare.value = geoData || null
+    } else {
+      const { data: mpiData } = await mpiInterpolate(points, mpiGridSize.value, mpiMethod.value)
+      mpiGrid.value = mpiData?.grid || null
+      mpiStats.value = mpiData?.statistics || {}
+    }
   } catch (error) {
     const message = error?.response?.data?.detail || 'MPI分布计算失败'
     mpiError.value = message
@@ -484,6 +629,7 @@ const debounceStepResult = createDebouncer(() => runStepResult(false), 500)
 const debounceStepGrid = createDebouncer(() => runStepGrid(false), 650)
 const debounceStepBatch = createDebouncer(() => runStepBatch(false), 650)
 const debounceMpi = createDebouncer(() => runMpiGrid(false), 700)
+const debounceMpiGeo = createDebouncer(() => runMpiGrid(false), 900)
 
 watch([stepModel, stepH, stepQ, stepT, stepS], () => {
   if (!initialized.value) return
@@ -503,6 +649,16 @@ watch(stepModel, () => {
 watch([mpiSeam, mpiGridSize, mpiMethod], () => {
   if (!initialized.value) return
   debounceMpi()
+})
+
+watch(geoAwareEnabled, () => {
+  if (!initialized.value) return
+  debounceMpi()
+})
+
+watch(geoModelJobId, () => {
+  if (!initialized.value || !geoAwareEnabled.value) return
+  debounceMpiGeo()
 })
 
 onMounted(async () => {
@@ -643,6 +799,18 @@ onMounted(async () => {
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
+.geo-toggle-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.geo-toggle-line input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+}
+
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -774,6 +942,78 @@ onMounted(async () => {
   color: #0f766e;
 }
 
+.geo-summary {
+  border: 1px solid #bfd6ff;
+  background: linear-gradient(135deg, #edf4ff, #e2ecff);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.geo-summary h4,
+.zone-card h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #1d4ed8;
+}
+
+.geo-summary-row {
+  margin-top: 4px;
+}
+
+.geo-meta,
+.geo-feature {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #1e3a8a;
+}
+
+.zone-card {
+  border: 1px solid #cfe7db;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f7fcfa;
+}
+
+.zone-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.zone-item {
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+}
+
+.zone-item span {
+  display: block;
+  font-size: 11px;
+  color: #334155;
+}
+
+.zone-item strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.zone-item.high {
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+.zone-item.medium {
+  border-color: #fde68a;
+  background: #fff9e8;
+}
+
+.zone-item.low {
+  border-color: #bbf7d0;
+  background: #ecfdf3;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -827,6 +1067,10 @@ thead th {
 
   .params-grid,
   .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .zone-grid {
     grid-template-columns: 1fr;
   }
 }

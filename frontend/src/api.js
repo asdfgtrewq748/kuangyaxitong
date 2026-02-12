@@ -229,9 +229,23 @@ export const getSeamContourImages = (
   return apiCache.cachedGet('/seams/contour-images', config)
 }
 
+// Geomodel APIs
+export const createGeomodelJob = (payload) =>
+  api.post('/api/geomodel/jobs', payload)
+export const getGeomodelJob = (jobId) =>
+  api.get(`/api/geomodel/jobs/${jobId}`)
+export const listGeomodelArtifacts = (jobId) =>
+  api.get(`/api/geomodel/jobs/${jobId}/artifacts`)
+export const downloadGeomodelArtifact = (jobId, artifactName) =>
+  api.get(`/api/geomodel/jobs/${jobId}/artifacts/${encodeURIComponent(artifactName)}`, { responseType: 'blob' })
+
 // MPI (矿压影响指标) APIs
 export const mpiCalculate = (point, weights = null, config = null) =>
   api.post('/api/mpi/calculate', { point, weights, config })
+export const mpiCalculateGeo = (payload) =>
+  api.post('/api/mpi/calculate-geo', payload)
+export const mpiInterpolateGeo = (payload) =>
+  api.post('/api/mpi/interpolate-geo', payload)
 export const mpiBatch = (points, weights = null, config = null) =>
   api.post('/api/mpi/batch', { points, weights, config })
 export const mpiInterpolate = (points, resolution = 50, method = 'idw', weights = null, bounds = null) =>

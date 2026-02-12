@@ -2,7 +2,7 @@
 
 **更新日期：** 2026-02-10  
 **项目：** 地质建模融合矿压 MPI 系统  
-**当前阶段：** 阶段 A（后端基座）准备启动  
+**当前阶段：** 阶段 E（验证、压测与上线）进行中  
 **总周期：** 6-8 周
 
 ---
@@ -27,71 +27,71 @@
 
 ---
 
-### 阶段 A：后端基座（第 1-2 周）`IN_PROGRESS`
+### 阶段 A：后端基座（第 1-2 周）`COMPLETE`
 
 **目标：** 建立 Geomodel 作业服务与标准产物协议。  
 
 **任务清单：**
-- [ ] 新增 `backend/app/routes/geomodel.py`
-- [ ] 新增 `backend/app/services/geomodel_service.py`
-- [ ] 新增 `backend/app/schemas/geomodel.py`
-- [ ] 接入任务状态、产物下载接口
-- [ ] 统一产物协议（`summary.json`、`quality_report.json`、`layer_*.vtp`、`model.vtk`）
-- [ ] 新增 `backend/tests/test_geomodel_api.py`
+- [x] 新增 `backend/app/routes/geomodel.py`
+- [x] 新增 `backend/app/services/geomodel_service.py`
+- [x] 新增 `backend/app/schemas/geomodel.py`
+- [x] 接入任务状态、产物下载接口
+- [x] 统一产物协议（`summary.json`、`quality_report.json`、`layer_*.vtp`、`model.vtk`）
+- [x] 新增 `backend/tests/test_geomodel_api.py`
 
 **验收标准：**
-- [ ] 可创建建模任务并成功完成
-- [ ] 可下载并读取标准产物
-- [ ] 失败场景返回明确错误
+- [x] 可创建建模任务并成功完成
+- [x] 可下载并读取标准产物
+- [x] 失败场景返回明确错误
 
 ---
 
-### 阶段 B：MPI 计算增强（第 3 周）`TODO`
+### 阶段 B：MPI 计算增强（第 3 周）`COMPLETE`
 
 **目标：** 增加 geology-aware 指标能力，兼容现有 MPI 接口。  
 
 **任务清单：**
-- [ ] 新增 `backend/app/services/geomodel_features.py`
-- [ ] 扩展 `backend/app/services/mpi_new_algorithm.py` 的地质特征输入
-- [ ] 新增 `POST /api/mpi/calculate-geo`
-- [ ] 增加地质特征来源追踪字段
-- [ ] 补充算法回归测试
+- [x] 新增 `backend/app/services/geomodel_features.py`
+- [x] 扩展 `backend/app/services/mpi_new_algorithm.py` 的地质特征输入
+- [x] 新增 `POST /api/mpi/calculate-geo`
+- [x] 增加地质特征来源追踪字段
+- [x] 补充算法回归测试
 
 **验收标准：**
-- [ ] geology-aware 与 baseline 可并行对照输出
-- [ ] 旧接口无行为回归
-- [ ] 指标结果包含可解释特征引用
+- [x] geology-aware 与 baseline 可并行对照输出
+- [x] 旧接口无行为回归
+- [x] 指标结果包含可解释特征引用
 
 ---
 
-### 阶段 C：前端接入与可视化（第 4-5 周）`TODO`
+### 阶段 C：前端接入与可视化（第 4-5 周）`COMPLETE`
 
 **目标：** 在关键页面接入建模产物，形成 2D/3D 联动分析。  
 
 **任务清单：**
-- [ ] `frontend/src/views/Interpolation.vue` 增加建模任务入口与诊断卡
-- [ ] `frontend/src/views/MpiHeatmapPro.vue` 增加 3D 联动入口
-- [ ] `frontend/src/views/AlgorithmValidation.vue` 增加地质约束开关与对照图
-- [ ] `frontend/src/views/Steps.vue` 增加分区步距修正建议
-- [ ] `frontend/src/views/Report.vue` 新增地质质量章节
+- [x] `frontend/src/views/Interpolation.vue` 增加建模任务入口与诊断卡
+- [x] `frontend/src/views/MpiHeatmapPro.vue` 增加 3D 联动入口
+- [x] `frontend/src/views/AlgorithmValidation.vue` 增加地质约束开关与对照图
+- [x] `frontend/src/views/Steps.vue` 增加分区步距修正建议
+- [x] `frontend/src/views/Report.vue` 新增地质质量章节
 
 **验收标准：**
-- [ ] 至少 3 个页面可直接消费 Geomodel 结果
-- [ ] 2D/3D 联动操作可用
-- [ ] 页面核心交互稳定
+- [x] 至少 3 个页面可直接消费 Geomodel 结果
+- [x] 2D/3D 联动操作可用
+- [x] 页面核心交互稳定
 
 ---
 
-### 阶段 D：科研闭环与证据链（第 6 周）`TODO`
+### 阶段 D：科研闭环与证据链（第 6 周）`COMPLETE`
 
 **目标：** 科研工作台可一键生成可复现实验与证据包。  
 
 **任务清单：**
-- [ ] 扩展 `backend/app/services/experiment_runner.py` 模板
-- [ ] 扩展 `frontend/src/views/ResearchWorkbench.vue` 模板配置
-- [ ] 新增 `geomodel_ablation` / `pinchout_effect` / `rk_vs_kriging`
-- [ ] 增加证据包导出（图组、统计、质量报告）
-- [ ] 增加实验追踪字段（数据版本、参数快照、对比结论）
+- [x] 扩展 `backend/app/services/experiment_runner.py` 模板
+- [x] 扩展 `frontend/src/views/ResearchWorkbench.vue` 模板配置
+- [x] 新增 `geomodel_ablation` / `pinchout_effect` / `rk_vs_kriging`
+- [x] 增加证据包导出（图组、统计、质量报告）
+- [x] 增加实验追踪字段（数据版本、参数快照、对比结论）
 
 **验收标准：**
 - [ ] 可一键跑通模板实验
@@ -110,6 +110,20 @@
 - [ ] 科研模板端到端验证（至少 2 套样本数据）
 - [ ] 发布说明与用户指南更新
 - [ ] 上线检查清单执行
+
+**本轮进展：**
+- [x] 已新增压测脚本 `scripts/perf/run_backend_perf.py`（覆盖大网格 MPI、地质增强、Geomodel 状态轮询、产物下载场景）
+- [x] 已新增压测说明 `scripts/perf/README.md`
+- [x] 已新增前端联调清单 `docs/plans/2026-02-11-阶段E-前端联调回归清单.md`
+- [x] 已新增阈值评估脚本 `scripts/perf/evaluate_backend_perf.py` 与阈值模板 `scripts/perf/thresholds.default.json`
+- [x] 已新增一键基线脚本 `scripts/perf/run_baseline_suite.py`（三轮压测 + 阈值评估 + Markdown报告）
+- [x] 已新增上线与回滚清单 `docs/plans/2026-02-11-阶段E-上线与回滚检查清单.md`
+- [x] 已新增联调回归记录模板 `docs/plans/2026-02-11-阶段E-联调回归记录模板.md`
+- [x] 已新增科研模板端到端验证脚本 `scripts/research/validate_template_e2e.py`
+- [x] 已完成脚本自验证（2套临时样本 + `geomodel_ablation` / `rk_vs_kriging` 模板通过）
+- [ ] 待在目标部署环境完成三轮基线采样并固化阈值
+- [ ] 待按联调清单完成核心页面逐项验收
+- [ ] 待使用 2 套真实数据执行科研模板端到端验证并归档报告
 
 **验收标准：**
 - [ ] 核心链路通过回归测试
@@ -157,4 +171,7 @@
 5. 阶段 C：`docs/plans/2026-02-10-阶段C-前端接入与可视化方案.md`  
 6. 阶段 D：`docs/plans/2026-02-10-阶段D-科研闭环与证据链方案.md`  
 7. 阶段 E：`docs/plans/2026-02-10-阶段E-验证压测与上线方案.md`  
-8. 模块执行清单：`docs/plans/2026-02-10-地质建模融合MPI-模块级执行清单.md`
+8. 阶段 E 联调清单：`docs/plans/2026-02-11-阶段E-前端联调回归清单.md`  
+9. 阶段 E 上线与回滚清单：`docs/plans/2026-02-11-阶段E-上线与回滚检查清单.md`  
+10. 阶段 E 联调记录模板：`docs/plans/2026-02-11-阶段E-联调回归记录模板.md`  
+11. 模块执行清单：`docs/plans/2026-02-10-地质建模融合MPI-模块级执行清单.md`

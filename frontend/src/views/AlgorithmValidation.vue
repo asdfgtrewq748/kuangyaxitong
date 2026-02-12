@@ -22,6 +22,7 @@
 
       <div class="nav-right">
         <button class="tool-btn" type="button" :class="{ active: showWeightPanel }" @click="showWeightPanel = !showWeightPanel">权重</button>
+        <button class="tool-btn" type="button" :class="{ active: showGeoPanel }" @click="showGeoPanel = !showGeoPanel">地质对照</button>
         <button class="tool-btn" type="button" :class="{ active: showEvalPanel }" @click="showEvalPanel = !showEvalPanel">评估</button>
         <button class="tool-btn" type="button" @click="exportCurrentFigure">导出高清图</button>
         <button class="tool-btn" type="button" :disabled="exportingPack || !hasSpatialData" @click="exportSciencePackage">{{ exportingPack ? '打包中...' : '导出图组包' }}</button>
@@ -164,6 +165,28 @@
       </aside>
     </transition>
 
+    <transition name="fade-up">
+      <aside v-if="showGeoPanel" class="floating-panel geo-panel">
+        <header><h3>Geology-aware 对照</h3><button type="button" class="close-btn" @click="showGeoPanel = false">×</button></header>
+        <p>基于当前煤层首个有效钻孔，计算 baseline 与 geology-aware 对照结果。</p>
+        <label class="geo-row">
+          <span>Geomodel任务ID</span>
+          <input v-model.trim="geoModelJobId" type="text" placeholder="可选，不填时走默认特征">
+        </label>
+        <button class="tool-btn small geo-run-btn" type="button" :disabled="geoCompareLoading || !seamName" @click="runGeoCompare">
+          {{ geoCompareLoading ? '计算中...' : '执行对照' }}
+        </button>
+        <p v-if="geoCompareError" class="geo-error">{{ geoCompareError }}</p>
+        <div v-if="geoCompareResult" class="geo-result-grid">
+          <div class="geo-cell"><span>模式</span><strong>{{ geoCompareResult.algorithm_mode }}</strong></div>
+          <div class="geo-cell"><span>Baseline</span><strong>{{ fmt(geoCompareResult.baseline?.mpi) }}</strong></div>
+          <div class="geo-cell"><span>Geo-aware</span><strong>{{ fmt(geoCompareResult.geology_aware?.mpi) }}</strong></div>
+          <div class="geo-cell"><span>差值</span><strong>{{ fmt((geoCompareResult.geology_aware?.mpi || 0) - (geoCompareResult.baseline?.mpi || 0)) }}</strong></div>
+          <div class="geo-cell"><span>回退</span><strong>{{ geoCompareResult.fallback_used ? '是' : '否' }}</strong></div>
+        </div>
+      </aside>
+    </transition>
+
     <transition name="drawer-up">
       <section v-if="showEvalPanel" class="eval-drawer">
         <header>
@@ -246,7 +269,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCoalSeams, validationEvaluate, validationSpatialOverview } from '../api'
+import { getCoalSeams, getRockParams, getSeamOverburden, mpiCalculateGeo, validationEvaluate, validationSpatialOverview } from '../api'
 import { useViewport } from '../composables/useViewport'
 import { useIndicatorCanvas } from '../composables/useIndicatorCanvas'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
@@ -284,6 +307,7 @@ const activeMetric = ref('mpi')
 const loading = ref(false)
 const hasInitialized = ref(false)
 const showWeightPanel = ref(false)
+const showGeoPanel = ref(false)
 const showEvalPanel = ref(true)
 const thumbsCollapsed = ref(false)
 const weights = reactive({ rsi: 0.4, bri: 0.35, asi: 0.25 })
@@ -303,7 +327,12 @@ const activePointerId = ref(null)
 const exportStaticMode = ref(false)
 const thumbCanvasRefs = {}
 const spatialCache = new Map()
+const layerParamsCache = new Map()
 const SPATIAL_CACHE_MODEL_REV = 'advanced_v2_asi_calibrated_v1'
+const geoModelJobId = ref('')
+const geoCompareLoading = ref(false)
+const geoCompareError = ref('')
+const geoCompareResult = ref(null)
 let jsZipCtor = null
 
 const getJSZipCtor = async () => {
@@ -1100,6 +1129,84 @@ const loadSeams = async () => {
   }
 }
 
+const getLayerParamsForGeo = async (name) => {
+  if (!name) return null
+  if (layerParamsCache.has(name)) return layerParamsCache.get(name)
+  try {
+    const { data } = await getRockParams(name)
+    layerParamsCache.set(name, data)
+    return data
+  } catch {
+    layerParamsCache.set(name, null)
+    return null
+  }
+}
+
+const buildGeoComparePoint = async () => {
+  if (!seamName.value) return null
+  const { data } = await getSeamOverburden(seamName.value)
+  const boreholes = data?.boreholes || []
+  const candidate = boreholes.find((item) => Array.isArray(item.layers) && item.layers.length > 0)
+  if (!candidate) return null
+
+  const layers = candidate.layers || []
+  const seamLayer = layers.find((l) => l.name === seamName.value)
+  const strataLayers = layers.filter((l) => l.name !== seamName.value)
+  const strata = []
+  for (const layer of strataLayers) {
+    const params = await getLayerParamsForGeo(layer.name)
+    strata.push({
+      thickness: Number(layer.thickness || 0),
+      name: layer.name || '',
+      density: params?.density,
+      bulk_modulus: params?.bulk_modulus,
+      shear_modulus: params?.shear_modulus,
+      cohesion: params?.cohesion,
+      friction_angle: params?.friction_angle,
+      tensile_strength: params?.tensile_strength,
+      compressive_strength: params?.compressive_strength,
+      elastic_modulus: params?.elastic_modulus,
+      poisson_ratio: params?.poisson_ratio
+    })
+  }
+
+  const burialDepth = Number(candidate.seam_top_depth ?? candidate.total_overburden_thickness ?? 0)
+  const thickness = Number(seamLayer?.thickness || 0)
+  return {
+    x: Number(candidate.x || 0),
+    y: Number(candidate.y || 0),
+    borehole: candidate.name || '',
+    thickness,
+    burial_depth: burialDepth,
+    z_top: burialDepth,
+    z_bottom: burialDepth + thickness,
+    strata
+  }
+}
+
+const runGeoCompare = async () => {
+  geoCompareError.value = ''
+  geoCompareResult.value = null
+  geoCompareLoading.value = true
+  try {
+    const point = await buildGeoComparePoint()
+    if (!point) {
+      geoCompareError.value = '未找到可用于对照的钻孔数据'
+      return
+    }
+    const { data } = await mpiCalculateGeo({
+      point,
+      geomodel_job_id: geoModelJobId.value || null,
+      include_baseline: true
+    })
+    geoCompareResult.value = data
+  } catch (error) {
+    geoCompareError.value = error?.response?.data?.detail || error?.message || '地质对照计算失败'
+  } finally {
+    geoCompareLoading.value = false
+  }
+}
+
 watch(activeMetric, () => queueRender())
 watch(showContours, () => queueRender())
 watch(contourLevels, () => { clampContourLevels(); queueRender() })
@@ -1107,6 +1214,8 @@ watch(useFixedScale, () => { queueRender(); queueThumbRender() })
 watch([resolution, method], () => { if (hasInitialized.value) fetchSpatial({ force: false }) })
 watch(seamName, () => {
   setSelectedSeam(seamName.value || '')
+  geoCompareError.value = ''
+  geoCompareResult.value = null
   if (hasInitialized.value) fetchSpatial({ force: false })
 })
 watch(matrixLinkable, (ok) => {
@@ -1218,10 +1327,20 @@ onBeforeUnmount(() => {
 .thumb-tooltip { position: absolute; z-index: 8; pointer-events: none; min-width: 154px; border: 1px solid rgba(15,23,42,.2); border-radius: 8px; background: rgba(255,255,255,.96); box-shadow: 0 10px 20px rgba(15,23,42,.12); padding: 8px 10px; font-size: 11px; color: #1f2937; }
 .thumb-tooltip p { margin: 2px 0; }
 .floating-panel { position: absolute; right: 16px; top: 152px; z-index: 20; width: 360px; border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: #fff; box-shadow: var(--shadow-lg); padding: 12px; }
+.geo-panel { top: 328px; }
 .floating-panel header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .floating-panel h3 { margin: 0; font-size: 15px; }
 .floating-panel p { margin: 0 0 10px; font-size: 12px; color: #4b5563; }
 .weight-row { display: grid; grid-template-columns: 44px 1fr 46px; align-items: center; gap: 10px; margin-bottom: 10px; }
+.geo-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; font-size: 12px; color: #475569; }
+.geo-row input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+.geo-row input:focus-visible { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(15,118,110,.2); }
+.geo-run-btn { width: 100%; justify-content: center; margin-bottom: 8px; color: #111827; border-color: #d8e6e3; background: #f8fafc; }
+.geo-error { margin: 0 0 8px; color: #b91c1c; font-size: 12px; }
+.geo-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.geo-cell { border: 1px solid #d8e6e3; border-radius: 8px; background: #f8fafc; padding: 7px 8px; }
+.geo-cell span { display: block; font-size: 11px; color: #64748b; }
+.geo-cell strong { font-size: 13px; color: #111827; font-family: 'JetBrains Mono', monospace; }
 .close-btn { border: 1px solid #cbd5e1; background: #f1f8f6; color: #1f2937; border-radius: 8px; width: 28px; height: 28px; font-size: 17px; line-height: 1; cursor: pointer; }
 .close-btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: #e8f5f2; }
 .eval-drawer { position: relative; z-index: 4; border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: #fff; box-shadow: var(--shadow-md); padding: 12px; }
@@ -1255,6 +1374,6 @@ onBeforeUnmount(() => {
 .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(6px); }
 .drawer-up-enter-from, .drawer-up-leave-to { opacity: 0; transform: translateY(20px); }
 @media (max-width: 1400px) { .main-layout { grid-template-columns: 1fr; } .thumb-list { flex-direction: row; overflow-x: auto; } .thumb-item { min-width: 220px; } }
-@media (max-width: 1080px) { .validation-page { height: auto; min-height: calc(100vh - 18px); } .metric-dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thumb-panel { display: none; } .floating-panel { position: fixed; left: 12px; right: 12px; top: 88px; width: auto; } .eval-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .eval-content { grid-template-columns: 1fr; } }
+@media (max-width: 1080px) { .validation-page { height: auto; min-height: calc(100vh - 18px); } .metric-dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thumb-panel { display: none; } .floating-panel { position: fixed; left: 12px; right: 12px; top: 88px; width: auto; } .geo-panel { top: 88px; } .eval-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .eval-content { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .top-nav { flex-direction: column; align-items: flex-start; } .nav-right { width: 100%; flex-wrap: wrap; } .stage { min-height: 320px; } }
 </style>

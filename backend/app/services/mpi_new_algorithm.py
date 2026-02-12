@@ -410,3 +410,50 @@ def calc_all_indicators_new(
         "missing_microseismic": missing_microseismic,
         "compute_errors": compute_errors,
     }
+
+
+def calc_mpi_geology_aware(
+    baseline_result: Dict[str, Any],
+    features: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    在 baseline MPI 基础上引入地质特征修正，输出 geology-aware 结果。
+    """
+    baseline_mpi = float(_to_float((baseline_result or {}).get("mpi"), 50.0))
+    baseline_breakdown = (baseline_result or {}).get("breakdown") or {}
+
+    f = features or {}
+    key_layer_span = float(_to_float(f.get("key_layer_span"), 80.0))
+    layer_cv = float(_to_float(f.get("layer_cv"), 0.3))
+    pinchout_ratio = float(_clamp(_to_float(f.get("pinchout_ratio"), 0.0), 0.0, 1.0))
+    continuity_score = float(_clamp(_to_float(f.get("continuity_score"), 0.5), 0.0, 1.0))
+
+    continuity_term = (continuity_score - 0.5) * 0.12
+    pinchout_term = -pinchout_ratio * 0.10
+    variability_term = -max(0.0, layer_cv - 0.3) * 0.08
+    span_term = -max(0.0, key_layer_span - 80.0) / 200.0 * 0.08
+
+    adjustment_ratio = continuity_term + pinchout_term + variability_term + span_term
+    geology_mpi = _clamp(baseline_mpi * (1.0 + adjustment_ratio), 0.0, 100.0)
+
+    scale = geology_mpi / baseline_mpi if baseline_mpi > 1e-6 else 1.0
+    rsi = _clamp(_to_float(baseline_breakdown.get("rsi"), 50.0) * scale, 0.0, 100.0)
+    bri = _clamp(_to_float(baseline_breakdown.get("bri"), 50.0) * scale, 0.0, 100.0)
+    asi = _clamp(_to_float(baseline_breakdown.get("asi"), 50.0) * scale, 0.0, 100.0)
+
+    return {
+        "mpi": round(float(geology_mpi), 4),
+        "breakdown": {
+            "rsi": round(float(rsi), 4),
+            "bri": round(float(bri), 4),
+            "asi": round(float(asi), 4),
+        },
+        "feature_contribution": {
+            "continuity_term": round(float(continuity_term), 6),
+            "pinchout_term": round(float(pinchout_term), 6),
+            "variability_term": round(float(variability_term), 6),
+            "span_term": round(float(span_term), 6),
+            "adjustment_ratio": round(float(adjustment_ratio), 6),
+        },
+        "algorithm_mode": "geology_aware_v1",
+    }

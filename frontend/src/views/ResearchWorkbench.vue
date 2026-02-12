@@ -164,6 +164,11 @@
               <option value="baseline">baseline</option>
               <option value="rsi_phase_field">rsi_phase_field</option>
               <option value="asi_ust">asi_ust</option>
+              <option value="geomodel_aware">geomodel_aware</option>
+              <option value="geomodel_ablation">geomodel_ablation</option>
+              <option value="pinchout_sensitive">pinchout_sensitive</option>
+              <option value="rk_enhanced">rk_enhanced</option>
+              <option value="kriging_baseline">kriging_baseline</option>
               <option value="custom">custom</option>
             </select>
           </label>
@@ -1033,6 +1038,54 @@ const buildMethodsMarkdown = () => {
   return lines.join('\n')
 }
 
+const escapeXml = (value) => (
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+)
+
+const buildComparisonPointChartSvg = () => {
+  const chart = comparisonPointChart.value
+  if (!chart) return ''
+  const lines = []
+  lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${chart.width} ${chart.height}">`)
+  lines.push(`<rect x="0" y="0" width="${chart.width}" height="${chart.height}" fill="#ffffff"/>`)
+  for (const tick of chart.ticks) {
+    const x = chart.scaleX(tick)
+    lines.push(`<line x1="${x}" y1="${chart.margin.top}" x2="${x}" y2="${chart.margin.top + chart.plotHeight}" stroke="#e2e8f0" stroke-width="1"/>`)
+    lines.push(`<text x="${x}" y="${chart.height - 6}" fill="#64748b" font-size="10" text-anchor="middle">${Number(tick).toFixed(4)}</text>`)
+  }
+  for (const row of chart.rows) {
+    lines.push(`<line x1="${chart.scaleX(row.ciLow)}" y1="${row.y}" x2="${chart.scaleX(row.ciHigh)}" y2="${row.y}" stroke="#94a3b8" stroke-width="1.6"/>`)
+    lines.push(`<circle cx="${chart.scaleX(row.value)}" cy="${row.y}" r="4.5" fill="${row.isChampion ? '#dc2626' : '#0f766e'}"/>`)
+    lines.push(`<text x="${chart.margin.left - 8}" y="${row.y + 4}" fill="#0f172a" font-size="10" text-anchor="end">${escapeXml(row.shortExpId)}</text>`)
+  }
+  lines.push('</svg>')
+  return lines.join('')
+}
+
+const buildComparisonModelBarSvg = () => {
+  const chart = comparisonModelBarChart.value
+  if (!chart) return ''
+  const lines = []
+  lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${chart.width} ${chart.height}">`)
+  lines.push(`<rect x="0" y="0" width="${chart.width}" height="${chart.height}" fill="#ffffff"/>`)
+  for (const row of chart.rows) {
+    const x0 = chart.scaleX(0)
+    const x1 = chart.scaleX(row.value)
+    const left = Math.min(x0, x1)
+    const width = Math.abs(x1 - x0)
+    lines.push(`<rect x="${left}" y="${row.y - row.height / 2}" width="${width}" height="${row.height}" rx="4" fill="#0f766e" opacity="0.85"/>`)
+    lines.push(`<text x="${chart.margin.left - 8}" y="${row.y + 4}" fill="#0f172a" font-size="10" text-anchor="end">${escapeXml(row.model_type)}</text>`)
+    lines.push(`<text x="${x1 + 6}" y="${row.y + 4}" fill="#475569" font-size="10">${Number(row.value).toFixed(4)}</text>`)
+  }
+  lines.push('</svg>')
+  return lines.join('')
+}
+
 const applyManifestToForms = (data) => {
   if (!data) return
   datasetQueryId.value = data.dataset_id || datasetQueryId.value
@@ -1303,17 +1356,24 @@ const exportEvidenceBundle = async () => {
       '',
       '包含内容:',
       '- manifests/dataset_manifest.json',
+      '- manifests/dataset_quality_report.json',
       '- manifests/split_manifest.json',
       '- results/latest_result.json',
       '- results/suite_result.json',
       '- methods/methods.md',
       '- comparison/*.json|csv',
+      '- figures/*.svg',
       '- artifacts/index.json (和可下载产物)'
     ]
     zip.file('README.md', readmeLines.join('\n'))
     zip.file('methods/methods.md', buildMethodsMarkdown())
 
-    if (manifest.value) zip.file('manifests/dataset_manifest.json', JSON.stringify(manifest.value, null, 2))
+    if (manifest.value) {
+      zip.file('manifests/dataset_manifest.json', JSON.stringify(manifest.value, null, 2))
+      if (manifest.value?.quality_report) {
+        zip.file('manifests/dataset_quality_report.json', JSON.stringify(manifest.value.quality_report, null, 2))
+      }
+    }
     if (splitManifest.value) zip.file('manifests/split_manifest.json', JSON.stringify(splitManifest.value, null, 2))
     if (displayResult.value) zip.file('results/latest_result.json', JSON.stringify(displayResult.value, null, 2))
     if (suiteResult.value) zip.file('results/suite_result.json', JSON.stringify(suiteResult.value, null, 2))
@@ -1331,9 +1391,13 @@ const exportEvidenceBundle = async () => {
     }
     if (comparisonPointChart.value) {
       zip.file('comparison/point_chart_data.json', JSON.stringify(comparisonPointChart.value.rows, null, 2))
+      const pointSvg = buildComparisonPointChartSvg()
+      if (pointSvg) zip.file('figures/comparison_point_chart.svg', pointSvg)
     }
     if (comparisonModelBarChart.value) {
       zip.file('comparison/model_bar_chart_data.json', JSON.stringify(comparisonModelBarChart.value.rows, null, 2))
+      const barSvg = buildComparisonModelBarSvg()
+      if (barSvg) zip.file('figures/model_summary_bar.svg', barSvg)
     }
 
     zip.file('artifacts/index.json', JSON.stringify(artifacts.value || [], null, 2))

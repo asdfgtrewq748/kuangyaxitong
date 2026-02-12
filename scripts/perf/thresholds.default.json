@@ -1,0 +1,24 @@
+{
+  "scenarios": {
+    "mpi_interpolate_large_grid": {
+      "success_rate": { "min": 0.99 },
+      "rps": { "min": 2.0 },
+      "latency_ms.p95": { "max": 1200.0 },
+      "latency_ms.p99": { "max": 1600.0 }
+    },
+    "mpi_interpolate_geo_large_grid": {
+      "success_rate": { "min": 0.99 },
+      "rps": { "min": 1.0 },
+      "latency_ms.p95": { "max": 2200.0 },
+      "latency_ms.p99": { "max": 3000.0 }
+    },
+    "geomodel_status_poll": {
+      "success_rate": { "min": 0.99 },
+      "latency_ms.p95": { "max": 600.0 }
+    },
+    "geomodel_artifact_download": {
+      "success_rate": { "min": 0.99 },
+      "latency_ms.p95": { "max": 2500.0 }
+    }
+  }
+}

@@ -134,7 +134,17 @@ class ExperimentSpec(BaseModel):
     dataset_version: str
     split_id: Optional[str] = None
     experiment_name: str
-    model_type: Literal["baseline", "rsi_phase_field", "asi_ust", "custom"] = "baseline"
+    model_type: Literal[
+        "baseline",
+        "rsi_phase_field",
+        "asi_ust",
+        "geomodel_aware",
+        "geomodel_ablation",
+        "pinchout_sensitive",
+        "rk_enhanced",
+        "kriging_baseline",
+        "custom",
+    ] = "baseline"
     target_label_column: Optional[str] = None
     params: Dict[str, Any] = Field(default_factory=dict)
     metrics: List[str] = Field(default_factory=lambda: ["auc", "pr_auc", "brier", "ece", "f1", "mae", "rmse"])

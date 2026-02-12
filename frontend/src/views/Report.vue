@@ -32,6 +32,15 @@
         <label>最近更新</label>
         <span>{{ generatedAt || '-' }}</span>
       </div>
+      <div class="control-item geomodel-control">
+        <label>Geomodel任务ID</label>
+        <div class="geomodel-input-row">
+          <input v-model.trim="geomodelJobId" type="text" placeholder="输入任务ID，如 a1b2c3d4e5f6">
+          <button class="btn secondary small" :disabled="geomodelLoading || !geomodelJobId" @click="loadGeomodelQuality(true)">
+            {{ geomodelLoading ? '读取中...' : '读取质量' }}
+          </button>
+        </div>
+      </div>
     </section>
 
     <section class="card" v-if="reportError">
@@ -89,6 +98,38 @@
     </section>
 
     <section class="card">
+      <h2>地质模型质量章节</h2>
+      <div v-if="geomodelError" class="error">{{ geomodelError }}</div>
+      <div v-else-if="geomodelQuality" class="geomodel-quality-grid">
+        <article class="metric-card">
+          <h3>任务状态</h3>
+          <div class="metric-main">{{ geomodelQuality.status || '-' }}</div>
+          <div class="metric-sub"><span>任务ID</span><span>{{ geomodelJobId }}</span></div>
+        </article>
+        <article class="metric-card">
+          <h3>连续性评分</h3>
+          <div class="metric-main">{{ formatNumber(geomodelQuality.summary?.continuity_score, 3) }}</div>
+          <div class="metric-sub"><span>尖灭比例</span><span>{{ formatNumber(geomodelQuality.summary?.pinchout_ratio, 3) }}</span></div>
+        </article>
+        <article class="metric-card">
+          <h3>层厚变异系数</h3>
+          <div class="metric-main">{{ formatNumber(geomodelQuality.summary?.layer_cv, 3) }}</div>
+          <div class="metric-sub"><span>零/负厚比</span><span>{{ formatNumber(geomodelQuality.summary?.zero_or_negative_ratio, 3) }}</span></div>
+        </article>
+        <article class="metric-card warning-card">
+          <h3>质量告警</h3>
+          <div class="warning-list">
+            <span v-if="geomodelQuality.warning_flags?.low_continuity">低连续性</span>
+            <span v-if="geomodelQuality.warning_flags?.high_pinchout">尖灭比例高</span>
+            <span v-if="geomodelQuality.warning_flags?.high_variability">层厚变异高</span>
+            <span v-if="!geomodelQuality.warning_flags || (!geomodelQuality.warning_flags.low_continuity && !geomodelQuality.warning_flags.high_pinchout && !geomodelQuality.warning_flags.high_variability)">无明显告警</span>
+          </div>
+        </article>
+      </div>
+      <div v-else class="empty-block">输入 Geomodel 任务ID 后读取质量摘要并纳入报告。</div>
+    </section>
+
+    <section class="card">
       <h2>详细统计表</h2>
       <div class="table-wrap" v-if="summary.length">
         <table>
@@ -129,7 +170,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import {
+  downloadGeomodelArtifact,
   getCoalSeams,
+  getGeomodelJob,
   getRockParams,
   getSeamOverburden,
   mpiBatch,
@@ -153,6 +196,10 @@ const generatedAt = ref('')
 const seamOptions = ref([])
 const selectedSeam = ref('')
 const initialized = ref(false)
+const geomodelJobId = ref('')
+const geomodelQuality = ref(null)
+const geomodelLoading = ref(false)
+const geomodelError = ref('')
 
 const layerParamsCache = new Map()
 
@@ -166,17 +213,71 @@ const normalizeQuerySeam = (value) => {
   return typeof value === 'string' ? value : ''
 }
 
+const normalizeQueryJobId = (value) => {
+  if (Array.isArray(value)) return value[0] || ''
+  return typeof value === 'string' ? value : ''
+}
+
 const loadSeams = async () => {
   try {
     const { data } = await getCoalSeams()
     seamOptions.value = data?.seams || []
     const seamFromQuery = normalizeQuerySeam(route.query?.seam)
+    const jobFromQuery = normalizeQueryJobId(route.query?.geomodel_job_id) || normalizeQueryJobId(route.query?.geomodelJobId)
+    if (jobFromQuery) geomodelJobId.value = jobFromQuery
     const preferred = seamFromQuery || seamOptions.value[0]?.name || ''
     selectedSeam.value = preferred
     if (preferred) setSelectedSeam(preferred)
   } catch {
     seamOptions.value = []
     selectedSeam.value = ''
+  }
+}
+
+const loadGeomodelQuality = async (notify = false) => {
+  geomodelError.value = ''
+  geomodelQuality.value = null
+  if (!geomodelJobId.value) return
+
+  geomodelLoading.value = true
+  try {
+    const { data: job } = await getGeomodelJob(geomodelJobId.value)
+    const summary = job?.result_manifest?.quality_summary || {}
+    if (job?.status !== 'completed') {
+      geomodelQuality.value = {
+        status: job?.status || 'pending',
+        summary,
+        warning_flags: {}
+      }
+      if (notify) toast.add(`建模任务状态：${job?.status || 'pending'}`, 'warning')
+      return
+    }
+
+    let detail = {}
+    try {
+      const artifactResp = await downloadGeomodelArtifact(geomodelJobId.value, 'quality_report.json')
+      const text = await artifactResp.data.text()
+      detail = JSON.parse(text)
+    } catch {
+      detail = {}
+    }
+
+    geomodelQuality.value = {
+      status: job?.status || 'completed',
+      summary: {
+        continuity_score: Number(summary?.continuity_score ?? detail?.continuity_score ?? 0),
+        pinchout_ratio: Number(summary?.pinchout_ratio ?? detail?.pinchout_ratio ?? 0),
+        layer_cv: Number(summary?.layer_cv ?? detail?.layer_cv ?? 0),
+        zero_or_negative_ratio: Number(detail?.zero_or_negative_ratio ?? 0)
+      },
+      warning_flags: detail?.warning_flags || {}
+    }
+    if (notify) toast.add('已加载地质模型质量摘要', 'success')
+  } catch (error) {
+    geomodelError.value = error?.response?.data?.detail || '读取地质建模质量失败'
+    if (notify) toast.add(geomodelError.value, 'error')
+  } finally {
+    geomodelLoading.value = false
   }
 }
 
@@ -417,10 +518,21 @@ watch(
   }
 )
 
+watch(
+  () => route.query?.geomodel_job_id,
+  (value) => {
+    const jobId = normalizeQueryJobId(value)
+    if (jobId && jobId !== geomodelJobId.value) geomodelJobId.value = jobId
+  }
+)
+
 onMounted(async () => {
   await loadSeams()
   initialized.value = true
   await generateReport(false)
+  if (geomodelJobId.value) {
+    await loadGeomodelQuality(false)
+  }
 })
 </script>
 
@@ -476,7 +588,7 @@ onMounted(async () => {
 
 .controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--spacing-md);
 }
 
@@ -496,6 +608,27 @@ onMounted(async () => {
   color: var(--text-primary);
   background: var(--bg-primary);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.geomodel-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.geomodel-input-row input {
+  flex: 1;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: 9px 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.geomodel-input-row input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
 }
 
 .control-item select:hover {
@@ -565,6 +698,11 @@ onMounted(async () => {
   background: var(--bg-tertiary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
+}
+
+.btn.small {
+  padding: 8px 10px;
+  font-size: 12px;
 }
 
 .btn.secondary:hover:not(:disabled) {
@@ -704,6 +842,21 @@ h2 {
   color: var(--text-secondary);
 }
 
+.geomodel-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.warning-card .warning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .empty-block {
   min-height: 140px;
   display: grid;
@@ -747,11 +900,19 @@ tbody tr:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .mpi-layout {
     grid-template-columns: 1fr;
   }
 
   .mpi-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .geomodel-quality-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -770,7 +931,8 @@ tbody tr:hover {
   .controls,
   .cards-grid,
   .mpi-stats,
-  .mpi-extremes {
+  .mpi-extremes,
+  .geomodel-quality-grid {
     grid-template-columns: 1fr;
   }
 }

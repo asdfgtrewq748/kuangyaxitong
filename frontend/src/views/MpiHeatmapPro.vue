@@ -71,6 +71,50 @@
           </div>
 
           <div class="control-section">
+            <h4>地质约束</h4>
+            <div class="control-grid">
+              <label class="layer-toggle">
+                <input type="checkbox" v-model="geoAwareEnabled">
+                <span>启用 geology-aware 预估</span>
+              </label>
+              <div class="control-item">
+                <label>Geomodel 任务ID</label>
+                <input
+                  v-model.trim="geoModelJobId"
+                  type="text"
+                  class="geo-input"
+                  placeholder="例如：a1b2c3d4e5f6"
+                >
+              </div>
+              <button class="geo-btn" @click="runGeoAwarePreview" :disabled="loading || geoAwareLoading">
+                {{ geoAwareLoading ? '计算中...' : '计算全域对照' }}
+              </button>
+              <button class="geo-btn secondary" @click="openGeomodelWorkspace">
+                打开建模联动页
+              </button>
+              <div v-if="geoAwareResult" class="geo-summary">
+                <div class="geo-row">
+                  <span>模式</span>
+                  <b>{{ geoAwareResult.algorithm_mode }}</b>
+                </div>
+                <div class="geo-row">
+                  <span>Baseline均值</span>
+                  <b>{{ geoAwareResult.baseline_statistics?.mean?.toFixed?.(2) ?? '-' }}</b>
+                </div>
+                <div class="geo-row">
+                  <span>Geo-aware均值</span>
+                  <b>{{ geoAwareResult.geology_aware_statistics?.mean?.toFixed?.(2) ?? '-' }}</b>
+                </div>
+                <div class="geo-row">
+                  <span>回退</span>
+                  <b>{{ geoAwareResult.fallback_used ? '是' : '否' }}</b>
+                </div>
+              </div>
+              <p v-if="geoAwareError" class="geo-error">{{ geoAwareError }}</p>
+            </div>
+          </div>
+
+          <div class="control-section">
             <h4>图层</h4>
             <div class="layer-toggles">
               <label class="layer-toggle">
@@ -217,6 +261,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch, onUnmounted, shallowRef, markRaw } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import { useMiningSimulation } from '../composables/useMiningSimulation'
 import { useParticles, useRipples } from '../composables/useParticles'
@@ -224,8 +269,10 @@ import DirectionControl from '../components/simulation/DirectionControl.vue'
 import * as d3 from 'd3'
 import {
   getCoalSeams,
+  getGeomodelJob,
   getSeamOverburden,
   getRockParams,
+  mpiInterpolateGeo,
   mpiInterpolate,
   parseMpiWorkfaces
 } from '../api'
@@ -239,6 +286,13 @@ const stats = ref({})
 const activeWorkface = ref(null)
 const workfaces = ref([])
 const seamBoreholes = shallowRef([]) // Store borehole data for display
+const currentPoints = shallowRef([])
+
+const geoAwareEnabled = ref(false)
+const geoModelJobId = ref('')
+const geoAwareLoading = ref(false)
+const geoAwareResult = ref(null)
+const geoAwareError = ref('')
 
 // UI State
 const controlsVisible = ref(false)
@@ -291,6 +345,7 @@ const hoverInfo = ref(null)
 const hoverPos = ref({ x: 0, y: 0 })
 
 const toast = useToast()
+const router = useRouter()
 
 // Cache
 const layerParamsCache = new Map()
@@ -356,8 +411,11 @@ const handleSeamChange = () => {
   // Reset and recompute when seam changes
   globalGrid.value = null
   seamBoreholes.value = []
+  currentPoints.value = []
   gridBounds.value = null
   stats.value = {}
+  geoAwareResult.value = null
+  geoAwareError.value = ''
   // Clear color cache when data changes
   colorCache.clear()
   simulation.seek(0)
@@ -372,6 +430,12 @@ const recomputeGlobal = () => {
     computeGlobal()
   }
 }
+
+watch(geoAwareEnabled, () => {
+  if (seam.value) {
+    computeGlobal()
+  }
+})
 
 // --- Mini Dashboard Computed ---
 const currentPhase = computed(() => {
@@ -496,9 +560,65 @@ const buildPoints = async (boreholes) => {
   return points
 }
 
+const runGeoAwarePreview = async (pointsOverride = null) => {
+  geoAwareError.value = ''
+  const points = pointsOverride || currentPoints.value
+
+  if (!geoAwareEnabled.value) {
+    geoAwareError.value = '请先启用 geology-aware 预估'
+    return
+  }
+  if (!points?.length) {
+    geoAwareError.value = '当前没有可用点位数据'
+    return
+  }
+
+  geoAwareLoading.value = true
+  try {
+    if (geoModelJobId.value) {
+      await getGeomodelJob(geoModelJobId.value)
+    }
+
+    const { data } = await mpiInterpolateGeo({
+      points,
+      resolution: resolution.value,
+      method: 'idw',
+      geomodel_job_id: geoModelJobId.value || null,
+      include_baseline_grid: true
+    })
+    geoAwareResult.value = data
+    globalGrid.value = data?.geology_aware_grid || null
+    gridBounds.value = data?.bounds || null
+    stats.value = data?.geology_aware_statistics || {}
+    const base = data?.baseline_statistics?.mean
+    const geo = data?.geology_aware_statistics?.mean
+    if (Number.isFinite(base) && Number.isFinite(geo)) {
+      toast.add(`Geo-aware对照完成：${base.toFixed(1)} -> ${geo.toFixed(1)}`, 'success')
+    } else {
+      toast.add('Geo-aware对照完成', 'success')
+    }
+    fitToScreen()
+    requestAnimationFrame(renderAll)
+  } catch (err) {
+    geoAwareError.value = err?.response?.data?.detail || err?.message || '地质约束计算失败'
+    toast.add(geoAwareError.value, 'error')
+  } finally {
+    geoAwareLoading.value = false
+  }
+}
+
+const openGeomodelWorkspace = () => {
+  const query = {}
+  if (seam.value) query.seam = seam.value
+  if (geoModelJobId.value) query.geomodel_job_id = geoModelJobId.value
+  router.push({ name: 'Interpolation', query })
+}
+
 const computeGlobal = async () => {
   if (!seam.value) return
   loading.value = true
+  geoAwareError.value = ''
+  geoAwareResult.value = null
   try {
     // 1. Get Boreholes
     const { data } = await getSeamOverburden(seam.value)
@@ -509,19 +629,19 @@ const computeGlobal = async () => {
 
     // 2. Build Points
     const points = await buildPoints(data.boreholes)
+    currentPoints.value = points
 
-    // 3. Interpolate Global Grid (No bounds = auto bounds)
-    const res = await mpiInterpolate(points, resolution.value, 'idw', null, null)
-
-    globalGrid.value = res.data.grid
-    gridBounds.value = res.data.bounds
-    stats.value = res.data.statistics
-
-    // 4. Center View
-    fitToScreen()
-
-    // 5. Render
-    requestAnimationFrame(renderAll)
+    if (geoAwareEnabled.value) {
+      await runGeoAwarePreview(points)
+    } else {
+      // 3. Interpolate Global Grid (No bounds = auto bounds)
+      const res = await mpiInterpolate(points, resolution.value, 'idw', null, null)
+      globalGrid.value = res.data.grid
+      gridBounds.value = res.data.bounds
+      stats.value = res.data.statistics
+      fitToScreen()
+      requestAnimationFrame(renderAll)
+    }
 
   } catch (e) {
     console.error(e)
@@ -1875,6 +1995,83 @@ const resetView = () => {
 .control-item label {
   font-size: 12px;
   color: #64748b;
+}
+
+.geo-input {
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #d8e6e3;
+  background: #ffffff;
+  color: #334155;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.geo-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+}
+
+.geo-btn {
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #d8e6e3;
+  background: #ffffff;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.geo-btn:hover:not(:disabled) {
+  border-color: #0f766e;
+  background: #e8f3f1;
+}
+
+.geo-btn.secondary {
+  border-color: #bfd7e5;
+  color: #0369a1;
+  background: #f0f9ff;
+}
+
+.geo-btn.secondary:hover:not(:disabled) {
+  border-color: #0369a1;
+  background: #e0f2fe;
+}
+
+.geo-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.geo-summary {
+  border: 1px solid #d8e6e3;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #f8fcfb;
+  display: grid;
+  gap: 4px;
+}
+
+.geo-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #475569;
+}
+
+.geo-row b {
+  color: #0f172a;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.geo-error {
+  margin: 0;
+  font-size: 11px;
+  color: #b91c1c;
 }
 
 .range-wrapper {

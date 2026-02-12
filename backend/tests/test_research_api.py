@@ -159,6 +159,9 @@ def test_research_experiment_run_and_artifacts(tmp_path, monkeypatch):
     assert templates_resp.status_code == 200
     templates = templates_resp.json()["templates"]
     assert "rsi_paper_core" in templates
+    assert "geomodel_ablation" in templates
+    assert "pinchout_effect" in templates
+    assert "rk_vs_kriging" in templates
 
     suite_resp = client.post(
         "/api/research/experiments/run-suite",
@@ -174,6 +177,26 @@ def test_research_experiment_run_and_artifacts(tmp_path, monkeypatch):
     suite = suite_resp.json()
     assert suite["template_name"] == "rsi_paper_core"
     assert len(suite["runs"]) >= 2
+    assert "comparison_conclusion" in suite
+    assert suite["comparison_conclusion"]["best_auc_experiment"]
+    assert "parameter_snapshot" in suite["runs"][0]
+
+    geo_suite_resp = client.post(
+        "/api/research/experiments/run-suite",
+        json={
+            "template_name": "geomodel_ablation",
+            "dataset_id": dataset_id,
+            "dataset_version": manifest["dataset_version"],
+            "split_id": split_id,
+            "seed": 321,
+        },
+    )
+    assert geo_suite_resp.status_code == 200
+    geo_suite = geo_suite_resp.json()
+    run_names = {item["experiment_name"] for item in geo_suite["runs"]}
+    assert "geomodel_full" in run_names
+    assert "geomodel_ablation_no_geo" in run_names
+    assert geo_suite["comparison_conclusion"]["best_auc_experiment"] in run_names
 
 
 def test_research_papers_overview_and_download(tmp_path, monkeypatch):
@@ -315,3 +338,57 @@ def test_research_experiment_leaderboard(tmp_path, monkeypatch):
     payload_brier = lb_brier.json()
     assert payload_brier["higher_is_better"] is False
     assert payload_brier["total_runs"] >= 2
+
+
+def test_research_template_e2e_with_two_datasets(tmp_path, monkeypatch):
+    dataset_ids = ["research_demo_a", "research_demo_b"]
+    for did in dataset_ids:
+        _write_dataset(tmp_path, dataset_id=did)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+
+    for did in dataset_ids:
+        register_resp = client.post(
+            "/api/research/dataset/register",
+            json={
+                "dataset_id": did,
+                "label_schema": {
+                    "label_column": "label",
+                    "positive_values": [1],
+                    "event_definition": "roof_pressure_event",
+                    "time_window_hours": 24,
+                },
+            },
+        )
+        assert register_resp.status_code == 200
+        dataset_version = register_resp.json()["dataset_version"]
+
+        split_resp = client.post(
+            f"/api/research/dataset/{did}/split",
+            json={
+                "strategy": "borehole_block",
+                "borehole_column": "borehole_name",
+                "train_ratio": 0.5,
+                "val_ratio": 0.25,
+                "test_ratio": 0.25,
+                "seed": 23,
+            },
+        )
+        assert split_resp.status_code == 200
+        split_id = split_resp.json()["split_id"]
+
+        for template_name in ("geomodel_ablation", "rk_vs_kriging"):
+            suite_resp = client.post(
+                "/api/research/experiments/run-suite",
+                json={
+                    "template_name": template_name,
+                    "dataset_id": did,
+                    "dataset_version": dataset_version,
+                    "split_id": split_id,
+                    "seed": 202,
+                },
+            )
+            assert suite_resp.status_code == 200
+            suite = suite_resp.json()
+            assert suite["template_name"] == template_name
+            assert len(suite["runs"]) >= 2
+            assert "comparison_conclusion" in suite

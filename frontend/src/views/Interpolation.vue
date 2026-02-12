@@ -153,6 +153,65 @@
           </button>
         </div>
         <p v-if="interpolationStatus" class="status-text">{{ interpolationStatus }}</p>
+
+        <div class="geomodel-panel" v-if="selectedSeam">
+          <div class="geomodel-head">
+            <span class="geomodel-title">地质建模任务</span>
+            <span class="geomodel-jobid" v-if="geomodelJobId">#{{ geomodelJobId }}</span>
+          </div>
+
+          <div class="geomodel-controls">
+            <select v-model="geomodelMethod" class="geomodel-select">
+              <option
+                v-for="opt in geomodelMethodOptions"
+                :key="opt.key"
+                :value="opt.key"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+            <div class="geomodel-range">
+              <label>分辨率</label>
+              <input v-model.number="geomodelResolution" type="number" min="1" max="500" step="1">
+            </div>
+            <button class="btn outline geomodel-btn" @click="startGeomodelJob" :disabled="geomodelSubmitting">
+              {{ geomodelSubmitting ? '提交中...' : '发起建模' }}
+            </button>
+          </div>
+
+          <div v-if="geomodelJob" class="geomodel-status">
+            <span>状态: {{ geomodelJob.status }}</span>
+            <span v-if="geomodelPolling">轮询中...</span>
+            <span v-if="geomodelJob.message">{{ geomodelJob.message }}</span>
+          </div>
+          <p v-if="geomodelError" class="geomodel-error">{{ geomodelError }}</p>
+
+          <div v-if="geomodelQualitySummary" class="geomodel-summary">
+            <div class="summary-item">
+              <span>连续性</span>
+              <strong>{{ Number(geomodelQualitySummary.continuity_score || 0).toFixed(3) }}</strong>
+            </div>
+            <div class="summary-item">
+              <span>尖灭比例</span>
+              <strong>{{ Number(geomodelQualitySummary.pinchout_ratio || 0).toFixed(3) }}</strong>
+            </div>
+            <div class="summary-item">
+              <span>层厚变异</span>
+              <strong>{{ Number(geomodelQualitySummary.layer_cv || 0).toFixed(3) }}</strong>
+            </div>
+          </div>
+
+          <div class="geomodel-files" v-if="geomodelArtifacts.length">
+            <button
+              v-for="artifact in geomodelArtifacts"
+              :key="artifact.name"
+              class="file-chip"
+              @click="downloadGeomodelFile(artifact.name)"
+            >
+              {{ artifact.name }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Card 2: Data Distribution -->
@@ -344,8 +403,15 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
+import { useGeomodelJob } from '../composables/useGeomodelJob'
 import ContourMap from '../components/ContourMap.vue'
-import { getCoalSeams, getSeamStats, getSeamOverburden, getSeamContourImages } from '../api'
+import {
+  downloadGeomodelArtifact,
+  getCoalSeams,
+  getSeamStats,
+  getSeamOverburden,
+  getSeamContourImages
+} from '../api'
 
 const toast = useToast()
 const route = useRoute()
@@ -379,6 +445,26 @@ const histogramCanvas = ref(null)
 const crossSectionCanvas = ref(null)
 const stratigraphicCanvas = ref(null)
 const uncertaintyCanvas = ref(null)
+
+// Geomodel state
+const geomodelMethod = ref('thickness')
+const geomodelResolution = ref(20)
+const geomodelMethodOptions = [
+  { key: 'thickness', label: '厚度建模' },
+  { key: 'hybrid', label: '混合建模' },
+  { key: 'regression_kriging', label: '回归克里金' },
+  { key: 'smart_pinchout', label: '智能尖灭' }
+]
+const {
+  jobId: geomodelJobId,
+  job: geomodelJob,
+  artifacts: geomodelArtifacts,
+  loading: geomodelSubmitting,
+  polling: geomodelPolling,
+  error: geomodelError,
+  submit: submitGeomodelJob,
+  refresh: refreshGeomodelJob
+} = useGeomodelJob()
 
 // Options
 const methodOptions = [
@@ -487,6 +573,10 @@ const seamThicknessStats = computed(() => {
   const cv = mean > 0 ? (stdDev / mean) * 100 : 0
 
   return { count, mean, stdDev, cv, min, max }
+})
+
+const geomodelQualitySummary = computed(() => {
+  return geomodelJob.value?.result_manifest?.quality_summary || null
 })
 
 const applyContourResult = (data) => {
@@ -645,6 +735,42 @@ const selectSeam = async (seam) => {
   } catch (err) {
     if (currentSelectionToken !== seamSelectionToken) return
     toast.add('加载煤层详情失败: ' + (err.response?.data?.detail || err.message), 'error')
+  }
+}
+
+const startGeomodelJob = async () => {
+  if (!selectedSeam.value?.name) {
+    toast.add('请先选择煤层后再发起建模任务', 'warning')
+    return
+  }
+  try {
+    await submitGeomodelJob({
+      method: geomodelMethod.value,
+      seam_name: selectedSeam.value.name,
+      resolution: geomodelResolution.value,
+      output_formats: ['vtk', 'vtp', 'summary', 'quality']
+    })
+    toast.add('建模任务已提交，正在后台计算', 'success')
+  } catch (err) {
+    toast.add(geomodelError.value || '建模任务提交失败', 'error')
+  }
+}
+
+const downloadGeomodelFile = async (artifactName) => {
+  if (!geomodelJobId.value) return
+  try {
+    const response = await downloadGeomodelArtifact(geomodelJobId.value, artifactName)
+    const blob = new Blob([response.data], { type: 'application/octet-stream' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = artifactName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    toast.add(err?.response?.data?.detail || '下载产物失败', 'error')
   }
 }
 
@@ -1901,8 +2027,22 @@ const normalizeQuerySeam = (value) => {
   return typeof value === 'string' ? value : ''
 }
 
+const normalizeQueryJobId = (value) => {
+  if (Array.isArray(value)) return value[0] || ''
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 onMounted(async () => {
   await loadSeams()
+  const preferredJobId = normalizeQueryJobId(route.query?.geomodel_job_id || route.query?.geomodelJobId)
+  if (preferredJobId) {
+    geomodelJobId.value = preferredJobId
+    try {
+      await refreshGeomodelJob()
+    } catch (err) {
+      toast.add('读取 Geomodel 任务状态失败: ' + (err?.response?.data?.detail || err?.message || ''), 'warning')
+    }
+  }
   const preferredName = normalizeQuerySeam(route.query?.seam) || workspaceState.selectedSeam
   if (!preferredName) return
   const preferred = availableSeams.value.find((item) => item.name === preferredName)
@@ -1955,6 +2095,26 @@ defineExpose({ resetView })
 .btn.outline:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-light); }
 .btn.small { padding: 8px 14px; font-size: 13px; }
 .status-text { margin: var(--spacing-md) 0 0; font-size: 12px; color: var(--text-secondary); }
+
+.geomodel-panel { margin-top: var(--spacing-lg); padding: 12px; border-radius: var(--border-radius-md); border: 1px solid var(--border-color); background: #ffffff; }
+.geomodel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.geomodel-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.geomodel-jobid { font-size: 11px; color: var(--text-secondary); font-family: monospace; }
+.geomodel-controls { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: 8px; align-items: center; }
+.geomodel-select { height: 34px; border-radius: 8px; border: 1px solid var(--border-color); padding: 0 10px; background: #fff; font-size: 12px; }
+.geomodel-range { display: flex; align-items: center; gap: 6px; }
+.geomodel-range label { font-size: 11px; color: var(--text-secondary); }
+.geomodel-range input { width: 74px; height: 32px; border-radius: 8px; border: 1px solid var(--border-color); padding: 0 8px; font-size: 12px; }
+.geomodel-btn { height: 34px; padding: 0 12px; font-size: 12px; }
+.geomodel-status { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--text-secondary); }
+.geomodel-error { margin-top: 8px; margin-bottom: 0; font-size: 11px; color: #b91c1c; }
+.geomodel-summary { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.summary-item { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.summary-item span { font-size: 10px; color: var(--text-secondary); }
+.summary-item strong { font-size: 13px; color: var(--text-primary); font-family: monospace; }
+.geomodel-files { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.file-chip { border: 1px solid var(--border-color); background: #f8fafc; color: var(--text-primary); border-radius: 999px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+.file-chip:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-light); }
 
 /* Cards */
 .grid > .card:nth-child(2) { grid-column: span 4; }
@@ -2110,6 +2270,6 @@ defineExpose({ resetView })
 
 /* Responsive */
 @media (max-width: 1400px) { .params-card, .grid > .card:nth-child(2), .grid > .card:nth-child(3), .grid > .card:nth-child(4) { grid-column: span 6; } .map-row { grid-template-columns: 1fr; } .map-card-large { grid-column: span 12; } }
-@media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } .params-card, .grid > .card, .map-card-large, .map-card-full { grid-column: span 1; } .header-stats { flex-wrap: wrap; } .seam-selection-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } .params-card, .grid > .card, .map-card-large, .map-card-full { grid-column: span 1; } .header-stats { flex-wrap: wrap; } .seam-selection-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .stats-grid { grid-template-columns: repeat(2, 1fr); } .geomodel-controls { grid-template-columns: 1fr; } .geomodel-summary { grid-template-columns: 1fr; } }
 @media (max-width: 768px) { .action-buttons { flex-direction: column; } .btn { width: 100%; } .map-wrapper, .uncertainty-wrapper, .cross-section-wrapper { min-height: 300px; } .map-wrapper :deep(.contour-map), .uncertainty-canvas, .cross-section-canvas { height: 300px; } .seam-selection-grid { grid-template-columns: 1fr; max-height: 400px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
