@@ -1,0 +1,1 @@
+FAIL: 3d linkage panel did not show selected anchor details

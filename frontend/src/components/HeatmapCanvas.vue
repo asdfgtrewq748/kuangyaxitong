@@ -17,11 +17,13 @@ const props = defineProps({
   size: { type: Number, default: 420 },
   colorScale: { type: Boolean, default: true }
 })
+const emit = defineEmits(['select'])
 
 const canvas = ref(null)
 const minVal = ref(null)
 const maxVal = ref(null)
 let drawRaf = 0
+const gridShape = ref({ rows: 0, cols: 0 })
 
 // Modern color palette - cool to warm gradient
 const getColor = (t) => {
@@ -51,6 +53,7 @@ const draw = () => {
   const rows = props.grid.length
   const cols = props.grid[0]?.length || 0
   if (rows === 0 || cols === 0) return
+  gridShape.value = { rows, cols }
   const cellW = props.size / cols
   const cellH = props.size / rows
 
@@ -93,11 +96,45 @@ const queueDraw = () => {
   })
 }
 
-onMounted(queueDraw)
+const handleCanvasClick = (event) => {
+  if (!canvas.value) return
+  const derivedRows = Array.isArray(props.grid) ? props.grid.length : 0
+  const derivedCols = Array.isArray(props.grid?.[0]) ? props.grid[0].length : 0
+  const rows = gridShape.value.rows || derivedRows
+  const cols = gridShape.value.cols || derivedCols
+  if (!rows || !cols) return
+
+  const rect = canvas.value.getBoundingClientRect()
+  const localX = event.clientX - rect.left
+  const localY = event.clientY - rect.top
+  const xRatio = localX / rect.width
+  const yRatio = localY / rect.height
+  const col = Math.max(0, Math.min(cols - 1, Math.floor(xRatio * cols)))
+  const row = Math.max(0, Math.min(rows - 1, Math.floor(yRatio * rows)))
+  const value = props.grid?.[row]?.[col]
+
+  emit('select', {
+    row,
+    col,
+    rows,
+    cols,
+    value: Number.isFinite(Number(value)) ? Number(value) : null,
+  })
+}
+
+onMounted(() => {
+  queueDraw()
+  if (canvas.value) {
+    canvas.value.addEventListener('click', handleCanvasClick)
+  }
+})
 watch(() => props.grid, queueDraw)
 watch(() => props.size, queueDraw)
 
 onBeforeUnmount(() => {
+  if (canvas.value) {
+    canvas.value.removeEventListener('click', handleCanvasClick)
+  }
   if (drawRaf) {
     cancelAnimationFrame(drawRaf)
     drawRaf = 0
@@ -112,6 +149,7 @@ onBeforeUnmount(() => {
 
 .heatmap-canvas {
   width: 100%;
+  cursor: crosshair;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);

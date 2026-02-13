@@ -1,0 +1,4 @@
+title=地质-指标空间实验室
+has_matrix=False
+has_state_hint=False
+url=http://127.0.0.1:5173/geo-mpi-studio

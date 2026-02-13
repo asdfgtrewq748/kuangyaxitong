@@ -66,6 +66,12 @@ const routes = [
     meta: { title: '科研工作台', icon: 'book', navOrder: 55 }
   },
   {
+    path: '/geo-mpi-studio',
+    name: 'GeoMpiStudio',
+    component: () => import('../views/GeoMpiStudio.vue'),
+    meta: { title: '空间实验室', icon: 'chart', navOrder: 56, workflow: false }
+  },
+  {
     path: '/steps',
     name: 'Steps',
     component: () => import('../views/Steps.vue'),

@@ -1,6 +1,6 @@
 ﻿# 任务计划：地质建模融合 MPI 系统
 
-**更新日期：** 2026-02-12  
+**更新日期：** 2026-02-13  
 **项目：** 地质建模融合矿压 MPI 系统  
 **当前阶段：** 阶段 E（验证、压测与上线）进行中  
 **总周期：** 6-8 周
@@ -94,9 +94,9 @@
 - [x] 增加实验追踪字段（数据版本、参数快照、对比结论）
 
 **验收标准：**
-- [ ] 可一键跑通模板实验
-- [ ] 证据包可直接用于论文附录
-- [ ] 结果可复现（同数据同参数结果一致）
+- [x] 可一键跑通模板实验
+- [x] 证据包可直接用于论文附录
+- [x] 结果可复现（同数据同参数结果一致）
 
 ---
 
@@ -106,7 +106,7 @@
 
 **任务清单：**
 - [ ] 后端接口压测与性能基线（任务队列、产物下载、大网格计算）
-- [ ] 前端联调回归测试（核心页面）
+- [x] 前端联调回归测试（核心页面）
 - [ ] 科研模板端到端验证（至少 2 套样本数据）
 - [x] 发布说明与用户指南更新
 - [ ] 上线检查清单执行
@@ -125,12 +125,19 @@
 - [x] 已新增用户指南 `docs/guides/geomodel-mpi-user-guide.md`
 - [x] 已新增运维交接手册 `docs/ops/geomodel-mpi-ops-handover.md`
 - [x] 已完成脚本自验证（2套临时样本 + `geomodel_ablation` / `rk_vs_kriging` 模板通过）
+- [x] 已完成 Playwright 全量联调回归（8/8 通过，含 GeoMpiStudio），最新报告：`data/research/stage_e/ui_regression/20260213_212304/report.md`
+- [x] 已在 Playwright 回归预检中完成模板重复运行复现性验证（同输入同指标）
+- [x] 已完成 Geo-MPI Studio 页面骨架与路由（P1）：`frontend/src/views/GeoMpiStudio.vue`、`frontend/src/router/index.js`
+- [x] 已完成 Geo-MPI Studio 状态/数据流 composable 骨架（P2）：`frontend/src/composables/useGeoMpiStudioState.js`、`frontend/src/composables/useGeoMpiData.js`
+- [x] 已完成 Geo-MPI Studio 四指标矩阵（P3）真实数据接线，支持 baseline / geo-aware / delta
+- [x] 已新增 Geo-MPI Studio Playwright 专项回归并通过：`data/research/stage_e/ui_regression/geo_mpi_studio_20260213_212242/result.txt`
+- [x] 已完成 Geo-MPI Studio P4 首批联动（矩阵选点 -> 解释面板 -> Geomodel质量/产物上下文）
+- [x] 已完成 Geo-MPI Studio P4 第二批联动（矩阵选点 -> 伪3D空间锚点同步 -> 解释面板一致更新）
 - [ ] 待在目标部署环境完成三轮基线采样并固化阈值
-- [ ] 待按联调清单完成核心页面逐项验收
 - [ ] 待使用 2 套真实数据执行科研模板端到端验证并归档报告
 
 **验收标准：**
-- [ ] 核心链路通过回归测试
+- [x] 核心链路通过回归测试
 - [ ] 关键接口性能达标
 - [ ] 线上可观测性与故障回滚预案齐备
 
@@ -183,3 +190,5 @@
 13. 阶段 E 用户指南：`docs/guides/geomodel-mpi-user-guide.md`
 14. 阶段 E 运维交接：`docs/ops/geomodel-mpi-ops-handover.md`
 15. 阶段 E 自动检查脚本说明：`scripts/stage_e/README.md`
+16. 阶段 E Playwright 回归记录：`docs/plans/2026-02-12-阶段E-Playwright回归记录.md`
+17. 地质建模 × MPI 空间演示页面方案：`docs/plans/2026-02-12-地质建模-MPI空间演示页面方案.md`

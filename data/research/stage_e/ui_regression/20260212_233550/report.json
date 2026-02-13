@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-02-12T23:35:52.926627",
+  "base_url": "http://127.0.0.1:5173",
+  "api_base": "http://127.0.0.1:8001",
+  "results": [
+    {
+      "item": "precheck",
+      "status": "FAIL",
+      "detail": "[WinError 10054] 远程主机强迫关闭了一个现有的连接。"
+    }
+  ]
+}

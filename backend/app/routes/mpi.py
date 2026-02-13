@@ -194,6 +194,7 @@ class MPIGeoInterpolateRequest(BaseModel):
     geomodel_job_id: Optional[str] = Field(None, description="Geomodel 任务ID")
     feature_overrides: Dict[str, float] = Field(default_factory=dict, description="特征覆写")
     include_baseline_grid: bool = Field(True, description="是否返回baseline网格")
+    include_component_grids: bool = Field(False, description="是否返回MPI/RSI/BRI/ASI四项网格")
 
 
 class MPIGeoInterpolateResponse(BaseModel):
@@ -204,6 +205,8 @@ class MPIGeoInterpolateResponse(BaseModel):
     geology_aware_statistics: Dict[str, float]
     baseline_grid: Optional[List[List[float]]] = None
     baseline_statistics: Optional[Dict[str, float]] = None
+    component_grids: Optional[Dict[str, Dict[str, List[List[float]]]]] = None
+    component_statistics: Optional[Dict[str, Dict[str, Dict[str, float]]]] = None
     feature_trace: Dict[str, Any]
     algorithm_mode: str
     fallback_used: bool
@@ -367,6 +370,36 @@ def _weights_to_dict(weights: Optional[WeightsModel]) -> Optional[Dict[str, floa
     }
 
 
+def _grid_stats(grid: List[List[float]]) -> Dict[str, float]:
+    arr = np.asarray(grid, dtype=float)
+    return {
+        "min": float(np.nanmin(arr)),
+        "max": float(np.nanmax(arr)),
+        "mean": float(np.nanmean(arr)),
+        "std": float(np.nanstd(arr)),
+    }
+
+
+def _interpolate_metric_grid(
+    *,
+    points: np.ndarray,
+    values: np.ndarray,
+    method: str,
+    grid_size: int,
+    bounds: Optional[Dict[str, float]],
+) -> Dict[str, Any]:
+    grid_result = interpolate_from_points(
+        points=points,
+        values=values,
+        method=method,
+        grid_size=grid_size,
+        bounds=bounds,
+    )
+    if "error" in grid_result:
+        raise HTTPException(status_code=400, detail=grid_result["error"])
+    return grid_result
+
+
 # =============================================================================
 # API Endpoints
 # =============================================================================
@@ -497,8 +530,9 @@ def interpolate_mpi_geo(request: MPIGeoInterpolateRequest) -> MPIGeoInterpolateR
 
     weights = _weights_to_dict(request.weights)
     points = []
-    baseline_values = []
-    geo_values = []
+    metric_keys = ("mpi", "rsi", "bri", "asi")
+    baseline_metric_values: Dict[str, List[float]] = {k: [] for k in metric_keys}
+    geo_metric_values: Dict[str, List[float]] = {k: [] for k in metric_keys}
 
     feature_values = dict(DEFAULT_GEOMODEL_FEATURES)
     feature_trace: Dict[str, Any] = {
@@ -533,67 +567,85 @@ def interpolate_mpi_geo(request: MPIGeoInterpolateRequest) -> MPIGeoInterpolateR
     for point_model in request.points:
         point = _parse_point_data(point_model)
         baseline_result = calc_mpi(point, weights=weights)
-        baseline_values.append(float(baseline_result["mpi"]))
+        baseline_breakdown = baseline_result.get("breakdown") or {}
+        baseline_metric_values["mpi"].append(float(baseline_result["mpi"]))
+        baseline_metric_values["rsi"].append(float(baseline_breakdown.get("rsi", baseline_result["mpi"])))
+        baseline_metric_values["bri"].append(float(baseline_breakdown.get("bri", baseline_result["mpi"])))
+        baseline_metric_values["asi"].append(float(baseline_breakdown.get("asi", baseline_result["mpi"])))
 
         geo_result = calc_mpi_geology_aware(baseline_result, feature_values)
         if fallback_used:
-            geo_values.append(float(baseline_result["mpi"]))
+            for metric_key in metric_keys:
+                geo_metric_values[metric_key].append(float(baseline_metric_values[metric_key][-1]))
         else:
-            geo_values.append(float(geo_result["mpi"]))
+            geo_breakdown = geo_result.get("breakdown") or {}
+            geo_metric_values["mpi"].append(float(geo_result["mpi"]))
+            geo_metric_values["rsi"].append(float(geo_breakdown.get("rsi", geo_result["mpi"])))
+            geo_metric_values["bri"].append(float(geo_breakdown.get("bri", geo_result["mpi"])))
+            geo_metric_values["asi"].append(float(geo_breakdown.get("asi", geo_result["mpi"])))
         points.append([point_model.x, point_model.y])
 
     pts_array = np.asarray(points, dtype=float)
-    baseline_array = np.asarray(baseline_values, dtype=float)
-    geo_array = np.asarray(geo_values, dtype=float)
 
-    baseline_grid = interpolate_from_points(
-        points=pts_array,
-        values=baseline_array,
-        method=request.method,
-        grid_size=request.resolution,
-        bounds=request.bounds
-    )
-    if "error" in baseline_grid:
-        raise HTTPException(status_code=400, detail=baseline_grid["error"])
+    def _build_metric_grids(metric_values: Dict[str, List[float]]) -> tuple[Dict[str, List[List[float]]], Dict[str, float]]:
+        grids: Dict[str, List[List[float]]] = {}
+        resolved_bounds: Dict[str, float] = {}
+        for metric_key in metric_keys:
+            metric_grid = _interpolate_metric_grid(
+                points=pts_array,
+                values=np.asarray(metric_values[metric_key], dtype=float),
+                method=request.method,
+                grid_size=request.resolution,
+                bounds=request.bounds,
+            )
+            grids[metric_key] = metric_grid["grid"]
+            if not resolved_bounds:
+                resolved_bounds = metric_grid.get("bounds") or {}
+        return grids, resolved_bounds
 
-    geo_grid = interpolate_from_points(
-        points=pts_array,
-        values=geo_array,
-        method=request.method,
-        grid_size=request.resolution,
-        bounds=request.bounds
-    )
-    if "error" in geo_grid:
-        raise HTTPException(status_code=400, detail=geo_grid["error"])
+    baseline_grids, baseline_bounds = _build_metric_grids(baseline_metric_values)
+    geo_grids, geo_bounds = _build_metric_grids(geo_metric_values)
 
-    geo_grid_arr = np.asarray(geo_grid["grid"], dtype=float)
-    geo_stats = {
-        "min": float(np.nanmin(geo_grid_arr)),
-        "max": float(np.nanmax(geo_grid_arr)),
-        "mean": float(np.nanmean(geo_grid_arr)),
-        "std": float(np.nanstd(geo_grid_arr)),
-    }
+    resolved_bounds = request.bounds or geo_bounds or baseline_bounds
+    geo_stats = _grid_stats(geo_grids["mpi"])
 
     baseline_stats = None
     baseline_payload_grid = None
     if request.include_baseline_grid:
-        baseline_grid_arr = np.asarray(baseline_grid["grid"], dtype=float)
-        baseline_stats = {
-            "min": float(np.nanmin(baseline_grid_arr)),
-            "max": float(np.nanmax(baseline_grid_arr)),
-            "mean": float(np.nanmean(baseline_grid_arr)),
-            "std": float(np.nanstd(baseline_grid_arr)),
+        baseline_stats = _grid_stats(baseline_grids["mpi"])
+        baseline_payload_grid = baseline_grids["mpi"]
+
+    component_grids = None
+    component_statistics = None
+    if request.include_component_grids:
+        delta_grids: Dict[str, List[List[float]]] = {}
+        for metric_key in metric_keys:
+            delta_arr = np.asarray(geo_grids[metric_key], dtype=float) - np.asarray(baseline_grids[metric_key], dtype=float)
+            delta_grids[metric_key] = delta_arr.tolist()
+
+        component_grids = {
+            "baseline": baseline_grids,
+            "geology_aware": geo_grids,
+            "delta": delta_grids,
         }
-        baseline_payload_grid = baseline_grid["grid"]
+        component_statistics = {
+            "baseline": {metric_key: _grid_stats(baseline_grids[metric_key]) for metric_key in metric_keys},
+            "geology_aware": {metric_key: _grid_stats(geo_grids[metric_key]) for metric_key in metric_keys},
+            "delta": {metric_key: _grid_stats(delta_grids[metric_key]) for metric_key in metric_keys},
+        }
+
+    feature_trace["values"] = dict(feature_values)
 
     return MPIGeoInterpolateResponse(
         method=request.method,
         grid_size=request.resolution,
-        bounds=request.bounds or geo_grid.get("bounds"),
-        geology_aware_grid=geo_grid["grid"],
+        bounds=resolved_bounds,
+        geology_aware_grid=geo_grids["mpi"],
         geology_aware_statistics=geo_stats,
         baseline_grid=baseline_payload_grid,
         baseline_statistics=baseline_stats,
+        component_grids=component_grids,
+        component_statistics=component_statistics,
         feature_trace=feature_trace,
         algorithm_mode="baseline_fallback" if fallback_used else "geology_aware_v1",
         fallback_used=fallback_used,

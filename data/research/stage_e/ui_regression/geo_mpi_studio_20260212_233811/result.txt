@@ -1,0 +1,1 @@
+PASS: matrix rendered and delta mode switch passed

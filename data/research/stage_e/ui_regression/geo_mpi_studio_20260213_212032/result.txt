@@ -1,0 +1,1 @@
+FAIL: explain panel did not show selected cell coordinates after canvas click

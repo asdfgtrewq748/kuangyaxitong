@@ -204,3 +204,48 @@ def test_interpolate_geo_invalid_job_id_fallback():
     assert data["fallback_used"] is True
     assert data["algorithm_mode"] == "baseline_fallback"
     assert data["feature_trace"]["source"]["mode"] == "fallback_default"
+
+
+def test_interpolate_geo_returns_component_grids_when_enabled():
+    resolution = 24
+    resp = client.post(
+        "/api/mpi/interpolate-geo",
+        json={
+            "points": _build_points_payload(),
+            "resolution": resolution,
+            "method": "idw",
+            "geomodel_job_id": "not_exists",
+            "include_baseline_grid": True,
+            "include_component_grids": True,
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["fallback_used"] is True
+    assert data["algorithm_mode"] == "baseline_fallback"
+
+    component_grids = data.get("component_grids")
+    assert isinstance(component_grids, dict)
+
+    for mode_key in ("baseline", "geology_aware", "delta"):
+        mode_payload = component_grids.get(mode_key)
+        assert isinstance(mode_payload, dict)
+        for metric_key in ("mpi", "rsi", "bri", "asi"):
+            grid = mode_payload.get(metric_key)
+            assert isinstance(grid, list)
+            assert len(grid) == resolution
+            assert len(grid[0]) == resolution
+
+    component_statistics = data.get("component_statistics")
+    assert isinstance(component_statistics, dict)
+    for mode_key in ("baseline", "geology_aware", "delta"):
+        mode_stats = component_statistics.get(mode_key)
+        assert isinstance(mode_stats, dict)
+        for metric_key in ("mpi", "rsi", "bri", "asi"):
+            stats = mode_stats.get(metric_key)
+            assert isinstance(stats, dict)
+            assert {"min", "max", "mean", "std"}.issubset(set(stats.keys()))
+
+    delta_mpi = component_grids["delta"]["mpi"]
+    delta_abs_max = max(abs(float(v)) for row in delta_mpi for v in row if v is not None)
+    assert delta_abs_max < 1e-6
