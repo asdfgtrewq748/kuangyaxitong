@@ -1,16 +1,19 @@
 <template>
   <div class="research-page page">
-    <header class="hero card">
-      <div>
-        <h1>科研工作台</h1>
-        <p>面向论文复现：数据版本化、泄漏审计、实验运行、结果归档一体化。</p>
-      </div>
-      <div class="hero-status">
-        <span class="status-pill info">Dataset {{ manifest?.dataset_id || '-' }}</span>
-        <span class="status-pill" :class="splitManifest ? 'ok' : 'idle'">Split {{ splitManifest?.split_id || '-' }}</span>
-        <span class="status-pill" :class="displayResult ? 'ok' : 'idle'">Experiment {{ displayResult?.exp_id || '-' }}</span>
-      </div>
-    </header>
+    <!-- Toolbar -->
+    <Toolbar
+      title="科研工作台"
+      description="面向论文复现：数据版本化、泄漏审计、实验运行、结果归档一体化"
+      size="lg"
+    >
+      <template #right>
+        <div class="status-pills">
+          <span class="status-pill info">Dataset {{ manifest?.dataset_id || '-' }}</span>
+          <span class="status-pill" :class="splitManifest ? 'ok' : 'idle'">Split {{ splitManifest?.split_id || '-' }}</span>
+          <span class="status-pill" :class="displayResult ? 'ok' : 'idle'">Experiment {{ displayResult?.exp_id || '-' }}</span>
+        </div>
+      </template>
+    </Toolbar>
 
     <section class="grid grid-2">
       <article class="card panel">
@@ -67,11 +70,11 @@
           </button>
         </div>
 
-        <div v-if="manifest" class="manifest-meta">
-          <span class="meta-item">version: <b>{{ manifest.dataset_version }}</b></span>
-          <span class="meta-item">rows: <b>{{ manifest.row_count }}</b></span>
-          <span class="meta-item">cols: <b>{{ manifest.column_count }}</b></span>
-          <span class="meta-item">file: <b>{{ manifest.dataset_file }}</b></span>
+        <div v-if="manifest" class="manifest-stats">
+          <StatCard title="版本" :value="manifest.dataset_version" size="sm" />
+          <StatCard title="行数" :value="manifest.row_count" size="sm" />
+          <StatCard title="列数" :value="manifest.column_count" size="sm" />
+          <StatCard title="文件" :value="manifest.dataset_file" size="sm" />
         </div>
 
         <div class="form-grid">
@@ -579,10 +582,28 @@ import {
   researchSplitDataset
 } from '../api'
 import { useToast } from '../composables/useToast'
+import { Toolbar, StatCard, DataTable, LoadingState } from '../components/library'
+import { useUIStore } from '../stores'
 
 const toast = useToast()
+const uiStore = useUIStore()
 const route = useRoute()
 const router = useRouter()
+
+// DataTable columns for artifacts
+const artifactColumns = [
+  { key: 'name', title: '名称', sortable: true },
+  { key: 'size', title: '大小', align: 'right' },
+  { key: 'path', title: '路径' },
+  { key: 'action', title: '操作' }
+]
+
+const artifactRows = computed(() => artifacts.value.map(item => ({
+  name: item.name,
+  size: formatBytes(item.size_bytes),
+  path: item.path,
+  action: 'download'
+})))
 
 const comparisonMetricOrder = ['auc', 'pr_auc', 'f1', 'brier', 'mae', 'rmse', 'paired_significance_p']
 const higherBetterMetrics = new Set(['auc', 'pr_auc', 'f1'])
@@ -1450,45 +1471,52 @@ onMounted(async () => {
 .research-page {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
-  padding-bottom: 12px;
+  gap: var(--spacing-6);
+  padding-bottom: var(--spacing-3);
 }
 
 .card {
-  background: var(--gradient-card);
-  border: 1px solid rgba(14, 116, 144, 0.16);
-  border-radius: var(--border-radius-lg);
-  padding: var(--spacing-xl);
+  background: var(--color-bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
   box-shadow: var(--shadow-sm);
 }
 
-.hero {
+/* Status Pills in Toolbar */
+.status-pills {
   display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-2);
   align-items: center;
-  background:
-    radial-gradient(circle at 12% 15%, rgba(15, 118, 110, 0.18) 0%, transparent 48%),
-    radial-gradient(circle at 92% 92%, rgba(180, 83, 9, 0.14) 0%, transparent 40%),
-    linear-gradient(145deg, #ffffff 0%, #edf6f4 100%);
 }
 
-.hero h1 {
-  margin: 0;
-  font-family: "Source Han Serif SC", "Noto Serif SC", "Times New Roman", serif;
-  font-size: 28px;
-  color: #0f172a;
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--border-color);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
 }
 
-.hero p {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-  font-size: 13px;
+.status-pill.ok {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
 }
 
-.hero-status {
-  display: grid;
-  gap: 8px;
+.status-pill.idle {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+.status-pill.info {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  border-color: var(--color-info-border);
 }
 
 .status-pill {
@@ -1535,27 +1563,28 @@ onMounted(async () => {
 
 .panel-head h2 {
   margin: 0;
-  font-size: 17px;
-  color: #111827;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .tip {
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .form-grid label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
-  color: #475569;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 .form-grid label.full {
@@ -1573,74 +1602,65 @@ onMounted(async () => {
   align-items: center;
 }
 
-.manifest-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.meta-item {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  font-size: 12px;
-  border: 1px solid var(--border-color-light);
-  border-radius: 999px;
-  background: #fff;
-  padding: 4px 10px;
-  color: #475569;
+/* Manifest Stats with StatCard */
+.manifest-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .summary-grid div {
-  border: 1px solid var(--border-color-light);
-  border-radius: 10px;
-  background: #fff;
-  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  padding: var(--spacing-2) var(--spacing-3);
 }
 
 .summary-grid span {
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .summary-grid strong {
   display: block;
-  margin-top: 4px;
-  font-size: 18px;
-  color: #111827;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .split-summary {
   display: grid;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .leakage {
   border: 1px solid;
-  border-radius: 10px;
-  padding: 8px 10px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2) var(--spacing-3);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-sm);
 }
 
 .leakage.safe {
-  background: #f0fdf4;
-  border-color: #86efac;
-  color: #166534;
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
 }
 
 .leakage.warn {
-  background: #fffbeb;
-  border-color: #fcd34d;
-  color: #92400e;
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
 }
 
 .actions {
@@ -1701,94 +1721,96 @@ onMounted(async () => {
 }
 
 .result-card {
-  border: 1px solid var(--border-color-light);
-  border-radius: 12px;
-  background: #fff;
-  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  padding: var(--spacing-3);
 }
 
 .result-card h3 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  color: #111827;
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .metric-item {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 8px;
-  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-2);
+  background: var(--color-bg-tertiary);
 }
 
 .metric-item span {
   display: block;
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .metric-item b {
   display: block;
-  margin-top: 4px;
-  font-size: 14px;
-  color: #111827;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .best {
   display: inline-flex;
-  padding: 2px 6px;
-  border-radius: 7px;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
-  color: #065f46;
-  font-weight: 700;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-md);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success-text);
+  font-weight: var(--font-weight-bold);
 }
 
 .compare-svg {
   width: 100%;
   height: 280px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
 }
 
 .axis-label {
-  font-size: 11px;
-  fill: #475569;
+  font-size: var(--font-size-xs);
+  fill: var(--color-text-secondary);
 }
 
 .axis-label.left {
-  fill: #334155;
+  fill: var(--color-text-primary);
 }
 
 .meta-row {
   display: flex;
-  gap: 10px;
+  gap: var(--spacing-3);
   flex-wrap: wrap;
-  font-size: 12px;
-  color: #475569;
-  margin-bottom: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-2);
 }
 
 .trace-row {
   display: grid;
-  gap: 5px;
-  font-size: 12px;
-  margin-bottom: 10px;
-  color: #475569;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-3);
+  color: var(--color-text-secondary);
 }
 
 .trace-row code {
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #334155;
+  padding: var(--spacing-2) var(--spacing-2);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--color-text-primary);
   word-break: break-all;
 }
 
@@ -1814,14 +1836,10 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
-  .hero {
+  .status-pills {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .hero-status {
     width: 100%;
-    grid-template-columns: 1fr;
   }
 
   .actions {
@@ -1830,6 +1848,10 @@ onMounted(async () => {
 
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .manifest-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>
