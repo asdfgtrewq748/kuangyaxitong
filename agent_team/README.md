@@ -27,7 +27,7 @@ This system coordinates two types of agents working together:
 
 ## Quick Start
 
-### Run Demo (Recommended First Step)
+### Option 1: Basic Demo (Standard Agents)
 
 ```bash
 cd agent_team
@@ -39,6 +39,30 @@ This demonstrates:
 - Task creation and distribution
 - Real-time status monitoring
 - Results validation
+
+### Option 2: Advanced Features (Recommended for Production)
+
+```bash
+cd agent_team
+python test_advanced.py        # Test advanced features
+python start_247_optimization.py   # Start 24/7 continuous optimization
+```
+
+**Advanced Features**:
+- 🧠 **Team Leader** uses brainstorming skill for deep analysis
+- 🌐 **QA Specialist** uses Playwright for automated browser testing
+- 🔄 **24/7 Continuous Optimization** with intelligent scheduling
+- ✅ **Auto-confirmation mode** - no prompts needed
+- 📊 **Detailed reports** after every cycle
+
+### Option 3: Manual Confirmation Mode
+
+```bash
+cd agent_team
+python start_247_optimization.py --manual
+```
+
+This will prompt you for confirmation before each decision.
 
 ### Interactive Mode
 
