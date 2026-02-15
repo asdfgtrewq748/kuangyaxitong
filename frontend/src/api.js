@@ -6,6 +6,24 @@ const api = axios.create({
   baseURL: API_BASE_URL
 })
 
+export const getApiErrorMessage = (error, fallback = '请求失败，请稍后重试') => {
+  if (!error) return fallback
+
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data
+    if (typeof data === 'string' && data.trim()) return data
+    if (data && typeof data === 'object') {
+      const detail = data.detail || data.message || data.error
+      if (typeof detail === 'string' && detail.trim()) return detail
+    }
+    if (typeof error.message === 'string' && error.message.trim()) return error.message
+    return fallback
+  }
+
+  if (typeof error?.message === 'string' && error.message.trim()) return error.message
+  return fallback
+}
+
 // LRU Cache for API responses (server-cache-lru pattern)
 class ApiCache {
   constructor(maxSize = 50) {
@@ -229,6 +247,13 @@ export const getSeamContourImages = (
   return apiCache.cachedGet('/seams/contour-images', config)
 }
 
+// Scene3D APIs
+export const getScene3DData = (seam, resolution = 50, config = {}) =>
+  api.get('/api/scene3d/data', {
+    ...config,
+    params: { seam, resolution },
+  })
+
 // Geomodel APIs
 export const createGeomodelJob = (payload) =>
   api.post('/api/geomodel/jobs', payload)
@@ -238,6 +263,12 @@ export const listGeomodelArtifacts = (jobId) =>
   api.get(`/api/geomodel/jobs/${jobId}/artifacts`)
 export const downloadGeomodelArtifact = (jobId, artifactName) =>
   api.get(`/api/geomodel/jobs/${jobId}/artifacts/${encodeURIComponent(artifactName)}`, { responseType: 'blob' })
+export const getGeomodelIntegrationJobs = () =>
+  api.get('/api/geomodel-integration/jobs')
+export const getGeomodelIntegrationVisualization = (jobId) =>
+  api.get(`/api/geomodel-integration/visualization/${jobId}`)
+export const runGeomodelIntegrationMpi = (payload) =>
+  api.post('/api/geomodel-integration/mpi-with-geomodel', payload)
 
 // MPI (矿压影响指标) APIs
 export const mpiCalculate = (point, weights = null, config = null) =>

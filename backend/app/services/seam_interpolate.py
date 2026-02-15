@@ -13,7 +13,9 @@ from pathlib import Path
 
 import numpy as np
 
+from app.core.config import get_data_dir
 from app.services.coal_seam_parser import get_coal_seam_data, get_overburden_lithology, get_seam_stats
+from app.services.coords_loader import load_borehole_coords
 from app.services.interpolate import interpolate_from_points
 from app.services.contour_generator import generate_contours_simplified
 
@@ -261,3 +263,20 @@ def compare_interpolation_methods_for_seam(
         "results": results,
         "recommended": best_method
     }
+
+
+async def get_seam_overburden(seam_name: str) -> Dict:
+    """
+    Compatibility helper for routes expecting an async overburden loader.
+    """
+    data_dir = get_data_dir()
+    if not data_dir.exists():
+        return {"seam_name": seam_name, "boreholes": [], "borehole_count": 0}
+
+    coord_path = data_dir / "zuobiao.csv"
+    if not coord_path.exists():
+        return {"seam_name": seam_name, "boreholes": [], "borehole_count": 0}
+
+    coords = load_borehole_coords(coord_path)
+    files = sorted([p for p in data_dir.glob("*.csv") if p.is_file() and p.name != "zuobiao.csv"])
+    return get_overburden_lithology(files, coords, seam_name)

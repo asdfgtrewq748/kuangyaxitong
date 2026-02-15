@@ -32,6 +32,7 @@ from app.routes.rock_params import router as rock_params_router
 from app.routes.algorithm_validation import router as validation_router
 from app.routes.research import router as research_router
 from app.routes.geomodel import router as geomodel_router
+from app.routes.geomodel_integration import router as geomodel_integration_router
 
 app = FastAPI(title="Mining Pressure System API", version="0.1.0")
 
@@ -41,6 +42,7 @@ app.include_router(rock_params_router)
 app.include_router(validation_router)
 app.include_router(research_router)
 app.include_router(geomodel_router)
+app.include_router(geomodel_integration_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -94,6 +96,166 @@ def _clear_contour_cache() -> None:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+def _clip01_100(value: float) -> float:
+    return max(0.0, min(100.0, float(value)))
+
+
+def _stats_from_values(values: list[float]) -> dict:
+    import numpy as np
+
+    if not values:
+        return {"min": 0.0, "max": 0.0, "mean": 0.0, "std": 0.0}
+    arr = np.asarray(values, dtype=float)
+    return {
+        "min": float(np.min(arr)),
+        "max": float(np.max(arr)),
+        "mean": float(np.mean(arr)),
+        "std": float(np.std(arr)),
+    }
+
+
+@app.get("/api/scene3d/data")
+def get_scene3d_data_api(seam: str, resolution: int = 50) -> dict:
+    """
+    Frontend-friendly scene3d data endpoint.
+    Returns keys expected by `Scene3DPage.vue`:
+    `scene`, `layers`, `indicators`, `bounds`, `stats`.
+    """
+    data_dir = get_data_dir()
+    if not data_dir.exists():
+        raise HTTPException(status_code=404, detail="data dir not found")
+
+    coord_path = data_dir / "zuobiao.csv"
+    if not coord_path.exists():
+        raise HTTPException(status_code=404, detail="zuobiao.csv not found")
+
+    coords = load_borehole_coords(coord_path)
+    files = sorted([p for p in data_dir.glob("*.csv") if p.is_file() and p.name != "zuobiao.csv"])
+
+    seam_data = get_coal_seam_data(files, coords, seam)
+    if (seam_data.get("point_count") or 0) <= 0:
+        raise HTTPException(status_code=404, detail=f"no seam data found: {seam}")
+
+    overburden = get_overburden_lithology(files, coords, seam)
+    boreholes = overburden.get("boreholes", [])
+
+    if boreholes:
+        xs = [float(bh.get("x", 0.0)) for bh in boreholes]
+        ys = [float(bh.get("y", 0.0)) for bh in boreholes]
+    else:
+        points = seam_data.get("points", [])
+        xs = [float(p.get("x", 0.0)) for p in points]
+        ys = [float(p.get("y", 0.0)) for p in points]
+
+    if not xs or not ys:
+        raise HTTPException(status_code=404, detail="no valid coordinates for scene")
+
+    bounds = {
+        "min_x": float(min(xs)),
+        "max_x": float(max(xs)),
+        "min_y": float(min(ys)),
+        "max_y": float(max(ys)),
+    }
+
+    layer_agg: dict[str, dict] = {}
+    for bh in boreholes:
+        for layer in (bh.get("layers") or []):
+            name = str(layer.get("name") or "").strip()
+            if not name:
+                continue
+            rec = layer_agg.setdefault(
+                name,
+                {"thickness": [], "z_top": [], "z_bottom": [], "color": layer.get("color") or "#94a3b8"},
+            )
+            try:
+                rec["thickness"].append(float(layer.get("thickness") or 0.0))
+                rec["z_top"].append(float(layer.get("z_top") or 0.0))
+                rec["z_bottom"].append(float(layer.get("z_bottom") or 0.0))
+            except Exception:
+                continue
+
+    layers_payload = []
+    sorted_layers = sorted(
+        layer_agg.items(),
+        key=lambda kv: sum(kv[1]["z_top"]) / max(1, len(kv[1]["z_top"])),
+    )
+    for i, (name, rec) in enumerate(sorted_layers):
+        avg_thick = sum(rec["thickness"]) / max(1, len(rec["thickness"]))
+        avg_z_top = sum(rec["z_top"]) / max(1, len(rec["z_top"]))
+        avg_z_bottom = sum(rec["z_bottom"]) / max(1, len(rec["z_bottom"]))
+        z_mid = (avg_z_top + avg_z_bottom) * 0.5
+        layers_payload.append(
+            {
+                "id": f"layer_{i}",
+                "name": name,
+                "displayName": name,
+                "color": rec["color"],
+                "thickness": float(avg_thick),
+                "depthTop": float(avg_z_top),
+                "depthBottom": float(avg_z_bottom),
+                "vertices": [
+                    [bounds["min_x"], bounds["min_y"], z_mid],
+                    [bounds["max_x"], bounds["min_y"], z_mid],
+                    [bounds["max_x"], bounds["max_y"], z_mid],
+                    [bounds["min_x"], bounds["max_y"], z_mid],
+                ],
+                "faces": [[0, 1, 2], [0, 2, 3]],
+            }
+        )
+
+    thickness_values = []
+    depth_values = []
+    for p in seam_data.get("points", []):
+        t = p.get("thickness")
+        d = p.get("burial_depth")
+        if isinstance(t, (int, float)):
+            thickness_values.append(float(t))
+        if isinstance(d, (int, float)):
+            depth_values.append(float(d))
+
+    point_scores = {"rsi": [], "bri": [], "asi": [], "mpi": []}
+    points = seam_data.get("points", [])
+    if points:
+        depth_ref = (sum(depth_values) / len(depth_values)) if depth_values else 500.0
+        for p in points:
+            thickness = float(p.get("thickness") or 0.0)
+            depth = float(p.get("burial_depth") or depth_ref)
+            rsi = _clip01_100(42.0 + thickness * 3.2 - depth * 0.02)
+            bri = _clip01_100(92.0 - depth * 0.085 - thickness * 1.4)
+            asi = _clip01_100(48.0 + thickness * 2.1 - abs(depth - depth_ref) * 0.03)
+            mpi = _clip01_100(0.4 * rsi + 0.35 * bri + 0.25 * asi)
+            point_scores["rsi"].append(rsi)
+            point_scores["bri"].append(bri)
+            point_scores["asi"].append(asi)
+            point_scores["mpi"].append(mpi)
+
+    indicators = {
+        "mpi": _stats_from_values(point_scores["mpi"]),
+        "rsi": _stats_from_values(point_scores["rsi"]),
+        "bri": _stats_from_values(point_scores["bri"]),
+        "asi": _stats_from_values(point_scores["asi"]),
+    }
+
+    stats = {
+        "layerCount": len(layers_payload),
+        "boreholeCount": len(boreholes),
+        "bounds": bounds,
+        "resolution": int(resolution),
+    }
+
+    return {
+        "scene": {
+            "seam": seam,
+            "resolution": int(resolution),
+            "pointCount": int(seam_data.get("point_count") or 0),
+        },
+        "layers": layers_payload,
+        "indicators": indicators,
+        "bounds": bounds,
+        "stats": stats,
+    }
 
 
 @app.get("/boreholes/scan")
@@ -639,6 +801,7 @@ def pipeline_run(field: str = "elastic_modulus", method: str = "idw", grid_size:
 # =============================================================================
 
 @app.get("/seams/list")
+@app.get("/api/seams/list")
 def get_coal_seams_api() -> dict:
     """
     Get list of all available coal seams from borehole data.
@@ -747,7 +910,12 @@ def interpolate_seam_api(
 
 
 @app.get("/seams/overburden")
-def get_seam_overburden_api(seam_name: str, borehole: Optional[str] = None) -> dict:
+@app.get("/api/seams/overburden")
+def get_seam_overburden_api(
+    seam_name: Optional[str] = None,
+    seam: Optional[str] = None,
+    borehole: Optional[str] = None
+) -> dict:
     """
     Get overburden lithology data for a coal seam.
 
@@ -782,14 +950,18 @@ def get_seam_overburden_api(seam_name: str, borehole: Optional[str] = None) -> d
     coords = load_borehole_coords(coord_path)
     files = sorted([p for p in data_dir.glob("*.csv") if p.is_file() and p.name != "zuobiao.csv"])
 
-    result = get_overburden_lithology(files, coords, seam_name)
+    seam_key = seam_name or seam
+    if not seam_key:
+        raise HTTPException(status_code=422, detail="missing required query param: seam_name or seam")
+
+    result = get_overburden_lithology(files, coords, seam_key)
 
     if borehole:
         # Filter to specific borehole if requested
         boreholes = result.get("boreholes", [])
         filtered = [b for b in boreholes if b["name"] == borehole]
         if not filtered:
-            raise HTTPException(status_code=404, detail=f"Borehole '{borehole}' not found or has no overburden data for seam '{seam_name}'")
+            raise HTTPException(status_code=404, detail=f"Borehole '{borehole}' not found or has no overburden data for seam '{seam_key}'")
         result["boreholes"] = filtered
         result["borehole_count"] = len(filtered)
 

@@ -82,6 +82,18 @@ const routes = [
     name: 'Report',
     component: () => import('../views/Report.vue'),
     meta: { title: '结果报告', icon: 'report', navOrder: 70, flowOrder: 50 }
+  },
+  {
+    path: '/geomodel-viz',
+    name: 'GeomodelVisualization',
+    component: () => import('../views/GeomodelVisualization.vue'),
+    meta: { title: '地质建模可视化', icon: 'chart', navOrder: 57 }
+  },
+  {
+    path: '/scene3d',
+    name: 'Scene3D',
+    component: () => import('../views/Scene3DPage.vue'),
+    meta: { title: '三维指标可视化', icon: 'chart', navOrder: 58 }
   }
 ]
 
