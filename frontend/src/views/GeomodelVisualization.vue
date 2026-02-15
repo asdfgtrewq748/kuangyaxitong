@@ -161,15 +161,30 @@
 
           <div v-show="activeTab === 'mpi'" class="viz-view mpi-view">
             <div class="heatmap-container">
-              <HeatmapCanvas
-                v-if="mpiGrid && mpiGrid.length"
-                :grid="mpiGrid"
-                :size="600"
-                :color-scale="'viridis'"
-                class="main-heatmap"
-              />
-              <div v-else class="heatmap-empty">
-                <p>请先运行分析生成 MPI 热力图</p>
+              <div class="heatmap-wrapper">
+                <HeatmapCanvas
+                  v-if="mpiGrid && mpiGrid.length"
+                  :grid="mpiGrid"
+                  :size="600"
+                  :color-scale="'viridis'"
+                  class="main-heatmap"
+                />
+                <ColorLegend
+                  v-if="mpiGrid && mpiGrid.length"
+                  type="gradient"
+                  title="MPI 分布"
+                  unit="MPa"
+                  :gradient="'linear-gradient(90deg, #0e7490, #14b8a6, #84cc16, #facc15, #fb923c, #dc2626)'"
+                  :labels="['低', '', '', '', '', '高']"
+                  direction="horizontal"
+                  class="heatmap-legend"
+                />
+                <LoadingState
+                  v-else
+                  type="empty"
+                  title="暂无 MPI 数据"
+                  message="请先运行分析生成 MPI 热力图"
+                />
               </div>
             </div>
           </div>
@@ -204,31 +219,59 @@
 
           <div v-show="activeTab === 'stats'" class="viz-view stats-view">
             <div class="stats-grid">
-              <div class="stat-card">
-                <h4>数据覆盖</h4>
-                <div class="stat-value">{{ boreholes.length }}</div>
-                <div class="stat-label">钻孔数量</div>
-              </div>
-              <div class="stat-card">
-                <h4>模型分辨率</h4>
-                <div class="stat-value">{{ resolution || '-' }}</div>
-                <div class="stat-label">网格大小</div>
-              </div>
-              <div class="stat-card">
-                <h4>图层数量</h4>
-                <div class="stat-value">{{ layers.length }}</div>
-                <div class="stat-label">地质层</div>
-              </div>
-              <div v-if="bounds" class="stat-card">
-                <h4>空间范围</h4>
-                <div class="stat-value">
-                  <div class="coords">
-                    <span>X: {{ bounds.min_x?.toFixed(0) }} - {{ bounds.max_x?.toFixed(0) }}</span>
-                    <span>Y: {{ bounds.min_y?.toFixed(0) }} - {{ bounds.max_y?.toFixed(0) }}</span>
-                  </div>
-                </div>
-                <div class="stat-label">单位 (m)</div>
-              </div>
+              <StatCard
+                title="钻孔数量"
+                :value="boreholes.length"
+                unit="个"
+                icon="📍"
+                :size="'lg'"
+              />
+              <StatCard
+                title="模型分辨率"
+                :value="resolution"
+                unit="m"
+                icon="📐"
+                :size="'lg'"
+              />
+              <StatCard
+                title="图层数量"
+                :value="layers.length"
+                unit="层"
+                icon="🏔️"
+                :size="'lg'"
+              />
+              <StatCard
+                v-if="bounds"
+                title="空间范围 X"
+                :value="`${bounds.min_x?.toFixed(0)} - ${bounds.max_x?.toFixed(0)}`"
+                unit="m"
+                icon="↔️"
+                :size="'lg'"
+                :format="false"
+              />
+              <StatCard
+                v-if="bounds"
+                title="空间范围 Y"
+                :value="`${bounds.min_y?.toFixed(0)} - ${bounds.max_y?.toFixed(0)}`"
+                unit="m"
+                icon="↕️"
+                :size="'lg'"
+                :format="false"
+              />
+            </div>
+
+            <!-- 钻孔详情表格 -->
+            <div v-if="boreholes.length" class="borehole-table-section">
+              <h3 class="table-section-title">钻孔详情列表</h3>
+              <DataTable
+                :columns="boreholeColumns"
+                :data="boreholes"
+                :searchable="true"
+                :paginated="true"
+                :page-size="10"
+                row-key="name"
+                @row-click="handleBoreholeClick"
+              />
             </div>
           </div>
         </div>
@@ -255,7 +298,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Toolbar, StatCard, SidePanel } from '../components/library'
+import { Toolbar, StatCard, SidePanel, ColorLegend, DataTable } from '../components/library'
 import { useDataStore, useUIStore } from '../stores'
 import GeomodelViewer from '../components/GeomodelViewer.vue'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
@@ -289,6 +332,14 @@ const activeTab = ref('model')
 const showAllBoreholes = ref(false)
 const fullscreenViewer = ref(false)
 const loadError = ref('')
+
+// 钻孔表格列定义
+const boreholeColumns = [
+  { key: 'name', title: '钻孔名称', sortable: true },
+  { key: 'x', title: 'X 坐标 (m)', sortable: true, align: 'right' },
+  { key: 'y', title: 'Y 坐标 (m)', sortable: true, align: 'right' },
+  { key: 'z', title: 'Z 坐标 (m)', sortable: true, align: 'right' }
+]
 
 const tabs = [
   { id: 'model', label: '3D 模型' },
@@ -424,7 +475,38 @@ const runAnalysis = async () => {
 }
 
 const exportSnapshot = () => {
-  loadError.value = '导出快照功能开发中'
+  try {
+    // 生成快照数据
+    const snapshot = {
+      timestamp: new Date().toISOString(),
+      seam: selectedSeam.value,
+      jobId: selectedJobId.value,
+      quality: quality.value,
+      bounds: bounds.value,
+      boreholes: boreholes.value.length,
+      layers: layers.value.length
+    }
+
+    // 导出为 JSON
+    const dataStr = JSON.stringify(snapshot, null, 2)
+    const blob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `geomodel-snapshot-${Date.now()}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    uiStore.showSuccess('快照导出成功')
+  } catch (error) {
+    console.error('导出快照失败:', error)
+    uiStore.showError('导出快照失败')
+  }
+}
+
+const handleBoreholeClick = (row) => {
+  console.log('点击钻孔:', row)
+  // TODO: 在 3D 视图中高亮显示该钻孔
 }
 
 onMounted(async () => {
@@ -837,6 +919,32 @@ select:focus {
   margin-top: var(--spacing-2);
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
+}
+
+/* 表格区域 */
+.borehole-table-section {
+  margin-top: var(--spacing-6);
+}
+
+.table-section-title {
+  margin: 0 0 var(--spacing-4);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* MPI 热力图布局 */
+.heatmap-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  align-items: center;
+  padding: var(--spacing-4);
+}
+
+.heatmap-legend {
+  width: 100%;
+  max-width: 600px;
 }
 
 .coords {
