@@ -1,10 +1,20 @@
 # Agent Team System
 
-Multi-agent orchestration system for the Mining Pressure Assessment project.
+Multi-agent orchestration system for the Mining Pressure Assessment project with **9 specialized agents**.
 
 ## Overview
 
-This system coordinates specialized agents, each responsible for different aspects of the project:
+This system coordinates two types of agents working together:
+
+### Role-Based Agents (Coordinators)
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| **Team Leader** | 决策者 (Decision Maker) | Analyzes project, coordinates team, makes decisions, reviews results |
+| **QA Specialist** | 验收专家 (Validation Expert) | Reviews code, validates changes, enforces quality gates, generates reports |
+| **Bug Hunter** | 修复者 (Fixer) | Scans for bugs, fixes violations, security checks, cleans technical debt |
+
+### Domain-Specific Agents (Executors)
 
 | Agent | Responsibilities |
 |-------|-----------------|
@@ -15,7 +25,20 @@ This system coordinates specialized agents, each responsible for different aspec
 | **DevOps Agent** | Deployment, environment, monitoring |
 | **Testing Agent** | Unit tests, integration tests, benchmarks |
 
-## Usage
+## Quick Start
+
+### Run Demo (Recommended First Step)
+
+```bash
+cd agent_team
+python demo_simple.py
+```
+
+This demonstrates:
+- 9 agents working together
+- Task creation and distribution
+- Real-time status monitoring
+- Results validation
 
 ### Interactive Mode
 
@@ -27,12 +50,6 @@ python -m agent_team.main
 
 ```bash
 python -m agent_team.main --run-workflow optimize_mpi_performance
-```
-
-### Demo
-
-```bash
-python -m agent_team.main demo
 ```
 
 ## Commands (Interactive)

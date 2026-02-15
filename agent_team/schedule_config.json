@@ -1,0 +1,108 @@
+{
+  "cycle_interval_minutes": 30,
+  "focus_hours": {
+    "00-06": {
+      "name": "Stability & Bug Fixes",
+      "focus": ["stability", "bug_fixes", "security", "monitoring"],
+      "priority_rules": {
+        "critical_bugs": "immediate",
+        "security_issues": "immediate",
+        "performance": "low"
+      }
+    },
+    "06-12": {
+      "name": "Performance & Testing",
+      "focus": ["performance", "testing", "optimization", "benchmarks"],
+      "priority_rules": {
+        "performance": "high",
+        "testing": "high",
+        "features": "medium"
+      }
+    },
+    "12-18": {
+      "name": "Development & Architecture",
+      "focus": ["features", "architecture", "refactoring", "improvements"],
+      "priority_rules": {
+        "features": "high",
+        "architecture": "high",
+        "bugs": "medium"
+      }
+    },
+    "18-24": {
+      "name": "Review & Documentation",
+      "focus": ["review", "documentation", "cleanup", "planning"],
+      "priority_rules": {
+        "documentation": "high",
+        "review": "high",
+        "cleanup": "medium",
+        "features": "low"
+      }
+    }
+  },
+  "weekly_theme": {
+    "monday": {
+      "name": "Performance Optimization",
+      "description": "Focus on improving application performance",
+      "extra_focus": ["frontend_performance", "backend_performance", "database_optimization"]
+    },
+    "tuesday": {
+      "name": "Test Coverage",
+      "description": "Improve test coverage and add new tests",
+      "extra_focus": ["unit_tests", "integration_tests", "e2e_tests"]
+    },
+    "wednesday": {
+      "name": "Architecture Improvements",
+      "description": "Refactor and improve code architecture",
+      "extra_focus": ["refactoring", "code_quality", "design_patterns"]
+    },
+    "thursday": {
+      "name": "Security Hardening",
+      "description": "Security audits and vulnerability fixes",
+      "extra_focus": ["security_scan", "dependency_updates", "secure_coding"]
+    },
+    "friday": {
+      "name": "Documentation",
+      "description": "Complete and improve documentation",
+      "extra_focus": ["api_docs", "readme", "guides", "changelog"]
+    },
+    "saturday": {
+      "name": "Bug Bash",
+      "description": "Focus on fixing accumulated bugs",
+      "extra_focus": ["bug_fixes", "issues", "tech_debt"]
+    },
+    "sunday": {
+      "name": "Tech Debt Cleanup",
+      "description": "Clean up technical debt and refactor",
+      "extra_focus": ["refactoring", "dead_code", "dependencies", "code_smells"]
+    }
+  },
+  "quality_gates": {
+    "code_coverage_minimum": 80,
+    "lighthouse_performance_minimum": 85,
+    "lighthouse_accessibility_minimum": 90,
+    "lighthouse_best_practices_minimum": 85,
+    "critical_violations_maximum": 0,
+    "major_violations_maximum": 10,
+    "sonar_quality_gate_required": true,
+    "all_tests_pass_required": true
+  },
+  "automation_settings": {
+    "auto_fix_simple_bugs": true,
+    "auto_refactor_safe_code": true,
+    "auto_update_documentation": false,
+    "auto_deploy": false,
+    "require_approval_for": ["breaking_changes", "database_migrations", "api_changes"]
+  },
+  "notifications": {
+    "on_cycle_complete": true,
+    "on_critical_issue": true,
+    "on_deployment": true,
+    "report_frequency": "daily"
+  },
+  "limits": {
+    "max_concurrent_tasks": 5,
+    "max_retries_per_task": 3,
+    "task_timeout_minutes": 30,
+    "cycle_timeout_minutes": 120
+  }
+}

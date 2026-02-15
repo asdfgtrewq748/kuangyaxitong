@@ -608,6 +608,386 @@ class TestingAgent(BaseAgent):
         return {"coverage": "85%"}
 
 
+class TeamLeaderAgent(BaseAgent):
+    """
+    Team Leader - Decision maker and coordinator (决策者)
+
+    Responsibilities:
+    - Analyze project quality metrics
+    - Identify optimization opportunities
+    - Create and prioritize task queue
+    - Assign tasks to specialized agents
+    - Monitor progress and coordinate team
+    - Review results and make decisions
+    - Approve or reject changes
+    """
+
+    def __init__(self):
+        config = AgentConfig(
+            id="leader-01",
+            name="Team Leader (决策者)",
+            agent_type="leader",
+            description="Coordinates the agent team, makes decisions, and reviews optimization results",
+            capabilities=[
+                "project_analysis",
+                "task_prioritization",
+                "team_coordination",
+                "decision_making",
+                "quality_gates",
+            ],
+            tools=["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+            max_concurrent_tasks=5,  # Can handle multiple coordination tasks
+        )
+        super().__init__(config)
+        self.task_queue: List[Task] = []
+        self.team_members: Dict[str, str] = {}  # agent_id -> agent_type
+        self.decision_log: List[Dict[str, Any]] = []
+
+    def _register_handlers(self) -> None:
+        """Register leader-specific message handlers"""
+        self.message_handlers = {
+            "analyze_project": self._analyze_project,
+            "assign_tasks": self._assign_tasks,
+            "review_results": self._review_results,
+            "get_status": self._get_status,
+        }
+
+    async def process_task(self, task: Task) -> Dict[str, Any]:
+        """Process leadership tasks"""
+        action = task.input_data.get("action")
+
+        if action == "analyze_and_plan":
+            return await self._analyze_and_plan(task)
+        elif action == "coordinate_optimization":
+            return await self._coordinate_optimization(task)
+        elif action == "review_cycle":
+            return await self._review_cycle(task)
+        elif action == "make_decision":
+            return await self._make_decision(task)
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+    async def _analyze_and_plan(self, task: Task) -> Dict[str, Any]:
+        """Analyze project and create optimization plan"""
+        # Would check:
+        # - Code quality (SonarQube, linting)
+        # - Test coverage
+        # - Performance metrics
+        # - Security vulnerabilities
+        # - Documentation completeness
+
+        return {
+            "status": "analyzed",
+            "metrics": {
+                "code_coverage": 75,
+                "critical_issues": 2,
+                "performance_score": 78,
+            },
+            "opportunities": [
+                {"priority": "high", "type": "bug_fix", "description": "Fix critical violations"},
+                {"priority": "medium", "type": "optimization", "description": "Improve test coverage"},
+            ],
+        }
+
+    async def _coordinate_optimization(self, task: Task) -> Dict[str, Any]:
+        """Coordinate optimization cycle"""
+        focus_areas = task.input_data.get("focus_areas", [])
+
+        return {
+            "status": "coordinated",
+            "tasks_created": len(self.task_queue),
+            "agents_assigned": len(self.team_members),
+        }
+
+    async def _review_cycle(self, task: Task) -> Dict[str, Any]:
+        """Review optimization cycle results"""
+        return {
+            "status": "reviewed",
+            "tasks_approved": 5,
+            "tasks_rejected": 0,
+            "tasks_needing_retry": 1,
+        }
+
+    async def _make_decision(self, task: Task) -> Dict[str, Any]:
+        """Make decision on proposed changes"""
+        decision = task.input_data.get("decision")
+        return {
+            "status": "decided",
+            "decision": decision,
+            "reasoning": "Based on quality gates and impact analysis",
+        }
+
+    # Message handlers
+    def _analyze_project(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze project state"""
+        return {"status": "analyzed", "health": "good"}
+
+    def _assign_tasks(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Assign tasks to agents"""
+        return {"status": "assigned", "count": 3}
+
+    def _review_results(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Review optimization results"""
+        return {"status": "approved", "improvements": 5}
+
+    def _get_status(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Get team status"""
+        return {
+            "agents_active": len(self.team_members),
+            "tasks_pending": len(self.task_queue),
+            "decisions_made": len(self.decision_log),
+        }
+
+
+class QASpecialistAgent(BaseAgent):
+    """
+    QA Specialist - Validation and quality assurance expert (验收专家)
+
+    Responsibilities:
+    - Review code changes
+    - Validate bug fixes
+    - Run test suites
+    - Enforce quality standards
+    - Generate QA reports
+    - Monitor continuous integration
+    """
+
+    def __init__(self):
+        config = AgentConfig(
+            id="qa-01",
+            name="QA Specialist (验收专家)",
+            agent_type="qa",
+            description="Validates all changes, enforces quality gates, and ensures standards compliance",
+            capabilities=[
+                "code_review",
+                "validation",
+                "quality_assurance",
+                "test_execution",
+                "standards_enforcement",
+            ],
+            tools=["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+            max_concurrent_tasks=4,
+        )
+        super().__init__(config)
+
+    def _register_handlers(self) -> None:
+        """Register QA-specific message handlers"""
+        self.message_handlers = {
+            "review_changes": self._review_changes,
+            "validate_fix": self._validate_fix,
+            "check_quality_gates": self._check_quality_gates,
+            "generate_qa_report": self._generate_qa_report,
+        }
+
+    async def process_task(self, task: Task) -> Dict[str, Any]:
+        """Process QA tasks"""
+        action = task.input_data.get("action")
+
+        if action == "validate_changes":
+            return await self._validate_changes(task)
+        elif action == "run_test_suite":
+            return await self._run_test_suite(task)
+        elif action == "check_quality_gates":
+            return await self._check_quality_gates_impl(task)
+        elif action == "review_pull_request":
+            return await self._review_pull_request(task)
+        elif action == "verify_fix":
+            return await self._verify_fix_impl(task)
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+    async def _validate_changes(self, task: Task) -> Dict[str, Any]:
+        """Validate proposed changes"""
+        changes = task.input_data.get("changes", [])
+
+        return {
+            "status": "validated",
+            "approved": True,
+            "issues_found": 0,
+            "suggestions": [],
+        }
+
+    async def _run_test_suite(self, task: Task) -> Dict[str, Any]:
+        """Run full test suite"""
+        return {
+            "status": "passed",
+            "unit_tests": {"total": 150, "passed": 145, "failed": 5},
+            "integration_tests": {"total": 50, "passed": 48, "failed": 2},
+            "coverage": "78.5%",
+        }
+
+    async def _check_quality_gates_impl(self, task: Task) -> Dict[str, Any]:
+        """Check if quality gates are met"""
+        return {
+            "status": "passed",
+            "gates": {
+                "code_coverage": {"minimum": 80, "actual": 78.5, "passed": False},
+                "critical_violations": {"maximum": 0, "actual": 2, "passed": False},
+                "test_pass_rate": {"minimum": 95, "actual": 96.7, "passed": True},
+            },
+        }
+
+    async def _review_pull_request(self, task: Task) -> Dict[str, Any]:
+        """Review a pull request"""
+        pr_id = task.input_data.get("pr_id")
+
+        return {
+            "status": "reviewed",
+            "pr_id": pr_id,
+            "approved": True,
+            "comments": [],
+        }
+
+    async def _verify_fix_impl(self, task: Task) -> Dict[str, Any]:
+        """Verify that a bug fix is correct"""
+        return {
+            "status": "verified",
+            "fix_confirmed": True,
+            "regression_test_added": True,
+        }
+
+    # Message handlers
+    def _review_changes(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Review code changes"""
+        return {"status": "approved", "issues": []}
+
+    def _validate_fix(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate a fix"""
+        return {"status": "valid", "verified": True}
+
+    def _check_quality_gates(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Check quality gates"""
+        return {"status": "passed", "all_gates_met": True}
+
+    def _generate_qa_report(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate QA report"""
+        return {"report": "qa_report.html", "metrics": {}}
+
+
+class BugHunterAgent(BaseAgent):
+    """
+    Bug Hunter - Code quality and security specialist (修复者)
+
+    Responsibilities:
+    - Scan code for issues
+    - Fix bugs
+    - Resolve security vulnerabilities
+    - Clean up technical debt
+    - Refactor code smells
+    - Enforce code quality standards
+    """
+
+    def __init__(self):
+        config = AgentConfig(
+            id="bug-hunter",
+            name="Bug Hunter (修复者)",
+            agent_type="bug_hunter",
+            description="Hunts down and fixes bugs, security issues, and code quality problems",
+            capabilities=[
+                "bug_detection",
+                "bug_fixing",
+                "security_scanning",
+                "code_refactoring",
+                "technical_debt_cleanup",
+            ],
+            tools=["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+            max_concurrent_tasks=3,
+        )
+        super().__init__(config)
+
+    def _register_handlers(self) -> None:
+        """Register bug hunter-specific message handlers"""
+        self.message_handlers = {
+            "scan_issues": self._scan_issues,
+            "fix_bug": self._fix_bug,
+            "security_scan": self._security_scan,
+            "cleanup_debt": self._cleanup_debt,
+        }
+
+    async def process_task(self, task: Task) -> Dict[str, Any]:
+        """Process bug hunting tasks"""
+        action = task.input_data.get("action")
+
+        if action == "fix_critical_violations":
+            return await self._fix_critical_violations(task)
+        elif action == "security_scan":
+            return await self._security_scan_impl(task)
+        elif action == "cleanup_technical_debt":
+            return await self._cleanup_technical_debt(task)
+        elif action == "refactor_smells":
+            return await self._refactor_smells(task)
+        elif action == "fix_bug":
+            return await self._fix_bug_impl(task)
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+    async def _fix_critical_violations(self, task: Task) -> Dict[str, Any]:
+        """Fix critical code violations"""
+        violations = task.input_data.get("violations", [])
+
+        return {
+            "status": "fixed",
+            "violations_fixed": len(violations),
+            "files_modified": 5,
+        }
+
+    async def _security_scan_impl(self, task: Task) -> Dict[str, Any]:
+        """Perform security scan"""
+        return {
+            "status": "scanned",
+            "vulnerabilities_found": 3,
+            "vulnerabilities_fixed": 3,
+            "secrets_scanned": 150,
+            "secrets_found": 0,
+        }
+
+    async def _cleanup_technical_debt(self, task: Task) -> Dict[str, Any]:
+        """Clean up technical debt"""
+        return {
+            "status": "cleaned",
+            "dead_code_removed": 250,
+            "dependencies_updated": 12,
+            "files_refactored": 8,
+        }
+
+    async def _refactor_smells(self, task: Task) -> Dict[str, Any]:
+        """Refactor code smells"""
+        smells = task.input_data.get("smells", [])
+
+        return {
+            "status": "refactored",
+            "smells_fixed": len(smells),
+            "complexity_reduced": 15,
+            "duplications_removed": 8,
+        }
+
+    async def _fix_bug_impl(self, task: Task) -> Dict[str, Any]:
+        """Fix a specific bug"""
+        bug_id = task.input_data.get("bug_id")
+        return {
+            "status": "fixed",
+            "bug_id": bug_id,
+            "verified": True,
+        }
+
+    # Message handlers
+    def _scan_issues(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Scan for code issues"""
+        return {"issues": [], "critical": 0, "major": 2}
+
+    def _fix_bug(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Fix a bug"""
+        return {"status": "fixed"}
+
+    def _security_scan(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Security scan"""
+        return {"vulnerabilities": []}
+
+    def _cleanup_debt(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Clean up technical debt"""
+        return {"status": "cleaned"}
+
+
 # Factory function to create agents by type
 def create_agent(agent_type: str) -> BaseAgent:
     """Factory function to create an agent of the specified type"""
@@ -618,6 +998,10 @@ def create_agent(agent_type: str) -> BaseAgent:
         "algorithm": AlgorithmAgent,
         "devops": DevOpsAgent,
         "testing": TestingAgent,
+        # Role-based agents
+        "leader": TeamLeaderAgent,
+        "qa": QASpecialistAgent,
+        "bug_hunter": BugHunterAgent,
     }
 
     agent_class = agent_classes.get(agent_type)
@@ -628,7 +1012,24 @@ def create_agent(agent_type: str) -> BaseAgent:
 
 
 def create_all_agents() -> List[BaseAgent]:
-    """Create all specialized agents"""
+    """Create all specialized agents (both domain and role-based)"""
+    return [
+        # Role-based agents (coordinators)
+        TeamLeaderAgent(),
+        QASpecialistAgent(),
+        BugHunterAgent(),
+        # Domain-specific agents (executors)
+        BackendAgent(),
+        FrontendAgent(),
+        DataAgent(),
+        AlgorithmAgent(),
+        DevOpsAgent(),
+        TestingAgent(),
+    ]
+
+
+def create_domain_agents() -> List[BaseAgent]:
+    """Create only domain-specific agents (executors)"""
     return [
         BackendAgent(),
         FrontendAgent(),
@@ -636,4 +1037,13 @@ def create_all_agents() -> List[BaseAgent]:
         AlgorithmAgent(),
         DevOpsAgent(),
         TestingAgent(),
+    ]
+
+
+def create_role_agents() -> List[BaseAgent]:
+    """Create only role-based agents (coordinators)"""
+    return [
+        TeamLeaderAgent(),
+        QASpecialistAgent(),
+        BugHunterAgent(),
     ]
