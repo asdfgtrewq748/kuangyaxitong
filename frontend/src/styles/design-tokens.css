@@ -82,6 +82,38 @@
   --bg-backdrop: rgba(15, 23, 42, 0.6);
 
   /* ========================================
+     COMPONENT-SPECIFIC VARIABLES
+     ======================================== */
+
+  /* Text Colors (component naming) */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
+  /* Background Colors (component naming) */
+  --color-bg-card: var(--bg-primary);
+  --color-bg-tertiary: var(--bg-tertiary);
+  --color-bg-secondary: var(--bg-secondary);
+
+  /* Border Colors (component naming) */
+  --color-border: var(--border-color);
+  --color-error-border: #fca5a5;
+  --color-success-border: #86efac;
+  --color-info-border: #93c5fd;
+  --color-warning-border: #fcd34d;
+
+  /* Semantic Colors (component naming) */
+  --color-success-text: #166534;
+  --color-error-text: #991b1b;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+
+  /* Transitions (component naming) */
+  --transition-normal: var(--transition-base);
+
+  /* ========================================
      TYPOGRAPHY
      ======================================== */
 

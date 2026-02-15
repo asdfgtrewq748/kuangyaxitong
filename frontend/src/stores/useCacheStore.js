@@ -38,7 +38,7 @@ export const useCacheStore = defineStore('cache', () => {
     return get(key) !== null
   }
 
-  function delete(key) {
+  function remove(key) {
     cache.value.delete(key)
   }
 
@@ -87,7 +87,7 @@ export const useCacheStore = defineStore('cache', () => {
     set,
     get,
     has,
-    delete,
+    remove,
     clear,
     cleanup,
     getStats,

@@ -984,7 +984,6 @@ select:focus {
     grid-template-rows: 1fr auto;
   }
 }
-</style>
 
 .main-layout {
   display: grid;
