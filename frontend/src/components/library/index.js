@@ -11,6 +11,7 @@ export { default as DataTable } from './data/DataTable.vue'
 // Control Components
 export { default as Toolbar } from './controls/Toolbar.vue'
 export { default as FilterPanel } from './controls/FilterPanel.vue'
+export { default as Viewer3DToolbar } from './controls/Viewer3DToolbar.vue'
 
 // Feedback Components
 export { default as LoadingState } from './feedback/LoadingState.vue'
