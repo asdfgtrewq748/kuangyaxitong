@@ -102,4 +102,22 @@ const router = createRouter({
   routes
 })
 
+// 导航守卫：同步 URL 参数到全局状态
+router.beforeEach((to, from, next) => {
+  // 从 URL 查询参数中提取状态
+  const { seam, job, exp } = to.query
+
+  // 延迟加载 store（避免循环依赖）
+  if (seam || job || exp) {
+    import('../stores').then(({ useDataStore }) => {
+      const dataStore = useDataStore()
+      if (seam) dataStore.setCurrentSeam(seam)
+      if (job) dataStore.setCurrentJob(job)
+      if (exp) dataStore.setCurrentExperiment(exp)
+    })
+  }
+
+  next()
+})
+
 export default router
