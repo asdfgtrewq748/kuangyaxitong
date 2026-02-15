@@ -1,39 +1,46 @@
 ﻿<template>
   <div class="geomodel-viz-page">
-    <header class="page-header">
-      <div class="header-content">
-        <div class="header-text">
-          <h1>地质建模与可视化</h1>
-          <p class="subtitle">Geological Modeling & Visualization</p>
-        </div>
-        <div class="header-actions">
-          <button class="btn secondary" @click="showHelp = !showHelp">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 0 1 1 5.83" />
-              <path d="M12 17h.01" />
-            </svg>
-            帮助
-          </button>
-        </div>
-      </div>
+    <!-- 使用 Toolbar 组件替换自定义头部 -->
+    <Toolbar
+      title="地质建模与可视化"
+      description="Geological Modeling & Visualization"
+      size="lg"
+    >
+      <template #right>
+        <button class="btn secondary" @click="showHelp = !showHelp">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 1 5.83" />
+            <path d="M12 17h.01" />
+          </svg>
+          帮助
+        </button>
+      </template>
+    </Toolbar>
 
-      <div v-if="showHelp" class="help-panel">
-        <div class="help-content">
-          <h3>地质建模可视化说明</h3>
-          <p>本页面集成地质建模、MPI 联动分析和统计概览。</p>
-          <ul>
-            <li>3D 地质模型浏览</li>
-            <li>MPI 热力图联动展示</li>
-            <li>质量评分与钻孔信息</li>
-          </ul>
-          <button class="btn" @click="showHelp = false">关闭</button>
-        </div>
+    <!-- 帮助面板 -->
+    <div v-if="showHelp" class="help-panel">
+      <div class="help-content">
+        <h3>地质建模可视化说明</h3>
+        <p>本页面集成地质建模、MPI 联动分析和统计概览。</p>
+        <ul>
+          <li>3D 地质模型浏览</li>
+          <li>MPI 热力图联动展示</li>
+          <li>质量评分与钻孔信息</li>
+        </ul>
+        <button class="btn primary" @click="showHelp = false">关闭</button>
       </div>
-    </header>
+    </div>
 
     <div class="main-layout">
-      <aside class="control-panel">
+      <!-- 侧边控制面板 -->
+      <SidePanel
+        title="控制面板"
+        position="left"
+        :width="320"
+        :default-collapsed="false"
+      >
+        <!-- 数据源 -->
         <div class="panel-section">
           <h3 class="panel-title">数据源</h3>
 
@@ -77,21 +84,28 @@
           <p v-if="loadError" class="error-tip">{{ loadError }}</p>
         </div>
 
-        <div v-if="quality" class="panel-section quality-section">
+        <!-- 使用 StatCard 组件显示质量评估 -->
+        <div v-if="quality" class="panel-section">
           <h3 class="panel-title">质量评估</h3>
           <div class="quality-cards">
-            <div class="quality-card" :class="getQualityClass(quality.continuity_score)">
-              <span class="quality-label">连续性</span>
-              <span class="quality-value">{{ formatPercent(quality.continuity_score) }}</span>
-            </div>
-            <div class="quality-card" :class="getQualityClass(1 - quality.pinchout_ratio)">
-              <span class="quality-label">完整度</span>
-              <span class="quality-value">{{ formatPercent(1 - quality.pinchout_ratio) }}</span>
-            </div>
-            <div class="quality-card" :class="getQualityClass(1 - quality.layer_cv)">
-              <span class="quality-label">稳定性</span>
-              <span class="quality-value">{{ formatPercent(1 - quality.layer_cv) }}</span>
-            </div>
+            <StatCard
+              title="连续性"
+              :value="formatPercentValue(quality.continuity_score)"
+              icon="📈"
+              :size="'sm'"
+            />
+            <StatCard
+              title="完整度"
+              :value="formatPercentValue(1 - quality.pinchout_ratio)"
+              icon="🎯"
+              :size="'sm'"
+            />
+            <StatCard
+              title="稳定性"
+              :value="formatPercentValue(1 - quality.layer_cv)"
+              icon="📊"
+              :size="'sm'"
+            />
           </div>
         </div>
 
@@ -111,7 +125,7 @@
             </button>
           </div>
         </div>
-      </aside>
+      </SidePanel>
 
       <main class="viz-panel">
         <div class="viz-tabs">
@@ -241,6 +255,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { Toolbar, StatCard, SidePanel } from '../components/library'
+import { useDataStore, useUIStore } from '../stores'
 import GeomodelViewer from '../components/GeomodelViewer.vue'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
 import {
@@ -251,6 +267,10 @@ import {
   runGeomodelIntegrationMpi,
   getApiErrorMessage,
 } from '../api'
+
+// 使用全局状态
+const dataStore = useDataStore()
+const uiStore = useUIStore()
 
 const showHelp = ref(false)
 const loading = ref(false)
@@ -279,6 +299,12 @@ const tabs = [
 
 const hasData = computed(() => geomodelData.value || (layers.value && layers.value.length > 0))
 const canRunAnalysis = computed(() => !!selectedSeam.value && !loading.value)
+
+// 格式化百分比值（用于 StatCard）
+const formatPercentValue = (val) => {
+  const num = parseFloat(val)
+  return Number.isFinite(num) ? Math.round(num * 100) : null
+}
 
 const formatPercent = (val) => {
   const num = parseFloat(val)
@@ -427,66 +453,430 @@ onMounted(async () => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-page);
+  background: var(--color-bg-page);
 }
 
-.page-header {
-  background: var(--gradient-card);
-  border-bottom: 1px solid var(--border-color);
-  padding: 20px 24px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.header-text h1 {
-  margin: 0 0 4px;
-  font-size: 24px;
-  color: var(--text-primary);
-}
-
-.subtitle {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
+/* 帮助面板 */
 .help-panel {
-  margin-top: 16px;
-  padding: 16px;
-  background: var(--bg-primary);
-  border-radius: 8px;
+  margin: var(--spacing-4) var(--spacing-4) 0;
+  padding: var(--spacing-4);
+  background: var(--color-bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .help-content h3 {
-  margin: 0 0 8px;
-  font-size: 14px;
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .help-content p {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--text-secondary);
+  margin: 0 0 var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
 }
 
 .help-content ul {
-  margin: 0;
-  padding-left: 20px;
+  margin: 0 0 var(--spacing-4);
+  padding-left: var(--spacing-6);
 }
 
 .help-content li {
-  margin-bottom: 4px;
-  font-size: 13px;
-  color: var(--text-secondary);
+  margin-bottom: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
 }
+
+/* 主布局 */
+.main-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: var(--spacing-5);
+  padding: var(--spacing-5);
+  flex: 1;
+  max-width: 1920px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 面板部分 */
+.panel-section {
+  margin-bottom: var(--spacing-4);
+}
+
+.panel-section:last-child {
+  margin-bottom: 0;
+}
+
+.panel-title {
+  margin: 0 0 var(--spacing-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+select {
+  padding: var(--spacing-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+select:hover {
+  border-color: var(--color-primary);
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+}
+
+.geomodel-input-group {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-color);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.icon-btn:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}
+
+.btn {
+  padding: var(--spacing-3) var(--spacing-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+}
+
+.btn.primary {
+  background: var(--gradient-primary);
+  color: white;
+}
+
+.btn.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-btn-hover);
+}
+
+.btn.secondary {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn.secondary:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-tip {
+  margin-top: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+}
+
+/* 质量卡片（使用 StatCard 后简化） */
+.quality-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+/* 钻孔列表 */
+.borehole-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.borehole-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+
+.borehole-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.bh-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.bh-coords {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family-mono);
+}
+
+.text-btn {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.text-btn:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+/* 可视化面板 */
+.viz-panel {
+  background: var(--color-bg-card);
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+}
+
+.viz-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color-light);
+  background: var(--color-bg-elevated);
+}
+
+.viz-tab {
+  padding: var(--spacing-3) var(--spacing-5);
+  border: none;
+  background: none;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.viz-tab:hover {
+  color: var(--color-primary);
+  background: var(--color-bg-hover);
+}
+
+.viz-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.viz-content {
+  padding: var(--spacing-5);
+  flex: 1;
+  min-height: 0;
+}
+
+.viz-view {
+  min-height: 600px;
+}
+
+.mpi-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.model-view {
+  display: block;
+}
+
+.model-view :deep(.geomodel-viewer) {
+  width: 100%;
+  min-height: 600px;
+}
+
+.stats-view {
+  display: block;
+}
+
+.heatmap-container,
+.heatmap-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heatmap-empty {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.combined-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--spacing-4);
+  height: 600px;
+}
+
+.combined-geomodel {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color-light);
+}
+
+.combined-mpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.mpi-legend h4 {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.mpi-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.stat-card {
+  padding: var(--spacing-5);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color-light);
+}
+
+.stat-card h4 {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.stat-value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  font-family: var(--font-family-mono);
+}
+
+.stat-label {
+  margin-top: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.coords {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-mono);
+  color: var(--color-text-secondary);
+}
+
+/* 全屏模态框 */
+.fullscreen-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.fullscreen-content {
+  width: 100%;
+  height: 100%;
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .combined-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+}
+</style>
 
 .main-layout {
   display: grid;
