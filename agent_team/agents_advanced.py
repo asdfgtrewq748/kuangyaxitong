@@ -176,8 +176,11 @@ class AdvancedQASpecialistAgent(QASpecialistAgent):
     def __init__(self, auto_confirm: bool = True):
         super().__init__()
         self.auto_confirm = auto_confirm
-        self.playwright_tests_path = Path.cwd() / "agent_team" / "playwright_tests"
-        self.playwright_tests_path.mkdir(exist_ok=True)
+        # Use centralized test_artifacts directory
+        self.playwright_tests_path = Path.cwd() / "test_artifacts" / "scripts"
+        self.playwright_screenshots_path = Path.cwd() / "test_artifacts" / "screenshots"
+        self.playwright_tests_path.mkdir(parents=True, exist_ok=True)
+        self.playwright_screenshots_path.mkdir(parents=True, exist_ok=True)
 
     async def _validate_changes(self, task: Task) -> Dict[str, Any]:
         """
@@ -305,7 +308,7 @@ class AdvancedQASpecialistAgent(QASpecialistAgent):
     def _create_playwright_test_script(self, page_name: str, page_url: str, selector: str) -> str:
         """Create a Playwright test script"""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        screenshot_path = f"agent_team/playwright_screenshots/{page_name}_{timestamp}.png"
+        screenshot_path = f"test_artifacts/screenshots/{page_name}_{timestamp}.png"
 
         return f"""
 import {{ chromium }} from 'playwright';
