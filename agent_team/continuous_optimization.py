@@ -14,7 +14,7 @@ import signal
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Any, List, Optional
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -25,11 +25,12 @@ from agent_team.agents import create_domain_agents
 from agent_team.core import Task, TaskPriority
 
 # Setup logging
+log_file = Path(__file__).parent / "continuous_optimization.log"
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('agent_team/continuous_optimization.log'),
+        logging.FileHandler(log_file),
         logging.StreamHandler()
     ]
 )
@@ -55,7 +56,7 @@ class ContinuousOptimizationScheduler:
         self.schedule_config = self._load_schedule_config()
         self.is_running = False
         self.cycle_count = 0
-        self.reports_dir = Path.cwd() / "agent_team" / "optimization_reports"
+        self.reports_dir = Path(__file__).parent / "optimization_reports"
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup graceful shutdown
@@ -118,31 +119,24 @@ class ContinuousOptimizationScheduler:
         """Start 24/7 continuous optimization loop"""
         self.is_running = True
 
-        print("""
-╔══════════════════════════════════════════════════════════════════╗
-║                                                                  ║
-║          🤖 24/7 Continuous Optimization System Starting         ║
-║                                                                  ║
-║  This will run continuous optimization cycles until stopped.      ║
-║  Press Ctrl+C to stop gracefully.                                ║
-║                                                                  ║
-║  Configuration:                                                  ║
-""")
+        print("=" * 70)
+        print("24/7 Continuous Optimization System")
+        print("=" * 70)
+        print("\nThis will run continuous optimization cycles until stopped.")
+        print("Press Ctrl+C to stop gracefully.\n")
+        print("Configuration:")
 
         # Show configuration
         cycle_interval = self.schedule_config.get("cycle_interval_minutes", 30)
-        print(f"    • Cycle interval: {cycle_interval} minutes")
-        print(f"    • Auto-confirm: {self.auto_confirm}")
-        print(f"    • Reports directory: {self.reports_dir}")
-        print("""
-║  Advanced Features:                                              ║
-║    • Team Leader uses brainstorming skill for analysis            ║
-║    • QA Specialist uses Playwright for browser testing           ║
-║    • Intelligent task scheduling based on time and day           ║
-║    • Quality gates enforce standards                             ║
-║                                                                  ║
-╚══════════════════════════════════════════════════════════════════╝
-""")
+        print(f"  - Cycle interval: {cycle_interval} minutes")
+        print(f"  - Auto-confirm: {self.auto_confirm}")
+        print(f"  - Reports directory: {self.reports_dir}")
+        print("\nAdvanced Features:")
+        print("  - Team Leader uses brainstorming skill for analysis")
+        print("  - QA Specialist uses Playwright for browser testing")
+        print("  - Intelligent task scheduling based on time and day")
+        print("  - Quality gates enforce standards")
+        print("=" * 70 + "\n")
 
         # Register all agents
         logger.info("[Scheduler] Registering agents...")
@@ -307,12 +301,12 @@ class ContinuousOptimizationScheduler:
         """Map opportunity type to agent action"""
         action_map = {
             "bug_fix": "fix_bug",
-            "optimization": "optimize_api",
+            "optimization": "optimize_component",  # Frontend uses optimize_component
             "testing": "run_all_tests",
-            "performance": "optimize_api",
+            "performance": "optimize_component",
             "security": "security_scan",
         }
-        return action_map.get(opportunity_type, "optimize_api")
+        return action_map.get(opportunity_type, "optimize_component")
 
     async def _execute_tasks_batch(self, tasks: List[Task]) -> List[Dict[str, Any]]:
         """Execute a batch of tasks"""
