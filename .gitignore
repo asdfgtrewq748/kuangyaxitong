@@ -23,6 +23,8 @@ test_artifacts/screenshots/
 test_artifacts/scripts/
 agent_team/test_artifacts/screenshots/
 agent_team/test_artifacts/scripts/
+playwright-report/
+test-results/
 
 # Frontend dev runtime logs
 frontend/devserver.out.log
@@ -30,6 +32,7 @@ frontend/devserver.err.log
 
 # Frontend build artifacts
 frontend/dist/
+backend/data/validation_runs/*.json
 
 # Local Sonar secrets
 agent_team/.sonar.env
