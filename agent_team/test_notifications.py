@@ -51,6 +51,7 @@ def test_build_cycle_summary_normalizes_issue_count():
     assert summary["execution"]["total_tasks"] == 3
     assert summary["execution"]["completed"] == 2
     assert summary["execution"]["failed"] == 1
+    assert summary["execution"]["timed_out"] == 0
     assert summary["validation"]["issues_found"] == 3
     assert summary["quality_gates"]["passed"] is False
 
@@ -135,3 +136,28 @@ def test_get_cycle_timeout_seconds_uses_limits():
     scheduler.schedule_config["limits"]["cycle_timeout_minutes"] = 2
 
     assert scheduler._get_cycle_timeout_seconds() == 120.0
+
+
+def test_build_cycle_summary_counts_timed_out_as_failed():
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+
+    summary = scheduler._build_cycle_summary(
+        cycle_id="cycle_timeout",
+        analysis={"metrics": {"code_coverage": 85}},
+        execution_results=[
+            {"status": "completed", "title": "done"},
+            {"status": "timed_out", "title": "timeout"},
+            {"status": "failed", "title": "failed"},
+        ],
+        validation={
+            "approved": False,
+            "issues_found": 1,
+        },
+        quality_gate_result={"passed": False, "violations": ["validation_approved"]},
+        focus_areas=["testing"],
+    )
+
+    assert summary["execution"]["completed"] == 1
+    assert summary["execution"]["failed"] == 2
+    assert summary["execution"]["timed_out"] == 1
+    assert summary["validation"]["method"] == "qa_validation"

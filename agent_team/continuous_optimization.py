@@ -128,7 +128,9 @@ class ContinuousOptimizationScheduler:
                     "enabled": True,
                     "source": "auto",
                     "base_url": "",
+                    "base_url_env": "SONAR_HOST_URL",
                     "project_key": "",
+                    "project_key_env": "SONAR_PROJECT_KEY",
                     "branch": "",
                     "token_env": "SONAR_TOKEN",
                     "startup_connectivity_check": True,
@@ -401,11 +403,34 @@ class ContinuousOptimizationScheduler:
             return ""
         return str(os.environ.get(env_name, "")).strip()
 
-    def _build_sonar_api_urls(self, config: Dict[str, Any]) -> Dict[str, str]:
-        """Build Sonar API endpoint URLs from config."""
-        base_url = str(config.get("base_url", "")).strip().rstrip("/")
+    def _resolve_sonar_connection(self, config: Dict[str, Any]) -> Dict[str, str]:
+        """Resolve Sonar base_url/project_key/branch from config or environment."""
+        base_url = str(config.get("base_url", "")).strip()
         project_key = str(config.get("project_key", "")).strip()
         branch = str(config.get("branch", "")).strip()
+
+        base_url_env = str(config.get("base_url_env", "SONAR_HOST_URL")).strip() or "SONAR_HOST_URL"
+        project_key_env = str(config.get("project_key_env", "SONAR_PROJECT_KEY")).strip() or "SONAR_PROJECT_KEY"
+
+        if not base_url:
+            base_url = str(os.environ.get(base_url_env, "")).strip()
+        if not project_key:
+            project_key = str(os.environ.get(project_key_env, "")).strip()
+
+        return {
+            "base_url": base_url.rstrip("/"),
+            "project_key": project_key,
+            "branch": branch,
+            "base_url_env": base_url_env,
+            "project_key_env": project_key_env,
+        }
+
+    def _build_sonar_api_urls(self, config: Dict[str, Any]) -> Dict[str, str]:
+        """Build Sonar API endpoint URLs from config."""
+        connection = self._resolve_sonar_connection(config)
+        base_url = connection.get("base_url", "")
+        project_key = connection.get("project_key", "")
+        branch = connection.get("branch", "")
         metric_keys = str(config.get("metric_keys", "critical_violations,major_violations")).strip()
         if not base_url or not project_key:
             return {}
@@ -575,6 +600,7 @@ class ContinuousOptimizationScheduler:
             source_mode == "auto" and not required_metrics.issubset(set(metrics.keys()))
         )
         api_payloads: Dict[str, Any] = {}
+        connection = self._resolve_sonar_connection(config) if needs_api else {}
         api_urls = self._build_sonar_api_urls(config) if needs_api else {}
         token = self._resolve_sonar_token(config)
 
@@ -586,7 +612,10 @@ class ContinuousOptimizationScheduler:
 
             if not api_payloads:
                 if not api_urls:
-                    errors.append("sonar api disabled: missing base_url or project_key")
+                    errors.append(
+                        "sonar api disabled: missing base_url/project_key "
+                        f"(set {connection.get('base_url_env', 'SONAR_HOST_URL')} and {connection.get('project_key_env', 'SONAR_PROJECT_KEY')})"
+                    )
                 else:
                     fetch_failed = False
                     for name, url in api_urls.items():
@@ -654,12 +683,16 @@ class ContinuousOptimizationScheduler:
                 result["errors"].append("sonar file source selected but no report files found")
 
         if source_mode in {"api", "auto"}:
+            connection = self._resolve_sonar_connection(config)
             api_urls = self._build_sonar_api_urls(config)
             token = self._resolve_sonar_token(config)
             token_env = str(config.get("token_env", "SONAR_TOKEN")).strip() or "SONAR_TOKEN"
 
             if not api_urls:
-                result["errors"].append("sonar api not configured: missing base_url or project_key")
+                result["errors"].append(
+                    "sonar api not configured: missing base_url/project_key "
+                    f"(set {connection.get('base_url_env', 'SONAR_HOST_URL')} and {connection.get('project_key_env', 'SONAR_PROJECT_KEY')})"
+                )
             elif not token:
                 result["errors"].append(f"sonar api token missing: set {token_env}")
             else:
@@ -1043,12 +1076,13 @@ class ContinuousOptimizationScheduler:
         """Execute a batch of tasks"""
         results = []
 
-        for task in tasks:
+        for index, task in enumerate(tasks, 1):
             task_id = self.coordinator.submit_task(task)
             logger.info(f"  鈫?Executing: {task.title}")
 
-            status = await self._wait_for_task_completion(task_id)
-            results.append(status)
+            status = await self._wait_for_task_completion(task_id, task_context=task)
+            normalized = self._normalize_execution_result(status, fallback_title=f"Task #{index}")
+            results.append(normalized)
 
         return results
 
@@ -1067,14 +1101,25 @@ class ContinuousOptimizationScheduler:
         )
 
         task_id = self.coordinator.submit_task(validation_task)
-        status = await self._wait_for_task_completion(task_id)
-        return status.get("output_data", {}) if status else {}
+        status = await self._wait_for_task_completion(task_id, task_context=validation_task)
+        payload = status.get("output_data", {}) if status else {}
+        if not isinstance(payload, dict):
+            payload = {}
+
+        if status and status.get("timed_out", False):
+            payload.setdefault("approved", False)
+            payload.setdefault("issues", ["validation task timed out"])
+            payload.setdefault("issues_found", len(payload.get("issues", [])))
+            payload.setdefault("method", "qa_validation_timeout")
+
+        return self._normalize_validation_payload(payload)
 
     async def _wait_for_task_completion(
         self,
         task_id: str,
         timeout_seconds: Optional[float] = None,
         poll_interval: float = 0.5,
+        task_context: Optional[Task] = None,
     ) -> Dict[str, Any]:
         """Poll task status until completion (or timeout)."""
         if timeout_seconds is None:
@@ -1088,6 +1133,10 @@ class ContinuousOptimizationScheduler:
         while elapsed < timeout_seconds:
             current_status = self.coordinator.get_task_status(task_id)
             if current_status:
+                if task_context is not None:
+                    current_status.setdefault("title", task_context.title)
+                    current_status.setdefault("description", task_context.description)
+                    current_status.setdefault("agent_type", task_context.agent_type)
                 latest_status = current_status
                 if current_status.get("status") in terminal_states:
                     return current_status
@@ -1096,10 +1145,29 @@ class ContinuousOptimizationScheduler:
             elapsed += poll_interval
 
         if latest_status is None:
-            return {"id": task_id, "status": "unknown", "timed_out": True}
+            if task_context is not None:
+                return {
+                    "id": task_id,
+                    "title": task_context.title,
+                    "description": task_context.description,
+                    "agent_type": task_context.agent_type,
+                    "assigned_to": task_context.assigned_to or task_context.agent_type,
+                    "status": "timed_out",
+                    "timed_out": True,
+                    "error_message": "task status unavailable before timeout",
+                }
+            return {
+                "id": task_id,
+                "status": "timed_out",
+                "timed_out": True,
+                "error_message": "task status unavailable before timeout",
+            }
 
         timed_out_status = dict(latest_status)
         timed_out_status["timed_out"] = True
+        if timed_out_status.get("status") not in terminal_states:
+            timed_out_status["status"] = "timed_out"
+        timed_out_status.setdefault("error_message", "task timed out before reaching terminal state")
         return timed_out_status
 
     def _normalize_issue_count(self, issues_value: Any) -> int:
@@ -1112,6 +1180,42 @@ class ContinuousOptimizationScheduler:
             return int(issues_value)
         except (TypeError, ValueError):
             return 0
+
+    def _normalize_execution_result(
+        self, result: Dict[str, Any], fallback_title: str = "Optimization task"
+    ) -> Dict[str, Any]:
+        """Normalize task execution payload for stable reporting."""
+        normalized = dict(result) if isinstance(result, dict) else {}
+        status = str(normalized.get("status", "")).strip().lower()
+        if not status:
+            status = "failed"
+        if status == "unknown":
+            status = "failed"
+        normalized["status"] = status
+        normalized["title"] = str(normalized.get("title") or fallback_title)
+        normalized["assigned_to"] = str(
+            normalized.get("assigned_to") or normalized.get("agent_type") or "unassigned"
+        )
+        return normalized
+
+    def _normalize_validation_payload(self, validation: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize validation payload to avoid ambiguous report fields."""
+        normalized = dict(validation) if isinstance(validation, dict) else {}
+        normalized["approved"] = bool(normalized.get("approved", False))
+
+        issues_value = normalized.get("issues")
+        if isinstance(issues_value, list):
+            issues_list = issues_value
+        elif issues_value is None:
+            issues_list = []
+        else:
+            issues_list = [str(issues_value)]
+
+        issue_count = self._normalize_issue_count(normalized.get("issues_found", issues_list))
+        normalized["issues_found"] = issue_count
+        normalized["issues"] = issues_list
+        normalized["method"] = str(normalized.get("method", "")).strip() or "qa_validation"
+        return normalized
 
     def _evaluate_quality_gates(self, analysis: Dict[str, Any], validation: Dict[str, Any]) -> Dict[str, Any]:
         """Evaluate configured quality gates for the current cycle."""
@@ -1286,9 +1390,20 @@ class ContinuousOptimizationScheduler:
         focus_areas: List[str],
     ) -> Dict[str, Any]:
         """Build compact summary payload for notifications."""
-        completed = len([item for item in execution_results if item.get("status") == "completed"])
-        failed = len([item for item in execution_results if item.get("status") == "failed"])
-        issue_count = self._normalize_issue_count(validation.get("issues_found", 0))
+        normalized_results = [
+            self._normalize_execution_result(item, fallback_title=f"Task #{idx}")
+            for idx, item in enumerate(execution_results, 1)
+        ]
+        completed = len([item for item in normalized_results if item.get("status") == "completed"])
+        timed_out = len([item for item in normalized_results if item.get("status") == "timed_out"])
+        failed = len(
+            [
+                item
+                for item in normalized_results
+                if item.get("status") in {"failed", "timed_out"}
+            ]
+        )
+        normalized_validation = self._normalize_validation_payload(validation)
 
         return {
             "cycle_id": cycle_id,
@@ -1297,14 +1412,15 @@ class ContinuousOptimizationScheduler:
             "focus_areas": focus_areas,
             "analysis_metrics": analysis.get("metrics", {}),
             "execution": {
-                "total_tasks": len(execution_results),
+                "total_tasks": len(normalized_results),
                 "completed": completed,
                 "failed": failed,
+                "timed_out": timed_out,
             },
             "validation": {
-                "approved": bool(validation.get("approved", False)),
-                "issues_found": issue_count,
-                "method": validation.get("method", "unknown"),
+                "approved": normalized_validation.get("approved", False),
+                "issues_found": normalized_validation.get("issues_found", 0),
+                "method": normalized_validation.get("method", "qa_validation"),
             },
             "quality_gates": {
                 "passed": bool(quality_gate_result.get("passed", False)),
@@ -1441,6 +1557,12 @@ class ContinuousOptimizationScheduler:
             focus_areas = self._get_current_focus_areas()
         if quality_gate_result is None:
             quality_gate_result = self._evaluate_quality_gates(analysis, validation)
+        normalized_results = [
+            self._normalize_execution_result(item, fallback_title=f"Task #{idx}")
+            for idx, item in enumerate(execution_results, 1)
+        ]
+        normalized_validation = self._normalize_validation_payload(validation)
+        timed_out = len([r for r in normalized_results if r.get("status") == "timed_out"])
 
         report = {
             "cycle_id": cycle_id,
@@ -1448,12 +1570,13 @@ class ContinuousOptimizationScheduler:
             "timestamp": datetime.now().isoformat(),
             "analysis": analysis,
             "execution": {
-                "total_tasks": len(execution_results),
-                "completed": len([r for r in execution_results if r.get("status") == "completed"]),
-                "failed": len([r for r in execution_results if r.get("status") == "failed"]),
-                "results": execution_results,
+                "total_tasks": len(normalized_results),
+                "completed": len([r for r in normalized_results if r.get("status") == "completed"]),
+                "failed": len([r for r in normalized_results if r.get("status") in {"failed", "timed_out"}]),
+                "timed_out": timed_out,
+                "results": normalized_results,
             },
-            "validation": validation,
+            "validation": normalized_validation,
             "focus_areas": focus_areas,
             "quality_gates": quality_gate_result,
         }

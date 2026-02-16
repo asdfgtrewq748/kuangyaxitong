@@ -1,6 +1,7 @@
 import asyncio
 
 from agent_team.continuous_optimization import ContinuousOptimizationScheduler
+from agent_team.core import Task
 
 
 class FakeCoordinator:
@@ -40,5 +41,30 @@ def test_wait_for_task_completion_marks_timeout():
         scheduler._wait_for_task_completion("task-2", timeout_seconds=0.03, poll_interval=0.01)
     )
 
-    assert result["status"] == "pending"
+    assert result["status"] == "timed_out"
     assert result["timed_out"] is True
+
+
+def test_wait_for_task_completion_uses_task_context_when_status_missing():
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    scheduler.coordinator = FakeCoordinator([None])
+    task = Task(
+        id="task-ctx",
+        title="important task",
+        description="execute with context fallback",
+        agent_type="qa",
+    )
+
+    result = asyncio.run(
+        scheduler._wait_for_task_completion(
+            "task-ctx",
+            timeout_seconds=0.03,
+            poll_interval=0.01,
+            task_context=task,
+        )
+    )
+
+    assert result["status"] == "timed_out"
+    assert result["timed_out"] is True
+    assert result["title"] == "important task"
+    assert result["assigned_to"] == "qa"

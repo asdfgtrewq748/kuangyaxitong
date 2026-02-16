@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 
 from agent_team.continuous_optimization import ContinuousOptimizationScheduler
 
@@ -149,6 +150,35 @@ def test_build_sonar_api_urls_includes_project_and_branch():
     assert "metricKeys=critical_violations%2Cmajor_violations" in urls["measures"]
 
 
+def test_build_sonar_api_urls_supports_env_fallback():
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    old_host = os.environ.get("SONAR_HOST_URL")
+    old_project = os.environ.get("SONAR_PROJECT_KEY")
+    try:
+        os.environ["SONAR_HOST_URL"] = "http://sonar.env.local"
+        os.environ["SONAR_PROJECT_KEY"] = "mine-env"
+        urls = scheduler._build_sonar_api_urls(
+            {
+                "base_url": "",
+                "project_key": "",
+                "branch": "",
+                "metric_keys": "critical_violations,major_violations",
+            }
+        )
+        assert "projectKey=mine-env" in urls["quality_gate"]
+        assert "component=mine-env" in urls["measures"]
+        assert urls["quality_gate"].startswith("http://sonar.env.local/")
+    finally:
+        if old_host is None:
+            os.environ.pop("SONAR_HOST_URL", None)
+        else:
+            os.environ["SONAR_HOST_URL"] = old_host
+        if old_project is None:
+            os.environ.pop("SONAR_PROJECT_KEY", None)
+        else:
+            os.environ["SONAR_PROJECT_KEY"] = old_project
+
+
 def test_collect_sonar_metrics_from_api(tmp_path):
     scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
 
@@ -219,7 +249,7 @@ def test_check_sonar_connectivity_reports_missing_api_config(tmp_path):
     result = asyncio.run(scheduler._check_sonar_connectivity(config))
 
     assert result["connected"] is False
-    assert "sonar api not configured: missing base_url or project_key" in result["errors"]
+    assert any("sonar api not configured: missing base_url/project_key" in msg for msg in result["errors"])
 
 
 def test_check_sonar_connectivity_api_success():

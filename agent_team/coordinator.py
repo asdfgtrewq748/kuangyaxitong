@@ -102,17 +102,24 @@ class AgentCoordinator:
         if not agent:
             raise ValueError(f"No available agent for type: {task.agent_type}")
 
-        # Execute the task
-        result = await agent.execute_task(task)
+        try:
+            # Execute the task
+            result = await agent.execute_task(task)
 
-        # Update tracking
-        if task.status == TaskStatus.COMPLETED:
-            self.completed_tasks.append(task)
-        elif task.status == TaskStatus.FAILED:
-            self.failed_tasks.append(task)
+            # Update tracking
+            if task.status == TaskStatus.COMPLETED:
+                self.completed_tasks.append(task)
+            elif task.status == TaskStatus.FAILED:
+                self.failed_tasks.append(task)
 
-        self._save_tasks()
-        return result
+            self._save_tasks()
+            return result
+        except Exception:
+            # Ensure failed task metadata is persisted for status polling/reporting.
+            if task.status == TaskStatus.FAILED and not any(t.id == task.id for t in self.failed_tasks):
+                self.failed_tasks.append(task)
+                self._save_tasks()
+            raise
 
     async def start(self, resume_queued_tasks: bool = False) -> None:
         """Start the coordinator and begin processing tasks"""
