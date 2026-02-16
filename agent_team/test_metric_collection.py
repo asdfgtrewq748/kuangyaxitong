@@ -202,3 +202,45 @@ def test_collect_sonar_metrics_from_api(tmp_path):
     assert result["metrics"]["critical_violations"] == 0
     assert result["metrics"]["major_violations"] == 3
     assert result["errors"] == []
+
+
+def test_check_sonar_connectivity_reports_missing_api_config(tmp_path):
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    config = {
+        "enabled": True,
+        "source": "api",
+        "base_url": "",
+        "project_key": "",
+        "token_env": "SONAR_TOKEN",
+        "report_path": str(tmp_path / "sonar_report.json"),
+        "quality_gate_path": str(tmp_path / "sonar_gate.json"),
+    }
+
+    result = asyncio.run(scheduler._check_sonar_connectivity(config))
+
+    assert result["connected"] is False
+    assert "sonar api not configured: missing base_url or project_key" in result["errors"]
+
+
+def test_check_sonar_connectivity_api_success():
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+
+    def fake_fetch_json_url(url: str, timeout_seconds: float = 15.0, token: str = ""):
+        return {"ok": True, "payload": {"projectStatus": {"status": "OK"}}}
+
+    scheduler._fetch_json_url = fake_fetch_json_url  # type: ignore[method-assign]
+
+    config = {
+        "enabled": True,
+        "source": "api",
+        "base_url": "http://sonar.local",
+        "project_key": "mine-app",
+        "token": "abc123",
+        "connectivity_timeout_seconds": 1,
+    }
+
+    result = asyncio.run(scheduler._check_sonar_connectivity(config))
+
+    assert result["connected"] is True
+    assert "api" in result["sources"]
+    assert result["errors"] == []

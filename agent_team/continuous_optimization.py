@@ -131,6 +131,9 @@ class ContinuousOptimizationScheduler:
                     "project_key": "",
                     "branch": "",
                     "token_env": "SONAR_TOKEN",
+                    "startup_connectivity_check": True,
+                    "notify_on_connectivity_failure": False,
+                    "connectivity_timeout_seconds": 15,
                     "api_cache_path": "agent_team/metrics/sonar_api.json",
                     "metric_keys": "critical_violations,major_violations",
                     "report_path": "agent_team/metrics/sonar_report.json",
@@ -625,6 +628,101 @@ class ContinuousOptimizationScheduler:
             "errors": errors,
         }
 
+    async def _check_sonar_connectivity(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Check whether Sonar data sources are reachable/configured at startup."""
+        source_mode = str(config.get("source", "auto")).lower()
+        timeout_seconds = (
+            self._safe_float(config.get("connectivity_timeout_seconds"))
+            or self._safe_float(config.get("timeout_seconds"))
+            or 15.0
+        )
+        result = {"collector": "sonar", "connected": False, "sources": [], "errors": []}
+
+        report_path = self._resolve_data_path(
+            config.get("report_path", "agent_team/metrics/sonar_report.json"),
+            "agent_team/metrics/sonar_report.json",
+        )
+        gate_path = self._resolve_data_path(
+            config.get("quality_gate_path", "agent_team/metrics/sonar_quality_gate.json"),
+            "agent_team/metrics/sonar_quality_gate.json",
+        )
+
+        if source_mode in {"file", "auto", "command"}:
+            if report_path.exists() or gate_path.exists():
+                result["sources"].append("file")
+            elif source_mode == "file":
+                result["errors"].append("sonar file source selected but no report files found")
+
+        if source_mode in {"api", "auto"}:
+            api_urls = self._build_sonar_api_urls(config)
+            token = self._resolve_sonar_token(config)
+            token_env = str(config.get("token_env", "SONAR_TOKEN")).strip() or "SONAR_TOKEN"
+
+            if not api_urls:
+                result["errors"].append("sonar api not configured: missing base_url or project_key")
+            elif not token:
+                result["errors"].append(f"sonar api token missing: set {token_env}")
+            else:
+                quality_url = api_urls.get("quality_gate", "")
+                fetch_result = await asyncio.to_thread(
+                    self._fetch_json_url,
+                    quality_url,
+                    timeout_seconds,
+                    token,
+                )
+                if fetch_result.get("ok", False):
+                    result["sources"].append("api")
+                else:
+                    result["errors"].append(
+                        f"sonar api quality_gate check failed: {fetch_result.get('error', 'unknown error')}"
+                    )
+
+        if source_mode == "command":
+            command = str(config.get("command", "")).strip()
+            if command:
+                result["sources"].append("command")
+            else:
+                result["errors"].append("sonar command source selected but command is empty")
+
+        result["sources"] = sorted(set(result["sources"]))
+        result["connected"] = len(result["sources"]) > 0
+        return result
+
+    async def _run_metric_connectivity_checks(self) -> None:
+        """Run startup connectivity checks for external metric providers."""
+        collection_config = self.schedule_config.get("metric_collection", {})
+        if not self._coerce_bool(collection_config.get("enabled", False)):
+            return
+
+        sonar_config = collection_config.get("sonar", {})
+        if not self._coerce_bool(sonar_config.get("enabled", False)):
+            return
+        if not self._coerce_bool(sonar_config.get("startup_connectivity_check", True)):
+            return
+
+        result = await self._check_sonar_connectivity(sonar_config)
+        if result.get("connected", False):
+            logger.info(
+                "[Metrics] Sonar connectivity check passed via: %s",
+                ", ".join(result.get("sources", [])),
+            )
+            return
+
+        errors = result.get("errors", [])
+        logger.warning(
+            "[Metrics] Sonar connectivity check failed: %s",
+            "; ".join(errors) if errors else "unknown reason",
+        )
+        if self._coerce_bool(sonar_config.get("notify_on_connectivity_failure", False)):
+            await self._notify_runtime_alert(
+                "metric_connectivity_failure",
+                "Sonar connectivity check failed",
+                {
+                    "collector": "sonar",
+                    "errors": errors,
+                },
+            )
+
     async def _collect_external_quality_metrics(self, cycle_id: str) -> Dict[str, Any]:
         """Collect external quality metrics and aggregate results."""
         collection_config = self.schedule_config.get("metric_collection", {})
@@ -733,6 +831,7 @@ class ContinuousOptimizationScheduler:
 
         # Start coordinator
         await self.coordinator.start()
+        await self._run_metric_connectivity_checks()
 
         # Main optimization loop
         while self.is_running:
