@@ -26,3 +26,6 @@ agent_team/test_artifacts/scripts/
 # Frontend dev runtime logs
 frontend/devserver.out.log
 frontend/devserver.err.log
+
+# Frontend build artifacts
+frontend/dist/
