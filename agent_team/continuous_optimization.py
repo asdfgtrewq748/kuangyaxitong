@@ -117,7 +117,8 @@ class ContinuousOptimizationScheduler:
                 "lighthouse": {
                     "enabled": True,
                     "source": "command",
-                    "url": "http://127.0.0.1:5173/",
+                    "url": "http://localhost:5173/",
+                    "url_fallbacks": ["http://127.0.0.1:5173/"],
                     "report_path": "agent_team/metrics/lighthouse_report.json",
                     "chrome_path": "",
                     "command": "npx.cmd --yes lighthouse {url} --only-categories=performance,accessibility,best-practices --quiet --chrome-flags=\"--headless --no-sandbox --disable-gpu --ignore-certificate-errors --allow-insecure-localhost --disable-dev-shm-usage\" --output=json --output-path=\"{report_path}\"",
@@ -469,6 +470,43 @@ class ContinuousOptimizationScheduler:
 
         return metrics
 
+    def _extract_lighthouse_runtime_error(self, payload: Any) -> str:
+        """Extract runtime error details from Lighthouse payload."""
+        if not isinstance(payload, dict):
+            return ""
+
+        runtime_error = payload.get("runtimeError")
+        if isinstance(runtime_error, dict):
+            code = str(runtime_error.get("code", "")).strip()
+            message = str(runtime_error.get("message", "")).strip()
+            if code and message:
+                return f"{code}: {self._compact_error_text(message)}"
+            if code:
+                return code
+            if message:
+                return self._compact_error_text(message)
+
+        final_url = str(payload.get("finalUrl", "")).strip()
+        if final_url.startswith("chrome-error://"):
+            return f"CHROME_INTERSTITIAL_ERROR: finalUrl={final_url}"
+        return ""
+
+    def _resolve_lighthouse_urls(self, config: Dict[str, Any]) -> List[str]:
+        """Resolve Lighthouse target URLs with fallback candidates."""
+        primary = str(config.get("url", "http://localhost:5173/")).strip() or "http://localhost:5173/"
+        raw_fallbacks = config.get("url_fallbacks", ["http://localhost:5173/", "http://127.0.0.1:5173/"])
+        fallback_urls: List[str] = []
+        if isinstance(raw_fallbacks, list):
+            fallback_urls = [str(item).strip() for item in raw_fallbacks if str(item).strip()]
+        elif isinstance(raw_fallbacks, str):
+            fallback_urls = [part.strip() for part in raw_fallbacks.split(",") if part.strip()]
+
+        urls: List[str] = []
+        for candidate in [primary, *fallback_urls]:
+            if candidate and candidate not in urls:
+                urls.append(candidate)
+        return urls
+
     def _extract_sonar_metrics(self, payload: Any) -> Dict[str, Any]:
         """Extract sonar metrics from common SonarQube JSON formats."""
         metrics: Dict[str, Any] = {}
@@ -530,25 +568,45 @@ class ContinuousOptimizationScheduler:
         )
         source_mode = str(config.get("source", "file")).lower()
         freshness_minutes = self._safe_float(config.get("freshness_minutes", 30)) or 30.0
+        timeout_seconds = self._safe_float(config.get("timeout_seconds", 180)) or 180.0
         errors: List[str] = []
+        payload = self._load_json_if_exists(report_path)
+        metrics = self._parse_lighthouse_report(payload)
+        runtime_error = self._extract_lighthouse_runtime_error(payload)
 
         if source_mode == "command":
-            if not self._is_file_fresh(report_path, freshness_minutes):
-                url = config.get("url", "http://127.0.0.1:5173/")
-                timeout_seconds = self._safe_float(config.get("timeout_seconds", 180)) or 180.0
+            has_fresh_report = self._is_file_fresh(report_path, freshness_minutes)
+            needs_refresh = (not has_fresh_report) or (not metrics) or bool(runtime_error)
+            if needs_refresh:
                 command_template = config.get(
                     "command",
                     "npx.cmd --yes lighthouse {url} --only-categories=performance,accessibility,best-practices --quiet --chrome-flags=\"--headless --no-sandbox --disable-gpu --ignore-certificate-errors --allow-insecure-localhost --disable-dev-shm-usage\" --output=json --output-path=\"{report_path}\"",
                 )
-                command = str(command_template).format(url=url, report_path=str(report_path))
                 browser_path = str(config.get("chrome_path", "")).strip() or self._discover_lighthouse_browser_path()
                 env_overrides = {"CHROME_PATH": browser_path} if browser_path else None
-                command_result = await self._run_metric_command(command, timeout_seconds, env_overrides=env_overrides)
-                if not command_result.get("ok", False):
-                    errors.append(f"lighthouse command failed: {command_result.get('error', 'unknown error')}")
+                candidate_urls = self._resolve_lighthouse_urls(config)
+                command_succeeded = False
+                runtime_error = ""
 
-        payload = self._load_json_if_exists(report_path)
-        metrics = self._parse_lighthouse_report(payload)
+                for candidate_url in candidate_urls:
+                    command = str(command_template).format(url=candidate_url, report_path=str(report_path))
+                    command_result = await self._run_metric_command(command, timeout_seconds, env_overrides=env_overrides)
+                    if not command_result.get("ok", False):
+                        errors.append(
+                            f"lighthouse command failed ({candidate_url}): {command_result.get('error', 'unknown error')}"
+                        )
+                        continue
+
+                    command_succeeded = True
+                    payload = self._load_json_if_exists(report_path)
+                    metrics = self._parse_lighthouse_report(payload)
+                    runtime_error = self._extract_lighthouse_runtime_error(payload)
+                    if metrics:
+                        break
+
+                if command_succeeded and (not metrics) and runtime_error:
+                    errors.append(f"lighthouse runtime error: {runtime_error}")
+
         if not metrics:
             errors.append("lighthouse report missing or no parseable category scores")
 

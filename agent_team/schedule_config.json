@@ -110,7 +110,10 @@
     "lighthouse": {
       "enabled": true,
       "source": "command",
-      "url": "http://127.0.0.1:5173/",
+      "url": "http://localhost:5173/",
+      "url_fallbacks": [
+        "http://127.0.0.1:5173/"
+      ],
       "report_path": "agent_team/metrics/lighthouse_report.json",
       "chrome_path": "",
       "command": "npx.cmd --yes lighthouse {url} --only-categories=performance,accessibility,best-practices --quiet --chrome-flags=\"--headless --no-sandbox --disable-gpu --ignore-certificate-errors --allow-insecure-localhost --disable-dev-shm-usage\" --output=json --output-path=\"{report_path}\"",

@@ -22,6 +22,21 @@ def test_parse_lighthouse_report_extracts_percent_scores():
     assert metrics["lighthouse_best_practices"] == 88.0
 
 
+def test_extract_lighthouse_runtime_error_from_payload():
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    payload = {
+        "runtimeError": {
+            "code": "CHROME_INTERSTITIAL_ERROR",
+            "message": "Chrome prevented page load with an interstitial.",
+        }
+    }
+
+    error = scheduler._extract_lighthouse_runtime_error(payload)
+
+    assert "CHROME_INTERSTITIAL_ERROR" in error
+    assert "interstitial" in error.lower()
+
+
 def test_extract_sonar_metrics_from_quality_gate_payload():
     scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
     payload = {
@@ -131,6 +146,103 @@ def test_collect_lighthouse_metrics_adds_discovered_browser_path(tmp_path):
     assert captured["env"]["CHROME_PATH"] == "C:/fake/browser.exe"
     assert result["metrics"] == {}
     assert len(result["errors"]) >= 1
+
+
+def test_collect_lighthouse_metrics_retries_with_fallback_url(tmp_path):
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    report_path = tmp_path / "lighthouse.json"
+    called_urls = []
+
+    async def fake_run_metric_command(command: str, timeout_seconds: float, env_overrides=None):
+        if "http://127.0.0.1:5173/" in command:
+            called_urls.append("http://127.0.0.1:5173/")
+            report_path.write_text(
+                json.dumps(
+                    {
+                        "runtimeError": {
+                            "code": "CHROME_INTERSTITIAL_ERROR",
+                            "message": "interstitial",
+                        },
+                        "finalUrl": "chrome-error://chromewebdata/",
+                    }
+                ),
+                encoding="utf-8",
+            )
+        else:
+            called_urls.append("http://localhost:5173/")
+            report_path.write_text(
+                json.dumps(
+                    {
+                        "categories": {
+                            "performance": {"score": 0.64},
+                            "accessibility": {"score": 0.91},
+                            "best-practices": {"score": 0.86},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+        return {"ok": True}
+
+    scheduler._run_metric_command = fake_run_metric_command  # type: ignore[method-assign]
+
+    config = {
+        "enabled": True,
+        "source": "command",
+        "url": "http://127.0.0.1:5173/",
+        "url_fallbacks": ["http://localhost:5173/"],
+        "report_path": str(report_path),
+        "command": "npx.cmd --yes lighthouse {url} --output=json --output-path=\"{report_path}\"",
+        "timeout_seconds": 10,
+        "freshness_minutes": 30,
+    }
+
+    result = asyncio.run(scheduler._collect_lighthouse_metrics("cycle_retry", config))
+
+    assert called_urls == ["http://127.0.0.1:5173/", "http://localhost:5173/"]
+    assert result["metrics"]["lighthouse_performance"] == 64.0
+    assert result["metrics"]["lighthouse_accessibility"] == 91.0
+    assert result["metrics"]["lighthouse_best_practices"] == 86.0
+    assert not any("lighthouse runtime error" in msg for msg in result["errors"])
+
+
+def test_collect_lighthouse_metrics_reports_runtime_error_details(tmp_path):
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    report_path = tmp_path / "lighthouse_runtime_error.json"
+
+    async def fake_run_metric_command(command: str, timeout_seconds: float, env_overrides=None):
+        report_path.write_text(
+            json.dumps(
+                {
+                    "runtimeError": {
+                        "code": "CHROME_INTERSTITIAL_ERROR",
+                        "message": "Chrome prevented page load with an interstitial.",
+                    },
+                    "finalUrl": "chrome-error://chromewebdata/",
+                }
+            ),
+            encoding="utf-8",
+        )
+        return {"ok": True}
+
+    scheduler._run_metric_command = fake_run_metric_command  # type: ignore[method-assign]
+
+    config = {
+        "enabled": True,
+        "source": "command",
+        "url": "http://127.0.0.1:5173/",
+        "url_fallbacks": [],
+        "report_path": str(report_path),
+        "command": "npx.cmd --yes lighthouse {url} --output=json --output-path=\"{report_path}\"",
+        "timeout_seconds": 10,
+        "freshness_minutes": 0,
+    }
+
+    result = asyncio.run(scheduler._collect_lighthouse_metrics("cycle_runtime_err", config))
+
+    assert result["metrics"] == {}
+    assert any("lighthouse runtime error" in msg for msg in result["errors"])
+    assert any("CHROME_INTERSTITIAL_ERROR" in msg for msg in result["errors"])
 
 
 def test_build_sonar_api_urls_includes_project_and_branch():
