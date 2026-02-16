@@ -24,8 +24,15 @@ from agent_team.agents_advanced import create_advanced_agents
 from agent_team.agents import create_domain_agents
 import logging
 
-logger = logging.getLogger(__name__)
-import logging
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s:%(name)s:%(message)s',
+    handlers=[
+        logging.FileHandler('agent_team/agent_team_10cycles.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +95,9 @@ class LimitedCycleScheduler(ContinuousOptimizationScheduler):
                 logger.info(f"[Scheduler] Waiting {interval_minutes} minutes until next cycle...")
                 logger.info(f"[Scheduler] Cycles remaining: {remaining_cycles}/{self.max_cycles}")
 
-                # Sleep in small increments
-                for _ in range(interval_minutes * 60):
+                # Sleep in small increments (convert to integer seconds)
+                sleep_seconds = int(interval_minutes * 60)
+                for _ in range(sleep_seconds):
                     if not self.is_running:
                         break
                     await asyncio.sleep(1)

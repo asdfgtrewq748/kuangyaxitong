@@ -383,35 +383,90 @@ testPage().catch(console.error);
 """
 
     async def _execute_playwright_test(self, test_file: Path) -> Dict[str, Any]:
-        """Execute a Playwright test script"""
+        """Execute a Playwright test script using Async API"""
         try:
-            # Run with tsx or node
-            result = subprocess.run(
-                ["npx", "tsx", str(test_file)],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=Path.cwd(),
-            )
+            # Use Async Playwright API since we're in an async loop
+            try:
+                from playwright.async_api import async_playwright
+            except ImportError:
+                return {
+                    "page": test_file.stem,
+                    "passed": False,
+                    "errors": ["Playwright async API not installed"],
+                }
 
-            # Parse output
-            output = result.stdout + result.stderr
+            # Parse test file to extract URL and selector
+            import re
+            with open(test_file, 'r', encoding='utf-8') as f:
+                content = f.read()
 
-            # Look for RESULT: line
-            for line in output.split('\n'):
-                if line.startswith('RESULT:'):
-                    result_json = line.replace('RESULT:', '').strip()
-                    return json.loads(result_json)
+            # Extract URL and selector from test script
+            url_match = re.search(r"goto\(['\"]([^'\"]+)['\"]", content)
+            selector_match = re.search(r"\$\( ['\"]([^'\"]+)['\"]", content)
 
-            # If no result found, return error
+            if not url_match:
+                return {"page": test_file.stem, "passed": False, "errors": ["Could not parse URL from test"]}
+
+            test_url = url_match.group(1)
+            test_selector = selector_match.group(1) if selector_match else "body"
+
+            # Run test directly with async API
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                page = await browser.new_page(viewport={"width": 1920, "height": 1080})
+
+                errors = []
+                def handle_error(error):
+                    errors.append(str(error))
+
+                page.on("pageerror", handle_error)
+
+                try:
+                    await page.goto(test_url, wait_until="networkidle", timeout=10000)
+                    await page.wait_for_timeout(2000)
+
+                    main_element = await page.query_selector(test_selector)
+                    has_selector = main_element is not None
+
+                    body_text = await page.inner_text("body") if await page.query_selector("body") else ""
+                    has_content = len(body_text) > 100
+
+                    screenshot_path = self.playwright_screenshots_path / f"{test_file.stem}.png"
+                    screenshot_path.parent.mkdir(parents=True, exist_ok=True)
+                    await page.screenshot(path=str(screenshot_path), full_page=True)
+
+                    title = await page.title()
+
+                    await browser.close()
+
+                    passed = len(errors) == 0 and has_content
+                    return {
+                        "page": test_file.stem,
+                        "url": test_url,
+                        "title": title,
+                        "passed": passed,
+                        "hasContent": has_content,
+                        "contentLength": len(body_text),
+                        "errors": errors,
+                        "screenshot": str(screenshot_path),
+                        "timestamp": datetime.now().isoformat()
+                    }
+
+                except Exception as e:
+                    await browser.close()
+                    return {
+                        "page": test_file.stem,
+                        "passed": False,
+                        "errors": [str(e)],
+                        "screenshot": None
+                    }
+
+        except Exception as e:
             return {
                 "page": test_file.stem,
                 "passed": False,
-                "errors": ["No result found in test output"],
-                "output": output,
+                "errors": [f"Test execution failed: {str(e)}"],
             }
-
-        except subprocess.TimeoutExpired:
             return {
                 "page": test_file.stem,
                 "passed": False,

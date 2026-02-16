@@ -1,5 +1,5 @@
 {
-  "cycle_interval_minutes": 30,
+  "cycle_interval_minutes": 0.5,
   "focus_hours": {
     "00-06": {
       "name": "Stability & Bug Fixes",

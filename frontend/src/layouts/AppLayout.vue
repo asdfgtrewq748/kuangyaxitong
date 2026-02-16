@@ -111,6 +111,15 @@
         </section>
 
         <router-view />
+
+        <!-- AI Search Bar -->
+        <div class="ai-search-container">
+          <AiSearchBar
+            v-if="showAiSearch"
+            label="AI 助手"
+            :expanded="false"
+          />
+        </div>
       </div>
     </main>
 
@@ -123,12 +132,14 @@ import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref } from 'v
 import { useRoute, useRouter } from 'vue-router'
 import Toast from '../components/Toast.vue'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
+import AiSearchBar from '../components/AiSearchBar.vue'
 
 const route = useRoute()
 const router = useRouter()
 const toast = ref(null)
 const { flowOrder, workspaceState, completionRate, resetFlow } = useWorkspaceFlow()
 const appToastRef = getCurrentInstance()?.appContext?.config?.globalProperties?.$toast
+const showAiSearch = ref(true) // 控制 AI 搜索栏显示
 
 const routes = computed(() => (
   router
@@ -644,8 +655,14 @@ onBeforeUnmount(() => {
   }
 
   .workflow-track {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr);
   }
 }
-</style>
+
+.ai-search-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 50;
+}
 

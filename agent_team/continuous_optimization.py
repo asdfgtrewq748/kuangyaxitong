@@ -165,8 +165,9 @@ class ContinuousOptimizationScheduler:
                 interval_minutes = self.schedule_config.get("cycle_interval_minutes", 30)
                 logger.info(f"[Scheduler] Waiting {interval_minutes} minutes until next cycle...")
 
-                # Sleep in small increments to check for shutdown signal
-                for _ in range(interval_minutes * 60):
+                # Sleep in small increments to check for shutdown signal (convert to integer seconds)
+                sleep_seconds = int(interval_minutes * 60)
+                for _ in range(sleep_seconds):
                     if not self.is_running:
                         break
                     await asyncio.sleep(1)
@@ -254,20 +255,38 @@ class ContinuousOptimizationScheduler:
         weekday = now.strftime("%A").lower()
 
         # Get time-based focus
+        time_focus = ["optimization"]  # Default
         for time_range, areas in self.schedule_config.get("focus_hours", {}).items():
             start_hour, end_hour = map(int, time_range.split("-"))
             if start_hour <= hour < end_hour:
-                time_focus = areas
+                # Handle both list format and dict format with "focus" key
+                if isinstance(areas, list):
+                    time_focus = areas
+                elif isinstance(areas, dict) and "focus" in areas:
+                    time_focus = areas["focus"]
+                else:
+                    time_focus = ["optimization"]
                 break
-        else:
-            time_focus = ["optimization"]
 
         # Get weekly theme
         weekly_theme = self.schedule_config.get("weekly_theme", {})
-        day_theme = weekly_theme.get(weekday, "optimization")
+        day_theme_data = weekly_theme.get(weekday, "optimization")
+
+        # Handle both string format and dict format with "extra_focus" key
+        extra_focus = []
+        if isinstance(day_theme_data, str):
+            extra_focus = [day_theme_data]
+        elif isinstance(day_theme_data, dict):
+            # Use extra_focus if available, otherwise use the name
+            if "extra_focus" in day_theme_data:
+                extra_focus = day_theme_data["extra_focus"]
+            elif "name" in day_theme_data:
+                # Convert name to snake_case focus area
+                name = day_theme_data["name"]
+                extra_focus = [name.lower().replace(" ", "_").replace("-", "_")]
 
         # Combine time focus and day theme
-        focus_areas = list(set(time_focus + [day_theme]))
+        focus_areas = list(set(time_focus + extra_focus))
 
         logger.info(f"[Scheduler] Current focus areas: {', '.join(focus_areas)}")
         return focus_areas
@@ -302,9 +321,9 @@ class ContinuousOptimizationScheduler:
         action_map = {
             "bug_fix": "fix_bug",
             "optimization": "optimize_component",  # Frontend uses optimize_component
-            "testing": "run_all_tests",
+            "testing": "run_test_suite",  # Changed to match QA agent's action
             "performance": "optimize_component",
-            "security": "security_scan",
+            "security": "security_scan_impl",  # Changed to match Bug Hunter's action
         }
         return action_map.get(opportunity_type, "optimize_component")
 

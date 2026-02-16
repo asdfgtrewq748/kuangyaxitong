@@ -53,8 +53,13 @@ class AgentCoordinator:
 
     def get_agent_by_type(self, agent_type: str) -> Optional[BaseAgent]:
         """Get an available agent of the specified type"""
+        # First try to find an IDLE agent
         for agent in self.agents.values():
             if agent.config.agent_type == agent_type and agent.status == AgentStatus.IDLE:
+                return agent
+        # If no IDLE agent, return any agent of the specified type (they can handle concurrent tasks)
+        for agent in self.agents.values():
+            if agent.config.agent_type == agent_type and agent.status != AgentStatus.OFFLINE:
                 return agent
         return None
 
