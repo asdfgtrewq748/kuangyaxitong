@@ -10,11 +10,15 @@ Uses schedule_config.json for configuration and supports automatic confirmation 
 import asyncio
 import json
 import logging
+import os
+import subprocess
 import signal
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from urllib import request as urllib_request
+from urllib import error as urllib_error
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -58,6 +62,8 @@ class ContinuousOptimizationScheduler:
         self.cycle_count = 0
         self.reports_dir = Path(__file__).parent / "optimization_reports"
         self.reports_dir.mkdir(parents=True, exist_ok=True)
+        self.notifications_dir = Path(__file__).parent / "notifications"
+        self.notifications_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -103,6 +109,37 @@ class ContinuousOptimizationScheduler:
                 "lighthouse_performance_minimum": 85,
                 "critical_violations_maximum": 0
             },
+            "metric_collection": {
+                "enabled": True,
+                "notify_on_collection_error": False,
+                "lighthouse": {
+                    "enabled": True,
+                    "source": "command",
+                    "url": "http://127.0.0.1:5173/",
+                    "report_path": "agent_team/metrics/lighthouse_report.json",
+                    "chrome_path": "",
+                    "command": "npx.cmd --yes lighthouse {url} --only-categories=performance,accessibility,best-practices --quiet --chrome-flags=\"--headless --no-sandbox --disable-gpu --ignore-certificate-errors --allow-insecure-localhost --disable-dev-shm-usage\" --output=json --output-path=\"{report_path}\"",
+                    "timeout_seconds": 180,
+                    "freshness_minutes": 30
+                },
+                "sonar": {
+                    "enabled": True,
+                    "source": "file",
+                    "report_path": "agent_team/metrics/sonar_report.json",
+                    "quality_gate_path": "agent_team/metrics/sonar_quality_gate.json",
+                    "command": "",
+                    "timeout_seconds": 60,
+                    "freshness_minutes": 30
+                }
+            },
+            "notifications": {
+                "on_cycle_complete": True,
+                "on_critical_issue": True,
+                "summary_file": "agent_team/notifications/cycle_summaries.jsonl",
+                "alert_file": "agent_team/notifications/quality_alerts.jsonl",
+                "webhook_url": "",
+                "webhook_timeout_seconds": 5,
+            },
             "automation_settings": {
                 "auto_fix_simple_bugs": True,
                 "auto_refactor_safe_code": True,
@@ -111,9 +148,423 @@ class ContinuousOptimizationScheduler:
             "limits": {
                 "max_concurrent_tasks": 5,
                 "max_retries": 3,
-                "task_timeout_minutes": 30
+                "task_timeout_minutes": 30,
+                "cycle_timeout_minutes": 120,
             }
         }
+
+    def _safe_float(self, value: Any) -> Optional[float]:
+        """Convert value to float, returning None on failure."""
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _coerce_bool(self, value: Any) -> bool:
+        """Normalize boolean-like values from config/metrics."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "y", "on", "pass", "passed"}:
+                return True
+            if normalized in {"0", "false", "no", "n", "off", "fail", "failed"}:
+                return False
+        return bool(value)
+
+    def _get_cycle_interval_seconds(self) -> int:
+        """Read cycle interval from config with validation."""
+        interval_minutes = self._safe_float(self.schedule_config.get("cycle_interval_minutes", 30))
+        if interval_minutes is None or interval_minutes <= 0:
+            return 30 * 60
+        return max(int(interval_minutes * 60), 1)
+
+    def _get_cycle_timeout_seconds(self) -> Optional[float]:
+        """Read cycle timeout from config (None means disabled)."""
+        limits = self.schedule_config.get("limits", {})
+        timeout_minutes = self._safe_float(limits.get("cycle_timeout_minutes"))
+        if timeout_minutes is None or timeout_minutes <= 0:
+            return None
+        return timeout_minutes * 60.0
+
+    async def _sleep_with_shutdown_checks(self, sleep_seconds: int) -> None:
+        """Sleep while still responding quickly to shutdown signals."""
+        for _ in range(max(int(sleep_seconds), 0)):
+            if not self.is_running:
+                break
+            await asyncio.sleep(1)
+
+    async def _notify_runtime_alert(
+        self,
+        alert_type: str,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Persist runtime alerts and optionally send webhook notifications."""
+        notifications = self.schedule_config.get("notifications", {})
+        context = context or {}
+        payload = {
+            "type": alert_type,
+            "timestamp": datetime.now().isoformat(),
+            "message": message,
+            "context": context,
+        }
+
+        alert_path = self._resolve_notification_path(
+            notifications.get("alert_file", "agent_team/notifications/quality_alerts.jsonl"),
+            "agent_team/notifications/quality_alerts.jsonl",
+        )
+        self._append_json_line(alert_path, payload)
+        logger.warning("[Notifications] Runtime alert appended: %s", alert_path)
+
+        webhook_url = notifications.get("webhook_url")
+        webhook_timeout = float(notifications.get("webhook_timeout_seconds", 5))
+        if webhook_url and notifications.get("on_critical_issue", True):
+            self._post_webhook_notification(
+                webhook_url,
+                {"type": alert_type, "data": payload},
+                timeout_seconds=webhook_timeout,
+            )
+
+    async def _run_cycle_with_timeout(self) -> bool:
+        """Run one cycle with optional timeout enforcement."""
+        timeout_seconds = self._get_cycle_timeout_seconds()
+        if timeout_seconds is None:
+            await self._run_optimization_cycle()
+            return True
+
+        try:
+            await asyncio.wait_for(self._run_optimization_cycle(), timeout=timeout_seconds)
+            return True
+        except asyncio.TimeoutError:
+            timeout_minutes = timeout_seconds / 60.0
+            cycle_number = max(self.cycle_count, 1)
+            message = (
+                f"Cycle #{cycle_number} timed out after {timeout_minutes:.2f} minutes"
+            )
+            logger.error("[Scheduler] %s", message)
+            await self._notify_runtime_alert(
+                "cycle_timeout",
+                message,
+                {
+                    "cycle_number": cycle_number,
+                    "timeout_seconds": timeout_seconds,
+                },
+            )
+            return False
+
+    def _resolve_data_path(self, configured_path: str, fallback_name: str) -> Path:
+        """Resolve a data path relative to workspace and ensure parent exists."""
+        target = configured_path or fallback_name
+        path = Path(target)
+        if not path.is_absolute():
+            path = Path.cwd() / target
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _load_json_if_exists(self, path: Path) -> Any:
+        """Load JSON payload if file exists and is valid."""
+        if not path.exists():
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                return json.load(handle)
+        except Exception as exc:
+            logger.warning("[Metrics] Failed to parse JSON from %s: %s", path, exc)
+            return None
+
+    def _is_file_fresh(self, path: Path, freshness_minutes: float) -> bool:
+        """Check whether a file is newer than freshness threshold."""
+        if not path.exists():
+            return False
+        freshness_seconds = max(float(freshness_minutes), 0.0) * 60.0
+        if freshness_seconds <= 0:
+            return False
+        age_seconds = (datetime.now() - datetime.fromtimestamp(path.stat().st_mtime)).total_seconds()
+        return age_seconds <= freshness_seconds
+
+    def _compact_error_text(self, value: str, max_lines: int = 4, max_chars: int = 400) -> str:
+        """Trim noisy command stderr/stdout text for concise alerts."""
+        text = (value or "").strip()
+        if not text:
+            return ""
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        compact = " | ".join(lines[:max_lines])
+        if len(compact) > max_chars:
+            compact = compact[: max_chars - 3] + "..."
+        return compact
+
+    def _discover_lighthouse_browser_path(self) -> str:
+        """Find a Chromium-based browser path for Lighthouse on Windows/macOS/Linux."""
+        candidates = [
+            Path("C:/Program Files/Google/Chrome/Application/chrome.exe"),
+            Path("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"),
+            Path("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
+            Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
+            Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+            Path("/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"),
+            Path("/usr/bin/google-chrome"),
+            Path("/usr/bin/chromium-browser"),
+            Path("/usr/bin/chromium"),
+            Path("/snap/bin/chromium"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+        return ""
+
+    async def _run_metric_command(
+        self,
+        command: str,
+        timeout_seconds: float,
+        env_overrides: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """Run external metric command and return execution metadata."""
+        env = dict(os.environ)
+        if env_overrides:
+            env.update({k: str(v) for k, v in env_overrides.items() if v is not None})
+        try:
+            completed = await asyncio.to_thread(
+                subprocess.run,
+                command,
+                shell=True,
+                cwd=str(Path.cwd()),
+                capture_output=True,
+                text=True,
+                timeout=max(timeout_seconds, 1.0),
+                env=env,
+            )
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "error": f"command timed out after {timeout_seconds} seconds"}
+        except Exception as exc:
+            return {"ok": False, "error": f"command execution failed: {exc}"}
+
+        if completed.returncode != 0:
+            stderr = (completed.stderr or "").strip()
+            stdout = (completed.stdout or "").strip()
+            detail = self._compact_error_text(stderr or stdout or f"exit code {completed.returncode}")
+            return {"ok": False, "error": detail}
+
+        return {"ok": True}
+
+    def _parse_lighthouse_report(self, payload: Any) -> Dict[str, Any]:
+        """Parse lighthouse JSON payload into quality gate metrics."""
+        metrics: Dict[str, Any] = {}
+        if not isinstance(payload, dict):
+            return metrics
+
+        categories = payload.get("categories", {})
+        category_map = {
+            "lighthouse_performance": "performance",
+            "lighthouse_accessibility": "accessibility",
+            "lighthouse_best_practices": "best-practices",
+        }
+        for metric_key, category_key in category_map.items():
+            category = categories.get(category_key, {})
+            score = category.get("score") if isinstance(category, dict) else None
+            numeric = self._safe_float(score)
+            if numeric is not None:
+                value = round(numeric * 100.0, 2)
+                metrics[metric_key] = value
+                metrics[f"{metric_key}_score"] = value
+
+        return metrics
+
+    def _extract_sonar_metrics(self, payload: Any) -> Dict[str, Any]:
+        """Extract sonar metrics from common SonarQube JSON formats."""
+        metrics: Dict[str, Any] = {}
+        if not isinstance(payload, dict):
+            return metrics
+
+        project_status = payload.get("projectStatus")
+        if isinstance(project_status, dict):
+            status_text = str(project_status.get("status", "")).upper()
+            if status_text:
+                metrics["sonar_quality_gate"] = status_text in {"OK", "PASS", "PASSED"}
+            for condition in project_status.get("conditions", []):
+                if not isinstance(condition, dict):
+                    continue
+                metric_key = str(condition.get("metricKey", "")).lower()
+                value = self._safe_float(condition.get("actualValue"))
+                if value is None:
+                    continue
+                if "critical_violations" in metric_key:
+                    metrics["critical_violations"] = int(value)
+                elif "major_violations" in metric_key:
+                    metrics["major_violations"] = int(value)
+
+        component = payload.get("component")
+        if isinstance(component, dict):
+            for measure in component.get("measures", []):
+                if not isinstance(measure, dict):
+                    continue
+                metric = str(measure.get("metric", "")).lower()
+                value = self._safe_float(measure.get("value"))
+                if value is None:
+                    continue
+                if metric == "critical_violations":
+                    metrics["critical_violations"] = int(value)
+                elif metric == "major_violations":
+                    metrics["major_violations"] = int(value)
+
+        issues = payload.get("issues")
+        if isinstance(issues, list):
+            severity_counts = {"CRITICAL": 0, "MAJOR": 0}
+            for issue in issues:
+                if not isinstance(issue, dict):
+                    continue
+                severity = str(issue.get("severity", "")).upper()
+                if severity in severity_counts:
+                    severity_counts[severity] += 1
+            if severity_counts["CRITICAL"] > 0 and "critical_violations" not in metrics:
+                metrics["critical_violations"] = severity_counts["CRITICAL"]
+            if severity_counts["MAJOR"] > 0 and "major_violations" not in metrics:
+                metrics["major_violations"] = severity_counts["MAJOR"]
+
+        return metrics
+
+    async def _collect_lighthouse_metrics(self, cycle_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Collect lighthouse metrics from command or report file."""
+        report_path = self._resolve_data_path(
+            config.get("report_path", "agent_team/metrics/lighthouse_report.json"),
+            "agent_team/metrics/lighthouse_report.json",
+        )
+        source_mode = str(config.get("source", "file")).lower()
+        freshness_minutes = self._safe_float(config.get("freshness_minutes", 30)) or 30.0
+        errors: List[str] = []
+
+        if source_mode == "command":
+            if not self._is_file_fresh(report_path, freshness_minutes):
+                url = config.get("url", "http://127.0.0.1:5173/")
+                timeout_seconds = self._safe_float(config.get("timeout_seconds", 180)) or 180.0
+                command_template = config.get(
+                    "command",
+                    "npx.cmd --yes lighthouse {url} --only-categories=performance,accessibility,best-practices --quiet --chrome-flags=\"--headless --no-sandbox --disable-gpu --ignore-certificate-errors --allow-insecure-localhost --disable-dev-shm-usage\" --output=json --output-path=\"{report_path}\"",
+                )
+                command = str(command_template).format(url=url, report_path=str(report_path))
+                browser_path = str(config.get("chrome_path", "")).strip() or self._discover_lighthouse_browser_path()
+                env_overrides = {"CHROME_PATH": browser_path} if browser_path else None
+                command_result = await self._run_metric_command(command, timeout_seconds, env_overrides=env_overrides)
+                if not command_result.get("ok", False):
+                    errors.append(f"lighthouse command failed: {command_result.get('error', 'unknown error')}")
+
+        payload = self._load_json_if_exists(report_path)
+        metrics = self._parse_lighthouse_report(payload)
+        if not metrics:
+            errors.append("lighthouse report missing or no parseable category scores")
+
+        return {
+            "collector": "lighthouse",
+            "cycle_id": cycle_id,
+            "source_mode": source_mode,
+            "report_path": str(report_path),
+            "metrics": metrics,
+            "errors": errors,
+        }
+
+    async def _collect_sonar_metrics(self, cycle_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Collect sonar metrics from file(s) or optional command."""
+        report_path = self._resolve_data_path(
+            config.get("report_path", "agent_team/metrics/sonar_report.json"),
+            "agent_team/metrics/sonar_report.json",
+        )
+        gate_path = self._resolve_data_path(
+            config.get("quality_gate_path", "agent_team/metrics/sonar_quality_gate.json"),
+            "agent_team/metrics/sonar_quality_gate.json",
+        )
+        source_mode = str(config.get("source", "file")).lower()
+        freshness_minutes = self._safe_float(config.get("freshness_minutes", 30)) or 30.0
+        errors: List[str] = []
+
+        if source_mode == "command":
+            command = str(config.get("command", "")).strip()
+            timeout_seconds = self._safe_float(config.get("timeout_seconds", 60)) or 60.0
+            has_fresh_data = self._is_file_fresh(report_path, freshness_minutes) or self._is_file_fresh(gate_path, freshness_minutes)
+            if command and not has_fresh_data:
+                command_result = await self._run_metric_command(command, timeout_seconds)
+                if not command_result.get("ok", False):
+                    errors.append(f"sonar command failed: {command_result.get('error', 'unknown error')}")
+
+        metrics: Dict[str, Any] = {}
+        report_payload = self._load_json_if_exists(report_path)
+        gate_payload = self._load_json_if_exists(gate_path)
+        metrics.update(self._extract_sonar_metrics(report_payload))
+        metrics.update(self._extract_sonar_metrics(gate_payload))
+
+        if not metrics:
+            errors.append("sonar report missing or no parseable metrics")
+
+        return {
+            "collector": "sonar",
+            "cycle_id": cycle_id,
+            "source_mode": source_mode,
+            "report_path": str(report_path),
+            "quality_gate_path": str(gate_path),
+            "metrics": metrics,
+            "errors": errors,
+        }
+
+    async def _collect_external_quality_metrics(self, cycle_id: str) -> Dict[str, Any]:
+        """Collect external quality metrics and aggregate results."""
+        collection_config = self.schedule_config.get("metric_collection", {})
+        if not self._coerce_bool(collection_config.get("enabled", False)):
+            return {"metrics": {}, "sources": [], "errors": []}
+
+        aggregated = {"metrics": {}, "sources": [], "errors": []}
+
+        lighthouse_config = collection_config.get("lighthouse", {})
+        if self._coerce_bool(lighthouse_config.get("enabled", False)):
+            lighthouse_result = await self._collect_lighthouse_metrics(cycle_id, lighthouse_config)
+            aggregated["metrics"].update(lighthouse_result.get("metrics", {}))
+            aggregated["sources"].append(
+                {
+                    "collector": "lighthouse",
+                    "mode": lighthouse_result.get("source_mode", "unknown"),
+                    "report_path": lighthouse_result.get("report_path", ""),
+                }
+            )
+            aggregated["errors"].extend(lighthouse_result.get("errors", []))
+
+        sonar_config = collection_config.get("sonar", {})
+        if self._coerce_bool(sonar_config.get("enabled", False)):
+            sonar_result = await self._collect_sonar_metrics(cycle_id, sonar_config)
+            aggregated["metrics"].update(sonar_result.get("metrics", {}))
+            aggregated["sources"].append(
+                {
+                    "collector": "sonar",
+                    "mode": sonar_result.get("source_mode", "unknown"),
+                    "report_path": sonar_result.get("report_path", ""),
+                }
+            )
+            aggregated["errors"].extend(sonar_result.get("errors", []))
+
+        return aggregated
+
+    def _merge_analysis_metrics(
+        self,
+        analysis: Dict[str, Any],
+        external_collection: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Merge externally collected metrics into analysis payload."""
+        merged = analysis if isinstance(analysis, dict) else {}
+        merged.setdefault("metrics", {})
+        merged.setdefault("opportunities", [])
+
+        if not isinstance(merged.get("metrics"), dict):
+            merged["metrics"] = {}
+
+        external_metrics = external_collection.get("metrics", {}) if isinstance(external_collection, dict) else {}
+        if isinstance(external_metrics, dict):
+            merged["metrics"].update(external_metrics)
+
+        merged["external_metrics"] = {
+            "sources": external_collection.get("sources", []) if isinstance(external_collection, dict) else [],
+            "errors": external_collection.get("errors", []) if isinstance(external_collection, dict) else [],
+            "timestamp": datetime.now().isoformat(),
+        }
+        return merged
 
     async def start(self):
         """Start 24/7 continuous optimization loop"""
@@ -127,8 +578,13 @@ class ContinuousOptimizationScheduler:
         print("Configuration:")
 
         # Show configuration
-        cycle_interval = self.schedule_config.get("cycle_interval_minutes", 30)
-        print(f"  - Cycle interval: {cycle_interval} minutes")
+        cycle_interval_seconds = self._get_cycle_interval_seconds()
+        cycle_timeout_seconds = self._get_cycle_timeout_seconds()
+        print(f"  - Cycle interval: {cycle_interval_seconds / 60:.2f} minutes")
+        if cycle_timeout_seconds:
+            print(f"  - Cycle timeout: {cycle_timeout_seconds / 60:.2f} minutes")
+        else:
+            print("  - Cycle timeout: disabled")
         print(f"  - Auto-confirm: {self.auto_confirm}")
         print(f"  - Reports directory: {self.reports_dir}")
         print("\nAdvanced Features:")
@@ -145,13 +601,13 @@ class ContinuousOptimizationScheduler:
         advanced_agents = create_advanced_agents(auto_confirm=self.auto_confirm)
         for agent in advanced_agents:
             self.coordinator.register_agent(agent)
-            logger.info(f"  ✓ Registered advanced agent: {agent.config.name}")
+            logger.info(f"  鉁?Registered advanced agent: {agent.config.name}")
 
         # Domain-specific agents
         domain_agents = create_domain_agents()
         for agent in domain_agents:
             self.coordinator.register_agent(agent)
-            logger.info(f"  ✓ Registered domain agent: {agent.config.name}")
+            logger.info(f"  鉁?Registered domain agent: {agent.config.name}")
 
         # Start coordinator
         await self.coordinator.start()
@@ -159,21 +615,22 @@ class ContinuousOptimizationScheduler:
         # Main optimization loop
         while self.is_running:
             try:
-                await self._run_optimization_cycle()
+                await self._run_cycle_with_timeout()
 
                 # Wait for next cycle
-                interval_minutes = self.schedule_config.get("cycle_interval_minutes", 30)
+                interval_minutes = cycle_interval_seconds / 60.0
                 logger.info(f"[Scheduler] Waiting {interval_minutes} minutes until next cycle...")
 
-                # Sleep in small increments to check for shutdown signal (convert to integer seconds)
-                sleep_seconds = int(interval_minutes * 60)
-                for _ in range(sleep_seconds):
-                    if not self.is_running:
-                        break
-                    await asyncio.sleep(1)
+                # Sleep in small increments to check for shutdown signal
+                await self._sleep_with_shutdown_checks(cycle_interval_seconds)
 
             except Exception as e:
                 logger.error(f"[Scheduler] Error in optimization cycle: {e}")
+                await self._notify_runtime_alert(
+                    "cycle_error",
+                    str(e),
+                    {"cycle_number": self.cycle_count},
+                )
                 # Continue to next cycle despite errors
                 await asyncio.sleep(60)  # Wait 1 minute before retry
 
@@ -194,6 +651,26 @@ class ContinuousOptimizationScheduler:
         # Phase 1: Analysis (5 minutes)
         logger.info("[Phase 1/5] Analysis - Team Leader analyzing project...")
         analysis = await self._analyze_project()
+        external_collection = await self._collect_external_quality_metrics(cycle_id)
+        analysis = self._merge_analysis_metrics(analysis, external_collection)
+        collection_errors = external_collection.get("errors", [])
+        if collection_errors:
+            logger.warning(
+                "[Metrics] Collection reported %s issue(s): %s",
+                len(collection_errors),
+                "; ".join(collection_errors),
+            )
+            if self._coerce_bool(
+                self.schedule_config.get("metric_collection", {}).get("notify_on_collection_error", False)
+            ):
+                await self._notify_runtime_alert(
+                    "metric_collection_error",
+                    "External metric collection reported errors",
+                    {
+                        "cycle_id": cycle_id,
+                        "errors": collection_errors,
+                    },
+                )
         self._log_analysis(analysis)
 
         # Phase 2: Planning (5 minutes)
@@ -210,10 +687,28 @@ class ContinuousOptimizationScheduler:
         logger.info("[Phase 4/5] Validation - QA Specialist validating results...")
         validation = await self._validate_results(execution_results)
         self._log_validation(validation)
+        focus_areas = self._get_current_focus_areas()
+        quality_gate_result = self._evaluate_quality_gates(analysis, validation)
+        self._log_quality_gate_result(quality_gate_result)
 
         # Phase 5: Report (2 minutes)
         logger.info("[Phase 5/5] Report - Generating optimization report...")
-        await self._generate_cycle_report(cycle_id, analysis, execution_results, validation)
+        await self._generate_cycle_report(
+            cycle_id,
+            analysis,
+            execution_results,
+            validation,
+            focus_areas,
+            quality_gate_result,
+        )
+        await self._notify_cycle_result(
+            cycle_id,
+            analysis,
+            execution_results,
+            validation,
+            focus_areas,
+            quality_gate_result,
+        )
 
         logger.info("=" * 70)
         logger.info(f"[Cycle #{self.cycle_count}] Optimization cycle complete")
@@ -239,14 +734,10 @@ class ContinuousOptimizationScheduler:
 
         # Submit and wait for completion
         task_id = self.coordinator.submit_task(analysis_task)
-        await asyncio.sleep(5)  # Wait for analysis
-
-        # Get result
-        status = self.coordinator.get_task_status(task_id)
+        status = await self._wait_for_task_completion(task_id, timeout_seconds=120)
         if status and status["status"] == "completed":
             return status.get("output_data", {})
-        else:
-            return {"opportunities": []}
+        return {"opportunities": []}
 
     def _get_current_focus_areas(self) -> List[str]:
         """Get focus areas based on current time and day"""
@@ -333,14 +824,10 @@ class ContinuousOptimizationScheduler:
 
         for task in tasks:
             task_id = self.coordinator.submit_task(task)
-            logger.info(f"  → Executing: {task.title}")
+            logger.info(f"  鈫?Executing: {task.title}")
 
-            # Wait for task completion
-            await asyncio.sleep(3)
-
-            # Get result
-            status = self.coordinator.get_task_status(task_id)
-            results.append(status or {})
+            status = await self._wait_for_task_completion(task_id)
+            results.append(status)
 
         return results
 
@@ -359,32 +846,381 @@ class ContinuousOptimizationScheduler:
         )
 
         task_id = self.coordinator.submit_task(validation_task)
-        await asyncio.sleep(5)
-
-        status = self.coordinator.get_task_status(task_id)
+        status = await self._wait_for_task_completion(task_id)
         return status.get("output_data", {}) if status else {}
 
+    async def _wait_for_task_completion(
+        self,
+        task_id: str,
+        timeout_seconds: Optional[float] = None,
+        poll_interval: float = 0.5,
+    ) -> Dict[str, Any]:
+        """Poll task status until completion (or timeout)."""
+        if timeout_seconds is None:
+            timeout_minutes = self.schedule_config.get("limits", {}).get("task_timeout_minutes", 30)
+            timeout_seconds = max(float(timeout_minutes) * 60.0, poll_interval)
+
+        elapsed = 0.0
+        latest_status: Optional[Dict[str, Any]] = None
+        terminal_states = {"completed", "failed", "cancelled"}
+
+        while elapsed < timeout_seconds:
+            current_status = self.coordinator.get_task_status(task_id)
+            if current_status:
+                latest_status = current_status
+                if current_status.get("status") in terminal_states:
+                    return current_status
+
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+
+        if latest_status is None:
+            return {"id": task_id, "status": "unknown", "timed_out": True}
+
+        timed_out_status = dict(latest_status)
+        timed_out_status["timed_out"] = True
+        return timed_out_status
+
+    def _normalize_issue_count(self, issues_value: Any) -> int:
+        """Normalize issues count from int/list-like values."""
+        if isinstance(issues_value, (list, tuple, set)):
+            return len(issues_value)
+        if issues_value is None:
+            return 0
+        try:
+            return int(issues_value)
+        except (TypeError, ValueError):
+            return 0
+
+    def _evaluate_quality_gates(self, analysis: Dict[str, Any], validation: Dict[str, Any]) -> Dict[str, Any]:
+        """Evaluate configured quality gates for the current cycle."""
+        gates = self.schedule_config.get("quality_gates", {})
+        metrics = analysis.get("metrics", {}) if isinstance(analysis, dict) else {}
+        checks: List[Dict[str, Any]] = []
+        fail_on_missing = self._coerce_bool(gates.get("fail_on_missing_metrics", False))
+        missing_metrics: List[str] = []
+
+        metric_aliases = {
+            "code_coverage": ["code_coverage", "coverage", "coverage_percent"],
+            "critical_violations": ["critical_violations", "critical_issues"],
+            "major_violations": ["major_violations", "major_issues"],
+            "lighthouse_performance": ["lighthouse_performance", "performance_score", "lighthouse_performance_score"],
+            "lighthouse_accessibility": ["lighthouse_accessibility", "accessibility_score", "lighthouse_accessibility_score"],
+            "lighthouse_best_practices": ["lighthouse_best_practices", "best_practices_score", "lighthouse_best_practices_score"],
+            "sonar_quality_gate": ["sonar_quality_gate", "sonar_quality_gate_passed"],
+        }
+
+        compatibility_check_names = {
+            ("critical_violations", "critical_issues"): "critical_issues",
+            ("lighthouse_performance", "performance_score"): "performance_score",
+        }
+
+        def resolve_metric(metric_name: str) -> tuple[str, Any]:
+            candidates = metric_aliases.get(metric_name, [metric_name])
+            for candidate in candidates:
+                if candidate in metrics:
+                    check_name = compatibility_check_names.get((metric_name, candidate), metric_name)
+                    return check_name, metrics.get(candidate)
+            return metric_name, None
+
+        def add_check(
+            name: str,
+            actual: Any,
+            expected: Any,
+            passed: bool,
+            operator: str,
+            evaluated: bool = True,
+            skipped_reason: str = "",
+        ) -> None:
+            checks.append(
+                {
+                    "name": name,
+                    "actual": actual,
+                    "expected": expected,
+                    "operator": operator,
+                    "passed": bool(passed),
+                    "evaluated": bool(evaluated),
+                    "skipped_reason": skipped_reason,
+                }
+            )
+
+        for gate_name, expected_value in gates.items():
+            if gate_name == "fail_on_missing_metrics":
+                continue
+
+            if gate_name.endswith("_minimum"):
+                metric_name = gate_name[: -len("_minimum")]
+                check_name, actual_value = resolve_metric(metric_name)
+                if actual_value is None:
+                    missing_metrics.append(metric_name)
+                    add_check(
+                        check_name,
+                        None,
+                        expected_value,
+                        not fail_on_missing,
+                        ">=",
+                        evaluated=False,
+                        skipped_reason="metric_missing",
+                    )
+                    continue
+
+                actual_number = self._safe_float(actual_value)
+                expected_number = self._safe_float(expected_value)
+                passed = False
+                if actual_number is not None and expected_number is not None:
+                    passed = actual_number >= expected_number
+                add_check(check_name, actual_value, expected_value, passed, ">=")
+                continue
+
+            if gate_name.endswith("_maximum"):
+                metric_name = gate_name[: -len("_maximum")]
+                check_name, actual_value = resolve_metric(metric_name)
+                if actual_value is None:
+                    missing_metrics.append(metric_name)
+                    add_check(
+                        check_name,
+                        None,
+                        expected_value,
+                        not fail_on_missing,
+                        "<=",
+                        evaluated=False,
+                        skipped_reason="metric_missing",
+                    )
+                    continue
+
+                actual_number = self._safe_float(actual_value)
+                expected_number = self._safe_float(expected_value)
+                passed = False
+                if actual_number is not None and expected_number is not None:
+                    passed = actual_number <= expected_number
+                add_check(check_name, actual_value, expected_value, passed, "<=")
+                continue
+
+            if gate_name.endswith("_required"):
+                metric_name = gate_name[: -len("_required")]
+                expected_bool = self._coerce_bool(expected_value)
+
+                if metric_name == "all_tests_pass":
+                    actual_bool = self._coerce_bool(validation.get("approved", False))
+                    add_check("validation_approved", actual_bool, expected_bool, actual_bool == expected_bool, "==")
+                    continue
+
+                check_name, actual_value = resolve_metric(metric_name)
+                if actual_value is None:
+                    missing_metrics.append(metric_name)
+                    add_check(
+                        check_name,
+                        None,
+                        expected_bool,
+                        not fail_on_missing,
+                        "==",
+                        evaluated=False,
+                        skipped_reason="metric_missing",
+                    )
+                    continue
+
+                actual_bool = self._coerce_bool(actual_value)
+                add_check(check_name, actual_bool, expected_bool, actual_bool == expected_bool, "==")
+
+        passed = all(item["passed"] for item in checks) if checks else True
+        violations = [f"{item['name']} ({item['actual']} {item['operator']} {item['expected']})" for item in checks if not item["passed"]]
+
+        return {
+            "passed": passed,
+            "checks": checks,
+            "violations": violations,
+            "missing_metrics": sorted(set(missing_metrics)),
+        }
+
+    def _log_quality_gate_result(self, result: Dict[str, Any]) -> None:
+        """Log quality gate evaluation result."""
+        passed = bool(result.get("passed", False))
+        violations = result.get("violations", [])
+        missing_metrics = result.get("missing_metrics", [])
+        if passed:
+            logger.info("[Quality Gates] Passed")
+            if missing_metrics:
+                logger.info(
+                    "[Quality Gates] Missing metrics skipped: %s",
+                    ", ".join(missing_metrics),
+                )
+            return
+
+        logger.warning("[Quality Gates] Failed with %s violation(s)", len(violations))
+        for item in violations:
+            logger.warning("  - %s", item)
+        if missing_metrics:
+            logger.warning(
+                "[Quality Gates] Missing metrics: %s",
+                ", ".join(missing_metrics),
+            )
+
+    def _build_cycle_summary(
+        self,
+        cycle_id: str,
+        analysis: Dict[str, Any],
+        execution_results: List[Dict[str, Any]],
+        validation: Dict[str, Any],
+        quality_gate_result: Dict[str, Any],
+        focus_areas: List[str],
+    ) -> Dict[str, Any]:
+        """Build compact summary payload for notifications."""
+        completed = len([item for item in execution_results if item.get("status") == "completed"])
+        failed = len([item for item in execution_results if item.get("status") == "failed"])
+        issue_count = self._normalize_issue_count(validation.get("issues_found", 0))
+
+        return {
+            "cycle_id": cycle_id,
+            "cycle_number": self.cycle_count,
+            "timestamp": datetime.now().isoformat(),
+            "focus_areas": focus_areas,
+            "analysis_metrics": analysis.get("metrics", {}),
+            "execution": {
+                "total_tasks": len(execution_results),
+                "completed": completed,
+                "failed": failed,
+            },
+            "validation": {
+                "approved": bool(validation.get("approved", False)),
+                "issues_found": issue_count,
+                "method": validation.get("method", "unknown"),
+            },
+            "quality_gates": {
+                "passed": bool(quality_gate_result.get("passed", False)),
+                "violations": quality_gate_result.get("violations", []),
+            },
+        }
+
+    def _resolve_notification_path(self, configured_path: str, fallback_name: str) -> Path:
+        """Resolve relative/absolute notification file paths."""
+        target = configured_path or fallback_name
+        path = Path(target)
+        if not path.is_absolute():
+            path = Path.cwd() / target
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _append_json_line(self, path: Path, payload: Dict[str, Any]) -> None:
+        """Append one JSON line to a file."""
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+    def _post_webhook_notification(self, webhook_url: str, payload: Dict[str, Any], timeout_seconds: float = 5.0) -> None:
+        """Send JSON payload to webhook URL."""
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        req = urllib_request.Request(
+            webhook_url,
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib_request.urlopen(req, timeout=timeout_seconds) as response:
+                logger.info("[Notifications] Webhook sent, status=%s", response.status)
+        except urllib_error.URLError as exc:
+            logger.warning("[Notifications] Webhook failed: %s", exc)
+        except Exception as exc:
+            logger.warning("[Notifications] Unexpected webhook error: %s", exc)
+
+    async def _notify_cycle_result(
+        self,
+        cycle_id: str,
+        analysis: Dict[str, Any],
+        execution_results: List[Dict[str, Any]],
+        validation: Dict[str, Any],
+        focus_areas: List[str],
+        quality_gate_result: Dict[str, Any],
+    ) -> None:
+        """Persist cycle summaries and emit optional alerts/webhooks."""
+        notifications = self.schedule_config.get("notifications", {})
+        summary = self._build_cycle_summary(
+            cycle_id=cycle_id,
+            analysis=analysis,
+            execution_results=execution_results,
+            validation=validation,
+            quality_gate_result=quality_gate_result,
+            focus_areas=focus_areas,
+        )
+
+        summary_path = self._resolve_notification_path(
+            notifications.get("summary_file", "agent_team/notifications/cycle_summaries.jsonl"),
+            "agent_team/notifications/cycle_summaries.jsonl",
+        )
+        self._append_json_line(summary_path, summary)
+        logger.info("[Notifications] Cycle summary appended: %s", summary_path)
+
+        if not quality_gate_result.get("passed", True):
+            alert_entry = {
+                "type": "quality_gate_alert",
+                "cycle_id": cycle_id,
+                "timestamp": datetime.now().isoformat(),
+                "violations": quality_gate_result.get("violations", []),
+            }
+            alert_path = self._resolve_notification_path(
+                notifications.get("alert_file", "agent_team/notifications/quality_alerts.jsonl"),
+                "agent_team/notifications/quality_alerts.jsonl",
+            )
+            self._append_json_line(alert_path, alert_entry)
+            logger.warning("[Notifications] Quality gate alert appended: %s", alert_path)
+
+        webhook_url = notifications.get("webhook_url")
+        webhook_timeout = float(notifications.get("webhook_timeout_seconds", 5))
+
+        if webhook_url and notifications.get("on_cycle_complete", True):
+            self._post_webhook_notification(
+                webhook_url,
+                {"type": "cycle_summary", "data": summary},
+                timeout_seconds=webhook_timeout,
+            )
+
+        if webhook_url and (not quality_gate_result.get("passed", True)) and notifications.get("on_critical_issue", True):
+            self._post_webhook_notification(
+                webhook_url,
+                {"type": "quality_gate_alert", "data": summary},
+                timeout_seconds=webhook_timeout,
+            )
+
     def _log_analysis(self, analysis: Dict[str, Any]):
-        """Log analysis results"""
+        """Log analysis results."""
         metrics = analysis.get("metrics", {})
+        external = analysis.get("external_metrics", {})
         logger.info("  Analysis Results:")
         if metrics:
             for key, value in metrics.items():
-                logger.info(f"    • {key}: {value}")
+                logger.info(f"    - {key}: {value}")
+        if isinstance(external, dict):
+            sources = external.get("sources", [])
+            errors = external.get("errors", [])
+            if sources:
+                collector_names = [str(item.get("collector", "unknown")) for item in sources if isinstance(item, dict)]
+                logger.info("    - External metric sources: %s", ", ".join(collector_names))
+            if errors:
+                logger.warning("    - External metric errors: %s", "; ".join([str(err) for err in errors]))
 
     def _log_validation(self, validation: Dict[str, Any]):
-        """Log validation results"""
+        """Log validation results."""
         approved = validation.get("approved", False)
-        issues = validation.get("issues_found", 0)
+        issues = self._normalize_issue_count(validation.get("issues_found", 0))
 
         logger.info(f"  Validation Results:")
-        logger.info(f"    • Approved: {approved}")
-        logger.info(f"    • Issues found: {issues}")
+        logger.info(f"    - Approved: {approved}")
+        logger.info(f"    - Issues found: {issues}")
 
-    async def _generate_cycle_report(self, cycle_id: str, analysis: Dict,
-                                    execution_results: List[Dict],
-                                    validation: Dict):
+    async def _generate_cycle_report(
+        self,
+        cycle_id: str,
+        analysis: Dict,
+        execution_results: List[Dict],
+        validation: Dict,
+        focus_areas: Optional[List[str]] = None,
+        quality_gate_result: Optional[Dict[str, Any]] = None,
+    ):
         """Generate optimization cycle report"""
+        if focus_areas is None:
+            focus_areas = self._get_current_focus_areas()
+        if quality_gate_result is None:
+            quality_gate_result = self._evaluate_quality_gates(analysis, validation)
+
         report = {
             "cycle_id": cycle_id,
             "cycle_number": self.cycle_count,
@@ -397,7 +1233,8 @@ class ContinuousOptimizationScheduler:
                 "results": execution_results,
             },
             "validation": validation,
-            "focus_areas": self._get_current_focus_areas(),
+            "focus_areas": focus_areas,
+            "quality_gates": quality_gate_result,
         }
 
         # Save report
@@ -447,8 +1284,13 @@ class ContinuousOptimizationScheduler:
 ## Validation Results
 
 - **Approved**: {report_data['validation'].get('approved', False)}
-- **Issues Found**: {report_data['validation'].get('issues_found', 0)}
+- **Issues Found**: {len(report_data['validation'].get('issues_found', [])) if isinstance(report_data['validation'].get('issues_found', 0), list) else report_data['validation'].get('issues_found', 0)}
 - **Method**: {report_data['validation'].get('method', 'unknown')}
+
+## Quality Gates
+
+- **Passed**: {report_data.get('quality_gates', {}).get('passed', False)}
+- **Violations**: {len(report_data.get('quality_gates', {}).get('violations', []))}
 
 ---
 

@@ -114,13 +114,13 @@ class AgentCoordinator:
         self._save_tasks()
         return result
 
-    async def start(self) -> None:
+    async def start(self, resume_queued_tasks: bool = False) -> None:
         """Start the coordinator and begin processing tasks"""
         self.running = True
         print("[Coordinator] Starting agent team coordinator...")
 
         # Load previous tasks if any
-        self._load_tasks()
+        self._load_tasks(resume_queued_tasks=resume_queued_tasks)
 
         # Start task processing loop
         asyncio.create_task(self._process_queue())
@@ -212,8 +212,8 @@ class AgentCoordinator:
         with open(self.task_history_path, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=2, ensure_ascii=False)
 
-    def _load_tasks(self) -> None:
-        """Load task history from file"""
+    def _load_tasks(self, resume_queued_tasks: bool = False) -> None:
+        """Load task history from file."""
         if not self.task_history_path.exists():
             return
 
@@ -222,9 +222,19 @@ class AgentCoordinator:
 
         self.completed_tasks = [Task.from_dict(t) for t in history.get("completed", [])]
         self.failed_tasks = [Task.from_dict(t) for t in history.get("failed", [])]
-        self.task_queue = [Task.from_dict(t) for t in history.get("queued", [])]
+        if resume_queued_tasks:
+            self.task_queue = [Task.from_dict(t) for t in history.get("queued", [])]
+        else:
+            self.task_queue = []
 
-        print(f"[Coordinator] Loaded {len(self.completed_tasks)} completed tasks")
+        print(
+            f"[Coordinator] Loaded {len(self.completed_tasks)} completed tasks"
+            + (
+                f", resumed {len(self.task_queue)} queued task(s)"
+                if resume_queued_tasks
+                else ""
+            )
+        )
 
     def print_status(self) -> None:
         """Print a formatted status report"""

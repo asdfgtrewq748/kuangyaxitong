@@ -47,13 +47,19 @@ class LimitedCycleScheduler(ContinuousOptimizationScheduler):
     async def start(self):
         """Start optimization loop with cycle limit"""
         self.is_running = True
+        cycle_interval_seconds = self._get_cycle_interval_seconds()
+        cycle_timeout_seconds = self._get_cycle_timeout_seconds()
 
         print("=" * 70)
         print("24/7 Continuous Optimization - Limited Cycles")
         print("=" * 70)
         print(f"\nConfiguration:")
         print(f"  - Max cycles: {self.max_cycles}")
-        print(f"  - Cycle interval: {self.schedule_config.get('cycle_interval_minutes', 30)} minutes")
+        print(f"  - Cycle interval: {cycle_interval_seconds / 60:.2f} minutes")
+        if cycle_timeout_seconds:
+            print(f"  - Cycle timeout: {cycle_timeout_seconds / 60:.2f} minutes")
+        else:
+            print("  - Cycle timeout: disabled")
         print(f"  - Auto-confirm: {self.auto_confirm}")
         print(f"  - Reports: {self.reports_dir}")
         print("\nAdvanced Features:")
@@ -81,7 +87,7 @@ class LimitedCycleScheduler(ContinuousOptimizationScheduler):
         # Run limited cycles
         while self.is_running and self.cycle_count < self.max_cycles:
             try:
-                await self._run_optimization_cycle()
+                await self._run_cycle_with_timeout()
 
                 # Check if we should continue
                 if self.cycle_count >= self.max_cycles:
@@ -89,21 +95,22 @@ class LimitedCycleScheduler(ContinuousOptimizationScheduler):
                     break
 
                 # Wait for next cycle
-                interval_minutes = self.schedule_config.get("cycle_interval_minutes", 30)
+                interval_minutes = cycle_interval_seconds / 60.0
                 remaining_cycles = self.max_cycles - self.cycle_count
 
                 logger.info(f"[Scheduler] Waiting {interval_minutes} minutes until next cycle...")
                 logger.info(f"[Scheduler] Cycles remaining: {remaining_cycles}/{self.max_cycles}")
 
-                # Sleep in small increments (convert to integer seconds)
-                sleep_seconds = int(interval_minutes * 60)
-                for _ in range(sleep_seconds):
-                    if not self.is_running:
-                        break
-                    await asyncio.sleep(1)
+                # Sleep in small increments
+                await self._sleep_with_shutdown_checks(cycle_interval_seconds)
 
             except Exception as e:
                 logger.error(f"[Scheduler] Error in optimization cycle: {e}")
+                await self._notify_runtime_alert(
+                    "cycle_error",
+                    str(e),
+                    {"cycle_number": self.cycle_count},
+                )
                 await asyncio.sleep(60)  # Wait 1 minute before retry
 
         # Shutdown

@@ -19,18 +19,24 @@ from continuous_optimization import ContinuousOptimizationScheduler
 
 
 async def main():
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    cycle_interval_seconds = scheduler._get_cycle_interval_seconds()
+    cycle_timeout_seconds = scheduler._get_cycle_timeout_seconds()
+
     print("=" * 70)
     print("24/7 Continuous Optimization System Starting")
     print("=" * 70)
     print("\nConfiguration:")
     print("  - Auto-confirm: ENABLED")
-    print("  - Cycle interval: 30 minutes")
+    print(f"  - Cycle interval: {cycle_interval_seconds / 60:.2f} minutes")
+    if cycle_timeout_seconds:
+        print(f"  - Cycle timeout: {cycle_timeout_seconds / 60:.2f} minutes")
+    else:
+        print("  - Cycle timeout: disabled")
     print("  - Test artifacts: test_artifacts/")
     print("  - Reports: agent_team/optimization_reports/")
     print("\nPress Ctrl+C to stop\n")
     print("=" * 70 + "\n")
-
-    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
 
     try:
         await scheduler.start()

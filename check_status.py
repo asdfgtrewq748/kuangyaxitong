@@ -58,7 +58,12 @@ else:
 print()
 print("=" * 70)
 print("Live Commands:")
-print("  tail -f agent_team/continuous_optimization.log")
-print("  ls -lh agent_team/optimization_reports/")
-print("  ls -lh test_artifacts/screenshots/")
+if sys.platform == "win32":
+    print("  Get-Content agent_team\\optimizer.err.log -Wait -Tail 60")
+    print("  Get-ChildItem agent_team\\optimization_reports | Sort-Object LastWriteTime -Descending | Select-Object -First 10")
+    print("  Get-ChildItem test_artifacts\\screenshots")
+else:
+    print("  tail -f agent_team/continuous_optimization.log")
+    print("  ls -lh agent_team/optimization_reports/")
+    print("  ls -lh test_artifacts/screenshots/")
 print("=" * 70)

@@ -84,7 +84,8 @@
     "critical_violations_maximum": 0,
     "major_violations_maximum": 10,
     "sonar_quality_gate_required": true,
-    "all_tests_pass_required": true
+    "all_tests_pass_required": true,
+    "fail_on_missing_metrics": false
   },
   "automation_settings": {
     "auto_fix_simple_bugs": true,
@@ -97,7 +98,34 @@
     "on_cycle_complete": true,
     "on_critical_issue": true,
     "on_deployment": true,
-    "report_frequency": "daily"
+    "report_frequency": "daily",
+    "summary_file": "agent_team/notifications/cycle_summaries.jsonl",
+    "alert_file": "agent_team/notifications/quality_alerts.jsonl",
+    "webhook_url": "",
+    "webhook_timeout_seconds": 5
+  },
+  "metric_collection": {
+    "enabled": true,
+    "notify_on_collection_error": false,
+    "lighthouse": {
+      "enabled": true,
+      "source": "command",
+      "url": "http://127.0.0.1:5173/",
+      "report_path": "agent_team/metrics/lighthouse_report.json",
+      "chrome_path": "",
+      "command": "npx.cmd --yes lighthouse {url} --only-categories=performance,accessibility,best-practices --quiet --chrome-flags=\"--headless --no-sandbox --disable-gpu --ignore-certificate-errors --allow-insecure-localhost --disable-dev-shm-usage\" --output=json --output-path=\"{report_path}\"",
+      "timeout_seconds": 180,
+      "freshness_minutes": 30
+    },
+    "sonar": {
+      "enabled": true,
+      "source": "file",
+      "report_path": "agent_team/metrics/sonar_report.json",
+      "quality_gate_path": "agent_team/metrics/sonar_quality_gate.json",
+      "command": "",
+      "timeout_seconds": 60,
+      "freshness_minutes": 30
+    }
   },
   "limits": {
     "max_concurrent_tasks": 5,
