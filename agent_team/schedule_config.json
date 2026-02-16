@@ -128,6 +128,7 @@
       "project_key": "",
       "project_key_env": "SONAR_PROJECT_KEY",
       "branch": "",
+      "branch_env": "SONAR_BRANCH",
       "token_env": "SONAR_TOKEN",
       "startup_connectivity_check": true,
       "notify_on_connectivity_failure": false,

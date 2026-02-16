@@ -58,6 +58,7 @@ class ContinuousOptimizationScheduler:
 
     def __init__(self, auto_confirm: bool = True):
         self.auto_confirm = auto_confirm
+        self._load_local_env_files()
         self.coordinator = AgentCoordinator()
         self.schedule_config = self._load_schedule_config()
         self.is_running = False
@@ -75,6 +76,54 @@ class ContinuousOptimizationScheduler:
         """Handle shutdown signals"""
         logger.info(f"[Scheduler] Received signal {signum}, shutting down gracefully...")
         self.is_running = False
+
+    def _load_local_env_files(self) -> None:
+        """Load optional local env files without overriding existing variables."""
+        candidates = [
+            Path.cwd() / ".env",
+            Path.cwd() / "agent_team" / ".env",
+            Path.cwd() / "agent_team" / ".sonar.env",
+        ]
+        loaded_paths: List[str] = []
+        for path in candidates:
+            if self._load_env_file(path):
+                loaded_paths.append(str(path))
+        if loaded_paths:
+            logger.info("[Scheduler] Loaded env file(s): %s", ", ".join(loaded_paths))
+
+    def _load_env_file(self, path: Path) -> bool:
+        """Load KEY=VALUE entries from a local env file."""
+        if not path.exists() or not path.is_file():
+            return False
+        loaded_any = False
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                for raw_line in handle:
+                    line = raw_line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if line.startswith("export "):
+                        line = line[len("export ") :].strip()
+                    if "=" not in line:
+                        continue
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    if not key:
+                        continue
+                    value = value.strip()
+                    if len(value) >= 2 and (
+                        (value.startswith('"') and value.endswith('"'))
+                        or (value.startswith("'") and value.endswith("'"))
+                    ):
+                        value = value[1:-1]
+                    if key in os.environ:
+                        continue
+                    os.environ[key] = value
+                    loaded_any = True
+        except Exception as exc:
+            logger.warning("[Scheduler] Failed to load env file %s: %s", path, exc)
+            return False
+        return loaded_any
 
     def _load_schedule_config(self) -> Dict:
         """Load schedule configuration from file"""
@@ -133,6 +182,7 @@ class ContinuousOptimizationScheduler:
                     "project_key": "",
                     "project_key_env": "SONAR_PROJECT_KEY",
                     "branch": "",
+                    "branch_env": "SONAR_BRANCH",
                     "token_env": "SONAR_TOKEN",
                     "startup_connectivity_check": True,
                     "notify_on_connectivity_failure": False,
@@ -412,11 +462,14 @@ class ContinuousOptimizationScheduler:
 
         base_url_env = str(config.get("base_url_env", "SONAR_HOST_URL")).strip() or "SONAR_HOST_URL"
         project_key_env = str(config.get("project_key_env", "SONAR_PROJECT_KEY")).strip() or "SONAR_PROJECT_KEY"
+        branch_env = str(config.get("branch_env", "SONAR_BRANCH")).strip() or "SONAR_BRANCH"
 
         if not base_url:
             base_url = str(os.environ.get(base_url_env, "")).strip()
         if not project_key:
             project_key = str(os.environ.get(project_key_env, "")).strip()
+        if not branch:
+            branch = str(os.environ.get(branch_env, "")).strip()
 
         return {
             "base_url": base_url.rstrip("/"),
@@ -424,6 +477,7 @@ class ContinuousOptimizationScheduler:
             "branch": branch,
             "base_url_env": base_url_env,
             "project_key_env": project_key_env,
+            "branch_env": branch_env,
         }
 
     def _build_sonar_api_urls(self, config: Dict[str, Any]) -> Dict[str, str]:

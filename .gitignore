@@ -29,3 +29,6 @@ frontend/devserver.err.log
 
 # Frontend build artifacts
 frontend/dist/
+
+# Local Sonar secrets
+agent_team/.sonar.env

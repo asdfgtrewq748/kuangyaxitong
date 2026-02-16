@@ -266,19 +266,24 @@ def test_build_sonar_api_urls_supports_env_fallback():
     scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
     old_host = os.environ.get("SONAR_HOST_URL")
     old_project = os.environ.get("SONAR_PROJECT_KEY")
+    old_branch = os.environ.get("SONAR_BRANCH")
     try:
         os.environ["SONAR_HOST_URL"] = "http://sonar.env.local"
         os.environ["SONAR_PROJECT_KEY"] = "mine-env"
+        os.environ["SONAR_BRANCH"] = "develop"
         urls = scheduler._build_sonar_api_urls(
             {
                 "base_url": "",
                 "project_key": "",
                 "branch": "",
+                "branch_env": "SONAR_BRANCH",
                 "metric_keys": "critical_violations,major_violations",
             }
         )
         assert "projectKey=mine-env" in urls["quality_gate"]
+        assert "branch=develop" in urls["quality_gate"]
         assert "component=mine-env" in urls["measures"]
+        assert "branch=develop" in urls["measures"]
         assert urls["quality_gate"].startswith("http://sonar.env.local/")
     finally:
         if old_host is None:
@@ -289,6 +294,46 @@ def test_build_sonar_api_urls_supports_env_fallback():
             os.environ.pop("SONAR_PROJECT_KEY", None)
         else:
             os.environ["SONAR_PROJECT_KEY"] = old_project
+        if old_branch is None:
+            os.environ.pop("SONAR_BRANCH", None)
+        else:
+            os.environ["SONAR_BRANCH"] = old_branch
+
+
+def test_load_env_file_populates_missing_env_values(tmp_path):
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    env_file = tmp_path / ".sonar.env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "# comment",
+                "SONAR_HOST_URL=http://sonar.test.local",
+                "SONAR_PROJECT_KEY=test-project",
+                "SONAR_BRANCH=main",
+                "SONAR_TOKEN='abc123'",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    old_values = {key: os.environ.get(key) for key in ["SONAR_HOST_URL", "SONAR_PROJECT_KEY", "SONAR_BRANCH", "SONAR_TOKEN"]}
+    for key in old_values:
+        os.environ.pop(key, None)
+
+    try:
+        loaded = scheduler._load_env_file(env_file)
+        assert loaded is True
+        assert os.environ.get("SONAR_HOST_URL") == "http://sonar.test.local"
+        assert os.environ.get("SONAR_PROJECT_KEY") == "test-project"
+        assert os.environ.get("SONAR_BRANCH") == "main"
+        assert os.environ.get("SONAR_TOKEN") == "abc123"
+    finally:
+        for key, value in old_values.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 def test_collect_sonar_metrics_from_api(tmp_path):
