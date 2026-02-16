@@ -8,6 +8,7 @@ Uses schedule_config.json for configuration and supports automatic confirmation 
 """
 
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -19,6 +20,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from urllib import request as urllib_request
 from urllib import error as urllib_error
+from urllib import parse as urllib_parse
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -124,7 +126,13 @@ class ContinuousOptimizationScheduler:
                 },
                 "sonar": {
                     "enabled": True,
-                    "source": "file",
+                    "source": "auto",
+                    "base_url": "",
+                    "project_key": "",
+                    "branch": "",
+                    "token_env": "SONAR_TOKEN",
+                    "api_cache_path": "agent_team/metrics/sonar_api.json",
+                    "metric_keys": "critical_violations,major_violations",
                     "report_path": "agent_team/metrics/sonar_report.json",
                     "quality_gate_path": "agent_team/metrics/sonar_quality_gate.json",
                     "command": "",
@@ -349,6 +357,67 @@ class ContinuousOptimizationScheduler:
 
         return {"ok": True}
 
+    def _build_sonar_auth_header(self, token: str) -> str:
+        """Build Sonar Basic auth header from token."""
+        encoded = base64.b64encode(f"{token}:".encode("utf-8")).decode("ascii")
+        return f"Basic {encoded}"
+
+    def _fetch_json_url(
+        self,
+        url: str,
+        timeout_seconds: float = 15.0,
+        token: str = "",
+    ) -> Dict[str, Any]:
+        """Fetch JSON over HTTP and return normalized result."""
+        headers = {"Accept": "application/json"}
+        if token:
+            headers["Authorization"] = self._build_sonar_auth_header(token)
+
+        request_obj = urllib_request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib_request.urlopen(request_obj, timeout=max(timeout_seconds, 1.0)) as response:
+                body = response.read().decode("utf-8", errors="replace")
+                payload = json.loads(body)
+                return {"ok": True, "payload": payload}
+        except urllib_error.HTTPError as exc:
+            return {"ok": False, "error": self._compact_error_text(f"HTTP {exc.code}: {exc.reason}")}
+        except urllib_error.URLError as exc:
+            return {"ok": False, "error": self._compact_error_text(str(exc.reason))}
+        except json.JSONDecodeError as exc:
+            return {"ok": False, "error": self._compact_error_text(f"invalid JSON response: {exc}")}
+        except Exception as exc:
+            return {"ok": False, "error": self._compact_error_text(str(exc))}
+
+    def _resolve_sonar_token(self, config: Dict[str, Any]) -> str:
+        """Resolve Sonar token from config value or environment variable."""
+        token = str(config.get("token", "")).strip()
+        if token:
+            return token
+        env_name = str(config.get("token_env", "SONAR_TOKEN")).strip()
+        if not env_name:
+            return ""
+        return str(os.environ.get(env_name, "")).strip()
+
+    def _build_sonar_api_urls(self, config: Dict[str, Any]) -> Dict[str, str]:
+        """Build Sonar API endpoint URLs from config."""
+        base_url = str(config.get("base_url", "")).strip().rstrip("/")
+        project_key = str(config.get("project_key", "")).strip()
+        branch = str(config.get("branch", "")).strip()
+        metric_keys = str(config.get("metric_keys", "critical_violations,major_violations")).strip()
+        if not base_url or not project_key:
+            return {}
+
+        quality_params = {"projectKey": project_key}
+        measures_params = {"component": project_key, "metricKeys": metric_keys}
+        if branch:
+            quality_params["branch"] = branch
+            measures_params["branch"] = branch
+
+        return {
+            "quality_gate": f"{base_url}/api/qualitygates/project_status?{urllib_parse.urlencode(quality_params)}",
+            "measures": f"{base_url}/api/measures/component?{urllib_parse.urlencode(measures_params)}",
+        }
+
     def _parse_lighthouse_report(self, payload: Any) -> Dict[str, Any]:
         """Parse lighthouse JSON payload into quality gate metrics."""
         metrics: Dict[str, Any] = {}
@@ -465,7 +534,7 @@ class ContinuousOptimizationScheduler:
         }
 
     async def _collect_sonar_metrics(self, cycle_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Collect sonar metrics from file(s) or optional command."""
+        """Collect sonar metrics from file(s), command output, and/or Sonar API."""
         report_path = self._resolve_data_path(
             config.get("report_path", "agent_team/metrics/sonar_report.json"),
             "agent_team/metrics/sonar_report.json",
@@ -474,24 +543,72 @@ class ContinuousOptimizationScheduler:
             config.get("quality_gate_path", "agent_team/metrics/sonar_quality_gate.json"),
             "agent_team/metrics/sonar_quality_gate.json",
         )
-        source_mode = str(config.get("source", "file")).lower()
+        cache_path = self._resolve_data_path(
+            config.get("api_cache_path", "agent_team/metrics/sonar_api.json"),
+            "agent_team/metrics/sonar_api.json",
+        )
+        source_mode = str(config.get("source", "auto")).lower()
         freshness_minutes = self._safe_float(config.get("freshness_minutes", 30)) or 30.0
+        timeout_seconds = self._safe_float(config.get("timeout_seconds", 60)) or 60.0
         errors: List[str] = []
+        metrics: Dict[str, Any] = {}
+        required_metrics = {"sonar_quality_gate", "critical_violations", "major_violations"}
 
-        if source_mode == "command":
+        if source_mode in {"command", "auto"}:
             command = str(config.get("command", "")).strip()
-            timeout_seconds = self._safe_float(config.get("timeout_seconds", 60)) or 60.0
             has_fresh_data = self._is_file_fresh(report_path, freshness_minutes) or self._is_file_fresh(gate_path, freshness_minutes)
             if command and not has_fresh_data:
                 command_result = await self._run_metric_command(command, timeout_seconds)
                 if not command_result.get("ok", False):
                     errors.append(f"sonar command failed: {command_result.get('error', 'unknown error')}")
 
-        metrics: Dict[str, Any] = {}
-        report_payload = self._load_json_if_exists(report_path)
-        gate_payload = self._load_json_if_exists(gate_path)
-        metrics.update(self._extract_sonar_metrics(report_payload))
-        metrics.update(self._extract_sonar_metrics(gate_payload))
+        if source_mode in {"file", "auto", "command"}:
+            report_payload = self._load_json_if_exists(report_path)
+            gate_payload = self._load_json_if_exists(gate_path)
+            metrics.update(self._extract_sonar_metrics(report_payload))
+            metrics.update(self._extract_sonar_metrics(gate_payload))
+
+        needs_api = source_mode == "api" or (
+            source_mode == "auto" and not required_metrics.issubset(set(metrics.keys()))
+        )
+        api_payloads: Dict[str, Any] = {}
+        api_urls = self._build_sonar_api_urls(config) if needs_api else {}
+        token = self._resolve_sonar_token(config)
+
+        if needs_api:
+            if self._is_file_fresh(cache_path, freshness_minutes):
+                cached_payload = self._load_json_if_exists(cache_path)
+                if isinstance(cached_payload, dict):
+                    api_payloads = cached_payload.get("payloads", {}) if isinstance(cached_payload.get("payloads", {}), dict) else {}
+
+            if not api_payloads:
+                if not api_urls:
+                    errors.append("sonar api disabled: missing base_url or project_key")
+                else:
+                    fetch_failed = False
+                    for name, url in api_urls.items():
+                        fetch_result = await asyncio.to_thread(
+                            self._fetch_json_url,
+                            url,
+                            timeout_seconds,
+                            token,
+                        )
+                        if fetch_result.get("ok", False):
+                            api_payloads[name] = fetch_result.get("payload")
+                        else:
+                            fetch_failed = True
+                            errors.append(f"sonar api {name} failed: {fetch_result.get('error', 'unknown error')}")
+
+                    if not fetch_failed and api_payloads:
+                        cache_payload = {
+                            "fetched_at": datetime.now().isoformat(),
+                            "payloads": api_payloads,
+                        }
+                        with open(cache_path, "w", encoding="utf-8") as handle:
+                            json.dump(cache_payload, handle, ensure_ascii=False, indent=2)
+
+            metrics.update(self._extract_sonar_metrics(api_payloads.get("quality_gate")))
+            metrics.update(self._extract_sonar_metrics(api_payloads.get("measures")))
 
         if not metrics:
             errors.append("sonar report missing or no parseable metrics")
@@ -502,6 +619,8 @@ class ContinuousOptimizationScheduler:
             "source_mode": source_mode,
             "report_path": str(report_path),
             "quality_gate_path": str(gate_path),
+            "api_cache_path": str(cache_path),
+            "api_urls": api_urls,
             "metrics": metrics,
             "errors": errors,
         }
@@ -536,6 +655,9 @@ class ContinuousOptimizationScheduler:
                     "collector": "sonar",
                     "mode": sonar_result.get("source_mode", "unknown"),
                     "report_path": sonar_result.get("report_path", ""),
+                    "quality_gate_path": sonar_result.get("quality_gate_path", ""),
+                    "api_cache_path": sonar_result.get("api_cache_path", ""),
+                    "api_enabled": bool(sonar_result.get("api_urls")),
                 }
             )
             aggregated["errors"].extend(sonar_result.get("errors", []))

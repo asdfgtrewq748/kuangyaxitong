@@ -130,3 +130,75 @@ def test_collect_lighthouse_metrics_adds_discovered_browser_path(tmp_path):
     assert captured["env"]["CHROME_PATH"] == "C:/fake/browser.exe"
     assert result["metrics"] == {}
     assert len(result["errors"]) >= 1
+
+
+def test_build_sonar_api_urls_includes_project_and_branch():
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+    urls = scheduler._build_sonar_api_urls(
+        {
+            "base_url": "http://sonar.local",
+            "project_key": "mine-app",
+            "branch": "main",
+            "metric_keys": "critical_violations,major_violations",
+        }
+    )
+
+    assert "projectKey=mine-app" in urls["quality_gate"]
+    assert "branch=main" in urls["quality_gate"]
+    assert "component=mine-app" in urls["measures"]
+    assert "metricKeys=critical_violations%2Cmajor_violations" in urls["measures"]
+
+
+def test_collect_sonar_metrics_from_api(tmp_path):
+    scheduler = ContinuousOptimizationScheduler(auto_confirm=True)
+
+    def fake_fetch_json_url(url: str, timeout_seconds: float = 15.0, token: str = ""):
+        if "qualitygates/project_status" in url:
+            return {
+                "ok": True,
+                "payload": {
+                    "projectStatus": {
+                        "status": "OK",
+                        "conditions": [
+                            {"metricKey": "critical_violations", "actualValue": "0"},
+                            {"metricKey": "major_violations", "actualValue": "3"},
+                        ],
+                    }
+                },
+            }
+        if "measures/component" in url:
+            return {
+                "ok": True,
+                "payload": {
+                    "component": {
+                        "measures": [
+                            {"metric": "critical_violations", "value": "0"},
+                            {"metric": "major_violations", "value": "3"},
+                        ]
+                    }
+                },
+            }
+        return {"ok": False, "error": "unexpected url"}
+
+    scheduler._fetch_json_url = fake_fetch_json_url  # type: ignore[method-assign]
+
+    config = {
+        "enabled": True,
+        "source": "api",
+        "base_url": "http://sonar.local",
+        "project_key": "mine-app",
+        "branch": "main",
+        "token": "abc123",
+        "api_cache_path": str(tmp_path / "sonar_api.json"),
+        "report_path": str(tmp_path / "sonar_report.json"),
+        "quality_gate_path": str(tmp_path / "sonar_gate.json"),
+        "timeout_seconds": 5,
+        "freshness_minutes": 0,
+    }
+
+    result = asyncio.run(scheduler._collect_sonar_metrics("cycle_sonar", config))
+
+    assert result["metrics"]["sonar_quality_gate"] is True
+    assert result["metrics"]["critical_violations"] == 0
+    assert result["metrics"]["major_violations"] == 3
+    assert result["errors"] == []
