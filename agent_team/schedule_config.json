@@ -147,5 +147,11 @@
     "max_retries_per_task": 3,
     "task_timeout_minutes": 30,
     "cycle_timeout_minutes": 120
+  },
+  "strategy_plan": {
+    "enabled": true,
+    "plan_path": "8_WEEK_ACTION_PLAN.md",
+    "state_path": "agent_team/state/strategy_plan_state.json",
+    "max_tasks_per_cycle": 2
   }
 }

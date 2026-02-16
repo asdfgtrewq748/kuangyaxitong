@@ -9,9 +9,11 @@ Uses schedule_config.json for configuration and supports automatic confirmation 
 
 import asyncio
 import base64
+import hashlib
 import json
 import logging
 import os
+import re
 import subprocess
 import signal
 import sys
@@ -214,7 +216,13 @@ class ContinuousOptimizationScheduler:
                 "max_retries": 3,
                 "task_timeout_minutes": 30,
                 "cycle_timeout_minutes": 120,
-            }
+            },
+            "strategy_plan": {
+                "enabled": True,
+                "plan_path": "8_WEEK_ACTION_PLAN.md",
+                "state_path": "agent_team/state/strategy_plan_state.json",
+                "max_tasks_per_cycle": 2,
+            },
         }
 
     def _safe_float(self, value: Any) -> Optional[float]:
@@ -1047,6 +1055,7 @@ class ContinuousOptimizationScheduler:
         # Phase 3: Execution (15 minutes)
         logger.info("[Phase 3/5] Execution - Running optimization tasks...")
         execution_results = await self._execute_tasks_batch(tasks)
+        self._update_strategy_plan_progress(execution_results)
         logger.info(f"  Executed {len(execution_results)} tasks")
 
         # Phase 4: Validation (3 minutes)
@@ -1148,13 +1157,165 @@ class ContinuousOptimizationScheduler:
         logger.info(f"[Scheduler] Current focus areas: {', '.join(focus_areas)}")
         return focus_areas
 
+    def _resolve_strategy_plan_path(self, configured_path: str) -> Path:
+        """Resolve strategy plan markdown path."""
+        target = configured_path or "8_WEEK_ACTION_PLAN.md"
+        path = Path(target)
+        if not path.is_absolute():
+            path = Path.cwd() / target
+        return path
+
+    def _resolve_strategy_state_path(self, configured_path: str) -> Path:
+        """Resolve strategy plan state JSON path and ensure parent exists."""
+        target = configured_path or "agent_team/state/strategy_plan_state.json"
+        path = Path(target)
+        if not path.is_absolute():
+            path = Path.cwd() / target
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _load_strategy_plan_state(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Load strategy plan execution state from disk."""
+        state_path = self._resolve_strategy_state_path(
+            str(config.get("state_path", "agent_team/state/strategy_plan_state.json"))
+        )
+        if not state_path.exists():
+            return {"completed_task_ids": []}
+        try:
+            with open(state_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            if isinstance(payload, dict):
+                payload.setdefault("completed_task_ids", [])
+                return payload
+        except Exception as exc:
+            logger.warning("[Strategy Plan] Failed to load state %s: %s", state_path, exc)
+        return {"completed_task_ids": []}
+
+    def _save_strategy_plan_state(self, config: Dict[str, Any], state: Dict[str, Any]) -> None:
+        """Persist strategy plan execution state."""
+        state_path = self._resolve_strategy_state_path(
+            str(config.get("state_path", "agent_team/state/strategy_plan_state.json"))
+        )
+        payload = dict(state) if isinstance(state, dict) else {"completed_task_ids": []}
+        payload.setdefault("completed_task_ids", [])
+        with open(state_path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+
+    def _extract_strategy_plan_backlog(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract open checklist items from strategy markdown plan."""
+        plan_path = self._resolve_strategy_plan_path(str(config.get("plan_path", "8_WEEK_ACTION_PLAN.md")))
+        if not plan_path.exists():
+            return []
+
+        try:
+            raw_text = plan_path.read_text(encoding="utf-8", errors="replace")
+        except Exception as exc:
+            logger.warning("[Strategy Plan] Failed to read plan %s: %s", plan_path, exc)
+            return []
+
+        backlog: List[Dict[str, Any]] = []
+        current_section = "General"
+        for raw_line in raw_text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            section_match = re.match(r"^###\s+(.+)$", line)
+            if section_match:
+                current_section = section_match.group(1).strip()
+                continue
+
+            task_match = re.match(r"^- \[( |x|X)\]\s+(.+)$", line)
+            if not task_match:
+                continue
+            if task_match.group(1).lower() == "x":
+                continue
+
+            title = task_match.group(2).strip()
+            if not title:
+                continue
+
+            task_hash = hashlib.sha1(f"{current_section}|{title}".encode("utf-8")).hexdigest()[:12]
+            backlog.append(
+                {
+                    "task_id": task_hash,
+                    "title": title,
+                    "section": current_section,
+                }
+            )
+        return backlog
+
+    def _map_strategy_plan_item(self, title: str) -> Dict[str, str]:
+        """Map strategy checklist item to agent/action pair."""
+        lowered = title.lower()
+        if any(keyword in lowered for keyword in ["sonar", "critical", "bug", "漏洞", "违", "修复"]):
+            return {"agent_type": "bug_hunter", "action": "fix_critical_violations"}
+        if any(keyword in lowered for keyword in ["e2e", "playwright", "test", "测试", "coverage", "覆盖"]):
+            return {"agent_type": "qa", "action": "run_test_suite"}
+        if any(keyword in lowered for keyword in ["frontend", "vue", "router", "route", "页面", "组件"]):
+            return {"agent_type": "frontend", "action": "optimize_component"}
+        if any(keyword in lowered for keyword in ["backend", "api", "service", "后端"]):
+            return {"agent_type": "backend", "action": "optimize_api"}
+        return {"agent_type": "testing", "action": "write_unit_test"}
+
+    def _select_strategy_plan_tasks_for_cycle(self) -> List[Dict[str, Any]]:
+        """Select unfinished strategy plan tasks for the current cycle."""
+        config = self.schedule_config.get("strategy_plan", {})
+        if not self._coerce_bool(config.get("enabled", False)):
+            return []
+
+        backlog = self._extract_strategy_plan_backlog(config)
+        if not backlog:
+            return []
+
+        max_tasks = int(config.get("max_tasks_per_cycle", 2) or 2)
+        max_tasks = max(max_tasks, 0)
+        if max_tasks == 0:
+            return []
+
+        state = self._load_strategy_plan_state(config)
+        completed = set(state.get("completed_task_ids", []))
+        selected = [item for item in backlog if item.get("task_id") not in completed][:max_tasks]
+        return selected
+
+    def _update_strategy_plan_progress(self, execution_results: List[Dict[str, Any]]) -> None:
+        """Mark completed strategy plan tasks in local progress state."""
+        config = self.schedule_config.get("strategy_plan", {})
+        if not self._coerce_bool(config.get("enabled", False)):
+            return
+
+        completed_ids: List[str] = []
+        for result in execution_results:
+            if not isinstance(result, dict):
+                continue
+            if str(result.get("status", "")).lower() != "completed":
+                continue
+            input_data = result.get("input_data", {})
+            if not isinstance(input_data, dict):
+                continue
+            task_id = str(input_data.get("strategy_plan_task_id", "")).strip()
+            if task_id:
+                completed_ids.append(task_id)
+
+        if not completed_ids:
+            return
+
+        state = self._load_strategy_plan_state(config)
+        existing = set(state.get("completed_task_ids", []))
+        existing.update(completed_ids)
+        state["completed_task_ids"] = sorted(existing)
+        state["last_updated"] = datetime.now().isoformat()
+        self._save_strategy_plan_state(config, state)
+        logger.info("[Strategy Plan] Marked %s task(s) as completed", len(set(completed_ids)))
+
     async def _create_optimization_tasks(self, analysis: Dict[str, Any]) -> List[Task]:
         """Create optimization tasks based on analysis"""
         opportunities = analysis.get("opportunities", [])
         tasks = []
+        max_total_tasks = 5
 
         # Convert opportunities to tasks
-        for opp in opportunities[:5]:  # Limit to 5 tasks per cycle
+        for opp in opportunities[:max_total_tasks]:
             agent_type = opp.get("agent", "backend")
             priority = TaskPriority.HIGH if opp.get("priority") == "critical" else TaskPriority.NORMAL
 
@@ -1170,6 +1331,29 @@ class ContinuousOptimizationScheduler:
             )
 
             tasks.append(task)
+
+        # Fill remaining slots with strategy plan backlog items.
+        remaining_slots = max(0, max_total_tasks - len(tasks))
+        if remaining_slots > 0:
+            plan_items = self._select_strategy_plan_tasks_for_cycle()[:remaining_slots]
+            for item in plan_items:
+                mapping = self._map_strategy_plan_item(item.get("title", ""))
+                section = item.get("section", "Strategy Plan")
+                title = str(item.get("title", "")).strip() or "Strategy plan task"
+                display_title = f"[Plan] {title}"
+                task = self.coordinator.create_task(
+                    title=display_title,
+                    description=f"{section}: {title}",
+                    agent_type=mapping.get("agent_type", "testing"),
+                    priority=TaskPriority.NORMAL,
+                    input_data={
+                        "action": mapping.get("action", "write_unit_test"),
+                        "strategy_plan_task_id": item.get("task_id"),
+                        "strategy_plan_section": section,
+                        "strategy_plan_title": title,
+                    },
+                )
+                tasks.append(task)
 
         return tasks
 

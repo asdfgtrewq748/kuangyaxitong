@@ -16,6 +16,7 @@ agent_team/optimization_reports/cycle_*.json
 agent_team/optimization_reports/cycle_*.md
 agent_team/notifications/*.jsonl
 agent_team/metrics/*.json
+agent_team/state/*.json
 
 # Playwright runtime artifacts
 test_artifacts/screenshots/
