@@ -205,7 +205,8 @@ class AdvancedQASpecialistAgent(QASpecialistAgent):
                 "status": "validated" if test_results["passed"] else "failed",
                 "method": "playwright_browser_testing",
                 "approved": test_results["passed"],
-                "issues_found": test_results["issues"],
+                "issues_found": len(test_results["issues"]),
+                "issues": test_results["issues"],
                 "screenshots": test_results["screenshots"],
                 "test_details": test_results,
             }
@@ -239,7 +240,13 @@ class AdvancedQASpecialistAgent(QASpecialistAgent):
 
             if not test_result["passed"]:
                 results["passed"] = False
-                results["issues"].extend(test_result.get("issues", []))
+                errors = test_result.get("issues") or test_result.get("errors") or []
+                page_name = test_result.get("page", page_config.get("name", "unknown-page"))
+
+                if errors:
+                    results["issues"].extend([f"{page_name}: {error}" for error in errors])
+                else:
+                    results["issues"].append(f"{page_name}: test failed with no explicit error")
 
             results["screenshots"].extend(test_result.get("screenshots", []))
 

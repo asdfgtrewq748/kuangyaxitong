@@ -655,7 +655,7 @@ onBeforeUnmount(() => {
   }
 
   .workflow-track {
-    grid-template-columns: repeat(5, minmax(0, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
@@ -666,3 +666,4 @@ onBeforeUnmount(() => {
   z-index: 50;
 }
 
+</style>
