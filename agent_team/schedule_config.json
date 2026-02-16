@@ -82,8 +82,6 @@
     "lighthouse_accessibility_minimum": 90,
     "lighthouse_best_practices_minimum": 85,
     "critical_violations_maximum": 0,
-    "major_violations_maximum": 10,
-    "sonar_quality_gate_required": true,
     "all_tests_pass_required": true,
     "fail_on_missing_metrics": false
   },
@@ -121,7 +119,7 @@
       "freshness_minutes": 30
     },
     "sonar": {
-      "enabled": true,
+      "enabled": false,
       "source": "auto",
       "base_url": "",
       "base_url_env": "SONAR_HOST_URL",

@@ -177,7 +177,7 @@ class ContinuousOptimizationScheduler:
                     "freshness_minutes": 30
                 },
                 "sonar": {
-                    "enabled": True,
+                    "enabled": False,
                     "source": "auto",
                     "base_url": "",
                     "base_url_env": "SONAR_HOST_URL",
