@@ -5,6 +5,11 @@ Simple health check endpoint for monitoring
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+router = APIRouter(
+    tags=["Health Check"],
+)
+
+
 class HealthResponse(BaseModel):
     status: str
     backend: bool
@@ -34,7 +39,7 @@ async def api_health() -> HealthResponse:
         import requests
         response = requests.get("http://localhost:8001/api/health", timeout=2)
         response.raise_for_status()
-    return HealthResponse(
+        return HealthResponse(
             status="ok",
             backend=response.status_code == 200,
             database=True,

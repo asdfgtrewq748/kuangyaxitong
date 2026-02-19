@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-02-19 22:21:08",
+  "total_issues": 5,
+  "issues": [
+    {
+      "id": "F8-6",
+      "source": "Flake8",
+      "severity": "CRITICAL",
+      "file": "backend/app",
+      "line": 0,
+      "message": "app\\routes\\scene3d.py:191:9: E999 IndentationError: unexpected indent",
+      "code": "Syntax/Logic Error",
+      "details": "Potential runtime error"
+    },
+    {
+      "id": "F8-7",
+      "source": "Flake8",
+      "severity": "CRITICAL",
+      "file": "backend/app",
+      "line": 0,
+      "message": "1     E999 IndentationError: unexpected indent",
+      "code": "Syntax/Logic Error",
+      "details": "Potential runtime error"
+    },
+    {
+      "id": "PY-1",
+      "source": "Pylint",
+      "severity": "HIGH",
+      "file": "app\\routes\\scene3d.py",
+      "line": 191,
+      "message": "Parsing failed: 'unexpected indent (app.routes.scene3d, line 191)'",
+      "code": "syntax-error",
+      "details": "E0001"
+    },
+    {
+      "id": "PY-2",
+      "source": "Pylint",
+      "severity": "HIGH",
+      "file": "app\\services\\mpi_new_algorithm.py",
+      "line": 19,
+      "message": "Unable to import 'mpi_advanced.core.data_models'",
+      "code": "import-error",
+      "details": "E0401"
+    },
+    {
+      "id": "PY-3",
+      "source": "Pylint",
+      "severity": "HIGH",
+      "file": "app\\services\\mpi_new_algorithm.py",
+      "line": 28,
+      "message": "Unable to import 'mpi_advanced.indicators.asi_indicator_ust'",
+      "code": "import-error",
+      "details": "E0401"
+    }
+  ]
+}
