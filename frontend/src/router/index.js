@@ -18,49 +18,29 @@ const routes = [
     meta: { title: '插值分析', icon: 'chart', navOrder: 20, flowOrder: 20 }
   },
   {
-    path: '/pressure',
-    name: 'PressureIndex',
-    component: () => import('../views/PressureIndex.vue'),
-    meta: { title: '矿压指标', icon: 'bar', nav: false, legacy: true }
-  },
-  {
-    path: '/mpi-heatmap',
-    name: 'MpiHeatmap',
-    component: () => import('../views/MpiHeatmap.vue'),
-    meta: { title: 'MPI 热力图(旧版)', icon: 'legacy', nav: false, legacy: true }
-  },
-  {
     path: '/mpi-heatmap-pro',
+    alias: ['/mpi-heatmap'],
     name: 'MpiHeatmapPro',
     component: () => import('../views/MpiHeatmapPro.vue'),
     meta: { title: 'MPI 数值模拟', icon: 'bolt', navOrder: 40 }
   },
   {
-    path: '/mpi-algorithm',
-    name: 'MpiAlgorithm',
-    component: () => import('../views/MpiAlgorithm.vue'),
-    meta: { title: 'MPI 算法原理', icon: 'box', nav: false, legacy: true }
-  },
-  {
     path: '/academic-algorithm',
+    alias: ['/mpi-algorithm'],
     name: 'AcademicAlgorithm',
     component: () => import('../views/AcademicAlgorithm.vue'),
     meta: { title: '新算法原理', icon: 'book', navOrder: 30, flowOrder: 30 }
   },
   {
     path: '/algorithm-validation',
+    alias: ['/pressure'],
     name: 'AlgorithmValidation',
     component: () => import('../views/AlgorithmValidation.vue'),
     meta: { title: '新算法实证', icon: 'flask', navOrder: 50, flowOrder: 40 }
   },
   {
-    path: '/research-portal',
-    name: 'ResearchPortal',
-    component: () => import('../views/ResearchPortal.vue'),
-    meta: { title: 'Research Portal', icon: 'book', navOrder: 54, workflow: false }
-  },
-  {
     path: '/research-workbench',
+    alias: ['/research-portal'],
     name: 'ResearchWorkbench',
     component: () => import('../views/ResearchWorkbench.vue'),
     meta: { title: '科研工作台', icon: 'book', navOrder: 55 }

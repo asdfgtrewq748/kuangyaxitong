@@ -90,6 +90,9 @@ def test_geomodel_job_lifecycle_and_artifacts(tmp_path, monkeypatch):
     assert download_resp.status_code == 200
     assert download_resp.content
 
+    missing_artifact = client.get(f"/api/geomodel/jobs/{job_id}/artifacts/not_found.bin")
+    assert missing_artifact.status_code == 404
+
 
 def test_geomodel_job_invalid_method_returns_422(tmp_path, monkeypatch):
     _write_geomodel_dataset(tmp_path)
@@ -107,4 +110,14 @@ def test_geomodel_job_invalid_method_returns_422(tmp_path, monkeypatch):
 
 def test_geomodel_job_not_found():
     resp = client.get("/api/geomodel/jobs/not_exists")
+    assert resp.status_code == 404
+
+
+def test_geomodel_artifacts_not_found():
+    resp = client.get("/api/geomodel/jobs/not_exists/artifacts")
+    assert resp.status_code == 404
+
+
+def test_geomodel_download_job_not_found():
+    resp = client.get("/api/geomodel/jobs/not_exists/artifacts/summary.json")
     assert resp.status_code == 404

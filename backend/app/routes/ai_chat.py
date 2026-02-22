@@ -194,7 +194,12 @@ async def list_sessions(user_id: Optional[str] = None) -> List[SessionInfo]:
     """List all chat sessions (optionally filtered by user)"""
     service = get_ai_chat_service()
     sessions = service.list_sessions(user_id)
-    return [SessionInfo(**s) for s in sessions]
+    normalized = []
+    for session in sessions:
+        payload = dict(session)
+        payload.setdefault("messages", [])
+        normalized.append(SessionInfo(**payload))
+    return normalized
 
 
 @router.get("/health")

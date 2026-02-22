@@ -392,3 +392,164 @@ def test_research_template_e2e_with_two_datasets(tmp_path, monkeypatch):
             assert suite["template_name"] == template_name
             assert len(suite["runs"]) >= 2
             assert "comparison_conclusion" in suite
+
+
+def test_research_split_ratio_validation_errors(tmp_path, monkeypatch):
+    dataset_id = "research_demo"
+    _write_dataset(tmp_path, dataset_id=dataset_id)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+
+    register_resp = client.post(
+        "/api/research/dataset/register",
+        json={
+            "dataset_id": dataset_id,
+            "label_schema": {
+                "label_column": "label",
+                "positive_values": [1],
+                "event_definition": "roof_pressure_event",
+                "time_window_hours": 24,
+            },
+        },
+    )
+    assert register_resp.status_code == 200
+
+    bad_total = client.post(
+        f"/api/research/dataset/{dataset_id}/split",
+        json={
+            "strategy": "random",
+            "train_ratio": 0.6,
+            "val_ratio": 0.2,
+            "test_ratio": 0.1,
+            "seed": 1,
+        },
+    )
+    assert bad_total.status_code == 422
+
+    bad_negative = client.post(
+        f"/api/research/dataset/{dataset_id}/split",
+        json={
+            "strategy": "random",
+            "train_ratio": -0.1,
+            "val_ratio": 0.6,
+            "test_ratio": 0.5,
+            "seed": 1,
+        },
+    )
+    assert bad_negative.status_code == 422
+
+
+def test_research_route_error_mapping_branches(monkeypatch):
+    def _raise_file_not_found(*args, **kwargs):
+        raise FileNotFoundError("missing")
+
+    def _raise_runtime(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    def _raise_value_error(*args, **kwargs):
+        raise ValueError("bad value")
+
+    monkeypatch.setattr(research_routes, "register_dataset_manifest", _raise_runtime)
+    resp = client.post(
+        "/api/research/dataset/register",
+        json={
+            "dataset_id": "demo",
+            "label_schema": {
+                "label_column": "label",
+                "positive_values": [1],
+                "event_definition": "roof_pressure_event",
+                "time_window_hours": 24,
+            },
+        },
+    )
+    assert resp.status_code == 400
+
+    monkeypatch.setattr(research_routes, "load_dataset_manifest", _raise_file_not_found)
+    resp = client.get("/api/research/dataset/demo")
+    assert resp.status_code == 404
+
+    monkeypatch.setattr(research_routes, "create_split_manifest", _raise_runtime)
+    resp = client.post(
+        "/api/research/dataset/demo/split",
+        json={
+            "strategy": "random",
+            "train_ratio": 0.7,
+            "val_ratio": 0.2,
+            "test_ratio": 0.1,
+            "seed": 7,
+        },
+    )
+    assert resp.status_code == 400
+
+    monkeypatch.setattr(research_routes, "run_experiment", _raise_runtime)
+    resp = client.post(
+        "/api/research/experiments/run",
+        json={
+            "dataset_id": "demo",
+            "dataset_version": "v1",
+            "split_id": "s1",
+            "experiment_name": "e1",
+            "model_type": "baseline",
+        },
+    )
+    assert resp.status_code == 400
+
+    monkeypatch.setattr(research_routes, "run_experiment_suite", _raise_runtime)
+    resp = client.post(
+        "/api/research/experiments/run-suite",
+        json={
+            "template_name": "rsi_paper_core",
+            "dataset_id": "demo",
+            "dataset_version": "v1",
+            "split_id": "s1",
+            "seed": 1,
+        },
+    )
+    assert resp.status_code == 400
+
+    monkeypatch.setattr(research_routes, "load_experiment_result", _raise_runtime)
+    resp = client.get("/api/research/experiments/exp_demo")
+    assert resp.status_code == 400
+
+    monkeypatch.setattr(research_routes, "list_experiment_artifacts", _raise_file_not_found)
+    resp = client.get("/api/research/experiments/exp_demo/artifacts")
+    assert resp.status_code == 404
+
+    monkeypatch.setattr(research_routes, "get_experiment_artifact_path", _raise_value_error)
+    resp = client.get("/api/research/experiments/exp_demo/artifacts/result.json")
+    assert resp.status_code == 400
+
+
+def test_research_paper_and_leaderboard_error_branches(tmp_path, monkeypatch):
+    papers_dir = tmp_path / "papers_empty"
+    papers_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(research_routes, "_PAPERS_DIR", papers_dir)
+    monkeypatch.setattr(
+        research_routes,
+        "_PAPER_SPECS",
+        {
+            "science_en": {
+                "title": "EN",
+                "language": "en",
+                "manuscript": "missing.docx",
+                "gates_dir": "gates_en",
+            }
+        },
+    )
+
+    resp_unknown_paper = client.get("/api/research/papers/not_exists/download", params={"kind": "manuscript"})
+    assert resp_unknown_paper.status_code == 404
+
+    resp_missing_asset = client.get("/api/research/papers/science_en/download", params={"kind": "manuscript"})
+    assert resp_missing_asset.status_code == 404
+
+    resp_bundle_unknown = client.get("/api/research/papers/not_exists/bundle")
+    assert resp_bundle_unknown.status_code == 404
+
+    resp_bundle_empty = client.get("/api/research/papers/science_en/bundle")
+    assert resp_bundle_empty.status_code == 404
+
+    resp_metric_required = client.get("/api/research/leaderboard/experiments", params={"metric": "   "})
+    assert resp_metric_required.status_code == 400
+
+    resp_limit_bad = client.get("/api/research/leaderboard/experiments", params={"metric": "auc", "limit": 0})
+    assert resp_limit_bad.status_code == 400

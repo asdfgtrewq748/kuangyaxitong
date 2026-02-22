@@ -37,22 +37,20 @@ if exist docs\issues\critical_issue_002.md (
 )
 
 echo.
-echo 2. 检查测试覆盖率
+echo 2. 检查后端测试与覆盖率
 echo -----------------------------------------
 
 cd backend
-python -m pytest tests/ --cov=app --cov-report=term > coverage_output.txt 2>&1
+python -m pytest tests/ --cov=app --cov-report=term --cov-fail-under=80 > coverage_output.txt 2>&1
+set "PYTEST_EXIT=%ERRORLEVEL%"
 cd ..
 
-REM 简单检查测试是否运行
-findstr /C:"passed" backend\coverage_output.txt >nul 2>&1
-if !errorlevel! equ 0 (
-    for /f "tokens=1" %%a in ('findstr /C:"passed" backend\coverage_output.txt') do set TEST_COUNT=%%a
-    echo [OK] 测试运行成功: !TEST_COUNT! passed
+if "%PYTEST_EXIT%"=="0" (
+    echo [OK] Backend tests passed with coverage threshold 80
     set /a PASSED+=1
 ) else (
-    echo [WARN] 无法获取测试运行结果
-    set /a WARNINGS+=1
+    echo [FAIL] Backend tests failed or coverage below 80 ^(see pytest output^)
+    set /a FAILED+=1
 )
 
 del backend\coverage_output.txt 2>nul

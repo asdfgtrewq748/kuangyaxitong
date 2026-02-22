@@ -406,28 +406,28 @@ const extractCoordinatesFromFiles = async () => {
 
   for (const file of files.value) {
     try {
-      // 使用预览 API 获取文件内容
+      // 使用预览 API 获取文件内容（兼容 rows/data 两种返回字段）
       const { data } = await previewBorehole(file.name, 100)
+      const previewRows = data?.rows || data?.data || []
 
       // 检查数据中是否包含坐标列
-      if (data.data && data.data.length > 0) {
-        const columns = Object.keys(data.data[0]).map(k => k.toLowerCase())
+      if (previewRows.length > 0) {
 
         // 查找可能的坐标列
-        const xCol = Object.keys(data.data[0]).find(k =>
+        const xCol = Object.keys(previewRows[0]).find(k =>
           k.toLowerCase().includes('x') || k === '坐标x' || k === 'x坐标'
         )
-        const yCol = Object.keys(data.data[0]).find(k =>
+        const yCol = Object.keys(previewRows[0]).find(k =>
           k.toLowerCase().includes('y') || k === '坐标y' || k === 'y坐标'
         )
-        const nameCol = Object.keys(data.data[0]).find(k =>
+        const nameCol = Object.keys(previewRows[0]).find(k =>
           k.toLowerCase().includes('name') || k.toLowerCase().includes('钻孔') ||
           k === '钻孔号' || k === '孔号'
         )
 
         if (xCol && yCol) {
           // 提取第一个包含坐标的行（通常每个文件代表一个钻孔）
-          const firstRow = data.data[0]
+          const firstRow = previewRows[0]
           const x = parseFloat(firstRow[xCol])
           const y = parseFloat(firstRow[yCol])
 

@@ -1,145 +1,58 @@
-# 🚀 矿压系统 8 周行动计划 - 进度跟踪
+﻿# 矿压系统 8 周行动计划进度
 
-**起始日期**: 2026-02-16  
-**当前日期**: 2026-02-19  
-**当前周次**: Week 1 (Day 4)  
-**总进度**: 1/56 任务完成 (1.8%)
+- 起始日期: 2026-02-16
+- 当前日期: 2026-02-22
+- 当前阶段: Week 2（已完成）
 
----
+## 当前总览
 
-## 📊 总体进度
+- Week 1 主任务: 已完成（7/7）
+- Week 2 已完成: 7/7
+- 全量 E2E: 16/16 通过（2026-02-21）
+- 后端单测: 324/324 通过（2026-02-22）
+- 后端覆盖率: 91%（目标 80%，已超额完成）
 
-```
-总任务数: 56
-已完成:   1   [██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 1.8%
-进行中:   1   [██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 1.8%
-待开始:  54   [████████████████████████████████████████░░] 96.4%
-```
+## Week 1 效果评估
 
----
+### 做得好的点
 
-## 🎯 Week 1 进度 (02/16 - 02/22)
+- 健康检查链路已修正并纳入路由，`/health` 与 API 健康检查可正常工作。
+- Playwright E2E 从骨架推进到可执行，核心流程均已落地。
+- 后端测试规模明显扩大，回归稳定性提升。
+- CI 脚本从“日志字符串判断”改为“命令退出码判断”，可靠性更高。
 
-### 目标
-- [ ] Critical Issues 归零 (2 → 0)
-- [ ] 建立端到端测试框架
-- [ ] 代码覆盖率 75% → 80%
+### 仍需改进
 
-### 任务完成情况
+- 覆盖率已从 58% 提升至 91%，但仍需保持新增功能的测试同步。
+- 报告页真实后端计算链路耗时长，UI 在“自动计算中”停留时间过久。
+- 周报文档曾有编码混乱，已开始统一为 UTF-8。
 
-| # | 任务 | 状态 | 完成时间 |
-|---|------|------|----------|
-| 1 | 定位 2 个 Critical Issues (SonarQube 扫描) | ✅ 已完成 | 2026-02-19 21:52 |
-| 2 | 修复 Critical Issue #1 + 编写回归测试 | 🔄 进行中 | - |
-| 3 | 修复 Critical Issue #2 + SonarQube 确认归零 | ⏳ 待开始 | - |
-| 4 | 搭建 Playwright E2E 测试框架 | ⏳ 待开始 | - |
-| 5 | 编写 5 条核心链路 E2E 测试骨架 | ⏳ 待开始 | - |
-| 6 | 补充后端单元测试 → 覆盖率 80% | ⏳ 待开始 | - |
-| 7 | 创建 CI 一键检查脚本 + Week1 总结 | ⏳ 待开始 | - |
+## Week 2 已完成项
 
-**Week 1 进度**: 1/7 (14.3%)
+- [x] E2E: 数据导入链路通过
+- [x] E2E: 插值计算链路通过
+- [x] E2E: MPI 指标查看通过
+- [x] E2E: 模拟 + 报告通过
+- [x] 前端路由审计文档（`docs/frontend-route-audit.md`）
+- [x] 路由收敛（总路由数已降至 12）
+- [x] Lighthouse 基准报告（`docs/performance-baseline.md`）
 
----
+> 说明: 报告导出 E2E 当前采用接口桩（mock）保证稳定性，真实后端报告计算链路需单独性能治理。
 
-## 🎉 最新完成
+## Week 2 待完成项
 
-### ✅ Task 1: Critical Issues 扫描 (2026-02-19)
+- [x] 无（Week2 计划项已全部完成）
 
-**成果**:
-- 识别了 **5 个 Critical Issues** (超过计划的 2 个)
-- 创建了自动化扫描工具 `scripts/scan_critical_issues.py`
-- 生成了详细的 issue 报告文档
+## 最近关键验证（2026-02-22）
 
-**Critical Issues 列表**:
-1. ⚠️ **health.py 语法错误** - CRITICAL (P0)
-   - 文件: [backend/app/routes/health.py:37](backend/app/routes/health.py#L37)
-   - 问题: `try` 块缺少 `except/finally`
-   - 影响: 模块无法导入，应用可能无法启动
+- `npm run e2e` -> 16 passed
+- `frontend/src/router/index.js` 路由项计数 -> 12
+- Lighthouse 基线 -> 已生成（`docs/performance-baseline.md`）
+- `python -m pytest backend/tests -q` -> 324 passed
+- `python -m pytest backend/tests --cov=backend/app --cov-report=term-missing` -> 91%
 
-2. ⚠️ **scene3d.py 参数缺失** - HIGH (P0)
-   - 文件: [backend/app/routes/scene3d.py:181](backend/app/routes/scene3d.py#L181)
-   - 问题: 函数调用缺少必需参数
-   - 影响: 3D 可视化功能运行时错误
+## 下一步执行顺序
 
-**产出物**:
-- 📄 [扫描脚本](scripts/scan_critical_issues.py)
-- 📊 [总览报告](docs/issues/critical_issues_report.md)
-- 📋 [JSON 数据](docs/issues/critical_issues.json)
-- 📝 [Issue #001 详情](docs/issues/critical_issue_001.md)
-- 📝 [Issue #002 详情](docs/issues/critical_issue_002.md)
-- 📈 [完成报告](docs/issues/task_completion_report.md)
-
----
-
-## 📅 下一步行动
-
-### 🔥 立即执行 (今天)
-- [ ] **修复 Critical Issue #001** (health.py)
-  - 预计时间: 20 分钟
-  - 优先级: P0 (阻塞)
-
-### 📋 明天计划
-- [ ] **修复 Critical Issue #002** (scene3d.py)
-  - 预计时间: 50 分钟
-  - 优先级: P0 (阻塞)
-
-### 📆 本周剩余任务
-- [ ] 搭建 Playwright E2E 测试框架
-- [ ] 编写 5 条 E2E 测试骨架
-- [ ] 补充后端单元测试
-- [ ] CI 一键检查脚本
-
----
-
-## 📈 质量指标
-
-| 指标 | 起点 (02/16) | 当前 | 目标 (02/22) | 状态 |
-|------|--------------|------|--------------|------|
-| Critical Issues | 2 | 5* | 0 | ⚠️ 需修复 |
-| 代码覆盖率 | 75% | - | 80% | ⏳ 待测量 |
-| E2E 测试 | 0 | 0 | 5 | ⏳ 待开始 |
-
-*注: 扫描发现了额外的 3 个问题
-
----
-
-## 🔍 发现的技术债务
-
-### 扫描统计
-- **Pylint 问题**: 111 个
-- **Bandit 安全问题**: 10 个
-- **Flake8 关键问题**: 4 个
-- **Critical Issues**: 5 个
-
-### 需要关注的问题类型
-1. **语法错误** (E999) - 2 个
-2. **参数缺失** (E1120) - 1 个
-3. **导入错误** (E0401) - 1 个
-4. **安全问题** - 10 个 (待分析)
-
----
-
-## 📚 相关文档
-
-- 📖 [8周行动计划](8_WEEK_ACTION_PLAN.md)
-- 📊 [Issues 报告目录](docs/issues/)
-- 🔧 [扫描脚本](scripts/scan_critical_issues.py)
-
----
-
-## 🏆 里程碑
-
-- [x] **2026-02-19**: Week 1 Task 1 完成 - Critical Issues 扫描
-- [ ] **2026-02-22**: Week 1 里程碑验收 - Critical Issues 归零 + E2E 框架
-- [ ] **2026-03-01**: Week 2 里程碑验收 - E2E 测试全部通过
-- [ ] **2026-03-08**: Week 3 里程碑验收 - Baseline 实验完成
-- [ ] **2026-03-15**: Week 4 里程碑验收 - 对比实验完成
-- [ ] **2026-03-22**: Week 5 里程碑验收 - 后端统一 + P0 组件
-- [ ] **2026-03-29**: Week 6 里程碑验收 - 论文 Methods+Results
-- [ ] **2026-04-05**: Week 7 里程碑验收 - 论文完整初稿
-- [ ] **2026-04-12**: Week 8 里程碑验收 - 最终交付
-
----
-
-**最后更新**: 2026-02-19 21:52
-**更新人**: Claude Code Assistant
+1. 启动 Week3：落地 `scripts/prepare_experiment_data.py`，完成实验数据清洗与质量报告。
+2. 完成数据集切分（K-fold + 固定随机种子 + 空间分层）并输出到 `data/experiments/splits/`。
+3. 对报告页真实后端计算链路做性能剖析，缩短“自动计算中”等待时长。

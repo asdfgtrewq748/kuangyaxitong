@@ -274,7 +274,7 @@ async def get_scene_3d_data(
             ))
 
         # Generate indicator data (simplified - would calculate from actual data)
-        indicator = None
+        indicator_data: Optional[IndicatorValues3D] = None
         if indicator:
             # Generate a simple grid with demo values
             grid_size = resolution
@@ -291,7 +291,7 @@ async def get_scene_3d_data(
 
             # Calculate stats
             flat_values = [v for row in grid for v in row]
-            indicator = IndicatorValues3D(
+            indicator_data = IndicatorValues3D(
                 indicator=indicator,
                 grid=grid,
                 min=float(min(flat_values)),
@@ -313,7 +313,7 @@ async def get_scene_3d_data(
             bounds=bounds,
             layers=layers,
             boreholes=borehole_3d_list,
-            indicator=indicator,
+            indicator=indicator_data,
             stats=stats,
         )
 

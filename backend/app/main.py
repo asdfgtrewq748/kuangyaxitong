@@ -34,6 +34,7 @@ from app.routes.research import router as research_router
 from app.routes.geomodel import router as geomodel_router
 from app.routes.geomodel_integration import router as geomodel_integration_router
 from app.routes.ai_chat import router as ai_chat_router
+from app.routes.health import router as health_router
 
 app = FastAPI(title="Mining Pressure System API", version="0.1.0")
 
@@ -45,6 +46,7 @@ app.include_router(research_router)
 app.include_router(geomodel_router)
 app.include_router(geomodel_integration_router)
 app.include_router(ai_chat_router)
+app.include_router(health_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -93,11 +95,6 @@ def _set_cached_contour_response(cache_key: tuple, payload: dict) -> None:
 def _clear_contour_cache() -> None:
     with _contour_cache_lock:
         _contour_cache.clear()
-
-
-@app.get("/health")
-def health() -> dict:
-    return {"status": "ok"}
 
 
 def _clip01_100(value: float) -> float:

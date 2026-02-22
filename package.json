@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "e2e": "playwright test -c tests/e2e/playwright.config.ts",
-    "e2e:smoke": "playwright test -c tests/e2e/playwright.config.ts tests/e2e/smoke.spec.ts"
+    "e2e": "cd tests/e2e && npx playwright test",
+    "e2e:smoke": "cd tests/e2e && npx playwright test smoke.spec.ts"
   },
   "devDependencies": {
     "playwright": "^1.58.2"

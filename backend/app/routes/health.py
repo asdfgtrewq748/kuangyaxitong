@@ -37,7 +37,8 @@ async def api_health() -> HealthResponse:
     """API health check endpoint"""
     try:
         import requests
-        response = requests.get("http://localhost:8001/api/health", timeout=2)
+        # Check the lightweight local health endpoint to avoid recursive calls.
+        response = requests.get("http://localhost:8001/health", timeout=2)
         response.raise_for_status()
         return HealthResponse(
             status="ok",

@@ -623,13 +623,17 @@ def estimate_missing_params(params: Dict[str, Optional[float]]) -> Dict[str, flo
     # 弹性模量与剪切模量的关系: G = E / [2(1+v)]
     if result.get("elastic_modulus") is not None and result.get("shear_modulus") is None:
         E = result["elastic_modulus"]
-        v = result.get("poisson_ratio", 0.25)
+        v = result.get("poisson_ratio")
+        if v is None:
+            v = 0.25
         result["shear_modulus"] = E / (2 * (1 + v))
 
     # 体积模量估算: K = E / [3(1-2v)]
     if result.get("elastic_modulus") is not None and result.get("bulk_modulus") is None:
         E = result["elastic_modulus"]
-        v = result.get("poisson_ratio", 0.25)
+        v = result.get("poisson_ratio")
+        if v is None:
+            v = 0.25
         result["bulk_modulus"] = E / (3 * (1 - 2 * v))
 
     # 泊松比估算

@@ -107,6 +107,8 @@ async def get_geomodel_visualization_data(job_id: str) -> GeomodelVisualizationD
 
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Geomodel job {job_id} not found")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -160,6 +162,8 @@ async def calculate_mpi_with_geomodel(request: GeomodelMpiRequest) -> Dict[str, 
 
         return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -196,6 +200,8 @@ async def get_combined_visualization(job_id: str, seam: str = Query(...)) -> Com
             combined_quality=combined_quality,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

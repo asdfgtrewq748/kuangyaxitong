@@ -1,30 +1,59 @@
 /**
  * E2E Test: 数据导入流程
- *
- * 测试用户上传和解析钻孔数据的完整流程
  */
-import { expect, test } from 'playwright/test';
+import { expect, test } from 'playwright/test'
+
+const buildCsv = (name: string) => ({
+  name,
+  mimeType: 'text/csv',
+  buffer: Buffer.from(
+    [
+      'name,x,y,elastic_modulus,density,tensile_strength,thickness',
+      'ZK01,100,200,12.5,2.4,1.2,3.6'
+    ].join('\n'),
+    'utf-8'
+  )
+})
 
 test.describe('数据导入流程', () => {
-  test.skip('用户可以上传 CSV 文件并看到解析结果', async ({ page }) => {
-    // TODO: 实现测试
-    // 1. 导航到数据导入页面
-    // 2. 上传测试 CSV 文件
-    // 3. 验证解析结果显示
-    // 4. 检查钻孔数量正确
-  });
+  test('用户可以上传 CSV 文件并看到解析结果', async ({ page }) => {
+    await page.goto('/data')
 
-  test.skip('上传格式错误的文件应显示友好提示', async ({ page }) => {
-    // TODO: 实现测试
-    // 1. 导航到数据导入页面
-    // 2. 上传无效文件
-    // 3. 验证错误消息显示
-  });
+    const dataFileInput = page.locator('input[type="file"][accept=".csv"]')
+    await dataFileInput.setInputFiles(buildCsv(`e2e-upload-${Date.now()}.csv`))
 
-  test.skip('用户可以预览已上传的数据', async ({ page }) => {
-    // TODO: 实现测试
-    // 1. 导航到数据导入页面
-    // 2. 上传有效文件
-    // 3. 验证数据预览表格显示
-  });
-});
+    await expect(page.locator('.file-name').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: '上传数据' })).toBeEnabled()
+
+    await page.getByRole('button', { name: '上传数据' }).click()
+
+    await expect(page.locator('.toast-content')).toContainText('已上传 1 个文件')
+    await expect(page.locator('.result-title')).toHaveText('扫描完成')
+  })
+
+  test('不支持格式的文件不会进入上传队列', async ({ page }) => {
+    await page.goto('/data')
+
+    const dataFileInput = page.locator('input[type="file"][accept=".csv"]')
+    await dataFileInput.setInputFiles({
+      name: 'invalid_format.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('not,csv', 'utf-8')
+    })
+
+    await expect(page.locator('.file-item')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '上传数据' })).toBeDisabled()
+  })
+
+  test('上传后可看到提取的坐标预览', async ({ page }) => {
+    await page.goto('/data')
+
+    const dataFileInput = page.locator('input[type="file"][accept=".csv"]')
+    await dataFileInput.setInputFiles(buildCsv(`e2e-coord-${Date.now()}.csv`))
+
+    await page.getByRole('button', { name: '上传数据' }).click()
+
+    await expect(page.locator('.extracted-coords .subsection-title')).toHaveText('从文件中提取的坐标')
+    await expect(page.locator('.extracted-coords .subsection-desc')).toContainText('发现 1 个钻孔')
+  })
+})
