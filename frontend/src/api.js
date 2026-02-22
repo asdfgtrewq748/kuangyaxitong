@@ -177,6 +177,8 @@ export const summarySteps = (model, target, gridSize) =>
   api.get('/summary/steps', { params: { model, target, grid_size: gridSize } })
 export const summaryStepsWorkfaces = (params) =>
   api.get('/summary/steps-workfaces', { params })
+export const summaryReport = (params) =>
+  api.get('/summary/report', { params })
 export const pressureStepsBatch = (model) =>
   api.get('/pressure/steps/boreholes', { params: { model } })
 export const exportPressureSteps = (model) =>

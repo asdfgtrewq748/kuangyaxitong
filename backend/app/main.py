@@ -4,9 +4,12 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from collections import OrderedDict
+import json
+import math
 import threading
+import time
 
 from app.core.config import get_data_dir
 from app.services.csv_loader import analyze_csv_file, read_csv_robust
@@ -61,6 +64,23 @@ _CONTOUR_CACHE_MAXSIZE = 24
 _contour_cache: OrderedDict[tuple, dict] = OrderedDict()
 _contour_cache_lock = threading.Lock()
 
+# Lightweight in-memory cache for report-summary requests.
+_REPORT_CACHE_MAXSIZE = 64
+_REPORT_CACHE_TTL_SEC = 45.0
+_report_cache: OrderedDict[tuple, Dict[str, Any]] = OrderedDict()
+_report_cache_lock = threading.Lock()
+_report_perf_lock = threading.Lock()
+_report_perf: Dict[str, Any] = {
+    "requests_total": 0,
+    "cache_hits": 0,
+    "cache_misses": 0,
+    "compute_ms_total": 0.0,
+    "cached_ms_total": 0.0,
+    "last_compute_ms": 0.0,
+    "last_cached_ms": 0.0,
+    "last_request_ts": 0.0,
+}
+
 
 def _build_contour_data_signature(data_dir: Path) -> str:
     files = sorted([p for p in data_dir.glob("*.csv") if p.is_file()])
@@ -95,6 +115,307 @@ def _set_cached_contour_response(cache_key: tuple, payload: dict) -> None:
 def _clear_contour_cache() -> None:
     with _contour_cache_lock:
         _contour_cache.clear()
+
+
+def _build_report_data_signature(data_dir: Path) -> str:
+    files = sorted([p for p in data_dir.glob("*.csv") if p.is_file()])
+    latest_mtime_ns = 0
+    total_size = 0
+    for file_path in files:
+        try:
+            st = file_path.stat()
+            mtime_ns = int(st.st_mtime_ns)
+            total_size += int(st.st_size)
+            if mtime_ns > latest_mtime_ns:
+                latest_mtime_ns = mtime_ns
+        except OSError:
+            continue
+    return f"{len(files)}:{total_size}:{latest_mtime_ns}"
+
+
+def _build_week3_research_signature(data_dir: Path) -> str:
+    split_audit_path = data_dir / "experiments" / "splits" / "split_leakage_audit.json"
+    suites_root = data_dir / "research" / "suites"
+    suite_files = sorted(suites_root.glob("suite_*/summary.json")) if suites_root.exists() else []
+    targets = [split_audit_path, *suite_files]
+
+    latest_mtime_ns = 0
+    total_size = 0
+    existing_count = 0
+    for file_path in targets:
+        if not file_path.exists() or not file_path.is_file():
+            continue
+        try:
+            st = file_path.stat()
+        except OSError:
+            continue
+        existing_count += 1
+        total_size += int(st.st_size)
+        latest_mtime_ns = max(latest_mtime_ns, int(st.st_mtime_ns))
+    return f"{existing_count}:{total_size}:{latest_mtime_ns}"
+
+
+def _read_json_object(path: Path) -> Dict[str, Any]:
+    if not path.exists() or not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if isinstance(payload, dict):
+        return payload
+    return {}
+
+
+def _safe_finite(value: Any) -> Optional[float]:
+    try:
+        if value is None:
+            return None
+        out = float(value)
+    except Exception:
+        return None
+    if not math.isfinite(out):
+        return None
+    return out
+
+
+def _load_week3_research_summary(data_dir: Path, max_suites: int = 12) -> Dict[str, Any]:
+    notes: List[str] = []
+
+    split_audit_path = data_dir / "experiments" / "splits" / "split_leakage_audit.json"
+    split_payload = _read_json_object(split_audit_path)
+    split_audit: Optional[Dict[str, Any]] = None
+    if split_payload:
+        kfold_summary = split_payload.get("kfold_summary") or {}
+        aggregate = split_payload.get("aggregate") or {}
+        split_audit = {
+            "generated_at_utc": split_payload.get("generated_at_utc"),
+            "path": str(split_audit_path),
+            "strategy": kfold_summary.get("strategy", ""),
+            "n_splits": int(kfold_summary.get("n_splits", 0) or 0),
+            "row_count": int(kfold_summary.get("row_count", 0) or 0),
+            "all_overlap_zero": bool(aggregate.get("all_overlap_zero", False)),
+            "max_overlap": aggregate.get("max_overlap") or {},
+        }
+    else:
+        notes.append("split_audit_missing")
+
+    suites: List[Dict[str, Any]] = []
+    suites_root = data_dir / "research" / "suites"
+    if suites_root.exists():
+        suite_summary_files = sorted(
+            suites_root.glob("suite_*/summary.json"),
+            key=lambda p: p.parent.name,
+            reverse=True,
+        )
+        for suite_summary_path in suite_summary_files[: max(1, int(max_suites))]:
+            suite_payload = _read_json_object(suite_summary_path)
+            if not suite_payload:
+                notes.append(f"suite_parse_failed:{suite_summary_path.parent.name}")
+                continue
+
+            conclusion = suite_payload.get("comparison_conclusion") or {}
+            run_items: List[Dict[str, Any]] = []
+            for run in suite_payload.get("runs") or []:
+                metrics = run.get("metrics") or {}
+                run_items.append(
+                    {
+                        "experiment_name": run.get("experiment_name", ""),
+                        "model_type": run.get("model_type", ""),
+                        "auc": _safe_finite(metrics.get("auc")),
+                        "brier": _safe_finite(metrics.get("brier")),
+                        "f1": _safe_finite(metrics.get("f1")),
+                        "mae": _safe_finite(metrics.get("mae")),
+                        "rmse": _safe_finite(metrics.get("rmse")),
+                    }
+                )
+
+            suites.append(
+                {
+                    "suite_id": suite_payload.get("suite_id", suite_summary_path.parent.name),
+                    "template_name": suite_payload.get("template_name", ""),
+                    "dataset_id": suite_payload.get("dataset_id", ""),
+                    "dataset_version": suite_payload.get("dataset_version", ""),
+                    "split_id": suite_payload.get("split_id", ""),
+                    "created_at": suite_payload.get("created_at", ""),
+                    "best_auc_experiment": conclusion.get("best_auc_experiment", ""),
+                    "best_auc_value": _safe_finite(conclusion.get("best_auc_value")),
+                    "best_brier_experiment": conclusion.get("best_brier_experiment", ""),
+                    "best_brier_value": _safe_finite(conclusion.get("best_brier_value")),
+                    "runs": run_items,
+                }
+            )
+    else:
+        notes.append("suite_dir_missing")
+
+    status = "missing"
+    if split_audit and suites:
+        status = "ready"
+    elif split_audit or suites:
+        status = "partial"
+
+    stability_compare = _build_week3_stability_compare(suites)
+    return {
+        "status": status,
+        "split_audit": split_audit,
+        "suites": suites,
+        "stability_compare": stability_compare,
+        "notes": notes,
+    }
+
+
+def _get_cached_report_response(cache_key: tuple) -> Optional[Dict[str, Any]]:
+    now = time.monotonic()
+    with _report_cache_lock:
+        cached = _report_cache.get(cache_key)
+        if cached is None:
+            return None
+        created_at = float(cached.get("_cache_time", 0.0))
+        if (now - created_at) > _REPORT_CACHE_TTL_SEC:
+            _report_cache.pop(cache_key, None)
+            return None
+        _report_cache.move_to_end(cache_key)
+        payload = cached.get("payload")
+        if isinstance(payload, dict):
+            return payload
+        return None
+
+
+def _set_cached_report_response(cache_key: tuple, payload: Dict[str, Any]) -> None:
+    with _report_cache_lock:
+        _report_cache[cache_key] = {"_cache_time": time.monotonic(), "payload": payload}
+        _report_cache.move_to_end(cache_key)
+        while len(_report_cache) > _REPORT_CACHE_MAXSIZE:
+            _report_cache.popitem(last=False)
+
+
+def _clear_report_cache() -> None:
+    with _report_cache_lock:
+        _report_cache.clear()
+
+
+def _record_report_perf(cache_hit: bool, elapsed_ms: float) -> Dict[str, Any]:
+    now_ts = float(time.time())
+    with _report_perf_lock:
+        _report_perf["requests_total"] = int(_report_perf.get("requests_total", 0)) + 1
+        if cache_hit:
+            _report_perf["cache_hits"] = int(_report_perf.get("cache_hits", 0)) + 1
+            _report_perf["cached_ms_total"] = float(_report_perf.get("cached_ms_total", 0.0)) + float(elapsed_ms)
+            _report_perf["last_cached_ms"] = float(elapsed_ms)
+        else:
+            _report_perf["cache_misses"] = int(_report_perf.get("cache_misses", 0)) + 1
+            _report_perf["compute_ms_total"] = float(_report_perf.get("compute_ms_total", 0.0)) + float(elapsed_ms)
+            _report_perf["last_compute_ms"] = float(elapsed_ms)
+        _report_perf["last_request_ts"] = now_ts
+
+    return _report_perf_snapshot()
+
+
+def _report_perf_snapshot() -> Dict[str, Any]:
+    with _report_perf_lock:
+        requests_total = int(_report_perf.get("requests_total", 0))
+        hits = int(_report_perf.get("cache_hits", 0))
+        misses = int(_report_perf.get("cache_misses", 0))
+        compute_total = float(_report_perf.get("compute_ms_total", 0.0))
+        cached_total = float(_report_perf.get("cached_ms_total", 0.0))
+        last_compute_ms = float(_report_perf.get("last_compute_ms", 0.0))
+        last_cached_ms = float(_report_perf.get("last_cached_ms", 0.0))
+        last_request_ts = float(_report_perf.get("last_request_ts", 0.0))
+
+    hit_rate = (hits / requests_total) if requests_total > 0 else 0.0
+    avg_compute_ms = (compute_total / misses) if misses > 0 else 0.0
+    avg_cached_ms = (cached_total / hits) if hits > 0 else 0.0
+    return {
+        "requests_total": requests_total,
+        "cache_hits": hits,
+        "cache_misses": misses,
+        "cache_hit_rate": float(hit_rate),
+        "avg_compute_ms": float(avg_compute_ms),
+        "avg_cached_ms": float(avg_cached_ms),
+        "last_compute_ms": float(last_compute_ms),
+        "last_cached_ms": float(last_cached_ms),
+        "last_request_ts": float(last_request_ts),
+    }
+
+
+def _to_int_tail(value: str) -> int:
+    text = str(value or "")
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return -1
+    try:
+        return int(digits)
+    except Exception:
+        return -1
+
+
+def _build_week3_stability_compare(suites: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    latest_by_template_dataset: Dict[tuple[str, str], Dict[str, Any]] = {}
+    for suite in suites:
+        template_name = str(suite.get("template_name") or "")
+        dataset_id = str(suite.get("dataset_id") or "")
+        if not template_name or not dataset_id:
+            continue
+        key = (template_name, dataset_id)
+        current = latest_by_template_dataset.get(key)
+        if current is None:
+            latest_by_template_dataset[key] = suite
+            continue
+        if str(suite.get("suite_id") or "") > str(current.get("suite_id") or ""):
+            latest_by_template_dataset[key] = suite
+
+    result_rows: List[Dict[str, Any]] = []
+    template_names = sorted({key[0] for key in latest_by_template_dataset.keys()})
+    for template_name in template_names:
+        dataset_items = [
+            suite
+            for (tpl, _), suite in latest_by_template_dataset.items()
+            if tpl == template_name
+        ]
+        if len(dataset_items) < 2:
+            continue
+        dataset_items.sort(
+            key=lambda item: _to_int_tail(str(item.get("dataset_id") or "")),
+        )
+        left = dataset_items[0]
+        right = dataset_items[-1]
+        left_runs = {str(run.get("experiment_name") or ""): run for run in (left.get("runs") or [])}
+        right_runs = {str(run.get("experiment_name") or ""): run for run in (right.get("runs") or [])}
+        exp_names = sorted({*left_runs.keys(), *right_runs.keys()})
+
+        comparisons: List[Dict[str, Any]] = []
+        for exp_name in exp_names:
+            if not exp_name:
+                continue
+            left_run = left_runs.get(exp_name) or {}
+            right_run = right_runs.get(exp_name) or {}
+            left_auc = _safe_finite(left_run.get("auc"))
+            right_auc = _safe_finite(right_run.get("auc"))
+            left_brier = _safe_finite(left_run.get("brier"))
+            right_brier = _safe_finite(right_run.get("brier"))
+            left_f1 = _safe_finite(left_run.get("f1"))
+            right_f1 = _safe_finite(right_run.get("f1"))
+            comparisons.append(
+                {
+                    "experiment_name": exp_name,
+                    "auc": {str(left.get("dataset_id") or ""): left_auc, str(right.get("dataset_id") or ""): right_auc},
+                    "brier": {str(left.get("dataset_id") or ""): left_brier, str(right.get("dataset_id") or ""): right_brier},
+                    "f1": {str(left.get("dataset_id") or ""): left_f1, str(right.get("dataset_id") or ""): right_f1},
+                    "delta_auc": (right_auc - left_auc) if (left_auc is not None and right_auc is not None) else None,
+                    "delta_brier": (right_brier - left_brier) if (left_brier is not None and right_brier is not None) else None,
+                    "delta_f1": (right_f1 - left_f1) if (left_f1 is not None and right_f1 is not None) else None,
+                }
+            )
+
+        result_rows.append(
+            {
+                "template_name": template_name,
+                "datasets": [str(left.get("dataset_id") or ""), str(right.get("dataset_id") or "")],
+                "suite_ids": [str(left.get("suite_id") or ""), str(right.get("suite_id") or "")],
+                "comparisons": comparisons,
+            }
+        )
+    return result_rows
 
 
 def _clip01_100(value: float) -> float:
@@ -310,6 +631,7 @@ async def upload_boreholes(files: List[UploadFile] = File(...)) -> dict:
 
     # Uploaded data can change seam interpolation results.
     _clear_contour_cache()
+    _clear_report_cache()
     return {"saved": saved, "count": len(saved)}
 
 
@@ -325,6 +647,7 @@ def fix_encoding() -> dict:
         result = fix_csv_encoding(p)
         results.append(result)
     _clear_contour_cache()
+    _clear_report_cache()
     return {"data_dir": str(data_dir), "files": results}
 
 
@@ -743,6 +1066,184 @@ def summary_steps_workfaces(
     if "error" in data:
         return data
     return {"grid": summarize_grid(data["workfaces"]["adjusted"])}
+
+
+@app.get("/summary/report")
+def summary_report(
+    method: str = "idw",
+    grid_size: int = 60,
+    axis: str = "x",
+    count: int = 3,
+    direction: str = "ascending",
+    mode: str = "decrease",
+    decay: float = 0.08,
+    step_model: str = "fixed",
+    step_target: str = "initial",
+    step_h_mode: str = "total",
+    step_q_mode: str = "density_thickness",
+    step_default_q: float = 1.0,
+    workface_elastic_modulus: float | None = None,
+    workface_density: float | None = None,
+    workface_tensile_strength: float | None = None,
+) -> dict:
+    """
+    One-shot summary API for Report page.
+    Returns four summary cards in a single response and caches
+    results briefly with automatic invalidation via data signature.
+    """
+    req_start = time.perf_counter()
+    data_dir = get_data_dir()
+    data_signature = _build_report_data_signature(data_dir)
+    research_signature = _build_week3_research_signature(data_dir)
+    cache_key = (
+        method,
+        int(grid_size),
+        axis,
+        int(count),
+        direction,
+        mode,
+        float(decay),
+        step_model,
+        step_target,
+        step_h_mode,
+        step_q_mode,
+        float(step_default_q),
+        workface_elastic_modulus,
+        workface_density,
+        workface_tensile_strength,
+        data_signature,
+        research_signature,
+    )
+    cached = _get_cached_report_response(cache_key)
+    if cached is not None:
+        elapsed_ms = (time.perf_counter() - req_start) * 1000.0
+        perf = _record_report_perf(cache_hit=True, elapsed_ms=elapsed_ms)
+        out = dict(cached)
+        out["performance"] = perf
+        out["cache"] = {"hit": True, "elapsed_ms": float(elapsed_ms)}
+        return out
+
+    index_data = pressure_index_grid(method=method, grid_size=grid_size)
+    if "error" in index_data:
+        err_payload = {"error": index_data.get("error", "summary index failed")}
+        _set_cached_report_response(cache_key, err_payload)
+        elapsed_ms = (time.perf_counter() - req_start) * 1000.0
+        perf = _record_report_perf(cache_hit=False, elapsed_ms=elapsed_ms)
+        out = dict(err_payload)
+        out["performance"] = perf
+        out["cache"] = {"hit": False, "elapsed_ms": float(elapsed_ms)}
+        return out
+    index_grid_values = (index_data.get("grid") or {}).get("values") or []
+    index_grid_bounds = (index_data.get("grid") or {}).get("bounds") or {}
+    index_grid_summary = summarize_grid(index_grid_values)
+
+    warnings: List[str] = []
+
+    if any(v is not None for v in (workface_elastic_modulus, workface_density, workface_tensile_strength)):
+        index_wf_data = pressure_index_workfaces(
+            method=method,
+            grid_size=grid_size,
+            axis=axis,
+            count=count,
+            direction=direction,
+            mode=mode,
+            decay=decay,
+            elastic_modulus=workface_elastic_modulus,
+            density=workface_density,
+            tensile_strength=workface_tensile_strength,
+        )
+        if "error" in index_wf_data:
+            warnings.append(f"index_workfaces_fallback:{index_wf_data.get('error', 'failed')}")
+            index_wf_adjusted = compute_workface_adjusted_grid(
+                grid=index_grid_values,
+                bounds=index_grid_bounds,
+                axis=axis,
+                count=count,
+                direction=direction,
+                mode=mode,
+                decay=decay,
+            )
+            index_wf_summary = summarize_grid(index_wf_adjusted.get("adjusted") or [])
+        else:
+            index_wf_summary = summarize_grid(((index_wf_data.get("workfaces") or {}).get("adjusted")) or [])
+    else:
+        index_wf_adjusted = compute_workface_adjusted_grid(
+            grid=index_grid_values,
+            bounds=index_grid_bounds,
+            axis=axis,
+            count=count,
+            direction=direction,
+            mode=mode,
+            decay=decay,
+        )
+        index_wf_summary = summarize_grid(index_wf_adjusted.get("adjusted") or [])
+
+    steps_data = pressure_steps_grid(
+        model=step_model,
+        target=step_target,
+        h_mode=step_h_mode,
+        q_mode=step_q_mode,
+        default_q=step_default_q,
+        grid_size=grid_size,
+    )
+    if "error" in steps_data:
+        warnings.append(f"steps_unavailable:{steps_data.get('error', 'failed')}")
+        steps_summary = summarize_grid([])
+        steps_wf_summary = summarize_grid([])
+    else:
+        steps_values = steps_data.get("values") or []
+        steps_bounds = steps_data.get("bounds") or {}
+        steps_summary = summarize_grid(steps_values)
+        steps_wf_adjusted = compute_workface_adjusted_grid(
+            grid=steps_values,
+            bounds=steps_bounds,
+            axis=axis,
+            count=count,
+            direction=direction,
+            mode=mode,
+            decay=decay,
+        )
+        steps_wf_summary = summarize_grid(steps_wf_adjusted.get("adjusted") or [])
+    week3_research = _load_week3_research_summary(data_dir)
+
+    payload: Dict[str, Any] = {
+        "generated_at": time.time(),
+        "params": {
+            "method": method,
+            "grid_size": int(grid_size),
+            "axis": axis,
+            "count": int(count),
+            "direction": direction,
+            "mode": mode,
+            "decay": float(decay),
+            "step_model": step_model,
+            "step_target": step_target,
+            "step_h_mode": step_h_mode,
+            "step_q_mode": step_q_mode,
+            "step_default_q": float(step_default_q),
+        },
+        "summary": {
+            "index": index_grid_summary,
+            "index_workfaces": index_wf_summary,
+            "steps": steps_summary,
+            "steps_workfaces": steps_wf_summary,
+        },
+        "research": week3_research,
+    }
+    if warnings:
+        payload["warnings"] = warnings
+    _set_cached_report_response(cache_key, payload)
+    elapsed_ms = (time.perf_counter() - req_start) * 1000.0
+    perf = _record_report_perf(cache_hit=False, elapsed_ms=elapsed_ms)
+    out = dict(payload)
+    out["performance"] = perf
+    out["cache"] = {"hit": False, "elapsed_ms": float(elapsed_ms)}
+    return out
+
+
+@app.get("/summary/report/perf")
+def summary_report_perf() -> dict:
+    return {"performance": _report_perf_snapshot()}
 
 
 @app.get("/export/interpolation")

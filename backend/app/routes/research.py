@@ -141,6 +141,7 @@ class ExperimentSpec(BaseModel):
         "geomodel_aware",
         "geomodel_ablation",
         "pinchout_sensitive",
+        "pinchout_no_zoning",
         "rk_enhanced",
         "kriging_baseline",
         "custom",

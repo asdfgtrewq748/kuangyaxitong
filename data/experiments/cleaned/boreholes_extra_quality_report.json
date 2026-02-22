@@ -1,0 +1,309 @@
+{
+  "generated_at_utc": "2026-02-22T13:47:20.165261+00:00",
+  "target_seam": "16-3",
+  "input": {
+    "data_dir": "data\\附件\\地表下沉\\1-地质钻孔",
+    "coord_file": "data\\experiments\\cleaned\\subsidence_coords.csv",
+    "coordinate_rows": 8,
+    "parsed_rows": 8,
+    "missing_files": [],
+    "parse_errors": []
+  },
+  "output": {
+    "clean_csv": "data\\experiments\\cleaned\\boreholes_extra_cleaned.csv",
+    "row_count": 8,
+    "column_count": 17,
+    "columns": [
+      "sample_id",
+      "borehole_name",
+      "event_time",
+      "x",
+      "y",
+      "target_coal_thickness_m",
+      "target_seam_thickness_m",
+      "total_coal_thickness_m",
+      "total_strata_thickness_m",
+      "layer_count",
+      "coal_layer_count",
+      "mean_layer_thickness_m",
+      "std_layer_thickness_m",
+      "mean_elastic_modulus_gpa",
+      "mean_density_kn_m3",
+      "mean_tensile_strength_mpa",
+      "label"
+    ]
+  },
+  "data_quality": {
+    "missing_before": {
+      "borehole_name": 0,
+      "x": 0,
+      "y": 0,
+      "layer_count": 0,
+      "coal_layer_count": 0,
+      "total_strata_thickness_m": 0,
+      "total_coal_thickness_m": 0,
+      "target_coal_thickness_m": 0,
+      "target_seam_thickness_m": 0,
+      "mean_layer_thickness_m": 0,
+      "std_layer_thickness_m": 0,
+      "mean_elastic_modulus_gpa": 8,
+      "mean_density_kn_m3": 8,
+      "mean_tensile_strength_mpa": 8
+    },
+    "missing_after": {
+      "sample_id": 0,
+      "borehole_name": 0,
+      "event_time": 0,
+      "x": 0,
+      "y": 0,
+      "target_coal_thickness_m": 0,
+      "target_seam_thickness_m": 0,
+      "total_coal_thickness_m": 0,
+      "total_strata_thickness_m": 0,
+      "layer_count": 0,
+      "coal_layer_count": 0,
+      "mean_layer_thickness_m": 0,
+      "std_layer_thickness_m": 0,
+      "mean_elastic_modulus_gpa": 0,
+      "mean_density_kn_m3": 0,
+      "mean_tensile_strength_mpa": 0,
+      "label": 0
+    },
+    "imputation": {
+      "x": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 494852.315
+      },
+      "y": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 5403495.22
+      },
+      "layer_count": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 31.5
+      },
+      "coal_layer_count": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 6.0
+      },
+      "total_strata_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 334.02500000000003
+      },
+      "total_coal_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 50.265
+      },
+      "target_coal_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 43.215
+      },
+      "target_seam_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 43.215
+      },
+      "mean_layer_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 10.653591954022989
+      },
+      "std_layer_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 13.92973711984078
+      },
+      "mean_elastic_modulus_gpa": {
+        "missing_before": 8.0,
+        "missing_after": 0.0,
+        "median_fill_value": 0.0
+      },
+      "mean_density_kn_m3": {
+        "missing_before": 8.0,
+        "missing_after": 0.0,
+        "median_fill_value": 0.0
+      },
+      "mean_tensile_strength_mpa": {
+        "missing_before": 8.0,
+        "missing_after": 0.0,
+        "median_fill_value": 0.0
+      }
+    },
+    "outlier_clipping": {
+      "layer_count": {
+        "q1": 28.5,
+        "q3": 40.25,
+        "iqr": 11.75,
+        "lower_bound": 10.875,
+        "upper_bound": 57.875,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "coal_layer_count": {
+        "q1": 6.0,
+        "q3": 7.0,
+        "iqr": 1.0,
+        "lower_bound": 4.5,
+        "upper_bound": 8.5,
+        "outlier_count_before": 2.0,
+        "clipped_count": 2.0
+      },
+      "total_strata_thickness_m": {
+        "q1": 322.17,
+        "q3": 353.15500000000003,
+        "iqr": 30.985000000000014,
+        "lower_bound": 275.6925,
+        "upper_bound": 399.63250000000005,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "total_coal_thickness_m": {
+        "q1": 45.067499999999995,
+        "q3": 50.95250000000002,
+        "iqr": 5.885000000000026,
+        "lower_bound": 36.23999999999995,
+        "upper_bound": 59.78000000000006,
+        "outlier_count_before": 1.0,
+        "clipped_count": 1.0
+      },
+      "target_coal_thickness_m": {
+        "q1": 39.879999999999995,
+        "q3": 44.40500000000003,
+        "iqr": 4.525000000000034,
+        "lower_bound": 33.092499999999944,
+        "upper_bound": 51.19250000000008,
+        "outlier_count_before": 2.0,
+        "clipped_count": 2.0
+      },
+      "target_seam_thickness_m": {
+        "q1": 39.879999999999995,
+        "q3": 44.40500000000003,
+        "iqr": 4.525000000000034,
+        "lower_bound": 33.092499999999944,
+        "upper_bound": 51.19250000000008,
+        "outlier_count_before": 2.0,
+        "clipped_count": 2.0
+      },
+      "mean_layer_thickness_m": {
+        "q1": 8.562333916083917,
+        "q3": 11.536281818181816,
+        "iqr": 2.9739479020978994,
+        "lower_bound": 4.101412062937068,
+        "upper_bound": 15.997203671328666,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "std_layer_thickness_m": {
+        "q1": 12.21532497177047,
+        "q3": 14.734757404356642,
+        "iqr": 2.519432432586173,
+        "lower_bound": 8.43617632289121,
+        "upper_bound": 18.513906053235903,
+        "outlier_count_before": 1.0,
+        "clipped_count": 1.0
+      },
+      "mean_elastic_modulus_gpa": {
+        "q1": 0.0,
+        "q3": 0.0,
+        "iqr": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "mean_density_kn_m3": {
+        "q1": 0.0,
+        "q3": 0.0,
+        "iqr": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "mean_tensile_strength_mpa": {
+        "q1": 0.0,
+        "q3": 0.0,
+        "iqr": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      }
+    },
+    "label_distribution": {
+      "1": 4,
+      "0": 4
+    },
+    "target_thickness_stats": {
+      "min": 33.092499999999944,
+      "max": 46.43000000000001,
+      "mean": 41.413124999999994,
+      "median": 43.215
+    }
+  },
+  "per_borehole_parse": [
+    {
+      "source_file": "42-17.csv",
+      "raw_rows": 44,
+      "valid_rows": 44,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "44-20.csv",
+      "raw_rows": 51,
+      "valid_rows": 50,
+      "dropped_rows": 1,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "44-21.csv",
+      "raw_rows": 25,
+      "valid_rows": 25,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "46-17.csv",
+      "raw_rows": 39,
+      "valid_rows": 39,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "46-18.csv",
+      "raw_rows": 30,
+      "valid_rows": 30,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "48-20.csv",
+      "raw_rows": 29,
+      "valid_rows": 29,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "48-19.csv",
+      "raw_rows": 27,
+      "valid_rows": 27,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "BK14-7.csv",
+      "raw_rows": 33,
+      "valid_rows": 33,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    }
+  ]
+}

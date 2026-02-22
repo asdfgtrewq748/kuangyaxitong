@@ -1,0 +1,2 @@
+﻿experiment_name,exp_id,auc,pr_auc,brier,f1,mae,rmse,paired_significance_p
+kriging_baseline,exp_20260222_141909_a01e77,0.666667,0.638889,0.234223,0.4,0.467937,0.483966,0.04239658

@@ -79,7 +79,8 @@ def test_compute_pressure_steps_boreholes_density_mode_and_coords(monkeypatch):
     )
 
     assert result["model"] == "fixed"
-    assert len(result["items"]) == 2
+    # When coords are provided, only boreholes present in coords are evaluated.
+    assert len(result["items"]) == 1
 
     first = result["items"][0]
     assert first["borehole"] == "bh1"
@@ -90,15 +91,8 @@ def test_compute_pressure_steps_boreholes_density_mode_and_coords(monkeypatch):
     assert first["x"] == 1
     assert first["y"] == 2
 
-    second = result["items"][1]
-    assert second["borehole"] == "bh2"
-    assert second["h"] == 0.0
-    assert second["q"] == 5.0
-    assert "x" not in second
-    assert "y" not in second
-
     assert seen_calls[0][0] == "fixed"
-    assert seen_calls[1][0] == "fixed"
+    assert len(seen_calls) == 1
 
 
 def test_compute_pressure_steps_boreholes_default_q_when_q_mode_not_density(monkeypatch):
@@ -121,3 +115,67 @@ def test_compute_pressure_steps_boreholes_default_q_when_q_mode_not_density(monk
 
     assert len(result["items"]) == 1
     assert result["items"][0]["q"] == 9.9
+
+
+def test_compute_pressure_steps_boreholes_density_mode_fallback_to_default_q(monkeypatch):
+    f1 = Path("bh.csv")
+    df = pd.DataFrame(
+        {
+            "thickness": [10.0, 20.0],
+            "density": [0.0, 0.0],  # weighted mean > 0 check should fail
+        }
+    )
+
+    monkeypatch.setattr(pressure_steps_batch, "read_csv_robust", lambda path: df.copy())
+    monkeypatch.setattr(pressure_steps_batch, "normalize_borehole_df", lambda d: d)
+    monkeypatch.setattr(pressure_steps_batch, "add_depth_columns", lambda d: d)
+    monkeypatch.setattr(pressure_steps_batch, "fill_missing_by_lithology", lambda d, avg: d)
+    monkeypatch.setattr(pressure_steps_batch, "compute_lithology_averages", lambda files: [])
+    monkeypatch.setattr(pressure_steps_batch, "compute_pressure_steps", lambda **kwargs: {"q": kwargs["q"]})
+
+    result = pressure_steps_batch.compute_pressure_steps_boreholes(
+        files=[f1],
+        model="fixed",
+        q_mode="density_thickness",
+        default_q=4.2,
+    )
+
+    assert len(result["items"]) == 1
+    assert result["items"][0]["q"] == pytest.approx(4.2)
+
+
+def test_compute_pressure_steps_boreholes_fallback_t_and_s(monkeypatch):
+    f1 = Path("bh.csv")
+    df = pd.DataFrame(
+        {
+            "thickness": [10.0],
+            "density": [2.0],
+            "tensile_strength": [0.0],
+            "shear_strength": [None],
+        }
+    )
+
+    captured = {}
+
+    monkeypatch.setattr(pressure_steps_batch, "read_csv_robust", lambda path: df.copy())
+    monkeypatch.setattr(pressure_steps_batch, "normalize_borehole_df", lambda d: d)
+    monkeypatch.setattr(pressure_steps_batch, "add_depth_columns", lambda d: d)
+    monkeypatch.setattr(pressure_steps_batch, "fill_missing_by_lithology", lambda d, avg: d)
+    monkeypatch.setattr(pressure_steps_batch, "compute_lithology_averages", lambda files: [])
+
+    def fake_compute_pressure_steps(model, h, q, t, s):
+        captured["t"] = t
+        captured["s"] = s
+        return {"ok": True}
+
+    monkeypatch.setattr(pressure_steps_batch, "compute_pressure_steps", fake_compute_pressure_steps)
+
+    result = pressure_steps_batch.compute_pressure_steps_boreholes(
+        files=[f1],
+        model="fixed",
+        q_mode="density_thickness",
+        default_q=1.0,
+    )
+    assert len(result["items"]) == 1
+    assert captured["t"] == pytest.approx(2.0)
+    assert captured["s"] == pytest.approx(1.0)

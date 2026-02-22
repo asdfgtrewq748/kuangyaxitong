@@ -1,0 +1,3 @@
+experiment_name,exp_id,auc,pr_auc,brier,f1,mae,rmse,paired_significance_p
+geomodel_full,exp_20260222_060447_c9ff8a,1.0,1.0,0.196047,1.0,0.442114,0.442772,0.69593121
+geomodel_ablation_no_geo,exp_20260222_060448_4c3193,1.0,1.0,0.182051,1.0,0.425555,0.426674,0.67696307

@@ -1,0 +1,67 @@
+﻿{
+    "experiment_id":  "exp006",
+    "title":  "Ablation: remove spatial zoning",
+    "created_at":  "2026-02-22T14:28:44.946034+00:00",
+    "dataset_id":  "research_boreholes_36",
+    "dataset_version":  "ae5f476a1eb0d25c",
+    "split_id":  "split_20260222_134800_0efe6a",
+    "mapping_note":  "Implemented as model_type=pinchout_no_zoning (new branch in research_manager).",
+    "reference_exp004":  {
+                             "exp_id":  "exp_20260222_142454_9626e0",
+                             "experiment_name":  "exp004_hybrid_augmented",
+                             "model_type":  "pinchout_sensitive",
+                             "metrics":  {
+                                             "auc":  0.666667,
+                                             "pr_auc":  0.638889,
+                                             "brier":  0.256373,
+                                             "f1":  0.0,
+                                             "mae":  0.502693,
+                                             "rmse":  0.506333,
+                                             "paired_significance_p":  0.23867454
+                                         }
+                         },
+    "reference_exp005":  {
+                             "exp_id":  "exp_20260222_142628_3d261c",
+                             "experiment_name":  "exp005_wo_pinchout",
+                             "model_type":  "geomodel_ablation",
+                             "metrics":  {
+                                             "auc":  1.0,
+                                             "pr_auc":  1.0,
+                                             "brier":  0.186218,
+                                             "f1":  1.0,
+                                             "mae":  0.430347,
+                                             "rmse":  0.43153,
+                                             "paired_significance_p":  0.09005017
+                                         }
+                         },
+    "candidate":  {
+                      "exp_id":  "exp_20260222_142844_4796d6",
+                      "experiment_name":  "exp006_wo_spatial_zoning",
+                      "model_type":  "pinchout_no_zoning",
+                      "metrics":  {
+                                      "auc":  0.666667,
+                                      "pr_auc":  0.638889,
+                                      "brier":  0.270765,
+                                      "f1":  0.0,
+                                      "mae":  0.517254,
+                                      "rmse":  0.520351,
+                                      "paired_significance_p":  0.57848966
+                                  }
+                  },
+    "delta_candidate_minus_exp004":  {
+                                         "auc":  0,
+                                         "pr_auc":  0,
+                                         "brier":  0.014392,
+                                         "f1":  0,
+                                         "mae":  0.014561,
+                                         "rmse":  0.014018
+                                     },
+    "delta_candidate_minus_exp005":  {
+                                         "auc":  -0.333333,
+                                         "pr_auc":  -0.361111,
+                                         "brier":  0.084547,
+                                         "f1":  -1,
+                                         "mae":  0.086907,
+                                         "rmse":  0.088821
+                                     }
+}

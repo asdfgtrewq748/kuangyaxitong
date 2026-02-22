@@ -1,0 +1,449 @@
+{
+  "generated_at_utc": "2026-02-22T13:44:51.642631+00:00",
+  "target_seam": "16-3",
+  "input": {
+    "data_dir": "data",
+    "coord_file": "data\\zuobiao.csv",
+    "coordinate_rows": 28,
+    "parsed_rows": 28,
+    "missing_files": [],
+    "parse_errors": []
+  },
+  "output": {
+    "clean_csv": "data\\experiments\\cleaned\\boreholes_28_cleaned.csv",
+    "row_count": 28,
+    "column_count": 17,
+    "columns": [
+      "sample_id",
+      "borehole_name",
+      "event_time",
+      "x",
+      "y",
+      "target_coal_thickness_m",
+      "target_seam_thickness_m",
+      "total_coal_thickness_m",
+      "total_strata_thickness_m",
+      "layer_count",
+      "coal_layer_count",
+      "mean_layer_thickness_m",
+      "std_layer_thickness_m",
+      "mean_elastic_modulus_gpa",
+      "mean_density_kn_m3",
+      "mean_tensile_strength_mpa",
+      "label"
+    ]
+  },
+  "data_quality": {
+    "missing_before": {
+      "borehole_name": 0,
+      "x": 0,
+      "y": 0,
+      "layer_count": 0,
+      "coal_layer_count": 0,
+      "total_strata_thickness_m": 0,
+      "total_coal_thickness_m": 0,
+      "target_coal_thickness_m": 0,
+      "target_seam_thickness_m": 0,
+      "mean_layer_thickness_m": 0,
+      "std_layer_thickness_m": 0,
+      "mean_elastic_modulus_gpa": 28,
+      "mean_density_kn_m3": 28,
+      "mean_tensile_strength_mpa": 28
+    },
+    "missing_after": {
+      "sample_id": 0,
+      "borehole_name": 0,
+      "event_time": 0,
+      "x": 0,
+      "y": 0,
+      "target_coal_thickness_m": 0,
+      "target_seam_thickness_m": 0,
+      "total_coal_thickness_m": 0,
+      "total_strata_thickness_m": 0,
+      "layer_count": 0,
+      "coal_layer_count": 0,
+      "mean_layer_thickness_m": 0,
+      "std_layer_thickness_m": 0,
+      "mean_elastic_modulus_gpa": 0,
+      "mean_density_kn_m3": 0,
+      "mean_tensile_strength_mpa": 0,
+      "label": 0
+    },
+    "imputation": {
+      "x": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 497378.005
+      },
+      "y": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 5404570.29
+      },
+      "layer_count": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 61.0
+      },
+      "coal_layer_count": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 11.0
+      },
+      "total_strata_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 467.95
+      },
+      "total_coal_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 51.58
+      },
+      "target_coal_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 34.14
+      },
+      "target_seam_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 34.14
+      },
+      "mean_layer_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 7.871432741971704
+      },
+      "std_layer_thickness_m": {
+        "missing_before": 0.0,
+        "missing_after": 0.0,
+        "median_fill_value": 10.156569287591353
+      },
+      "mean_elastic_modulus_gpa": {
+        "missing_before": 28.0,
+        "missing_after": 0.0,
+        "median_fill_value": 0.0
+      },
+      "mean_density_kn_m3": {
+        "missing_before": 28.0,
+        "missing_after": 0.0,
+        "median_fill_value": 0.0
+      },
+      "mean_tensile_strength_mpa": {
+        "missing_before": 28.0,
+        "missing_after": 0.0,
+        "median_fill_value": 0.0
+      }
+    },
+    "outlier_clipping": {
+      "layer_count": {
+        "q1": 42.0,
+        "q3": 73.25,
+        "iqr": 31.25,
+        "lower_bound": -4.875,
+        "upper_bound": 120.125,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "coal_layer_count": {
+        "q1": 8.75,
+        "q3": 17.25,
+        "iqr": 8.5,
+        "lower_bound": -4.0,
+        "upper_bound": 30.0,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "total_strata_thickness_m": {
+        "q1": 427.18,
+        "q3": 523.365,
+        "iqr": 96.185,
+        "lower_bound": 282.90250000000003,
+        "upper_bound": 667.6425,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "total_coal_thickness_m": {
+        "q1": 31.874999999999996,
+        "q3": 67.71249999999999,
+        "iqr": 35.83749999999999,
+        "lower_bound": -21.88124999999999,
+        "upper_bound": 121.46874999999997,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "target_coal_thickness_m": {
+        "q1": 25.745,
+        "q3": 39.945,
+        "iqr": 14.2,
+        "lower_bound": 4.445000000000004,
+        "upper_bound": 61.245,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "target_seam_thickness_m": {
+        "q1": 24.6225,
+        "q3": 39.945,
+        "iqr": 15.322500000000002,
+        "lower_bound": 1.6387499999999982,
+        "upper_bound": 62.92875,
+        "outlier_count_before": 1.0,
+        "clipped_count": 1.0
+      },
+      "mean_layer_thickness_m": {
+        "q1": 6.940917288557214,
+        "q3": 10.039165596919126,
+        "iqr": 3.098248308361912,
+        "lower_bound": 2.2935448260143465,
+        "upper_bound": 14.686538059461995,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "std_layer_thickness_m": {
+        "q1": 8.899792005228125,
+        "q3": 13.075850198621207,
+        "iqr": 4.176058193393082,
+        "lower_bound": 2.635704715138502,
+        "upper_bound": 19.33993748871083,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "mean_elastic_modulus_gpa": {
+        "q1": 0.0,
+        "q3": 0.0,
+        "iqr": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "mean_density_kn_m3": {
+        "q1": 0.0,
+        "q3": 0.0,
+        "iqr": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      },
+      "mean_tensile_strength_mpa": {
+        "q1": 0.0,
+        "q3": 0.0,
+        "iqr": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "outlier_count_before": 0.0,
+        "clipped_count": 0.0
+      }
+    },
+    "label_distribution": {
+      "1": 14,
+      "0": 14
+    },
+    "target_thickness_stats": {
+      "min": 18.89,
+      "max": 47.17,
+      "mean": 33.13285714285714,
+      "median": 34.14
+    }
+  },
+  "per_borehole_parse": [
+    {
+      "source_file": "50-14.csv",
+      "raw_rows": 63,
+      "valid_rows": 63,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "50-15.csv",
+      "raw_rows": 57,
+      "valid_rows": 57,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "50-16.csv",
+      "raw_rows": 46,
+      "valid_rows": 46,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "52-17.csv",
+      "raw_rows": 76,
+      "valid_rows": 76,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "52-18.csv",
+      "raw_rows": 67,
+      "valid_rows": 67,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "52-19.csv",
+      "raw_rows": 58,
+      "valid_rows": 58,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "54-16.csv",
+      "raw_rows": 75,
+      "valid_rows": 75,
+      "dropped_rows": 0,
+      "seam_hit_rows": 2
+    },
+    {
+      "source_file": "54-17.csv",
+      "raw_rows": 38,
+      "valid_rows": 38,
+      "dropped_rows": 0,
+      "seam_hit_rows": 2
+    },
+    {
+      "source_file": "54-18.csv",
+      "raw_rows": 38,
+      "valid_rows": 38,
+      "dropped_rows": 0,
+      "seam_hit_rows": 4
+    },
+    {
+      "source_file": "56-18.csv",
+      "raw_rows": 72,
+      "valid_rows": 72,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "56-20.csv",
+      "raw_rows": 41,
+      "valid_rows": 41,
+      "dropped_rows": 0,
+      "seam_hit_rows": 0
+    },
+    {
+      "source_file": "56-22.csv",
+      "raw_rows": 41,
+      "valid_rows": 41,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "60-18.csv",
+      "raw_rows": 73,
+      "valid_rows": 73,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "60-20.csv",
+      "raw_rows": 52,
+      "valid_rows": 52,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "64-24.csv",
+      "raw_rows": 61,
+      "valid_rows": 61,
+      "dropped_rows": 0,
+      "seam_hit_rows": 2
+    },
+    {
+      "source_file": "BK12-2.csv",
+      "raw_rows": 63,
+      "valid_rows": 63,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "BK12-3.csv",
+      "raw_rows": 61,
+      "valid_rows": 61,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "BK12-4.csv",
+      "raw_rows": 42,
+      "valid_rows": 42,
+      "dropped_rows": 0,
+      "seam_hit_rows": 2
+    },
+    {
+      "source_file": "BK12-7.csv",
+      "raw_rows": 72,
+      "valid_rows": 72,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "BK12-8.csv",
+      "raw_rows": 37,
+      "valid_rows": 37,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "BK14-9.csv",
+      "raw_rows": 42,
+      "valid_rows": 42,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "BK17-6.csv",
+      "raw_rows": 33,
+      "valid_rows": 33,
+      "dropped_rows": 0,
+      "seam_hit_rows": 2
+    },
+    {
+      "source_file": "BK20-1.csv",
+      "raw_rows": 42,
+      "valid_rows": 42,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "BK23-3.csv",
+      "raw_rows": 84,
+      "valid_rows": 84,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "BK23-4.csv",
+      "raw_rows": 81,
+      "valid_rows": 81,
+      "dropped_rows": 0,
+      "seam_hit_rows": 3
+    },
+    {
+      "source_file": "BK23-5.csv",
+      "raw_rows": 74,
+      "valid_rows": 74,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "BK23-6.csv",
+      "raw_rows": 78,
+      "valid_rows": 78,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    },
+    {
+      "source_file": "BK23-8.csv",
+      "raw_rows": 79,
+      "valid_rows": 79,
+      "dropped_rows": 0,
+      "seam_hit_rows": 1
+    }
+  ]
+}

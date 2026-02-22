@@ -1,0 +1,47 @@
+﻿{
+    "experiment_id":  "exp002",
+    "title":  "Co-Kriging vs Baseline",
+    "created_at":  "2026-02-22T14:19:09.300881+00:00",
+    "dataset_id":  "research_boreholes_36",
+    "dataset_version":  "ae5f476a1eb0d25c",
+    "split_id":  "split_20260222_134800_0efe6a",
+    "suite_id":  "suite_20260222_141909",
+    "template_name":  "rk_vs_kriging",
+    "candidates":  [
+                       {
+                           "name":  "rk_enhanced",
+                           "exp_id":  "exp_20260222_141908_11a250",
+                           "model_type":  "rk_enhanced",
+                           "metrics":  {
+                                           "auc":  0.333333,
+                                           "pr_auc":  0.477778,
+                                           "brier":  0.291073,
+                                           "f1":  0.0,
+                                           "mae":  0.533428,
+                                           "rmse":  0.539512,
+                                           "paired_significance_p":  0.66131819
+                                       }
+                       },
+                       {
+                           "name":  "kriging_baseline",
+                           "exp_id":  "exp_20260222_141909_a01e77",
+                           "model_type":  "kriging_baseline",
+                           "metrics":  {
+                                           "auc":  0.666667,
+                                           "pr_auc":  0.638889,
+                                           "brier":  0.234223,
+                                           "f1":  0.4,
+                                           "mae":  0.467937,
+                                           "rmse":  0.483966,
+                                           "paired_significance_p":  0.04239658
+                                       }
+                       }
+                   ],
+    "conclusion":  {
+                       "best_auc_experiment":  "kriging_baseline",
+                       "best_auc_value":  0.666667,
+                       "best_brier_experiment":  "kriging_baseline",
+                       "best_brier_value":  0.234223,
+                       "note":  "Template=rk_vs_kriging, AUC-best=kriging_baseline, Brier-best=kriging_baseline"
+                   }
+}

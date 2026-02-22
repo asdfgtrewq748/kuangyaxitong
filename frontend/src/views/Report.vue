@@ -130,6 +130,83 @@
     </section>
 
     <section class="card">
+      <h2>Week3实验进展</h2>
+      <div v-if="week3Research && week3Research.status !== 'missing'" class="week3-layout">
+        <article class="metric-card week3-perf-card" v-if="reportPerformance">
+          <h3>报告接口性能</h3>
+          <div class="metric-sub"><span>请求总数</span><span>{{ reportPerformance.requests_total ?? '-' }}</span></div>
+          <div class="metric-sub"><span>缓存命中率</span><span>{{ formatPercent(reportPerformance.cache_hit_rate) }}</span></div>
+          <div class="metric-sub"><span>平均冷启动(ms)</span><span>{{ formatNumber(reportPerformance.avg_compute_ms, 2) }}</span></div>
+          <div class="metric-sub"><span>平均命中(ms)</span><span>{{ formatNumber(reportPerformance.avg_cached_ms, 2) }}</span></div>
+          <div class="metric-sub"><span>最近一次来源</span><span>{{ reportCacheHit ? '缓存命中' : '冷启动' }}</span></div>
+        </article>
+
+        <article class="metric-card week3-split-card">
+          <h3>切分泄漏审计</h3>
+          <div class="metric-sub">
+            <span>状态</span>
+            <strong :class="week3Research.split_audit?.all_overlap_zero ? 'ok-text' : 'warn-text'">
+              {{ week3Research.split_audit?.all_overlap_zero ? '通过' : '需关注' }}
+            </strong>
+          </div>
+          <div class="metric-sub"><span>策略</span><span>{{ week3Research.split_audit?.strategy || '-' }}</span></div>
+          <div class="metric-sub"><span>Fold数</span><span>{{ week3Research.split_audit?.n_splits ?? '-' }}</span></div>
+          <div class="metric-sub"><span>样本数</span><span>{{ week3Research.split_audit?.row_count ?? '-' }}</span></div>
+        </article>
+
+        <article class="metric-card week3-suite-card" v-for="suite in week3Research.suites || []" :key="suite.suite_id">
+          <h3>{{ suite.template_name || suite.suite_id }}</h3>
+          <div class="metric-sub"><span>Suite</span><span>{{ suite.suite_id }}</span></div>
+          <div class="metric-sub"><span>Best AUC</span><span>{{ suite.best_auc_experiment || '-' }} / {{ formatNumber(suite.best_auc_value, 3) }}</span></div>
+          <div class="metric-sub"><span>Best Brier</span><span>{{ suite.best_brier_experiment || '-' }} / {{ formatNumber(suite.best_brier_value, 3) }}</span></div>
+          <div class="mini-table-wrap" v-if="suite.runs?.length">
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>实验</th>
+                  <th>AUC</th>
+                  <th>Brier</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="run in suite.runs" :key="`${suite.suite_id}-${run.experiment_name}`">
+                  <td>{{ run.experiment_name }}</td>
+                  <td>{{ formatNumber(run.auc, 3) }}</td>
+                  <td>{{ formatNumber(run.brier, 3) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+      <div class="week3-compare" v-if="week3Research?.stability_compare?.length">
+        <h3>28 vs 36 稳定性对比</h3>
+        <div class="compare-table-wrap" v-for="item in week3Research.stability_compare" :key="`cmp-${item.template_name}`">
+          <div class="compare-caption">{{ item.template_name }}（{{ item.datasets?.join(' vs ') }}）</div>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>实验</th>
+                <th>ΔAUC</th>
+                <th>ΔBrier</th>
+                <th>ΔF1</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in item.comparisons || []" :key="`cmp-row-${item.template_name}-${row.experiment_name}`">
+                <td>{{ row.experiment_name }}</td>
+                <td>{{ formatNumber(row.delta_auc, 3) }}</td>
+                <td>{{ formatNumber(row.delta_brier, 3) }}</td>
+                <td>{{ formatNumber(row.delta_f1, 3) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div v-if="!(week3Research && week3Research.status !== 'missing')" class="empty-block">暂无Week3实验摘要（未检测到 split 审计或 suite 结果文件）。</div>
+    </section>
+
+    <section class="card">
       <h2>详细统计表</h2>
       <div class="table-wrap" v-if="summary.length">
         <table>
@@ -176,6 +253,7 @@ import {
   getRockParams,
   getSeamOverburden,
   mpiBatch,
+  summaryReport,
   summaryIndex,
   summaryIndexWorkfaces,
   summarySteps,
@@ -200,12 +278,21 @@ const geomodelJobId = ref('')
 const geomodelQuality = ref(null)
 const geomodelLoading = ref(false)
 const geomodelError = ref('')
+const week3Research = ref(null)
+const reportPerformance = ref(null)
+const reportCacheHit = ref(false)
 
 const layerParamsCache = new Map()
+const layerParamsPending = new Map()
 
 const formatNumber = (value, digits = 3) => {
   const n = Number(value)
   return Number.isFinite(n) ? n.toFixed(digits) : '-'
+}
+
+const formatPercent = (value) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '-'
 }
 
 const normalizeQuerySeam = (value) => {
@@ -284,17 +371,36 @@ const loadGeomodelQuality = async (notify = false) => {
 const getLayerParams = async (name) => {
   if (!name) return null
   if (layerParamsCache.has(name)) return layerParamsCache.get(name)
-  try {
-    const { data } = await getRockParams(name)
-    layerParamsCache.set(name, data)
-    return data
-  } catch {
-    layerParamsCache.set(name, null)
-    return null
-  }
+  if (layerParamsPending.has(name)) return layerParamsPending.get(name)
+
+  const task = (async () => {
+    try {
+      const { data } = await getRockParams(name)
+      layerParamsCache.set(name, data)
+      return data
+    } catch {
+      layerParamsCache.set(name, null)
+      return null
+    } finally {
+      layerParamsPending.delete(name)
+    }
+  })()
+
+  layerParamsPending.set(name, task)
+  return task
 }
 
 const buildMpiPoints = async (boreholes = [], seamName = '') => {
+  const uniqueLayerNames = new Set()
+  for (const borehole of boreholes) {
+    const layers = borehole.layers || []
+    for (const layer of layers) {
+      if (!layer?.name || layer.name === seamName) continue
+      uniqueLayerNames.add(layer.name)
+    }
+  }
+  await Promise.all([...uniqueLayerNames].map((name) => getLayerParams(name)))
+
   const points = []
   for (const borehole of boreholes) {
     const layers = borehole.layers || []
@@ -396,9 +502,8 @@ const generateReport = async (notify = false) => {
     const wDensity = 0.3
     const wTensile = 0.3
 
-    const [a, b, c, d, mpi] = await Promise.all([
-      summaryIndex(method, gridSize),
-      summaryIndexWorkfaces({
+    const [reportResp, mpi] = await Promise.all([
+      summaryReport({
         method,
         grid_size: gridSize,
         axis: faceAxis,
@@ -406,30 +511,64 @@ const generateReport = async (notify = false) => {
         direction: faceDirection,
         mode: faceMode,
         decay: faceDecay,
-        elastic_modulus: wElastic,
-        density: wDensity,
-        tensile_strength: wTensile
-      }),
-      summarySteps(stepModel, stepTarget, gridSize),
-      summaryStepsWorkfaces({
-        model: stepModel,
-        target: stepTarget,
-        grid_size: gridSize,
-        axis: faceAxis,
-        count: faceCount,
-        direction: faceDirection,
-        mode: faceMode,
-        decay: faceDecay
+        step_model: stepModel,
+        step_target: stepTarget,
+        workface_elastic_modulus: wElastic,
+        workface_density: wDensity,
+        workface_tensile_strength: wTensile
       }),
       buildMpiReport(selectedSeam.value)
     ])
 
-    summary.value = [
-      { name: '矿压指标', stats: a.data.grid },
-      { name: '矿压指标-工作面', stats: b.data.grid },
-      { name: '来压步距', stats: c.data.grid },
-      { name: '来压步距-工作面', stats: d.data.grid }
-    ]
+    const reportSummary = reportResp?.data?.summary
+    week3Research.value = reportResp?.data?.research || null
+    reportPerformance.value = reportResp?.data?.performance || null
+    reportCacheHit.value = Boolean(reportResp?.data?.cache?.hit)
+    if (reportSummary?.index && reportSummary?.index_workfaces && reportSummary?.steps && reportSummary?.steps_workfaces) {
+      summary.value = [
+        { name: '矿压指标', stats: reportSummary.index },
+        { name: '矿压指标-工作面', stats: reportSummary.index_workfaces },
+        { name: '来压步距', stats: reportSummary.steps },
+        { name: '来压步距-工作面', stats: reportSummary.steps_workfaces }
+      ]
+    } else {
+      week3Research.value = null
+      reportPerformance.value = null
+      reportCacheHit.value = false
+      // Fallback for older backend versions.
+      const [a, b, c, d] = await Promise.all([
+        summaryIndex(method, gridSize),
+        summaryIndexWorkfaces({
+          method,
+          grid_size: gridSize,
+          axis: faceAxis,
+          count: faceCount,
+          direction: faceDirection,
+          mode: faceMode,
+          decay: faceDecay,
+          elastic_modulus: wElastic,
+          density: wDensity,
+          tensile_strength: wTensile
+        }),
+        summarySteps(stepModel, stepTarget, gridSize),
+        summaryStepsWorkfaces({
+          model: stepModel,
+          target: stepTarget,
+          grid_size: gridSize,
+          axis: faceAxis,
+          count: faceCount,
+          direction: faceDirection,
+          mode: faceMode,
+          decay: faceDecay
+        })
+      ])
+      summary.value = [
+        { name: '矿压指标', stats: a.data.grid },
+        { name: '矿压指标-工作面', stats: b.data.grid },
+        { name: '来压步距', stats: c.data.grid },
+        { name: '来压步距-工作面', stats: d.data.grid }
+      ]
+    }
 
     mpiSummary.value = mpi
     generatedAt.value = new Date().toLocaleString()
@@ -848,6 +987,87 @@ h2 {
   gap: 12px;
 }
 
+.week3-layout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.week3-split-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f2fbf6 100%);
+}
+
+.week3-perf-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f3f8ff 100%);
+}
+
+.week3-suite-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ok-text {
+  color: var(--color-success);
+}
+
+.warn-text {
+  color: var(--color-warning);
+}
+
+.mini-table-wrap {
+  margin-top: 6px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.mini-table th,
+.mini-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.mini-table th {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.week3-compare {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.week3-compare h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.compare-table-wrap {
+  border: 1px solid var(--border-color-light);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.compare-caption {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color-light);
+  background: var(--bg-secondary);
+}
+
 .warning-card .warning-list {
   display: flex;
   flex-direction: column;
@@ -915,6 +1135,10 @@ tbody tr:hover {
   .geomodel-quality-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .week3-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -932,7 +1156,8 @@ tbody tr:hover {
   .cards-grid,
   .mpi-stats,
   .mpi-extremes,
-  .geomodel-quality-grid {
+  .geomodel-quality-grid,
+  .week3-layout {
     grid-template-columns: 1fr;
   }
 }

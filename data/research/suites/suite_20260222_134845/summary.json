@@ -1,0 +1,62 @@
+{
+  "suite_id": "suite_20260222_134845",
+  "template_name": "geomodel_ablation",
+  "dataset_id": "research_boreholes_36",
+  "dataset_version": "ae5f476a1eb0d25c",
+  "split_id": "split_20260222_134800_0efe6a",
+  "seed": 123,
+  "created_at": "2026-02-22T13:48:45.433548+00:00",
+  "runs": [
+    {
+      "exp_id": "exp_20260222_134845_a36147",
+      "experiment_name": "geomodel_full",
+      "model_type": "geomodel_aware",
+      "seed": 123,
+      "metrics": {
+        "auc": 1.0,
+        "pr_auc": 1.0,
+        "brier": 0.20626,
+        "f1": 1.0,
+        "mae": 0.45351,
+        "rmse": 0.454158,
+        "paired_significance_p": 0.1215448
+      },
+      "dataset_version": "ae5f476a1eb0d25c",
+      "split_id": "split_20260222_134800_0efe6a",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_36\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_36\\splits\\split_20260222_134800_0efe6a.json"
+      }
+    },
+    {
+      "exp_id": "exp_20260222_134845_8c3d8a",
+      "experiment_name": "geomodel_ablation_no_geo",
+      "model_type": "geomodel_ablation",
+      "seed": 124,
+      "metrics": {
+        "auc": 1.0,
+        "pr_auc": 1.0,
+        "brier": 0.202982,
+        "f1": 0.8,
+        "mae": 0.449339,
+        "rmse": 0.450535,
+        "paired_significance_p": 0.10166179
+      },
+      "dataset_version": "ae5f476a1eb0d25c",
+      "split_id": "split_20260222_134800_0efe6a",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_36\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_36\\splits\\split_20260222_134800_0efe6a.json"
+      }
+    }
+  ],
+  "comparison_conclusion": {
+    "best_auc_experiment": "geomodel_full",
+    "best_auc_value": 1.0,
+    "best_brier_experiment": "geomodel_ablation_no_geo",
+    "best_brier_value": 0.202982,
+    "note": "Template=geomodel_ablation, AUC-best=geomodel_full, Brier-best=geomodel_ablation_no_geo"
+  }
+}

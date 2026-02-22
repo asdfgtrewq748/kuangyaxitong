@@ -1,0 +1,3 @@
+experiment_name,exp_id,auc,pr_auc,brier,f1,mae,rmse,paired_significance_p
+rsi_main,exp_20260222_060425_279934,1.0,1.0,0.190012,1.0,0.430558,0.435903,0.66498288
+rsi_baseline,exp_20260222_060425_c5284e,1.0,1.0,0.144577,0.666667,0.339995,0.380233,nan

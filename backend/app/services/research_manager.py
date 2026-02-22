@@ -421,6 +421,10 @@ def _build_model_probabilities(df: pd.DataFrame, model_type: str, seed: int) -> 
         # Pinchout effect is approximated by thin seam + depth interaction.
         pinchout_proxy = np.clip((1.0 - thickness) * depth, 0.0, 1.0)
         score = 0.24 * elastic + 0.18 * cohesion + 0.16 * tensile + 0.16 * (1 - depth) + 0.12 * thickness + 0.14 * pinchout_proxy
+    elif model_type == "pinchout_no_zoning":
+        # Remove spatial zoning contribution by dropping depth-linked terms.
+        pinchout_proxy = np.clip(1.0 - thickness, 0.0, 1.0)
+        score = 0.28 * elastic + 0.22 * cohesion + 0.20 * tensile + 0.18 * thickness + 0.12 * pinchout_proxy
     elif model_type == "rk_enhanced":
         score = 0.30 * elastic + 0.24 * friction + 0.20 * cohesion + 0.16 * (1 - depth) + 0.10 * thickness
     elif model_type == "kriging_baseline":

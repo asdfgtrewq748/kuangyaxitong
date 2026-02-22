@@ -1,0 +1,62 @@
+{
+  "suite_id": "suite_20260222_060425",
+  "template_name": "rsi_paper_core",
+  "dataset_id": "research_boreholes_28",
+  "dataset_version": "13d60b4df0dbf296",
+  "split_id": "split_20260222_060239_1fa211",
+  "seed": 42,
+  "created_at": "2026-02-22T06:04:25.856020+00:00",
+  "runs": [
+    {
+      "exp_id": "exp_20260222_060425_279934",
+      "experiment_name": "rsi_main",
+      "model_type": "rsi_phase_field",
+      "seed": 42,
+      "metrics": {
+        "auc": 1.0,
+        "pr_auc": 1.0,
+        "brier": 0.190012,
+        "f1": 1.0,
+        "mae": 0.430558,
+        "rmse": 0.435903,
+        "paired_significance_p": 0.66498288
+      },
+      "dataset_version": "13d60b4df0dbf296",
+      "split_id": "split_20260222_060239_1fa211",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\splits\\split_20260222_060239_1fa211.json"
+      }
+    },
+    {
+      "exp_id": "exp_20260222_060425_c5284e",
+      "experiment_name": "rsi_baseline",
+      "model_type": "baseline",
+      "seed": 43,
+      "metrics": {
+        "auc": 1.0,
+        "pr_auc": 1.0,
+        "brier": 0.144577,
+        "f1": 0.666667,
+        "mae": 0.339995,
+        "rmse": 0.380233,
+        "paired_significance_p": NaN
+      },
+      "dataset_version": "13d60b4df0dbf296",
+      "split_id": "split_20260222_060239_1fa211",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\splits\\split_20260222_060239_1fa211.json"
+      }
+    }
+  ],
+  "comparison_conclusion": {
+    "best_auc_experiment": "rsi_main",
+    "best_auc_value": 1.0,
+    "best_brier_experiment": "rsi_baseline",
+    "best_brier_value": 0.144577,
+    "note": "Template=rsi_paper_core, AUC-best=rsi_main, Brier-best=rsi_baseline"
+  }
+}

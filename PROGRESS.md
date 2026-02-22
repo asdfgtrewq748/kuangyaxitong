@@ -2,7 +2,7 @@
 
 - 起始日期: 2026-02-16
 - 当前日期: 2026-02-22
-- 当前阶段: Week 2（已完成）
+- 当前阶段: Week 4（已完成，待进入 Week 5）
 
 ## 当前总览
 
@@ -50,9 +50,64 @@
 - Lighthouse 基线 -> 已生成（`docs/performance-baseline.md`）
 - `python -m pytest backend/tests -q` -> 324 passed
 - `python -m pytest backend/tests --cov=backend/app --cov-report=term-missing` -> 91%
+- `python scripts/prepare_experiment_data.py` -> 生成 28 条清洗样本
+- 清洗产物: `data/experiments/cleaned/boreholes_28_cleaned.csv`
+- 质量报告: `data/experiments/cleaned/boreholes_28_quality_report.json`
+- `python scripts/create_experiment_splits.py --register-research-dataset-id research_boreholes_28` -> 切分与审计成功
+- 切分产物: `data/experiments/splits/kfold_5_spatial_seed42.json`、`data/experiments/splits/leave_one_out_seed42.json`
+- 泄漏审计: `data/experiments/splits/split_leakage_audit.json`（all_overlap_zero=true）
+- 研究入口接入: `data/research/datasets/research_boreholes_28/dataset_manifest.json` + 默认 split manifest
+- `run_experiment_suite(rsi_paper_core)` -> `suite_20260222_060425`
+- `run_experiment_suite(geomodel_ablation)` -> `suite_20260222_060448`
+- 中期报告: `docs/experiments/week3_midterm_report.md`
+- 报告页后端链路优化: 新增 `GET /summary/report` + LRU/TTL缓存（`backend/app/main.py`）
+- 性能实测: 旧4接口总耗时 `3385.5ms` -> 新接口冷启动 `2502.7ms`，缓存命中 `1.1ms`
+- 性能分析文档: `docs/performance-report-backend.md`
+- `summary/steps*` 根因修复: `pressure_steps_batch` 增加坐标过滤 + `q/t/s` 回退（`backend/app/services/pressure_steps_batch.py`）
+- 修复后验证: `pressure_steps_boreholes` 28/28 可计算，`summary_steps` 不再报 `not enough points for interpolation`
+- Week3 摘要接入报告页: `GET /summary/report` 新增 `research` 字段（split leakage + latest suites）
+- 报告页前端展示: `frontend/src/views/Report.vue` 新增 “Week3实验进展” 章节
+- 回归验证: `python -m pytest backend/tests/test_main_api.py -q` -> 13 passed
+- 前端构建验证: `npm run build` -> success
+- 扩样本准备: `boreholes_28` + `地表下沉`新增 8 钻孔 -> `data/experiments/cleaned/boreholes_36_cleaned.csv`
+- 扩样本切分审计: `data/experiments/splits/boreholes_36/split_leakage_audit.json`（all_overlap_zero=true）
+- 扩样本套件复跑:
+  - `rsi_paper_core` -> `suite_20260222_134844`
+  - `geomodel_ablation` -> `suite_20260222_134845`
+- 稳定性报告: `docs/experiments/week3_stability_report.md`
+- 性能监控接入: `summary/report` 返回 `performance`，新增 `GET /summary/report/perf`
+- 结果页对比接入: 报告页支持 `28 vs 36` 稳定性对比与接口命中率展示
+- 可视化脚本: `scripts/plot_experiment_results.py`
+- 可视化产物: `docs/experiments/figures/week3/*.png`
+- Week3 验收快照: `docs/experiments/week3_acceptance_snapshot.md`
+- Week4 exp002 完成: `run_experiment_suite(rk_vs_kriging)` -> `suite_20260222_141909`
+- Week4 exp002 报告: `docs/experiments/week4_exp002_report.md`
+- Week4 图表产物: `docs/experiments/figures/week4/suite_20260222_141909_*.png`
+- Week4 exp002 三件套目录: `data/experiments/results/exp002/`
+- Week4 exp003 完成: `geomodel_aware` -> `exp_20260222_142216_86a543`（对照 `exp_20260222_141909_a01e77`）
+- Week4 exp003 报告: `docs/experiments/week4_exp003_report.md`
+- Week4 exp003 三件套目录: `data/experiments/results/exp003/`
+- Week4 exp004 完成: `pinchout_sensitive`（增强代理映射）-> `exp_20260222_142454_9626e0`
+- Week4 exp004 报告: `docs/experiments/week4_exp004_report.md`
+- Week4 exp004 三件套目录: `data/experiments/results/exp004/`
+- Week4 exp005 完成: `geomodel_ablation`（去掉尖灭模式）-> `exp_20260222_142628_3d261c`
+- Week4 exp005 报告: `docs/experiments/week4_exp005_report.md`
+- Week4 exp005 三件套目录: `data/experiments/results/exp005/`
+- Week4 exp006 完成: `pinchout_no_zoning`（去掉空间分区）-> `exp_20260222_142844_4796d6`
+- Week4 exp006 报告: `docs/experiments/week4_exp006_report.md`
+- Week4 exp006 三件套目录: `data/experiments/results/exp006/`
+- Week4 消融实现补齐: 新增 `model_type=pinchout_no_zoning`（`backend/app/services/research_manager.py`）
+- Week4 基线三件套补齐: `data/experiments/results/exp001/`
+- Week4 综合对比表: `docs/experiments/comparison_table.md`
+- Week4 图表 6 张: `docs/experiments/figures/week4/fig1_*.png` ~ `fig6_*.png`
+- 回归验证:
+  - `python -m pytest backend/tests/test_research_api.py -q` -> 8 passed
+- 最新验证:
+  - `python -m pytest backend/tests/test_main_api.py -q` -> 15 passed
+  - `npm run build` -> success
 
 ## 下一步执行顺序
 
-1. 启动 Week3：落地 `scripts/prepare_experiment_data.py`，完成实验数据清洗与质量报告。
-2. 完成数据集切分（K-fold + 固定随机种子 + 空间分层）并输出到 `data/experiments/splits/`。
-3. 对报告页真实后端计算链路做性能剖析，缩短“自动计算中”等待时长。
+1. 启动 Week5：输出后端路由合并方案（目标收敛研究/报告接口）。
+2. 启动 Week5：前端 API 层适配清单（按路由变更映射）。
+3. 评估是否将 `exp004` 代理实现升级为真实增强策略模型，避免实验语义漂移。

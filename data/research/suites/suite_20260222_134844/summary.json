@@ -1,0 +1,62 @@
+{
+  "suite_id": "suite_20260222_134844",
+  "template_name": "rsi_paper_core",
+  "dataset_id": "research_boreholes_36",
+  "dataset_version": "ae5f476a1eb0d25c",
+  "split_id": "split_20260222_134800_0efe6a",
+  "seed": 42,
+  "created_at": "2026-02-22T13:48:44.652567+00:00",
+  "runs": [
+    {
+      "exp_id": "exp_20260222_134844_4b8713",
+      "experiment_name": "rsi_main",
+      "model_type": "rsi_phase_field",
+      "seed": 42,
+      "metrics": {
+        "auc": 1.0,
+        "pr_auc": 1.0,
+        "brier": 0.154477,
+        "f1": 0.857143,
+        "mae": 0.387064,
+        "rmse": 0.393036,
+        "paired_significance_p": 0.08260113
+      },
+      "dataset_version": "ae5f476a1eb0d25c",
+      "split_id": "split_20260222_134800_0efe6a",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_36\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_36\\splits\\split_20260222_134800_0efe6a.json"
+      }
+    },
+    {
+      "exp_id": "exp_20260222_134844_cf8411",
+      "experiment_name": "rsi_baseline",
+      "model_type": "baseline",
+      "seed": 43,
+      "metrics": {
+        "auc": 0.666667,
+        "pr_auc": 0.638889,
+        "brier": 0.281923,
+        "f1": 0.0,
+        "mae": 0.504135,
+        "rmse": 0.530964,
+        "paired_significance_p": NaN
+      },
+      "dataset_version": "ae5f476a1eb0d25c",
+      "split_id": "split_20260222_134800_0efe6a",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_36\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_36\\splits\\split_20260222_134800_0efe6a.json"
+      }
+    }
+  ],
+  "comparison_conclusion": {
+    "best_auc_experiment": "rsi_main",
+    "best_auc_value": 1.0,
+    "best_brier_experiment": "rsi_main",
+    "best_brier_value": 0.154477,
+    "note": "Template=rsi_paper_core, AUC-best=rsi_main, Brier-best=rsi_main"
+  }
+}

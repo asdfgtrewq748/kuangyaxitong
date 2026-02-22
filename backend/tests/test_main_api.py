@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 
 import numpy as np
@@ -52,6 +53,111 @@ def test_main_helpers_and_cache(tmp_path):
         main_api._set_cached_contour_response((f"k{i}",), {"i": i})
     assert len(main_api._contour_cache) <= main_api._CONTOUR_CACHE_MAXSIZE
     main_api._clear_contour_cache()
+
+    report_sig = main_api._build_report_data_signature(data_dir)
+    assert report_sig.count(":") == 2
+    main_api._clear_report_cache()
+    assert main_api._get_cached_report_response(("rk",)) is None
+    main_api._set_cached_report_response(("rk",), {"ok": True})
+    assert main_api._get_cached_report_response(("rk",)) == {"ok": True}
+    old_ttl = main_api._REPORT_CACHE_TTL_SEC
+    main_api._REPORT_CACHE_TTL_SEC = 0.0
+    try:
+        assert main_api._get_cached_report_response(("rk",)) is None
+    finally:
+        main_api._REPORT_CACHE_TTL_SEC = old_ttl
+    main_api._clear_report_cache()
+
+
+def test_week3_research_summary_helpers(tmp_path):
+    data_dir = _make_data_dir(tmp_path)
+    split_dir = data_dir / "experiments" / "splits"
+    split_dir.mkdir(parents=True, exist_ok=True)
+    (split_dir / "split_leakage_audit.json").write_text(
+        json.dumps(
+            {
+                "generated_at_utc": "2026-02-22T06:02:39Z",
+                "kfold_summary": {
+                    "strategy": "stratified_kfold:spatial_x_label",
+                    "n_splits": 5,
+                    "row_count": 28,
+                },
+                "aggregate": {
+                    "all_overlap_zero": True,
+                    "max_overlap": {"sample_train_val": 0},
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    suites_root = data_dir / "research" / "suites"
+    suite_a = suites_root / "suite_20260222_060425"
+    suite_b = suites_root / "suite_20260222_060448"
+    suite_a.mkdir(parents=True, exist_ok=True)
+    suite_b.mkdir(parents=True, exist_ok=True)
+    (suite_a / "summary.json").write_text(
+        json.dumps(
+            {
+                "suite_id": "suite_20260222_060425",
+                "template_name": "rsi_paper_core",
+                "runs": [
+                    {
+                        "experiment_name": "rsi_main",
+                        "model_type": "rsi_phase_field",
+                        "metrics": {"auc": 0.99, "brier": 0.2},
+                    }
+                ],
+                "comparison_conclusion": {
+                    "best_auc_experiment": "rsi_main",
+                    "best_auc_value": 0.99,
+                    "best_brier_experiment": "rsi_main",
+                    "best_brier_value": 0.2,
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (suite_b / "summary.json").write_text(
+        json.dumps(
+            {
+                "suite_id": "suite_20260222_060448",
+                "template_name": "geomodel_ablation",
+                "runs": [
+                    {
+                        "experiment_name": "geomodel_full",
+                        "model_type": "geomodel_aware",
+                        "metrics": {"auc": 1.0, "brier": float("nan")},
+                    }
+                ],
+                "comparison_conclusion": {
+                    "best_auc_experiment": "geomodel_full",
+                    "best_auc_value": 1.0,
+                    "best_brier_experiment": "geomodel_full",
+                    "best_brier_value": 0.18,
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    signature = main_api._build_week3_research_signature(data_dir)
+    assert signature.startswith("3:")
+
+    summary = main_api._load_week3_research_summary(data_dir, max_suites=2)
+    assert summary["status"] == "ready"
+    assert summary["split_audit"]["all_overlap_zero"] is True
+    assert len(summary["suites"]) == 2
+    assert summary["suites"][0]["suite_id"] == "suite_20260222_060448"
+    assert summary["suites"][0]["runs"][0]["auc"] == 1.0
+    assert summary["suites"][0]["runs"][0]["brier"] is None
+    assert "stability_compare" in summary
 
 
 def test_scene3d_data_api_branches(monkeypatch, tmp_path):
@@ -294,6 +400,111 @@ def test_interpolation_recommend_index_summary_export_pipeline(monkeypatch, tmp_
     monkeypatch.setattr(main_api, "get_data_dir", lambda: missing)
     with pytest.raises(HTTPException):
         main_api.pipeline_run()
+
+
+def test_summary_report_endpoint_and_cache(monkeypatch, tmp_path):
+    data_dir = _make_data_dir(tmp_path)
+    monkeypatch.setattr(main_api, "get_data_dir", lambda: data_dir)
+
+    calls = {"index": 0, "index_wf": 0, "steps": 0}
+
+    def _index(**kwargs):
+        calls["index"] += 1
+        return {
+            "grid": {
+                "values": [[1.0, 2.0], [3.0, 4.0]],
+                "bounds": {"min_x": 0, "max_x": 1, "min_y": 0, "max_y": 1},
+            }
+        }
+
+    def _index_wf(**kwargs):
+        calls["index_wf"] += 1
+        return {"workfaces": {"adjusted": [[2.0, 3.0], [4.0, 5.0]]}}
+
+    def _steps(**kwargs):
+        calls["steps"] += 1
+        return {
+            "values": [[6.0, 7.0], [8.0, 9.0]],
+            "bounds": {"min_x": 0, "max_x": 1, "min_y": 0, "max_y": 1},
+        }
+
+    monkeypatch.setattr(main_api, "pressure_index_grid", _index)
+    monkeypatch.setattr(main_api, "pressure_index_workfaces", _index_wf)
+    monkeypatch.setattr(main_api, "pressure_steps_grid", _steps)
+    monkeypatch.setattr(main_api, "compute_workface_adjusted_grid", lambda **kwargs: {"adjusted": [[10.0, 11.0], [12.0, 13.0]]})
+    monkeypatch.setattr(main_api, "summarize_grid", lambda grid: {"mean": float(np.nanmean(np.asarray(grid, dtype=float)))})
+    monkeypatch.setattr(main_api, "_build_week3_research_signature", lambda d: "wk3sig")
+    monkeypatch.setattr(
+        main_api,
+        "_load_week3_research_summary",
+        lambda d: {"status": "ready", "split_audit": None, "suites": [], "stability_compare": [], "notes": []},
+    )
+
+    main_api._clear_report_cache()
+    payload1 = main_api.summary_report(
+        method="idw",
+        grid_size=60,
+        workface_elastic_modulus=0.4,
+        workface_density=0.3,
+        workface_tensile_strength=0.3,
+    )
+    assert payload1["summary"]["index"]["mean"] == 2.5
+    assert payload1["summary"]["index_workfaces"]["mean"] == 3.5
+    assert payload1["summary"]["steps"]["mean"] == 7.5
+    assert payload1["summary"]["steps_workfaces"]["mean"] == 11.5
+    assert payload1["research"]["status"] == "ready"
+    assert payload1["cache"]["hit"] is False
+    assert payload1["performance"]["requests_total"] >= 1
+    assert calls == {"index": 1, "index_wf": 1, "steps": 1}
+
+    payload2 = main_api.summary_report(
+        method="idw",
+        grid_size=60,
+        workface_elastic_modulus=0.4,
+        workface_density=0.3,
+        workface_tensile_strength=0.3,
+    )
+    assert payload2["summary"]["index"]["mean"] == 2.5
+    assert payload2["cache"]["hit"] is True
+    assert payload2["performance"]["cache_hits"] >= 1
+    assert calls == {"index": 1, "index_wf": 1, "steps": 1}
+
+
+def test_summary_report_perf_endpoint():
+    perf_payload = main_api.summary_report_perf()
+    assert "performance" in perf_payload
+    assert "cache_hit_rate" in perf_payload["performance"]
+
+
+def test_build_week3_stability_compare_rows():
+    suites = [
+        {
+            "suite_id": "suite_1",
+            "template_name": "rsi_paper_core",
+            "dataset_id": "research_boreholes_28",
+            "runs": [
+                {"experiment_name": "rsi_main", "auc": 1.0, "brier": 0.2, "f1": 1.0},
+                {"experiment_name": "rsi_baseline", "auc": 0.9, "brier": 0.3, "f1": 0.8},
+            ],
+        },
+        {
+            "suite_id": "suite_2",
+            "template_name": "rsi_paper_core",
+            "dataset_id": "research_boreholes_36",
+            "runs": [
+                {"experiment_name": "rsi_main", "auc": 0.95, "brier": 0.24, "f1": 0.9},
+                {"experiment_name": "rsi_baseline", "auc": 0.7, "brier": 0.35, "f1": 0.2},
+            ],
+        },
+    ]
+    rows = main_api._build_week3_stability_compare(suites)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["template_name"] == "rsi_paper_core"
+    assert row["datasets"] == ["research_boreholes_28", "research_boreholes_36"]
+    comp = {item["experiment_name"]: item for item in row["comparisons"]}
+    assert comp["rsi_main"]["delta_auc"] == pytest.approx(-0.05)
+    assert comp["rsi_baseline"]["delta_f1"] == pytest.approx(-0.6)
 
 
 def test_export_error_paths_and_missing_coord(monkeypatch, tmp_path):
