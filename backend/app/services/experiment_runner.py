@@ -57,6 +57,18 @@ DEFAULT_EXPERIMENT_TEMPLATES: Dict[str, List[Dict[str, Any]]] = {
             "metrics": ["auc", "pr_auc", "brier", "ece", "f1", "mae", "rmse", "paired_significance_p"],
         },
     ],
+    "hybrid_augmented_upgrade": [
+        {
+            "experiment_name": "hybrid_wo_aug",
+            "model_type": "geomodel_aware",
+            "metrics": ["auc", "pr_auc", "brier", "ece", "f1", "mae", "rmse", "paired_significance_p"],
+        },
+        {
+            "experiment_name": "hybrid_augmented_v2",
+            "model_type": "hybrid_augmented",
+            "metrics": ["auc", "pr_auc", "brier", "ece", "f1", "mae", "rmse", "paired_significance_p"],
+        },
+    ],
     "rk_vs_kriging": [
         {
             "experiment_name": "rk_enhanced",

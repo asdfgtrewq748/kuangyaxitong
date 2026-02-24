@@ -108,30 +108,42 @@
         </div>
 
         <!-- 手动输入坐标 -->
-        <div v-if="coordMode === 'manual'" class="coord-input">
-          <div class="coord-list">
-            <div v-for="(b, i) in boreholes" :key="i" class="coord-item">
-              <span class="coord-num">#{{ i + 1 }}</span>
-              <input type="text" v-model="b.name" placeholder="名称" class="coord-name-input">
-              <input type="number" v-model.number="b.x" placeholder="X (m)" class="coord-value-input">
-              <input type="number" v-model.number="b.y" placeholder="Y (m)" class="coord-value-input">
-              <button class="coord-remove" @click="removeBorehole(i)" title="删除">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
+        <FormPanel
+          v-if="coordMode === 'manual'"
+          title="手动坐标录入"
+          description="支持增删钻孔并批量保存坐标"
+          :auto-grid="false"
+          :show-actions="true"
+          :show-cancel="false"
+          @submit="saveCoordinates"
+        >
+          <div class="coord-input">
+            <div class="coord-list">
+              <div v-for="(b, i) in boreholes" :key="i" class="coord-item">
+                <span class="coord-num">#{{ i + 1 }}</span>
+                <input type="text" v-model="b.name" placeholder="名称" class="coord-name-input">
+                <input type="number" v-model.number="b.x" placeholder="X (m)" class="coord-value-input">
+                <input type="number" v-model.number="b.y" placeholder="Y (m)" class="coord-value-input">
+                <button class="coord-remove" @click="removeBorehole(i)" title="删除">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-          <div class="coord-actions">
-            <button class="btn outline small" @click="addBorehole">
-              + 添加
-            </button>
-            <button class="btn primary small" @click="saveCoordinates" :disabled="loading || boreholes.length === 0">
-              保存坐标
-            </button>
-          </div>
-        </div>
+          <template #actions>
+            <div class="coord-actions">
+              <button class="btn outline small" type="button" @click="addBorehole">
+                + 添加
+              </button>
+              <button class="btn primary small" type="submit" :disabled="loading || boreholes.length === 0">
+                保存坐标
+              </button>
+            </div>
+          </template>
+        </FormPanel>
 
         <!-- 文件上传坐标 -->
         <div v-else class="coord-file">
@@ -306,11 +318,22 @@
         <p class="empty-hint">请先上传数据文件或手动输入坐标</p>
       </div>
     </div>
+
+    <ConfirmDialog
+      v-model="clearDialogVisible"
+      title="确认清空坐标"
+      message="清空后会删除当前全部钻孔坐标，并移除本地缓存，是否继续？"
+      confirm-text="确认清空"
+      cancel-text="取消"
+      variant="danger"
+      @confirm="confirmClearCoords"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { ConfirmDialog, FormPanel } from '../components/library'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import BoreholeMap from '../components/BoreholeMap.vue'
@@ -328,6 +351,7 @@ const scanResult = ref(null)
 const coordMode = ref('manual')
 const selectedBorehole = ref(null)
 const searchQuery = ref('')
+const clearDialogVisible = ref(false)
 
 // 钻孔坐标数据
 const boreholes = ref([])
@@ -629,12 +653,15 @@ const exportCoords = () => {
 }
 
 const clearCoords = () => {
-  if (confirm('确定要清空所有坐标吗？')) {
-    boreholes.value = []
-    selectedBorehole.value = null
-    localStorage.removeItem('borehole_coordinates')
-    toast.add('坐标已清空', 'success')
-  }
+  if (!boreholes.value.length) return
+  clearDialogVisible.value = true
+}
+
+const confirmClearCoords = () => {
+  boreholes.value = []
+  selectedBorehole.value = null
+  localStorage.removeItem('borehole_coordinates')
+  toast.add('坐标已清空', 'success')
 }
 
 onMounted(() => {

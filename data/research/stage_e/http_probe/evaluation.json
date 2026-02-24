@@ -1,0 +1,193 @@
+{
+  "all_passed": true,
+  "results": [
+    {
+      "scenario": "mpi_interpolate_large_grid",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "success_rate",
+          "passed": true,
+          "threshold": {
+            "min": 0.99
+          },
+          "actual": {
+            "min": 1.0,
+            "max": 1.0,
+            "avg": 1.0,
+            "count": 3
+          }
+        },
+        {
+          "metric": "rps",
+          "passed": true,
+          "threshold": {
+            "min": 3.5
+          },
+          "actual": {
+            "min": 3.8718273375679653,
+            "max": 3.913537638929543,
+            "avg": 3.897690690991276,
+            "count": 3
+          }
+        },
+        {
+          "metric": "latency_ms.p95",
+          "passed": true,
+          "threshold": {
+            "max": 3200.0
+          },
+          "actual": {
+            "min": 2068.5416299164294,
+            "max": 2103.1110649764537,
+            "avg": 2088.3128466208777,
+            "count": 3
+          }
+        },
+        {
+          "metric": "latency_ms.p99",
+          "passed": true,
+          "threshold": {
+            "max": 3800.0
+          },
+          "actual": {
+            "min": 2100.5797130441665,
+            "max": 2265.723432980776,
+            "avg": 2177.29238503774,
+            "count": 3
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "mpi_interpolate_geo_large_grid",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "success_rate",
+          "passed": true,
+          "threshold": {
+            "min": 0.97
+          },
+          "actual": {
+            "min": 1.0,
+            "max": 1.0,
+            "avg": 1.0,
+            "count": 3
+          }
+        },
+        {
+          "metric": "rps",
+          "passed": true,
+          "threshold": {
+            "min": 0.45
+          },
+          "actual": {
+            "min": 0.5525935507685379,
+            "max": 0.555315317923611,
+            "avg": 0.553899960323745,
+            "count": 3
+          }
+        },
+        {
+          "metric": "latency_ms.p95",
+          "passed": true,
+          "threshold": {
+            "max": 20000.0
+          },
+          "actual": {
+            "min": 12152.595839953423,
+            "max": 12484.951075065135,
+            "avg": 12297.58208335638,
+            "count": 3
+          }
+        },
+        {
+          "metric": "latency_ms.p99",
+          "passed": true,
+          "threshold": {
+            "max": 22000.0
+          },
+          "actual": {
+            "min": 12384.145498988628,
+            "max": 12888.203441032172,
+            "avg": 12697.336630003849,
+            "count": 3
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "geomodel_status_poll",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "success_rate",
+          "passed": true,
+          "threshold": {
+            "min": 0.99
+          },
+          "actual": {
+            "min": 1.0,
+            "max": 1.0,
+            "avg": 1.0,
+            "count": 3
+          }
+        },
+        {
+          "metric": "latency_ms.p95",
+          "passed": true,
+          "threshold": {
+            "max": 800.0
+          },
+          "actual": {
+            "min": 22.74636492729187,
+            "max": 26.591550022363656,
+            "avg": 24.8355549732844,
+            "count": 3
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "geomodel_artifact_download",
+      "passed": true,
+      "checks": [
+        {
+          "metric": "success_rate",
+          "passed": true,
+          "threshold": {
+            "min": 0.99
+          },
+          "actual": {
+            "min": 1.0,
+            "max": 1.0,
+            "avg": 1.0,
+            "count": 3
+          }
+        },
+        {
+          "metric": "latency_ms.p95",
+          "passed": true,
+          "threshold": {
+            "max": 3000.0
+          },
+          "actual": {
+            "min": 17.222045034170147,
+            "max": 27.57830004096031,
+            "avg": 23.216080037752786,
+            "count": 3
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "reports": [
+      "D:\\xiangmu\\kuangyaxitong\\data\\research\\stage_e\\http_probe\\run_1.json",
+      "D:\\xiangmu\\kuangyaxitong\\data\\research\\stage_e\\http_probe\\run_2.json",
+      "D:\\xiangmu\\kuangyaxitong\\data\\research\\stage_e\\http_probe\\run_3.json"
+    ],
+    "thresholds": "D:\\xiangmu\\kuangyaxitong\\scripts\\perf\\thresholds.http.json"
+  }
+}

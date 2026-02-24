@@ -17,7 +17,7 @@ In-process mode:
 python scripts/research/validate_template_e2e.py \
   --inprocess \
   --dataset-ids research_demo research_demo_alt \
-  --templates geomodel_ablation rk_vs_kriging \
+  --templates geomodel_ablation hybrid_augmented_upgrade rk_vs_kriging \
   --output-json data/research/e2e/template_e2e.json
 ```
 
@@ -36,8 +36,18 @@ HTTP mode:
 python scripts/research/validate_template_e2e.py \
   --base-url http://127.0.0.1:8001 \
   --dataset-ids research_demo research_demo_alt \
-  --templates geomodel_ablation rk_vs_kriging \
+  --templates geomodel_ablation hybrid_augmented_upgrade rk_vs_kriging \
   --output-json data/research/e2e/template_e2e.json
+```
+
+## 2. run_week4_multi_seed_stability.py
+
+Run multi-seed stability benchmark for Week4 models and export JSON/CSV/Markdown:
+
+```bash
+python scripts/research/run_week4_multi_seed_stability.py \
+  --dataset-ids research_boreholes_28 research_boreholes_36 \
+  --seed-count 5
 ```
 
 ### Notes

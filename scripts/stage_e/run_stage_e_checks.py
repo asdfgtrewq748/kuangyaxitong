@@ -18,6 +18,12 @@ DEFAULT_TEST_TARGETS = [
     "backend/tests/test_perf_stats.py",
     "backend/tests/test_perf_baseline.py",
 ]
+DEFAULT_PERF_THRESHOLDS = "scripts/perf/thresholds.default.json"
+HTTP_PERF_THRESHOLDS = "scripts/perf/thresholds.http.json"
+DEFAULT_PERF_REQUESTS = 40
+DEFAULT_PERF_CONCURRENCY = 8
+HTTP_PERF_REQUESTS = 30
+HTTP_PERF_CONCURRENCY = 6
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,17 +44,31 @@ def build_parser() -> argparse.ArgumentParser:
 
     p.add_argument("--skip-perf", action="store_true", help="Skip perf baseline step.")
     p.add_argument("--perf-runs", type=int, default=3)
-    p.add_argument("--perf-requests", type=int, default=40)
-    p.add_argument("--perf-concurrency", type=int, default=8)
+    p.add_argument("--perf-requests", type=int, default=DEFAULT_PERF_REQUESTS)
+    p.add_argument("--perf-concurrency", type=int, default=DEFAULT_PERF_CONCURRENCY)
     p.add_argument("--perf-resolution", type=int, default=100)
     p.add_argument("--perf-points", type=int, default=81)
     p.add_argument("--perf-method", default="idw", choices=["idw", "linear", "nearest"])
-    p.add_argument("--perf-thresholds", default="scripts/perf/thresholds.default.json")
+    p.add_argument("--perf-thresholds", default=DEFAULT_PERF_THRESHOLDS)
     p.add_argument("--perf-allow-missing-scenarios", action="store_true")
+    p.add_argument(
+        "--perf-geomodel-job-id",
+        default="",
+        help="Optional geomodel job id for perf geomodel scenarios.",
+    )
+    p.add_argument(
+        "--perf-artifact-name",
+        default="quality_report.json",
+        help="Artifact file name for geomodel download perf scenario.",
+    )
 
     p.add_argument("--skip-research", action="store_true", help="Skip research template e2e step.")
     p.add_argument("--dataset-ids", nargs="+", default=[], help="At least two dataset ids for research e2e.")
-    p.add_argument("--templates", nargs="+", default=["geomodel_ablation", "rk_vs_kriging"])
+    p.add_argument(
+        "--templates",
+        nargs="+",
+        default=["geomodel_ablation", "hybrid_augmented_upgrade", "rk_vs_kriging"],
+    )
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--auto-register", action="store_true")
     p.add_argument("--label-column", default="label")
@@ -143,15 +163,29 @@ def main() -> int:
     if not args.skip_perf:
         perf_dir = output_dir / "perf"
         perf_script = repo_root / "scripts" / "perf" / "run_baseline_suite.py"
+        perf_thresholds = str(args.perf_thresholds)
+        if (
+            not args.inprocess
+            and str(args.perf_thresholds) == DEFAULT_PERF_THRESHOLDS
+            and (repo_root / HTTP_PERF_THRESHOLDS).exists()
+        ):
+            perf_thresholds = HTTP_PERF_THRESHOLDS
+        perf_requests = int(args.perf_requests)
+        perf_concurrency = int(args.perf_concurrency)
+        if not args.inprocess:
+            if int(args.perf_requests) == DEFAULT_PERF_REQUESTS:
+                perf_requests = HTTP_PERF_REQUESTS
+            if int(args.perf_concurrency) == DEFAULT_PERF_CONCURRENCY:
+                perf_concurrency = HTTP_PERF_CONCURRENCY
         perf_cmd = [
             sys.executable,
             str(perf_script),
             "--runs",
             str(max(args.perf_runs, 1)),
             "--requests",
-            str(args.perf_requests),
+            str(perf_requests),
             "--concurrency",
-            str(args.perf_concurrency),
+            str(perf_concurrency),
             "--resolution",
             str(args.perf_resolution),
             "--points",
@@ -159,7 +193,7 @@ def main() -> int:
             "--method",
             str(args.perf_method),
             "--thresholds",
-            str(resolve_repo_path(repo_root, args.perf_thresholds)),
+            str(resolve_repo_path(repo_root, perf_thresholds)),
             "--output-dir",
             str(perf_dir),
         ]
@@ -167,7 +201,15 @@ def main() -> int:
             perf_cmd.append("--inprocess")
         else:
             perf_cmd.extend(["--base-url", str(args.base_url)])
-        if args.perf_allow_missing_scenarios:
+        job_id = str(args.perf_geomodel_job_id).strip()
+        if job_id:
+            perf_cmd.extend(["--geomodel-job-id", job_id])
+        perf_artifact_name = str(args.perf_artifact_name).strip()
+        if perf_artifact_name:
+            perf_cmd.extend(["--artifact-name", perf_artifact_name])
+
+        allow_missing_scenarios = bool(args.perf_allow_missing_scenarios or not job_id)
+        if allow_missing_scenarios:
             perf_cmd.append("--allow-missing-scenarios")
         rc = run_cmd(perf_cmd, repo_root)
         step = {
@@ -175,7 +217,14 @@ def main() -> int:
             "passed": rc == 0,
             "exit_code": rc,
             "output": str((perf_dir / "evaluation.json").as_posix()),
-            "note": "run_baseline_suite.py",
+            "note": (
+                f"run_baseline_suite.py (thresholds={perf_thresholds}, requests={perf_requests}, concurrency={perf_concurrency})"
+                if not allow_missing_scenarios
+                else (
+                    "run_baseline_suite.py "
+                    f"(thresholds={perf_thresholds}, requests={perf_requests}, concurrency={perf_concurrency}, allow-missing-scenarios)"
+                )
+            ),
         }
         report["steps"].append(step)
         if rc != 0:

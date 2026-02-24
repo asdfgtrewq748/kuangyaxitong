@@ -1,44 +1,44 @@
-﻿{
-    "experiment_id":  "exp005",
-    "title":  "Ablation: remove pinch-out pattern",
-    "created_at":  "2026-02-22T14:26:28.181774+00:00",
-    "dataset_id":  "research_boreholes_36",
-    "dataset_version":  "ae5f476a1eb0d25c",
-    "split_id":  "split_20260222_134800_0efe6a",
-    "reference_exp004":  {
-                             "exp_id":  "exp_20260222_142454_9626e0",
-                             "experiment_name":  "exp004_hybrid_augmented",
-                             "model_type":  "pinchout_sensitive",
-                             "metrics":  {
-                                             "auc":  0.666667,
-                                             "pr_auc":  0.638889,
-                                             "brier":  0.256373,
-                                             "f1":  0.0,
-                                             "mae":  0.502693,
-                                             "rmse":  0.506333,
-                                             "paired_significance_p":  0.23867454
-                                         }
-                         },
-    "candidate":  {
-                      "exp_id":  "exp_20260222_142628_3d261c",
-                      "experiment_name":  "exp005_wo_pinchout",
-                      "model_type":  "geomodel_ablation",
-                      "metrics":  {
-                                      "auc":  1.0,
-                                      "pr_auc":  1.0,
-                                      "brier":  0.186218,
-                                      "f1":  1.0,
-                                      "mae":  0.430347,
-                                      "rmse":  0.43153,
-                                      "paired_significance_p":  0.09005017
-                                  }
-                  },
-    "delta_candidate_minus_exp004":  {
-                                         "auc":  0.333333,
-                                         "pr_auc":  0.361111,
-                                         "brier":  -0.070155,
-                                         "f1":  1,
-                                         "mae":  -0.072346,
-                                         "rmse":  -0.074803
-                                     }
+{
+    "experiment_id": "exp005",
+    "title": "Ablation: remove pinch-out pattern",
+    "created_at": "2026-02-23T11:38:33.192109+00:00",
+    "dataset_id": "research_boreholes_36",
+    "dataset_version": "ae5f476a1eb0d25c",
+    "split_id": "split_20260222_134800_0efe6a",
+    "reference_exp004": {
+        "exp_id": "exp_20260223_113726_3bf742",
+        "experiment_name": "exp004_hybrid_augmented",
+        "model_type": "hybrid_augmented",
+        "metrics": {
+            "auc": 1.0,
+            "pr_auc": 1.0,
+            "brier": 0.201764,
+            "f1": 1.0,
+            "mae": 0.447604,
+            "rmse": 0.449182,
+            "paired_significance_p": 0.11072013
+        }
+    },
+    "candidate": {
+        "exp_id": "exp_20260223_113726_00b4c3",
+        "experiment_name": "exp005_wo_pinchout",
+        "model_type": "geomodel_ablation",
+        "metrics": {
+            "auc": 1.0,
+            "pr_auc": 1.0,
+            "brier": 0.189901,
+            "f1": 1.0,
+            "mae": 0.434474,
+            "rmse": 0.435776,
+            "paired_significance_p": 0.10683865
+        }
+    },
+    "delta_candidate_minus_exp004": {
+        "auc": 0.0,
+        "pr_auc": 0.0,
+        "brier": -0.011863,
+        "f1": 0.0,
+        "mae": -0.01313,
+        "rmse": -0.013406
+    }
 }

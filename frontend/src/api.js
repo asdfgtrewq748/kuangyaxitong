@@ -133,22 +133,22 @@ const apiCache = new ApiCache(100)
 // Clear cache on certain actions
 export const clearApiCache = () => apiCache.clear()
 
-export const scanBoreholes = () => api.get('/boreholes/scan')
-export const previewBorehole = (file, limit = 20) => api.get('/boreholes/preview', { params: { file, limit } })
-export const fixEncoding = () => api.post('/boreholes/fix-encoding')
+export const scanBoreholes = () => api.get('/api/boreholes/scan')
+export const previewBorehole = (file, limit = 20) => api.get('/api/boreholes/preview', { params: { file, limit } })
+export const fixEncoding = () => api.post('/api/boreholes/fix-encoding')
 export const uploadBoreholes = (files) => {
   const form = new FormData()
   files.forEach((f) => form.append('files', f))
-  return api.post('/boreholes/upload', form)
+  return api.post('/api/boreholes/upload', form)
 }
 export const interpolateField = (field, method, gridSize) =>
-  api.get('/interpolate/field', { params: { field, method, grid_size: gridSize } })
+  api.get('/api/interpolate/field', { params: { field, method, grid_size: gridSize } })
 export const compareInterpolate = (field, gridSize) =>
-  api.get('/interpolate/compare', { params: { field, grid_size: gridSize } })
+  api.get('/api/interpolate/compare', { params: { field, grid_size: gridSize } })
 export const recommendInterpolate = (field) =>
-  api.get('/interpolate/recommend', { params: { field } })
+  api.get('/api/interpolate/recommend', { params: { field } })
 export const pressureIndexGrid = (method, gridSize, wElastic, wDensity, wTensile) =>
-  api.get('/pressure/index/grid', {
+  api.get('/api/pressure/index/grid', {
     params: {
       method,
       grid_size: gridSize,
@@ -158,52 +158,52 @@ export const pressureIndexGrid = (method, gridSize, wElastic, wDensity, wTensile
     }
   })
 export const pressureSteps = (model, h, q, t, s) =>
-  api.get('/pressure/steps', { params: { model, h, q, t, s } })
+  api.get('/api/pressure/steps', { params: { model, h, q, t, s } })
 export const runPipeline = (field, method, gridSize, fixEncoding) =>
-  api.post('/pipeline/run', null, { params: { field, method, grid_size: gridSize, fix_encoding: fixEncoding } })
+  api.post('/api/pipeline/run', null, { params: { field, method, grid_size: gridSize, fix_encoding: fixEncoding } })
 export const exportInterpolation = (field, method, gridSize) =>
-  api.get('/export/interpolation', { params: { field, method, grid_size: gridSize }, responseType: 'blob' })
+  api.get('/api/export/interpolation', { params: { field, method, grid_size: gridSize }, responseType: 'blob' })
 export const exportIndex = (method, gridSize) =>
-  api.get('/export/index', { params: { method, grid_size: gridSize }, responseType: 'blob' })
+  api.get('/api/export/index', { params: { method, grid_size: gridSize }, responseType: 'blob' })
 export const pressureIndexWorkfaces = (params) =>
-  api.get('/pressure/index/workfaces', { params })
+  api.get('/api/pressure/index/workfaces', { params })
 export const exportPressureIndexWorkfaces = (params) =>
-  api.get('/export/pressure-index-workfaces', { params, responseType: 'blob' })
+  api.get('/api/export/pressure-index-workfaces', { params, responseType: 'blob' })
 export const summaryIndex = (method, gridSize) =>
-  api.get('/summary/index', { params: { method, grid_size: gridSize } })
+  api.get('/api/summary/index', { params: { method, grid_size: gridSize } })
 export const summaryIndexWorkfaces = (params) =>
-  api.get('/summary/index-workfaces', { params })
+  api.get('/api/summary/index-workfaces', { params })
 export const summarySteps = (model, target, gridSize) =>
-  api.get('/summary/steps', { params: { model, target, grid_size: gridSize } })
+  api.get('/api/summary/steps', { params: { model, target, grid_size: gridSize } })
 export const summaryStepsWorkfaces = (params) =>
-  api.get('/summary/steps-workfaces', { params })
+  api.get('/api/summary/steps-workfaces', { params })
 export const summaryReport = (params) =>
-  api.get('/summary/report', { params })
+  api.get('/api/summary/report', { params })
 export const pressureStepsBatch = (model) =>
-  api.get('/pressure/steps/boreholes', { params: { model } })
+  api.get('/api/pressure/steps/boreholes', { params: { model } })
 export const exportPressureSteps = (model) =>
-  api.get('/export/pressure-steps', { params: { model }, responseType: 'blob' })
+  api.get('/api/export/pressure-steps', { params: { model }, responseType: 'blob' })
 export const pressureStepsGrid = (model, target, hMode, qMode, gridSize, defaultQ) =>
-  api.get('/pressure/steps/grid', {
+  api.get('/api/pressure/steps/grid', {
     params: { model, target, h_mode: hMode, q_mode: qMode, grid_size: gridSize, default_q: defaultQ }
   })
 export const exportPressureStepsGrid = (model, target, hMode, qMode, gridSize, defaultQ) =>
-  api.get('/export/pressure-steps-grid', {
+  api.get('/api/export/pressure-steps-grid', {
     params: { model, target, h_mode: hMode, q_mode: qMode, grid_size: gridSize, default_q: defaultQ },
     responseType: 'blob'
   })
 export const pressureStepsWorkfaces = (params) =>
-  api.get('/pressure/steps/workfaces', { params })
+  api.get('/api/pressure/steps/workfaces', { params })
 export const exportPressureStepsWorkfaces = (params) =>
-  api.get('/export/pressure-steps-workfaces', { params, responseType: 'blob' })
+  api.get('/api/export/pressure-steps-workfaces', { params, responseType: 'blob' })
 
 // Coal Seam Interpolation APIs
 // Use cached GET for static data (client-swr-dedup pattern)
-export const getCoalSeams = () => apiCache.cachedGet('/seams/list')
+export const getCoalSeams = () => apiCache.cachedGet('/api/seams/list')
 export const getSeamStats = (seamName) =>
-  api.get('/seams/stats', { params: { seam_name: seamName } })
+  api.get('/api/seams/stats', { params: { seam_name: seamName } })
 export const interpolateSeam = (seamName, property, method = 'idw', gridSize = 100, contourLevels = 10, includeContours = true) =>
-  api.get('/seams/interpolate', {
+  api.get('/api/seams/interpolate', {
     params: {
       seam_name: seamName,
       property,
@@ -214,9 +214,9 @@ export const interpolateSeam = (seamName, property, method = 'idw', gridSize = 1
     }
   })
 export const getSeamOverburden = (seamName, borehole = null) =>
-  api.get('/seams/overburden', { params: { seam_name: seamName, borehole } })
+  api.get('/api/seams/overburden', { params: { seam_name: seamName, borehole } })
 export const compareSeamMethods = (seamName, property = 'thickness', gridSize = 100) =>
-  api.get('/seams/compare', { params: { seam_name: seamName, property, grid_size: gridSize } })
+  api.get('/api/seams/compare', { params: { seam_name: seamName, property, grid_size: gridSize } })
 export const exportSeamInterpolation = (seamName, property, method, gridSize) =>
   api.get('/export/seam-interpolation', {
     params: { seam_name: seamName, property, method, grid_size: gridSize },
@@ -243,10 +243,10 @@ export const getSeamContourImages = (
   }
 
   if (options?.forceRefresh) {
-    return api.get('/seams/contour-images', config)
+    return api.get('/api/seams/contour-images', config)
   }
 
-  return apiCache.cachedGet('/seams/contour-images', config)
+  return apiCache.cachedGet('/api/seams/contour-images', config)
 }
 
 // Scene3D APIs

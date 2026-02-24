@@ -1,0 +1,172 @@
+{
+  "exp_id": "exp_20260223_114952_dc9570",
+  "status": "completed",
+  "dataset_id": "research_boreholes_28",
+  "dataset_version": "13d60b4df0dbf296",
+  "split_id": "split_20260222_060239_1fa211",
+  "spec": {
+    "dataset_id": "research_boreholes_28",
+    "dataset_version": "13d60b4df0dbf296",
+    "split_id": "split_20260222_060239_1fa211",
+    "experiment_name": "stability_research_boreholes_28_hybrid_augmented_s43201",
+    "model_type": "hybrid_augmented",
+    "seed": 43201
+  },
+  "metrics": {
+    "auc": 1.0,
+    "pr_auc": 1.0,
+    "brier": 0.191281,
+    "f1": 1.0,
+    "mae": 0.435753,
+    "rmse": 0.437356,
+    "paired_significance_p": 0.64691753
+  },
+  "calibration": {
+    "ece": 0.4357528740396267,
+    "mce": 0.46509738336441675,
+    "bin_count": 10,
+    "bins": [
+      {
+        "bin": 0,
+        "range": [
+          0.0,
+          0.1
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 1,
+        "range": [
+          0.1,
+          0.2
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 2,
+        "range": [
+          0.2,
+          0.30000000000000004
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 3,
+        "range": [
+          0.30000000000000004,
+          0.4
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 4,
+        "range": [
+          0.4,
+          0.5
+        ],
+        "count": 2,
+        "acc": 0.0,
+        "conf": 0.4487433337572596,
+        "gap": 0.4487433337572596
+      },
+      {
+        "bin": 5,
+        "range": [
+          0.5,
+          0.6000000000000001
+        ],
+        "count": 1,
+        "acc": 1.0,
+        "conf": 0.5349026166355833,
+        "gap": 0.46509738336441675
+      },
+      {
+        "bin": 6,
+        "range": [
+          0.6000000000000001,
+          0.7000000000000001
+        ],
+        "count": 1,
+        "acc": 1.0,
+        "conf": 0.619572554720429,
+        "gap": 0.38042744527957095
+      },
+      {
+        "bin": 7,
+        "range": [
+          0.7000000000000001,
+          0.8
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 8,
+        "range": [
+          0.8,
+          0.9
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": 9,
+        "range": [
+          0.9,
+          1.0
+        ],
+        "count": 0,
+        "acc": 0.0,
+        "conf": 0.0,
+        "gap": 0.0
+      }
+    ]
+  },
+  "ci95": {
+    "auc": [
+      0.5,
+      1.0
+    ],
+    "pr_auc": [
+      0.5,
+      1.0
+    ],
+    "brier": [
+      0.16176591670975432,
+      0.22085114493618907
+    ],
+    "f1": [
+      0.0,
+      1.0
+    ],
+    "mae": [
+      0.4015949298007824,
+      0.47224770514400527
+    ],
+    "rmse": [
+      0.3914658081056986,
+      0.4698884444824302
+    ]
+  },
+  "traceability": {
+    "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\dataset_manifest.json",
+    "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\splits\\split_20260222_060239_1fa211.json"
+  },
+  "created_at": "2026-02-23T11:49:52.085516+00:00"
+}

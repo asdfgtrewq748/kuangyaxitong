@@ -1,0 +1,62 @@
+{
+  "suite_id": "suite_20260224_050902",
+  "template_name": "rk_vs_kriging",
+  "dataset_id": "research_boreholes_28",
+  "dataset_version": "13d60b4df0dbf296",
+  "split_id": "split_20260224_050900_7f0462",
+  "seed": 44,
+  "created_at": "2026-02-24T05:09:02.831707+00:00",
+  "runs": [
+    {
+      "exp_id": "exp_20260224_050902_c355e2",
+      "experiment_name": "rk_enhanced",
+      "model_type": "rk_enhanced",
+      "seed": 44,
+      "metrics": {
+        "auc": 0.5,
+        "pr_auc": 0.5,
+        "brier": 0.277027,
+        "f1": 0.0,
+        "mae": 0.517292,
+        "rmse": 0.526334,
+        "paired_significance_p": 0.4626046
+      },
+      "dataset_version": "13d60b4df0dbf296",
+      "split_id": "split_20260224_050900_7f0462",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\splits\\split_20260224_050900_7f0462.json"
+      }
+    },
+    {
+      "exp_id": "exp_20260224_050902_7b6218",
+      "experiment_name": "kriging_baseline",
+      "model_type": "kriging_baseline",
+      "seed": 45,
+      "metrics": {
+        "auc": 0.5,
+        "pr_auc": 0.5,
+        "brier": 0.253314,
+        "f1": 0.0,
+        "mae": 0.488217,
+        "rmse": 0.503303,
+        "paired_significance_p": 0.34030401
+      },
+      "dataset_version": "13d60b4df0dbf296",
+      "split_id": "split_20260224_050900_7f0462",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\splits\\split_20260224_050900_7f0462.json"
+      }
+    }
+  ],
+  "comparison_conclusion": {
+    "best_auc_experiment": "rk_enhanced",
+    "best_auc_value": 0.5,
+    "best_brier_experiment": "kriging_baseline",
+    "best_brier_value": 0.253314,
+    "note": "Template=rk_vs_kriging, AUC-best=rk_enhanced, Brier-best=kriging_baseline"
+  }
+}

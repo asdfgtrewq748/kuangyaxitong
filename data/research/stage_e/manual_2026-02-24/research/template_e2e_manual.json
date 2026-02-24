@@ -1,0 +1,103 @@
+{
+  "generated_at": "2026-02-24 13:09:00",
+  "mode": "http",
+  "base_url": "http://127.0.0.1:8001",
+  "templates": [
+    "geomodel_ablation",
+    "hybrid_augmented_upgrade",
+    "rk_vs_kriging"
+  ],
+  "datasets": [
+    {
+      "dataset_id": "research_boreholes_28",
+      "passed": true,
+      "templates": [
+        {
+          "template_name": "geomodel_ablation",
+          "passed": true,
+          "suite_id": "suite_20260224_050901",
+          "run_count": 2,
+          "comparison_conclusion": {
+            "best_auc_experiment": "geomodel_full",
+            "best_auc_value": 0.5,
+            "best_brier_experiment": "geomodel_ablation_no_geo",
+            "best_brier_value": 0.235747,
+            "note": "Template=geomodel_ablation, AUC-best=geomodel_full, Brier-best=geomodel_ablation_no_geo"
+          }
+        },
+        {
+          "template_name": "hybrid_augmented_upgrade",
+          "passed": true,
+          "suite_id": "suite_20260224_050902",
+          "run_count": 2,
+          "comparison_conclusion": {
+            "best_auc_experiment": "hybrid_wo_aug",
+            "best_auc_value": 0.5,
+            "best_brier_experiment": "hybrid_wo_aug",
+            "best_brier_value": 0.235794,
+            "note": "Template=hybrid_augmented_upgrade, AUC-best=hybrid_wo_aug, Brier-best=hybrid_wo_aug"
+          }
+        },
+        {
+          "template_name": "rk_vs_kriging",
+          "passed": true,
+          "suite_id": "suite_20260224_050902",
+          "run_count": 2,
+          "comparison_conclusion": {
+            "best_auc_experiment": "rk_enhanced",
+            "best_auc_value": 0.5,
+            "best_brier_experiment": "kriging_baseline",
+            "best_brier_value": 0.253314,
+            "note": "Template=rk_vs_kriging, AUC-best=rk_enhanced, Brier-best=kriging_baseline"
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "research_boreholes_36",
+      "passed": true,
+      "templates": [
+        {
+          "template_name": "geomodel_ablation",
+          "passed": true,
+          "suite_id": "suite_20260224_050904",
+          "run_count": 2,
+          "comparison_conclusion": {
+            "best_auc_experiment": "geomodel_full",
+            "best_auc_value": 1.0,
+            "best_brier_experiment": "geomodel_ablation_no_geo",
+            "best_brier_value": 0.181287,
+            "note": "Template=geomodel_ablation, AUC-best=geomodel_full, Brier-best=geomodel_ablation_no_geo"
+          }
+        },
+        {
+          "template_name": "hybrid_augmented_upgrade",
+          "passed": true,
+          "suite_id": "suite_20260224_050905",
+          "run_count": 2,
+          "comparison_conclusion": {
+            "best_auc_experiment": "hybrid_wo_aug",
+            "best_auc_value": 1.0,
+            "best_brier_experiment": "hybrid_augmented_v2",
+            "best_brier_value": 0.185592,
+            "note": "Template=hybrid_augmented_upgrade, AUC-best=hybrid_wo_aug, Brier-best=hybrid_augmented_v2"
+          }
+        },
+        {
+          "template_name": "rk_vs_kriging",
+          "passed": true,
+          "suite_id": "suite_20260224_050906",
+          "run_count": 2,
+          "comparison_conclusion": {
+            "best_auc_experiment": "kriging_baseline",
+            "best_auc_value": 0.833333,
+            "best_brier_experiment": "kriging_baseline",
+            "best_brier_value": 0.198328,
+            "note": "Template=rk_vs_kriging, AUC-best=kriging_baseline, Brier-best=kriging_baseline"
+          }
+        }
+      ]
+    }
+  ],
+  "all_passed": true
+}

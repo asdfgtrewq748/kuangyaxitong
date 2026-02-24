@@ -1,12 +1,12 @@
 # Claim Strength Audit Report
 
-Generated at: 2026-02-10T09:08:30.063308+00:00
+Generated at: 2026-02-24T04:58:49.097657+00:00
 
 ## Summary
 - strong: 0
-- moderate: 2
-- exploratory: 3
-- explicit labels (strong/moderate/exploratory): 0/2/3
+- moderate: 22
+- exploratory: 12
+- explicit labels (strong/moderate/exploratory): 0/22/12
 - risky strong claims: 0
 - unlabeled claim candidates: 0
 

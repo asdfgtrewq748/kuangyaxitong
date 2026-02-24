@@ -1,0 +1,62 @@
+{
+  "suite_id": "suite_20260223_135716",
+  "template_name": "hybrid_augmented_upgrade",
+  "dataset_id": "research_boreholes_28",
+  "dataset_version": "13d60b4df0dbf296",
+  "split_id": "split_20260223_135713_5c7aa7",
+  "seed": 43,
+  "created_at": "2026-02-23T13:57:16.182547+00:00",
+  "runs": [
+    {
+      "exp_id": "exp_20260223_135715_925f62",
+      "experiment_name": "hybrid_wo_aug",
+      "model_type": "geomodel_aware",
+      "seed": 43,
+      "metrics": {
+        "auc": 0.5,
+        "pr_auc": 0.5,
+        "brier": 0.235794,
+        "f1": 0.0,
+        "mae": 0.480974,
+        "rmse": 0.485586,
+        "paired_significance_p": 0.42047034
+      },
+      "dataset_version": "13d60b4df0dbf296",
+      "split_id": "split_20260223_135713_5c7aa7",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\splits\\split_20260223_135713_5c7aa7.json"
+      }
+    },
+    {
+      "exp_id": "exp_20260223_135716_11dbba",
+      "experiment_name": "hybrid_augmented_v2",
+      "model_type": "hybrid_augmented",
+      "seed": 44,
+      "metrics": {
+        "auc": 0.5,
+        "pr_auc": 0.5,
+        "brier": 0.265846,
+        "f1": 0.0,
+        "mae": 0.510948,
+        "rmse": 0.515602,
+        "paired_significance_p": 0.43176128
+      },
+      "dataset_version": "13d60b4df0dbf296",
+      "split_id": "split_20260223_135713_5c7aa7",
+      "parameter_snapshot": {},
+      "traceability": {
+        "dataset_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\dataset_manifest.json",
+        "split_manifest": "D:\\xiangmu\\kuangyaxitong\\data\\research\\datasets\\research_boreholes_28\\splits\\split_20260223_135713_5c7aa7.json"
+      }
+    }
+  ],
+  "comparison_conclusion": {
+    "best_auc_experiment": "hybrid_wo_aug",
+    "best_auc_value": 0.5,
+    "best_brier_experiment": "hybrid_wo_aug",
+    "best_brier_value": 0.235794,
+    "note": "Template=hybrid_augmented_upgrade, AUC-best=hybrid_wo_aug, Brier-best=hybrid_wo_aug"
+  }
+}

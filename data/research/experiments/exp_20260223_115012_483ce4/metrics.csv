@@ -1,0 +1,8 @@
+metric,value
+auc,0.333333
+pr_auc,0.477778
+brier,0.275054
+f1,0.0
+mae,0.518039
+rmse,0.524456
+paired_significance_p,0.3686453

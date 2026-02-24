@@ -1293,13 +1293,13 @@ if __name__ == '__main__':
 - [x] 论文级图表 6 张
 
 ### Week 5 (03/16-03/22): 后端统一 + 组件库
-- [ ] 后端路由合并方案
-- [ ] 路由合并实现
-- [ ] 前端 API 层适配
-- [ ] P0 组件：DataTable
-- [ ] P0 组件：ChartContainer
-- [ ] P0 组件：ConfirmDialog + FormPanel
-- [ ] 组件文档
+- [x] 后端路由合并方案
+- [x] 路由合并实现
+- [x] 前端 API 层适配
+- [x] P0 组件：DataTable
+- [x] P0 组件：ChartContainer
+- [x] P0 组件：ConfirmDialog + FormPanel
+- [x] 组件文档
 
 ### Week 6 (03/23-03/29): 论文 Methods + Results
 - [ ] 2.1 Study Area (500 字)

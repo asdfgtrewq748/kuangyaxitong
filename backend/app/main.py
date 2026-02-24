@@ -38,6 +38,10 @@ from app.routes.geomodel import router as geomodel_router
 from app.routes.geomodel_integration import router as geomodel_integration_router
 from app.routes.ai_chat import router as ai_chat_router
 from app.routes.health import router as health_router
+from app.routes.data_ops import router as data_ops_router
+from app.routes.pressure import router as pressure_router
+from app.routes.seams import router as seams_router
+from app.routes.summary import router as summary_router
 
 app = FastAPI(title="Mining Pressure System API", version="0.1.0")
 
@@ -50,6 +54,10 @@ app.include_router(geomodel_router)
 app.include_router(geomodel_integration_router)
 app.include_router(ai_chat_router)
 app.include_router(health_router)
+app.include_router(data_ops_router)
+app.include_router(pressure_router)
+app.include_router(seams_router)
+app.include_router(summary_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -578,7 +586,6 @@ def get_scene3d_data_api(seam: str, resolution: int = 50) -> dict:
     }
 
 
-@app.get("/boreholes/scan")
 def scan_boreholes() -> dict:
     data_dir = get_data_dir()
     if not data_dir.exists():
@@ -592,7 +599,6 @@ def scan_boreholes() -> dict:
     return {"data_dir": str(data_dir), "files": results}
 
 
-@app.get("/boreholes/preview")
 def preview_borehole(file: str, limit: int = 20) -> dict:
     data_dir = get_data_dir()
     path = (data_dir / file).resolve()
@@ -614,7 +620,6 @@ def preview_borehole(file: str, limit: int = 20) -> dict:
     }
 
 
-@app.post("/boreholes/upload")
 async def upload_boreholes(files: List[UploadFile] = File(...)) -> dict:
     data_dir = get_data_dir()
     if not data_dir.exists():
@@ -635,7 +640,6 @@ async def upload_boreholes(files: List[UploadFile] = File(...)) -> dict:
     return {"saved": saved, "count": len(saved)}
 
 
-@app.post("/boreholes/fix-encoding")
 def fix_encoding() -> dict:
     data_dir = get_data_dir()
     if not data_dir.exists():
@@ -651,7 +655,6 @@ def fix_encoding() -> dict:
     return {"data_dir": str(data_dir), "files": results}
 
 
-@app.get("/lithology/averages")
 def lithology_averages() -> dict:
     data_dir = get_data_dir()
     if not data_dir.exists():
@@ -662,13 +665,11 @@ def lithology_averages() -> dict:
     return {"data_dir": str(data_dir), "averages": stats}
 
 
-@app.get("/pressure/steps")
 def pressure_steps(model: str, h: float, q: float, t: float | None = None, s: float | None = None) -> dict:
     result = compute_pressure_steps(model=model, h=h, q=q, t=t, s=s)
     return result
 
 
-@app.get("/pressure/steps/boreholes")
 def pressure_steps_boreholes(model: str = "fixed", h_mode: str = "total", q_mode: str = "density_thickness", default_q: float = 1.0) -> dict:
     data_dir = get_data_dir()
     files = sorted([p for p in data_dir.glob("*.csv") if p.is_file() and p.name != "zuobiao.csv"])
@@ -678,7 +679,6 @@ def pressure_steps_boreholes(model: str = "fixed", h_mode: str = "total", q_mode
     return result
 
 
-@app.get("/export/pressure-steps")
 def export_pressure_steps(model: str = "fixed", h_mode: str = "total", q_mode: str = "density_thickness", default_q: float = 1.0) -> Response:
     data_dir = get_data_dir()
     files = sorted([p for p in data_dir.glob("*.csv") if p.is_file() and p.name != "zuobiao.csv"])
@@ -705,7 +705,6 @@ def export_pressure_steps(model: str = "fixed", h_mode: str = "total", q_mode: s
     return Response(content=content.encode("utf-8"), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
-@app.get("/pressure/steps/grid")
 def pressure_steps_grid(model: str = "fixed", target: str = "initial", h_mode: str = "total", q_mode: str = "density_thickness", default_q: float = 1.0, grid_size: int = 60) -> dict:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
@@ -745,7 +744,6 @@ def pressure_steps_grid(model: str = "fixed", target: str = "initial", h_mode: s
     }
 
 
-@app.get("/pressure/steps/workfaces")
 def pressure_steps_workfaces(
     model: str = "fixed",
     target: str = "initial",
@@ -781,7 +779,6 @@ def pressure_steps_workfaces(
     return {"grid": grid_data, "workfaces": adjusted}
 
 
-@app.get("/export/pressure-steps-grid")
 def export_pressure_steps_grid(model: str = "fixed", target: str = "initial", h_mode: str = "total", q_mode: str = "density_thickness", default_q: float = 1.0, grid_size: int = 60) -> Response:
     data = pressure_steps_grid(model=model, target=target, h_mode=h_mode, q_mode=q_mode, default_q=default_q, grid_size=grid_size)
     if "error" in data:
@@ -791,7 +788,6 @@ def export_pressure_steps_grid(model: str = "fixed", target: str = "initial", h_
     return Response(content=content, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
-@app.get("/export/pressure-steps-workfaces")
 def export_pressure_steps_workfaces(
     model: str = "fixed",
     target: str = "initial",
@@ -825,7 +821,6 @@ def export_pressure_steps_workfaces(
     return Response(content=content, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
-@app.get("/interpolate/field")
 def interpolate_field_api(field: str, method: str = "kriging", grid_size: int = 50) -> dict:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
@@ -838,7 +833,6 @@ def interpolate_field_api(field: str, method: str = "kriging", grid_size: int = 
     return result
 
 
-@app.get("/interpolate/compare")
 def interpolate_compare_api(field: str, grid_size: int = 50) -> dict:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
@@ -854,7 +848,6 @@ def interpolate_compare_api(field: str, grid_size: int = 50) -> dict:
     return {"field": field, "grid_size": grid_size, "results": results}
 
 
-@app.get("/interpolate/recommend")
 def interpolate_recommend_api(field: str, methods: str = "kriging,idw,linear,nearest") -> dict:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
@@ -881,7 +874,6 @@ def interpolate_recommend_api(field: str, methods: str = "kriging,idw,linear,nea
     return {"field": field, "scores": scores, "recommended": best[0]}
 
 
-@app.get("/pressure/index/boreholes")
 def pressure_index_boreholes(elastic_modulus: float | None = None, density: float | None = None, tensile_strength: float | None = None) -> dict:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
@@ -901,7 +893,6 @@ def pressure_index_boreholes(elastic_modulus: float | None = None, density: floa
     return result
 
 
-@app.get("/pressure/index/grid")
 def pressure_index_grid(method: str = "idw", grid_size: int = 50, elastic_modulus: float | None = None, density: float | None = None, tensile_strength: float | None = None) -> dict:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
@@ -923,7 +914,6 @@ def pressure_index_grid(method: str = "idw", grid_size: int = 50, elastic_modulu
     return {"base": base, "grid": grid}
 
 
-@app.get("/pressure/index/workfaces")
 def pressure_index_workfaces(
     method: str = "idw",
     grid_size: int = 60,
@@ -970,7 +960,6 @@ def pressure_index_workfaces(
     return {"base": base, "grid": grid, "workfaces": adjusted}
 
 
-@app.get("/export/pressure-index-workfaces")
 def export_pressure_index_workfaces(
     method: str = "idw",
     grid_size: int = 60,
@@ -1002,7 +991,6 @@ def export_pressure_index_workfaces(
     return Response(content=content, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
-@app.get("/summary/index")
 def summary_index(method: str = "idw", grid_size: int = 60) -> dict:
     data = pressure_index_grid(method=method, grid_size=grid_size)
     if "error" in data:
@@ -1010,7 +998,6 @@ def summary_index(method: str = "idw", grid_size: int = 60) -> dict:
     return {"grid": summarize_grid(data["grid"]["values"])}
 
 
-@app.get("/summary/index-workfaces")
 def summary_index_workfaces(
     method: str = "idw",
     grid_size: int = 60,
@@ -1034,7 +1021,6 @@ def summary_index_workfaces(
     return {"grid": summarize_grid(data["workfaces"]["adjusted"])}
 
 
-@app.get("/summary/steps")
 def summary_steps(model: str = "fixed", target: str = "initial", grid_size: int = 60) -> dict:
     data = pressure_steps_grid(model=model, target=target, grid_size=grid_size)
     if "error" in data:
@@ -1042,7 +1028,6 @@ def summary_steps(model: str = "fixed", target: str = "initial", grid_size: int 
     return {"grid": summarize_grid(data["values"])}
 
 
-@app.get("/summary/steps-workfaces")
 def summary_steps_workfaces(
     model: str = "fixed",
     target: str = "initial",
@@ -1068,7 +1053,6 @@ def summary_steps_workfaces(
     return {"grid": summarize_grid(data["workfaces"]["adjusted"])}
 
 
-@app.get("/summary/report")
 def summary_report(
     method: str = "idw",
     grid_size: int = 60,
@@ -1241,12 +1225,10 @@ def summary_report(
     return out
 
 
-@app.get("/summary/report/perf")
 def summary_report_perf() -> dict:
     return {"performance": _report_perf_snapshot()}
 
 
-@app.get("/export/interpolation")
 def export_interpolation(field: str, method: str = "idw", grid_size: int = 60) -> Response:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
@@ -1264,7 +1246,6 @@ def export_interpolation(field: str, method: str = "idw", grid_size: int = 60) -
     return Response(content=content, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
-@app.get("/export/index")
 def export_index(method: str = "idw", grid_size: int = 60) -> Response:
     data_dir = get_data_dir()
     coord_path = data_dir / "zuobiao.csv"
@@ -1283,7 +1264,6 @@ def export_index(method: str = "idw", grid_size: int = 60) -> Response:
     return Response(content=content, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
-@app.post("/pipeline/run")
 def pipeline_run(field: str = "elastic_modulus", method: str = "idw", grid_size: int = 60, fix_encoding: bool = True) -> dict:
     data_dir = get_data_dir()
     if not data_dir.exists():
@@ -1300,8 +1280,6 @@ def pipeline_run(field: str = "elastic_modulus", method: str = "idw", grid_size:
 # Coal Seam Interpolation API Endpoints
 # =============================================================================
 
-@app.get("/seams/list")
-@app.get("/api/seams/list")
 def get_coal_seams_api() -> dict:
     """
     Get list of all available coal seams from borehole data.
@@ -1331,7 +1309,6 @@ def get_coal_seams_api() -> dict:
     return result
 
 
-@app.get("/seams/stats")
 def get_seam_stats_api(seam_name: str) -> dict:
     """
     Get detailed statistics for a specific coal seam.
@@ -1361,7 +1338,6 @@ def get_seam_stats_api(seam_name: str) -> dict:
     return result
 
 
-@app.get("/seams/interpolate")
 def interpolate_seam_api(
     seam_name: str,
     property: str,
@@ -1409,8 +1385,6 @@ def interpolate_seam_api(
     return result
 
 
-@app.get("/seams/overburden")
-@app.get("/api/seams/overburden")
 def get_seam_overburden_api(
     seam_name: Optional[str] = None,
     seam: Optional[str] = None,
@@ -1468,7 +1442,6 @@ def get_seam_overburden_api(
     return result
 
 
-@app.get("/seams/compare")
 def compare_seam_methods_api(
     seam_name: str,
     property: str = "thickness",
@@ -1507,7 +1480,6 @@ def compare_seam_methods_api(
     return result
 
 
-@app.get("/seams/contour-images")
 def get_seam_contour_images_api(
     seam_name: str,
     method: str = "kriging",
@@ -1653,7 +1625,6 @@ def get_seam_contour_images_api(
     return response_payload
 
 
-@app.get("/seams/test-contour")
 def test_contour_api() -> dict:
     """Test endpoint for contour generation."""
     import numpy as np

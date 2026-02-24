@@ -102,7 +102,12 @@ def build_parser() -> argparse.ArgumentParser:
         description="Validate research template end-to-end flow on 2+ datasets."
     )
     p.add_argument("--dataset-ids", nargs="+", required=True, help="Existing dataset_id list (at least 2).")
-    p.add_argument("--templates", nargs="+", default=["geomodel_ablation", "rk_vs_kriging"], help="Template names.")
+    p.add_argument(
+        "--templates",
+        nargs="+",
+        default=["geomodel_ablation", "hybrid_augmented_upgrade", "rk_vs_kriging"],
+        help="Template names.",
+    )
     p.add_argument("--inprocess", action="store_true", help="Use FastAPI TestClient mode.")
     p.add_argument("--base-url", default="http://127.0.0.1:8001", help="Backend base URL.")
     p.add_argument("--timeout", type=float, default=20.0, help="HTTP timeout in seconds.")

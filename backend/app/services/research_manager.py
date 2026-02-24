@@ -383,6 +383,86 @@ def _rank01(series: pd.Series) -> np.ndarray:
     return (arr - min_v) / (max_v - min_v)
 
 
+def _normalize_array(values: np.ndarray) -> np.ndarray:
+    arr = np.asarray(values, dtype=float)
+    if arr.size == 0:
+        return arr
+    min_v = float(np.min(arr))
+    max_v = float(np.max(arr))
+    if max_v - min_v < 1e-12:
+        return np.full_like(arr, 0.5, dtype=float)
+    return (arr - min_v) / (max_v - min_v)
+
+
+def _spatial_context_features(
+    df: pd.DataFrame,
+    thickness: np.ndarray,
+    depth: np.ndarray,
+    k_neighbors: int = 5,
+) -> Dict[str, np.ndarray]:
+    n = len(df)
+    zeros = np.zeros(n, dtype=float)
+    if n <= 1:
+        return {
+            "local_thickness_var": zeros,
+            "boundary_gradient": zeros,
+            "sparse_boost": zeros,
+            "depth_discontinuity": zeros,
+        }
+
+    x_col = _choose_column(df, ["x", "coord_x", "easting", "lon", "longitude", "经度"])
+    y_col = _choose_column(df, ["y", "coord_y", "northing", "lat", "latitude", "纬度"])
+    if not x_col or not y_col:
+        return {
+            "local_thickness_var": zeros,
+            "boundary_gradient": zeros,
+            "sparse_boost": zeros,
+            "depth_discontinuity": zeros,
+        }
+
+    x = pd.to_numeric(df[x_col], errors="coerce")
+    y = pd.to_numeric(df[y_col], errors="coerce")
+    if x.isna().all() or y.isna().all():
+        return {
+            "local_thickness_var": zeros,
+            "boundary_gradient": zeros,
+            "sparse_boost": zeros,
+            "depth_discontinuity": zeros,
+        }
+
+    x_arr = x.fillna(float(x.median() if x.notna().any() else 0.0)).to_numpy(dtype=float)
+    y_arr = y.fillna(float(y.median() if y.notna().any() else 0.0)).to_numpy(dtype=float)
+    coords = np.column_stack([x_arr, y_arr])
+
+    dist = np.sqrt(np.sum((coords[:, None, :] - coords[None, :, :]) ** 2, axis=2))
+    np.fill_diagonal(dist, np.inf)
+
+    k = max(1, min(int(k_neighbors), n - 1))
+    nn_idx = np.argpartition(dist, kth=k - 1, axis=1)[:, :k]
+    nn_dist = np.take_along_axis(dist, nn_idx, axis=1)
+
+    nn_thickness = thickness[nn_idx]
+    nn_depth = depth[nn_idx]
+    mean_nn_thickness = np.mean(nn_thickness, axis=1)
+    mean_nn_depth = np.mean(nn_depth, axis=1)
+
+    local_thickness_var = _normalize_array(np.std(nn_thickness, axis=1))
+    boundary_gradient = _normalize_array(np.abs(thickness - mean_nn_thickness))
+    depth_discontinuity = _normalize_array(np.abs(depth - mean_nn_depth))
+
+    # Distances larger => point is in sparse area and should gain augmentation weight.
+    mean_dist = np.mean(nn_dist, axis=1)
+    density = 1.0 / (mean_dist + 1e-6)
+    sparse_boost = 1.0 - _normalize_array(density)
+
+    return {
+        "local_thickness_var": local_thickness_var,
+        "boundary_gradient": boundary_gradient,
+        "sparse_boost": sparse_boost,
+        "depth_discontinuity": depth_discontinuity,
+    }
+
+
 def _build_model_probabilities(df: pd.DataFrame, model_type: str, seed: int) -> np.ndarray:
     numeric_cols = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
     if not numeric_cols:
@@ -417,14 +497,57 @@ def _build_model_probabilities(df: pd.DataFrame, model_type: str, seed: int) -> 
     elif model_type == "geomodel_ablation":
         # Ablation variant with weaker geology prior (no pinchout/continuity proxy terms).
         score = 0.30 * elastic + 0.20 * tensile + 0.20 * thickness + 0.15 * (1 - depth) + 0.15 * friction
+    elif model_type == "hybrid_augmented":
+        spatial = _spatial_context_features(df, thickness=thickness, depth=depth)
+        augmentation_gain = np.clip(
+            0.50 * spatial["local_thickness_var"]
+            + 0.30 * spatial["boundary_gradient"]
+            + 0.20 * spatial["sparse_boost"],
+            0.0,
+            1.0,
+        )
+        score = (
+            0.25 * elastic
+            + 0.19 * tensile
+            + 0.19 * thickness
+            + 0.14 * (1 - depth)
+            + 0.14 * cohesion
+            + 0.09 * augmentation_gain
+        )
     elif model_type == "pinchout_sensitive":
-        # Pinchout effect is approximated by thin seam + depth interaction.
-        pinchout_proxy = np.clip((1.0 - thickness) * depth, 0.0, 1.0)
-        score = 0.24 * elastic + 0.18 * cohesion + 0.16 * tensile + 0.16 * (1 - depth) + 0.12 * thickness + 0.14 * pinchout_proxy
+        spatial = _spatial_context_features(df, thickness=thickness, depth=depth)
+        pinchout_boundary = np.clip(
+            (1.0 - thickness) * (0.65 * spatial["boundary_gradient"] + 0.35 * spatial["depth_discontinuity"]),
+            0.0,
+            1.0,
+        )
+        augmentation_gain = np.clip(
+            0.50 * spatial["local_thickness_var"]
+            + 0.30 * spatial["boundary_gradient"]
+            + 0.20 * spatial["sparse_boost"],
+            0.0,
+            1.0,
+        )
+        score = (
+            0.24 * elastic
+            + 0.17 * cohesion
+            + 0.17 * tensile
+            + 0.16 * thickness
+            + 0.12 * (1 - depth)
+            + 0.08 * augmentation_gain
+            + 0.06 * pinchout_boundary
+        )
     elif model_type == "pinchout_no_zoning":
-        # Remove spatial zoning contribution by dropping depth-linked terms.
-        pinchout_proxy = np.clip(1.0 - thickness, 0.0, 1.0)
-        score = 0.28 * elastic + 0.22 * cohesion + 0.20 * tensile + 0.18 * thickness + 0.12 * pinchout_proxy
+        spatial = _spatial_context_features(df, thickness=thickness, depth=depth)
+        pinchout_boundary = np.clip((1.0 - thickness) * spatial["boundary_gradient"], 0.0, 1.0)
+        score = (
+            0.27 * elastic
+            + 0.22 * cohesion
+            + 0.20 * tensile
+            + 0.17 * thickness
+            + 0.08 * spatial["local_thickness_var"]
+            + 0.06 * pinchout_boundary
+        )
     elif model_type == "rk_enhanced":
         score = 0.30 * elastic + 0.24 * friction + 0.20 * cohesion + 0.16 * (1 - depth) + 0.10 * thickness
     elif model_type == "kriging_baseline":

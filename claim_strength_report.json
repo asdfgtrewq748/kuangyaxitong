@@ -1,0 +1,267 @@
+{
+  "summary": {
+    "input": "D:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_Science_Style_Draft_EN.docx",
+    "generated_at_utc": "2026-02-24T03:43:02.529531+00:00",
+    "counts": {
+      "strong": 0,
+      "moderate": 22,
+      "exploratory": 12
+    },
+    "risky_strong_claim_count": 0,
+    "unlabeled_claim_candidate_count": 0
+  },
+  "report": {
+    "counts": {
+      "strong": 0,
+      "moderate": 22,
+      "exploratory": 12
+    },
+    "explicit_label_counts": {
+      "strong": 0,
+      "moderate": 22,
+      "exploratory": 12
+    },
+    "flags": [
+      {
+        "sentence": "\\[Moderate\\] ASI is computed by a unified-strength-theory (UST) analytical model with calibratable parameter b and uncertainty interval output.",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] We provide draft-level scenario results and current figures to support immediate manuscript writing, while reserving strict real-label field validation for final claims.",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Statistical reporting protocol includes uncertainty, significance (p-value), and effect size requirements for submission-stage experiments.",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "New-Algorithm Demonstration Results  \\[Exploratory\\] Table 1 presents scenario-level indicator outputs for demonstration scenarios (RSI, BRI, ASI, and fused MPI).",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "Scenario            RSI     BRI     ASI     MPI   ------------------- ------- ------- ------- -------   Scenario-LowRisk    86.87   93.61   39.41   77.36   Scenario-MidRisk    86.87   87.91   40.27   75.58   Scenario-HighRisk   86.87   69.70   41.02   69.40  ### 4.1 Baseline and Method Comparison  \\",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Relative to the kriging baseline, all hybrid/geomodel-aware variants improved discriminative and calibration metrics.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "Model                        AUC        PR-AUC     Brier      F1         RMSE   ---------------------------- ---------- ---------- ---------- ---------- ----------   Kriging baseline (exp001)    0.666667   0.638889   0.244266   0.400000   0.494233   Geomodel-aware (exp003)      1.000000   1.000000  ",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] The no-zoning variant showed substantial degradation across all metrics, indicating spatial zoning as a core contributor.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "### 4.2 Multi-Seed Robustness Across Two Datasets  \\[Exploratory\\] To reduce split/seed sensitivity, we executed five seeds per model on two datasets with frozen splits (research_boreholes_28 and research_boreholes_36; 50 runs total).",
+        "level": "exploratory",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Table 3 reports multi-seed robustness on dataset research_boreholes_36 (mean +/- std).",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Model   AUC (mean +/- std)      Brier (mean +/- std)    F1 (mean +/- std)       RMSE (mean +/- std)   -------------------- ----------------------- ----------------------- ----------------------- -----------------------   Kriging baseline     0.644445 +/- 0.044444   0.240584 +/- 0.008727",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] On the 36-borehole dataset, geomodel-aware achieved the     highest AUC stability (1.000000 +/- 0.000000).",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Hybrid-augmented provided the best calibration/RMSE     trade-off among top-performing models (Brier 0.198534; RMSE     0.445488).",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Relative to baseline, hybrid-augmented improved AUC by     +0.311111 and reduced Brier by 17.5% (0.240584 -\\> 0.198534).",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Removing spatial zoning caused major regression (AUC     0.377777; F1 0.080000).",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] On the 28-borehole dataset, multiple models reached ceiling-level AUC (=1.0).",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] Therefore, calibration and error metrics were more discriminative than rank-only metrics.",
+        "level": "exploratory",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Spatial zoning had the strongest positive contribution,     confirmed by severe metric drop in the no-zoning variant.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] The pinch-out-specific branch did not show stable     gain on the current fixed split and appears data-dependent.",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] The upgraded hybrid feature construction remained     robust in multi-seed runs and is retained as the default hybrid     candidate.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "### 4.4 \\[Exploratory\\] Result Section Usage Notes  -   Table 1 should map to the scenario-level indicator output table at     the beginning of Section 4.",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] Data sources: docs/experiments/comparison_table.md; docs/experiments/week4_multi_seed_stability.md; data/experiments/results/week4_multi_seed_stability/stability_model_summary.csv.",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "Limitations and Next Submission Step  ### 6.1 Main Limitations  \\[Exploratory\\] Current values are generated from reproducibility-oriented scenarios and two frozen research datasets.",
+        "level": "exploratory",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] While these settings are suitable for method validation, they are not yet sufficient for final field-deployment claims across heterogeneous mines.",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] The sample scale remains modest, especially for high-variance events in microseismic branches.",
+        "level": "exploratory",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] Some ablation conclusions (e.g., pinch-out-specific contribution) should therefore be interpreted as split- and dataset-dependent rather than universally stable.",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "### 6.2 Practical Implications  \\[Moderate\\] Despite current scale limits, two practical implications are already consistent across runs: (1) spatial zoning is a high-impact component, and (2) geomodel-aware/hybrid branches significantly outperform plain kriging on the 36-borehole setting.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] The Stage E pipeline has now passed in both in-process and HTTP modes under explicit threshold governance, which supports engineering reproducibility for subsequent field-validation cycles.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "### 6.3 Next Submission Step  \\[Moderate\\] The next submission package will include: (a) expanded field-labeled experiments, (b) paired significance tests with effect sizes, (c) updated figure/table numbering aligned to journal templates, and (d) finalized references with complete DOI coverage.",
+        "level": "moderate",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] All reported metrics will continue to bind dataset_version, split_id, seed, and model_type to maintain strict traceability from manuscript statements to archived artifacts.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "Conclusions  \\[Moderate\\] This study establishes a reproducible MPI research stack that integrates RSI-PhaseField, ASI-UST, and microseismic-driven BRI with explicit evidence tracking.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Multi-seed evaluations show robust gains over kriging baselines on the expanded 36-borehole dataset.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Moderate\\] Ablation evidence indicates that spatial zoning is a critical contributor, while pinch-out-specific gains require larger-sample confirmation.",
+        "level": "moderate",
+        "has_evidence_marker": false,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      },
+      {
+        "sentence": "\\[Exploratory\\] The manuscript is now upgraded from pipeline-level placeholder results to structured method-and-result reporting suitable for submission polishing.",
+        "level": "exploratory",
+        "has_evidence_marker": true,
+        "has_explicit_label": true,
+        "is_claim_candidate": true
+      }
+    ],
+    "risky_strong_claims": [],
+    "unlabeled_claim_candidates": []
+  }
+}

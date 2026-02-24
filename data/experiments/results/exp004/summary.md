@@ -1,10 +1,9 @@
-﻿# exp004 混合建模+增强结果摘要
+# exp004 ????+??????
 
-- mapping: pinchout_sensitive 作为增强版代理实现
-- exp001 baseline: exp_20260222_141909_a01e77
-- exp003 reference: exp_20260222_142216_86a543
-- exp004 candidate: exp_20260222_142454_9626e0
-- delta_vs_exp001_auc: 0
-- delta_vs_exp003_auc: -0.333333
-- delta_vs_exp001_brier: 0.02215
-- delta_vs_exp003_brier: 0.050278
+- exp001 baseline: exp_20260223_113724_5bc0fa
+- exp003 reference: exp_20260223_113725_dfd03e
+- exp004 candidate: exp_20260223_113726_3bf742
+- delta_vs_exp001_auc: 0.333333
+- delta_vs_exp003_auc: 0.0
+- delta_vs_exp001_brier: -0.042502
+- delta_vs_exp003_brier: 0.006687

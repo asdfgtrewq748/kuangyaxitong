@@ -1,7 +1,7 @@
 {
   "summary": {
-    "input": "d:\\xiangmu\\kuangyaxitong\\docs\\papers\\MPI_Science_Style_Draft_EN.docx",
-    "generated_at_utc": "2026-02-10T09:08:30.499598+00:00",
+    "input": "docs\\papers\\MPI_Science_Style_Draft_EN.docx",
+    "generated_at_utc": "2026-02-24T04:58:49.360706+00:00",
     "missing_categories": [],
     "missing_count": 0
   },
@@ -9,11 +9,11 @@
     "categories": {
       "metrics": {
         "found": true,
-        "example": "er calibration: best_b=0.600, RMSE=0.000, 95%CI=\\[0.600, 0.600\\], samples="
+        "example": " Model                        AUC        PR-AUC     Brier      F1        "
       },
       "uncertainty": {
         "found": true,
-        "example": " parameter b calibration with bootstrap CI; Eq. (2), (5)).  BRI module: microse"
+        "example": ". Parameter b is estimated by bootstrap calibration on training folds only to a"
       },
       "significance": {
         "found": true,
@@ -25,11 +25,11 @@
       },
       "sample_size": {
         "found": true,
-        "example": ".000, 95%CI=\\[0.600, 0.600\\], samples=4.  \\[Exploratory\\] No formal signific"
+        "example": "s mines.  \\[Exploratory\\] The sample scale remains modest, especially for hi"
       },
       "split_leakage": {
         "found": true,
-        "example": "fference solver, boundary constraints, convergence checks; Eq. (3)-(4)).  A"
+        "example": "d by bootstrap calibration on training folds only to avoid test leakage.  $"
       }
     },
     "missing": []

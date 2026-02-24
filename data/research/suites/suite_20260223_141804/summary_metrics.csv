@@ -1,0 +1,3 @@
+experiment_name,exp_id,auc,pr_auc,brier,f1,mae,rmse,paired_significance_p
+hybrid_wo_aug,exp_20260223_141804_45b093,0.5,0.5,0.235794,0.0,0.480974,0.485586,0.42047034
+hybrid_augmented_v2,exp_20260223_141804_38933d,0.5,0.5,0.265846,0.0,0.510948,0.515602,0.43176128

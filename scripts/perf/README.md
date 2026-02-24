@@ -15,7 +15,9 @@ This folder contains performance baseline scripts for Stage E.
 - `run_baseline_suite.py`
   - One-command workflow: run N rounds + evaluate thresholds + generate markdown report.
 - `thresholds.default.json`
-  - Default threshold template, should be tuned by real deployment baseline.
+  - In-process/local baseline threshold template.
+- `thresholds.http.json`
+  - HTTP deployment baseline threshold template.
 
 ## 2. Usage
 
@@ -48,7 +50,7 @@ Evaluate multiple baseline runs:
 ```bash
 python scripts/perf/evaluate_backend_perf.py \
   --reports data/research/perf/run1.json data/research/perf/run2.json data/research/perf/run3.json \
-  --thresholds scripts/perf/thresholds.default.json \
+  --thresholds scripts/perf/thresholds.http.json \
   --output-json data/research/perf/eval.json
 ```
 
@@ -86,3 +88,4 @@ python scripts/perf/evaluate_backend_perf.py \
 - `geomodel_status_poll` and `geomodel_artifact_download` need a valid `--geomodel-job-id`.
 - Without `--geomodel-job-id`, Geomodel scenarios are skipped.
 - In-process mode is useful for CI smoke benchmark and quick regression checks.
+- Use `thresholds.default.json` for in-process checks; use `thresholds.http.json` for HTTP deployment checks.

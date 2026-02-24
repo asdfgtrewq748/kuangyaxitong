@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "mode": "http",
+    "base_url": "http://127.0.0.1:8001",
+    "requests": 5,
+    "concurrency": 2,
+    "points": 81,
+    "resolution": 40,
+    "method": "idw",
+    "geomodel_job_id": "06ec501845c4",
+    "artifact_name": "quality_report.json",
+    "generated_at": "2026-02-24 13:10:23"
+  },
+  "scenarios": [
+    {
+      "name": "mpi_interpolate_large_grid",
+      "summary": {
+        "total_requests": 5,
+        "success_count": 5,
+        "failed_count": 0,
+        "success_rate": 1.0,
+        "elapsed_ms": 396.2947999993339,
+        "rps": 12.616870067455853,
+        "latency_ms": {
+          "min": 63.425400000065565,
+          "max": 326.57660000026226,
+          "avg": 157.08618000000715,
+          "p50": 65.06630000006407,
+          "p90": 302.52104000002146,
+          "p95": 314.54882000014186,
+          "p99": 324.17104400023817
+        }
+      },
+      "error_buckets": {}
+    },
+    {
+      "name": "mpi_interpolate_geo_large_grid",
+      "summary": {
+        "total_requests": 5,
+        "success_count": 5,
+        "failed_count": 0,
+        "success_rate": 1.0,
+        "elapsed_ms": 1001.9806999992579,
+        "rps": 4.9901160770898105,
+        "latency_ms": {
+          "min": 208.44049999956042,
+          "max": 407.85709999967366,
+          "avg": 359.2593399997801,
+          "p50": 393.23699999880046,
+          "p90": 405.8829400001094,
+          "p95": 406.8700199998915,
+          "p99": 407.65968399971723
+        }
+      },
+      "error_buckets": {}
+    },
+    {
+      "name": "geomodel_status_poll",
+      "summary": {
+        "total_requests": 5,
+        "success_count": 5,
+        "failed_count": 0,
+        "success_rate": 1.0,
+        "elapsed_ms": 31.99030000064522,
+        "rps": 156.29737763944553,
+        "latency_ms": {
+          "min": 2.3776000002399087,
+          "max": 16.797200000844896,
+          "avg": 10.460060000233351,
+          "p50": 15.11710000038147,
+          "p90": 16.32464000042528,
+          "p95": 16.560920000635086,
+          "p99": 16.749944000802934
+        }
+      },
+      "error_buckets": {}
+    },
+    {
+      "name": "geomodel_artifact_download",
+      "summary": {
+        "total_requests": 5,
+        "success_count": 5,
+        "failed_count": 0,
+        "success_rate": 1.0,
+        "elapsed_ms": 32.42780000064522,
+        "rps": 154.1886899481468,
+        "latency_ms": {
+          "min": 3.132099999114871,
+          "max": 20.136999999172986,
+          "avg": 9.548559999652207,
+          "p50": 4.921000000089407,
+          "p90": 18.53459999952465,
+          "p95": 19.33579999934882,
+          "p99": 19.976759999208152
+        }
+      },
+      "error_buckets": {}
+    }
+  ]
+}

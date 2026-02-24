@@ -476,6 +476,37 @@ def test_summary_report_perf_endpoint():
     assert "cache_hit_rate" in perf_payload["performance"]
 
 
+def test_summary_api_alias_routes_registered():
+    paths = {getattr(route, "path", "") for route in main_api.app.routes}
+    assert "/api/boreholes/scan" in paths
+    assert "/api/boreholes/preview" in paths
+    assert "/api/boreholes/upload" in paths
+    assert "/api/boreholes/fix-encoding" in paths
+    assert "/api/interpolate/field" in paths
+    assert "/api/interpolate/compare" in paths
+    assert "/api/interpolate/recommend" in paths
+    assert "/api/pipeline/run" in paths
+    assert "/api/summary/index" in paths
+    assert "/api/summary/index-workfaces" in paths
+    assert "/api/summary/steps" in paths
+    assert "/api/summary/steps-workfaces" in paths
+    assert "/api/summary/report" in paths
+    assert "/api/summary/report/perf" in paths
+    assert "/api/pressure/index/grid" in paths
+    assert "/api/pressure/index/workfaces" in paths
+    assert "/api/pressure/steps/grid" in paths
+    assert "/api/pressure/steps/workfaces" in paths
+    assert "/api/export/interpolation" in paths
+    assert "/api/export/index" in paths
+    assert "/api/seams/list" in paths
+    assert "/api/seams/stats" in paths
+    assert "/api/seams/interpolate" in paths
+    assert "/api/seams/overburden" in paths
+    assert "/api/seams/compare" in paths
+    assert "/api/seams/contour-images" in paths
+    assert "/api/seams/test-contour" in paths
+
+
 def test_build_week3_stability_compare_rows():
     suites = [
         {

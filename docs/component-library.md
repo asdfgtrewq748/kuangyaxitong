@@ -1,306 +1,153 @@
-# 组件库使用指南
+# 组件库使用说明（Week5）
 
-本目录包含项目的共用组件库，基于优化方案开发。
+## 当前范围
 
-## 已完成的组件 (P0)
+本组件库位于 `frontend/src/components/library/`，用于统一页面结构、交互行为和状态样式。
 
-### 数据展示组件
+当前 P0 组件已完成 4 个：
 
-#### StatCard - 统计卡片
-用于展示数值统计信息，支持趋势指示和多种状态。
+1. `DataTable`（数据表格）
+2. `ChartContainer`（图表容器）
+3. `ConfirmDialog`（确认对话框）
+4. `FormPanel`（通用表单面板）
 
-**位置**: `library/data/StatCard.vue`
+## 组件清单
 
-**基本用法**:
+### DataTable
+
+- 文件：`frontend/src/components/library/data/DataTable.vue`
+- 导出：`import { DataTable } from '@/components/library'`
+- 场景：排序、搜索、分页、行选择
+
+最小示例：
+
 ```vue
 <script setup>
-import { StatCard } from '@/components/library'
-</script>
-
-<template>
-  <StatCard
-    title="数据集行数"
-    :value="12500"
-    unit="行"
-    :trend="12.5"
-    trendLabel="较上周"
-    icon="📊"
-  />
-</template>
-```
-
-**Props**:
-- `title` (String, 必需): 标题
-- `value` (Number|String): 数值
-- `unit` (String): 单位
-- `subtitle` (String): 副标题
-- `icon` (String): 图标（emoji 或文本）
-- `trend` (Number|String): 趋势（百分比）
-- `trendLabel` (String): 趋势标签
-- `loading` (Boolean): 加载状态
-- `error` (String): 错误信息
-- `size` (String): 尺寸 (`'sm' | 'md' | 'lg'`)
-- `onClick` (Function): 点击回调
-
-#### DataTable - 数据表格
-功能丰富的数据表格，支持排序、分页、搜索、选择。
-
-**位置**: `library/data/DataTable.vue`
-
-**基本用法**:
-```vue
-<script setup>
-import { ref } from 'vue'
 import { DataTable } from '@/components/library'
 
 const columns = [
   { key: 'name', title: '名称', sortable: true },
-  { key: 'value', title: '数值', sortable: true },
-  { key: 'status', title: '状态' }
+  { key: 'value', title: '数值', sortable: true }
 ]
 
-const data = ref([
-  { id: 1, name: '项目 A', value: 100, status: '进行中' },
-  { id: 2, name: '项目 B', value: 200, status: '已完成' }
-])
+const rows = [
+  { id: 1, name: 'A', value: 10 },
+  { id: 2, name: 'B', value: 20 }
+]
 </script>
 
 <template>
-  <DataTable
-    :columns="columns"
-    :data="data"
-    row-key="id"
-    :selectable="true"
-    :searchable="true"
-    :paginated="true"
-    :page-size="10"
-    @row-click="handleRowClick"
+  <DataTable :columns="columns" :data="rows" row-key="id" :searchable="true" :paginated="true" />
+</template>
+```
+
+### ChartContainer
+
+- 文件：`frontend/src/components/library/visualization/ChartContainer.vue`
+- 导出：`import { ChartContainer } from '@/components/library'`
+- 场景：统一图表标题、空状态、错误态、加载态
+
+最小示例：
+
+```vue
+<ChartContainer title="MPI 分布" :loading="loading" :error="error" :empty="!points.length">
+  <YourChart :data="points" />
+</ChartContainer>
+```
+
+### ConfirmDialog
+
+- 文件：`frontend/src/components/library/feedback/ConfirmDialog.vue`
+- 导出：`import { ConfirmDialog } from '@/components/library'`
+- 场景：删除、清空、覆盖等高风险操作确认
+
+核心 props：
+
+1. `v-model`：开关状态（`modelValue`）
+2. `title`：标题
+3. `message`：提示文本
+4. `confirm-text` / `cancel-text`：按钮文案
+5. `variant`：`danger | warning | primary`
+6. `confirm-loading`：确认按钮加载态
+
+核心事件：
+
+1. `@confirm`
+2. `@cancel`
+
+最小示例：
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import { ConfirmDialog } from '@/components/library'
+
+const visible = ref(false)
+const clearAll = () => {
+  // do clear
+}
+</script>
+
+<template>
+  <button @click="visible = true">清空</button>
+  <ConfirmDialog
+    v-model="visible"
+    title="确认清空"
+    message="此操作不可恢复，是否继续？"
+    confirm-text="确认"
+    cancel-text="取消"
+    variant="danger"
+    @confirm="clearAll"
   />
 </template>
 ```
 
-**Props**:
-- `columns` (Array, 必需): 列定义
-- `data` (Array): 数据
-- `rowKey` (String): 行主键（默认 `'id'`）
-- `selectable` (Boolean): 是否可选择
-- `searchable` (Boolean): 是否可搜索
-- `paginated` (Boolean): 是否分页
-- `pageSize` (Number): 每页数量（默认 `10`）
-- `loading` (Boolean): 加载状态
+### FormPanel
 
-**事件**:
-- `@row-click`: 行点击事件
-- `@selection-change`: 选择变化事件
-- `@sort-change`: 排序变化事件
+- 文件：`frontend/src/components/library/layout/FormPanel.vue`
+- 导出：`import { FormPanel } from '@/components/library'`
+- 场景：统一表单头部、提交动作、提交加载状态
 
-### 控制组件
+核心 props：
 
-#### Toolbar - 工具栏
-页面或组件的工具栏，包含标题和操作按钮。
+1. `title` / `description`
+2. `auto-grid`（默认 `true`）
+3. `columns`（默认 `2`）
+4. `submit-text` / `submit-loading-text`
+5. `submit-disabled` / `submit-loading`
+6. `show-actions` / `show-cancel`
 
-**位置**: `library/controls/Toolbar.vue`
+核心事件：
 
-**基本用法**:
+1. `@submit`
+2. `@cancel`
+
+最小示例：
+
 ```vue
-<Toolbar
-  title="数据集管理"
-  description="管理和配置所有数据集"
+<FormPanel
+  title="参数配置"
+  description="设置实验运行参数"
+  :submit-loading="saving"
+  :submit-disabled="saving"
+  submit-text="保存"
+  @submit="handleSave"
 >
-  <template #right>
-    <button @click="handleAdd">添加</button>
-    <button @click="handleExport">导出</button>
-  </template>
-</Toolbar>
+  <label class="full">
+    <span>name</span>
+    <input v-model="form.name" class="input" />
+  </label>
+</FormPanel>
 ```
 
-**Props**:
-- `title` (String): 标题
-- `description` (String): 描述
-- `size` (String): 尺寸 (`'sm' | 'md' | 'lg'`)
-- `bordered` (Boolean): 是否显示底部边框
+## 已接入页面
 
-### 反馈组件
+1. `frontend/src/views/GeomodelVisualization.vue`：`DataTable`
+2. `frontend/src/views/ResearchWorkbench.vue`：`DataTable`
+3. `frontend/src/views/DataImport.vue`：`ConfirmDialog` + `FormPanel`
 
-#### LoadingState - 加载状态
-展示加载、空状态、错误状态。
+## 后续建议
 
-**位置**: `library/feedback/LoadingState.vue`
-
-**基本用法**:
-```vue
-<!-- 加载状态 -->
-<LoadingState type="loading" message="正在加载数据..." />
-
-<!-- 空状态 -->
-<LoadingState
-  type="empty"
-  title="暂无数据"
-  message="请先创建数据集"
->
-  <template #actions>
-    <button @click="handleCreate">创建数据集</button>
-  </template>
-</LoadingState>
-
-<!-- 错误状态 -->
-<LoadingState
-  type="error"
-  title="加载失败"
-  message="网络连接失败，请检查网络设置"
-  @retry="handleRetry"
-/>
-```
-
-**Props**:
-- `type` (String, 必需): 类型 (`'loading' | 'empty' | 'error' | 'success'`)
-- `title` (String): 标题
-- `message` (String): 消息
-- `showRetry` (Boolean): 是否显示重试按钮（仅 error）
-- `fullScreen` (Boolean): 是否全屏显示
-
-### 布局组件
-
-#### SidePanel - 侧边面板
-可折叠的侧边面板，用于显示控制项。
-
-**位置**: `library/layout/SidePanel.vue`
-
-**基本用法**:
-```vue
-<script setup>
-import { ref } from 'vue'
-import { SidePanel } from '@/components/library'
-
-const panelRef = ref()
-
-function collapse() {
-  panelRef.value?.collapse()
-}
-</script>
-
-<template>
-  <SidePanel
-    ref="panelRef"
-    title="控制面板"
-    position="left"
-    :width="320"
-    :default-collapsed="false"
-  >
-    <div>面板内容</div>
-
-    <template #footer>
-      <button @click="collapse">收起</button>
-    </template>
-  </SidePanel>
-</template>
-```
-
-**Props**:
-- `position` (String): 位置 (`'left' | 'right'`)
-- `title` (String): 标题
-- `description` (String): 描述
-- `width` (Number|String): 宽度（默认 `320`）
-- `collapsedWidth` (Number|String): 折叠后宽度
-- `floating` (Boolean): 是否浮动
-- `defaultCollapsed` (Boolean): 默认是否折叠
-- `showToggle` (Boolean): 是否显示切换按钮
-
-**方法**:
-- `expand()`: 展开面板
-- `collapse()`: 折叠面板
-- `toggle()`: 切换面板
-
-## 设计规范
-
-### Props 规范
-
-所有组件遵循统一的 Props 规范：
-
-```javascript
-{
-  // 数据
-  data: Array,
-  items: Array,
-  value: [String, Number],
-
-  // 状态
-  loading: Boolean,
-  disabled: Boolean,
-  error: String,
-
-  // 尺寸
-  size: {
-    type: String,
-    validator: (v) => ['xs', 'sm', 'md', 'lg', 'xl'].includes(v)
-  },
-
-  // 样式
-  class: [String, Object, Array],
-  style: [String, Object]
-}
-```
-
-### 事件规范
-
-所有组件遵循统一的事件命名：
-
-```javascript
-// 更新类事件（v-model）
-emit('update:modelValue', value)
-
-// 动作类事件
-emit('click', event)
-emit('change', value)
-
-// 状态类事件
-emit('loading', isLoading)
-emit('error', error)
-```
-
-### 插槽规范
-
-所有组件使用具名插槽，提供扩展性：
-
-```vue
-<template>
-  <div class="component">
-    <!-- 头部插槽 -->
-    <div v-if="$slots.header">
-      <slot name="header"></slot>
-    </div>
-
-    <!-- 默认插槽 -->
-    <slot></slot>
-
-    <!-- 底部插槽 -->
-    <div v-if="$slots.footer">
-      <slot name="footer"></slot>
-    </div>
-  </div>
-</template>
-```
-
-## 使用建议
-
-1. **优先使用库组件**: 开发新页面时，优先使用库组件，保持一致性
-2. **遵循设计 Token**: 使用 CSS 变量，而不是硬编码颜色和间距
-3. **保持简洁**: 不要过度封装，简单页面可以直接使用原生元素
-4. **按需引入**: 只导入需要使用的组件
-
-## 后续计划
-
-**P1 组件（重要）**:
-- FilterPanel - 筛选面板
-- PlaybackBar - 播放控制
-- ChartContainer - 图表容器
-- ColorLegend - 颜色图例
-
-**P2 组件（可选）**:
-- VirtualList - 虚拟列表
-- SplitPane - 分屏组件
-- AnnotationTool - 标注工具
-
-## 问题反馈
-
-如有问题或建议，请联系开发团队。
+1. 为 `ConfirmDialog` 增加焦点陷阱和可访问性测试。
+2. 为 `FormPanel` 增加 `v-model` 表单校验适配（如 Element Plus 表单）。
+3. 补一组组件级单元测试，重点覆盖事件和状态切换。

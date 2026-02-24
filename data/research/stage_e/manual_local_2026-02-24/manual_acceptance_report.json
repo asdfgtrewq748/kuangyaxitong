@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-02-24 13:22:52",
+  "base_url": "http://127.0.0.1:8001",
+  "all_passed": true,
+  "steps": [
+    {
+      "name": "backend_health",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "-",
+      "note": "GET /health"
+    },
+    {
+      "name": "geomodel_job_prepare",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "9614de96903a",
+      "note": "artifact=quality_report.json"
+    },
+    {
+      "name": "perf_baseline_3runs",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "D:/xiangmu/kuangyaxitong/data/research/stage_e/manual_local_2026-02-24/perf_http/evaluation.json",
+      "note": "run_baseline_suite.py"
+    },
+    {
+      "name": "frontend_e2e",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "-",
+      "note": "npm run e2e"
+    },
+    {
+      "name": "research_templates_real_datasets",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "D:/xiangmu/kuangyaxitong/data/research/stage_e/manual_local_2026-02-24/research/template_e2e_manual.json",
+      "note": "validate_template_e2e.py"
+    },
+    {
+      "name": "rollout_rollback_smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "D:/xiangmu/kuangyaxitong/data/research/stage_e/manual_local_2026-02-24/rollout/rollout_smoke.json",
+      "note": "geomodel_job_id=9614de96903a"
+    }
+  ],
+  "online_pending": [
+    "Execute 10%/30%/100% progressive rollout in production and observe error/latency windows.",
+    "Run alert-routing/on-call drill with real notification channels.",
+    "Execute rollback trigger drill under production guardrails.",
+    "Archive 24h post-release observation report."
+  ]
+}

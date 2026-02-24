@@ -1,9 +1,9 @@
-﻿# exp005 去掉尖灭模式识别结果摘要
+# exp005 ????????????
 
-- reference_exp004: exp_20260222_142454_9626e0
-- candidate_exp005: exp_20260222_142628_3d261c
-- delta_auc: 0.333333
-- delta_pr_auc: 0.361111
-- delta_brier: -0.070155
-- delta_f1: 1
-- delta_rmse: -0.074803
+- reference_exp004: exp_20260223_113726_3bf742
+- candidate_exp005: exp_20260223_113726_00b4c3
+- delta_auc: 0.0
+- delta_pr_auc: 0.0
+- delta_brier: -0.011863
+- delta_f1: 0.0
+- delta_rmse: -0.013406

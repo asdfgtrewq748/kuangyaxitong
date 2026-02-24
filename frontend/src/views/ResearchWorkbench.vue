@@ -169,7 +169,9 @@
               <option value="asi_ust">asi_ust</option>
               <option value="geomodel_aware">geomodel_aware</option>
               <option value="geomodel_ablation">geomodel_ablation</option>
+              <option value="hybrid_augmented">hybrid_augmented</option>
               <option value="pinchout_sensitive">pinchout_sensitive</option>
+              <option value="pinchout_no_zoning">pinchout_no_zoning</option>
               <option value="rk_enhanced">rk_enhanced</option>
               <option value="kriging_baseline">kriging_baseline</option>
               <option value="custom">custom</option>
@@ -1855,4 +1857,3 @@ onMounted(async () => {
   }
 }
 </style>
-

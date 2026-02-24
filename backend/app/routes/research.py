@@ -140,6 +140,7 @@ class ExperimentSpec(BaseModel):
         "asi_ust",
         "geomodel_aware",
         "geomodel_ablation",
+        "hybrid_augmented",
         "pinchout_sensitive",
         "pinchout_no_zoning",
         "rk_enhanced",
