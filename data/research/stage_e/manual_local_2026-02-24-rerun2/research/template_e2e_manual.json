@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-02-24 21:57:15",
+  "mode": "http",
+  "base_url": "http://127.0.0.1:8001",
+  "templates": [
+    "geomodel_ablation",
+    "hybrid_augmented_upgrade",
+    "rk_vs_kriging"
+  ],
+  "datasets": [
+    {
+      "dataset_id": "research_boreholes_28",
+      "passed": false,
+      "templates": [],
+      "error": "dataset lookup failed status=404 err=auto-register failed: {\"detail\":\"dataset csv not found: research_boreholes_28.csv\"}"
+    },
+    {
+      "dataset_id": "research_boreholes_36",
+      "passed": false,
+      "templates": [],
+      "error": "dataset lookup failed status=404 err=auto-register failed: {\"detail\":\"dataset csv not found: research_boreholes_36.csv\"}"
+    }
+  ],
+  "all_passed": false
+}

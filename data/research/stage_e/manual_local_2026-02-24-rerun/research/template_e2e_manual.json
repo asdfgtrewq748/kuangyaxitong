@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-02-24 21:53:46",
+  "mode": "http",
+  "base_url": "http://127.0.0.1:8001",
+  "templates": [
+    "geomodel_ablation",
+    "hybrid_augmented_upgrade",
+    "rk_vs_kriging"
+  ],
+  "datasets": [
+    {
+      "dataset_id": "research_boreholes_28",
+      "passed": false,
+      "templates": [],
+      "error": "dataset lookup failed status=0 err=URLError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。"
+    },
+    {
+      "dataset_id": "research_boreholes_36",
+      "passed": false,
+      "templates": [],
+      "error": "dataset lookup failed status=0 err=URLError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。"
+    }
+  ],
+  "all_passed": false
+}

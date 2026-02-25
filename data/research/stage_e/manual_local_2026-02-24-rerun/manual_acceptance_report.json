@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-02-24 21:52:10",
+  "base_url": "http://127.0.0.1:8001",
+  "all_passed": false,
+  "steps": [
+    {
+      "name": "backend_health",
+      "status": "failed",
+      "exit_code": 1,
+      "output": "-",
+      "note": "GET /health failed status=0 err=URLError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。"
+    },
+    {
+      "name": "geomodel_job_prepare",
+      "status": "failed",
+      "exit_code": 1,
+      "output": "",
+      "note": "create geomodel job failed status=0 err=URLError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。"
+    },
+    {
+      "name": "perf_baseline_3runs",
+      "status": "failed",
+      "exit_code": 1,
+      "output": "D:/xiangmu/kuangyaxitong/data/research/stage_e/manual_local_2026-02-24-rerun/perf_http/evaluation.json",
+      "note": "run_baseline_suite.py"
+    },
+    {
+      "name": "frontend_e2e",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "-",
+      "note": "npm run e2e"
+    },
+    {
+      "name": "research_templates_real_datasets",
+      "status": "failed",
+      "exit_code": 2,
+      "output": "D:/xiangmu/kuangyaxitong/data/research/stage_e/manual_local_2026-02-24-rerun/research/template_e2e_manual.json",
+      "note": "validate_template_e2e.py"
+    },
+    {
+      "name": "rollout_rollback_smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "D:/xiangmu/kuangyaxitong/data/research/stage_e/manual_local_2026-02-24-rerun/rollout/rollout_smoke.json",
+      "note": "geomodel_job_id=n/a"
+    }
+  ],
+  "online_pending": [
+    "Execute 10%/30%/100% progressive rollout in production and observe error/latency windows.",
+    "Run alert-routing/on-call drill with real notification channels.",
+    "Execute rollback trigger drill under production guardrails.",
+    "Archive 24h post-release observation report."
+  ]
+}

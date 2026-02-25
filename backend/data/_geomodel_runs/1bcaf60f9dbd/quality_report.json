@@ -1,0 +1,13 @@
+{
+  "continuity_score": 0.2469,
+  "pinchout_ratio": 0.8333,
+  "layer_cv": 0.6715,
+  "zero_or_negative_ratio": 0.0,
+  "sample_count": 1780,
+  "warning_flags": {
+    "low_continuity": true,
+    "high_pinchout": true,
+    "high_variability": false
+  },
+  "generated_at": "2026-02-24T13:55:23.913574+00:00"
+}

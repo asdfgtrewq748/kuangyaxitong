@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "mode": "http",
+    "base_url": "http://127.0.0.1:8001",
+    "requests": 30,
+    "concurrency": 6,
+    "points": 81,
+    "resolution": 100,
+    "method": "idw",
+    "geomodel_job_id": null,
+    "artifact_name": "quality_report.json",
+    "generated_at": "2026-02-24 21:53:17"
+  },
+  "scenarios": [
+    {
+      "name": "mpi_interpolate_large_grid",
+      "summary": {
+        "total_requests": 30,
+        "success_count": 0,
+        "failed_count": 30,
+        "success_rate": 0.0,
+        "elapsed_ms": 10482.231699995697,
+        "rps": 2.861985964306849,
+        "latency_ms": {
+          "min": 2016.2809000015259,
+          "max": 2287.6875,
+          "avg": 2092.2763800012567,
+          "p50": 2056.4484499953687,
+          "p90": 2269.2427400052547,
+          "p95": 2273.9722450014206,
+          "p99": 2284.1078270002454
+        }
+      },
+      "error_buckets": {
+        "EXC:URLError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。": 30
+      }
+    },
+    {
+      "name": "mpi_interpolate_geo_large_grid",
+      "summary": {
+        "total_requests": 30,
+        "success_count": 0,
+        "failed_count": 30,
+        "success_rate": 0.0,
+        "elapsed_ms": 10257.337400004268,
+        "rps": 2.9247356141358396,
+        "latency_ms": {
+          "min": 2027.7256999984384,
+          "max": 2061.896600008011,
+          "avg": 2048.1706433338422,
+          "p50": 2050.214049998671,
+          "p90": 2058.122009999305,
+          "p95": 2060.09432499744,
+          "p99": 2061.8209680046884
+        }
+      },
+      "error_buckets": {
+        "EXC:URLError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。": 30
+      }
+    }
+  ]
+}

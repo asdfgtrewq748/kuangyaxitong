@@ -242,10 +242,19 @@
     - 新增一键脚本：`scripts/stage_e/run_stage_e_manual_acceptance.py`
     - 文档更新：`scripts/stage_e/README.md`（新增 manual acceptance 用法）
     - 新增线上灰度执行清单：`docs/plans/2026-02-24-阶段E-线上灰度执行清单.md`
+    - 新增线上灰度执行记录模板：`docs/plans/2026-02-24-阶段E-线上灰度执行记录模板.md`
+    - 新增线上灰度执行记录实例：`docs/plans/2026-02-24-阶段E-线上灰度执行记录.md`
+    - 执行记录实例已按本地演练结果预填（`manual_local_2026-02-24-rerun3`），线上仅需替换 `base_url` 并回填灰度观测数据
     - 本地全流程自验证：
       - `python scripts/stage_e/run_stage_e_manual_acceptance.py --base-url http://127.0.0.1:8001 --output-dir data/research/stage_e/manual_local_2026-02-24 --dataset-ids research_boreholes_28 research_boreholes_36 --auto-register --label-column label`
       - 结果：`data/research/stage_e/manual_local_2026-02-24/manual_acceptance_report.json` -> `all_passed=true`
       - 验证任务：`geomodel_job_id=9614de96903a`
+    - 本地复跑验证（2026-02-24，修正 DATA_DIR 前置）：
+      - 前置：启动后端时需设置 `DATA_DIR=./data`，否则 `auto-register` 会读取 `backend/data` 并触发 `dataset csv not found`。
+      - 执行：`python scripts/stage_e/run_stage_e_manual_acceptance.py --base-url http://127.0.0.1:8001 --output-dir data/research/stage_e/manual_local_2026-02-24-rerun3 --dataset-ids research_boreholes_28 research_boreholes_36 --auto-register --label-column label`
+      - 结果：`data/research/stage_e/manual_local_2026-02-24-rerun3/manual_acceptance_report.json` -> `all_passed=true`
+      - 关键产物：`perf_http/evaluation.json`、`research/template_e2e_manual.json`、`rollout/rollout_smoke.json`
+      - 验证任务：`geomodel_job_id=136d833d5461`
 
 ## 下一步执行顺序
 
