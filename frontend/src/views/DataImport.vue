@@ -228,8 +228,8 @@
             >
           </div>
           <div class="table-wrapper">
-            <!-- Use virtual list for large datasets (>100 items) -->
-            <template v-if="filteredBoreholes.length > 100">
+            <!-- Use virtual list for medium/large datasets (>=50 items) -->
+            <template v-if="useVirtualList">
               <div class="virtual-table-header">
                 <div class="virtual-row virtual-header">
                   <div class="virtual-cell" style="width: 50px;">序号</div>
@@ -352,6 +352,7 @@ const coordMode = ref('manual')
 const selectedBorehole = ref(null)
 const searchQuery = ref('')
 const clearDialogVisible = ref(false)
+const VIRTUAL_LIST_THRESHOLD = 50
 
 // 钻孔坐标数据
 const boreholes = ref([])
@@ -372,6 +373,8 @@ const filteredBoreholes = computed(() => {
     b.y?.toString().includes(q)
   )
 })
+
+const useVirtualList = computed(() => filteredBoreholes.value.length >= VIRTUAL_LIST_THRESHOLD)
 
 // 监听选中状态，同步到地图组件
 watch(selectedBorehole, (val) => {

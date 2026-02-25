@@ -77,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import AiChatSidebar from './AiChatSidebar.vue'
 
 const props = defineProps<{
@@ -133,15 +133,20 @@ const selectSuggestion = (suggestion: string) => {
 }
 
 // Watch for search events from sidebar
-const handleSearchFromChat = (e: CustomEvent) => {
-  if (e.detail) {
-    query.value = e.detail
+const handleSearchFromChat = (event: Event) => {
+  const customEvent = event as CustomEvent<string>
+  if (typeof customEvent.detail === 'string' && customEvent.detail.trim()) {
+    query.value = customEvent.detail
     sendInlineQuery()
   }
 }
 
 onMounted(() => {
-  window.addEventListener('ai-search', handleSearchFromChat)
+  window.addEventListener('ai-search', handleSearchFromChat as EventListener)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('ai-search', handleSearchFromChat as EventListener)
 })
 </script>
 
@@ -157,32 +162,32 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border: 1px solid #e0e0e0;
-  background: white;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .search-trigger:hover {
-  border-color: #667eea;
-  background: #f8f8ff;
+  border-color: var(--color-primary);
+  background: var(--bg-secondary);
 }
 
 .search-trigger svg {
   width: 18px;
   height: 18px;
-  color: #667eea;
+  color: var(--color-primary);
 }
 
 .trigger-label {
   font-size: 14px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .ai-search-bar.focused .search-trigger {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .inline-input-wrapper {
@@ -190,8 +195,8 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -205,15 +210,15 @@ onMounted(() => {
 }
 
 .inline-input::placeholder {
-  color: #999;
+  color: var(--text-muted);
 }
 
 .inline-send-btn {
   width: 32px;
   height: 32px;
   border: none;
-  background: #667eea;
-  color: white;
+  background: var(--color-primary);
+  color: var(--text-inverted);
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -223,7 +228,7 @@ onMounted(() => {
 }
 
 .inline-send-btn:hover:not(:disabled) {
-  background: #5568d3;
+  background: var(--color-primary-hover);
 }
 
 .inline-send-btn:disabled {
@@ -235,7 +240,7 @@ onMounted(() => {
   width: 28px;
   height: 28px;
   border: none;
-  background: #f0f0f0;
+  background: var(--bg-tertiary);
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -245,7 +250,7 @@ onMounted(() => {
 }
 
 .inline-expand-btn:hover {
-  background: #e0e0e0;
+  background: var(--border-color-light);
 }
 
 .suggestions-dropdown {
@@ -253,7 +258,7 @@ onMounted(() => {
   top: calc(100% + 8px);
   right: 0;
   min-width: 280px;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
@@ -277,10 +282,10 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color-light);
   font-size: 13px;
   font-weight: 500;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .close-suggestions {
@@ -288,7 +293,7 @@ onMounted(() => {
   height: 20px;
   border: none;
   background: none;
-  color: #999;
+  color: var(--text-tertiary);
   cursor: pointer;
   border-radius: 4px;
   display: flex;
@@ -297,8 +302,8 @@ onMounted(() => {
 }
 
 .close-suggestions:hover {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .suggestions-list {
@@ -320,18 +325,18 @@ onMounted(() => {
 }
 
 .suggestion-item:hover {
-  background: #f8f8ff;
+  background: var(--bg-secondary);
 }
 
 .suggestion-icon {
   width: 16px;
   height: 16px;
-  color: #667eea;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
 .suggestion-item span {
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
 }
 </style>

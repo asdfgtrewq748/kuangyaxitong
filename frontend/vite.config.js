@@ -13,9 +13,11 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return
 
+          if (id.includes('node_modules/pinia/')) return 'state'
           if (id.includes('node_modules/vue-router/')) return 'vue-router'
           if (id.includes('node_modules/echarts/')) return 'echarts'
           if (id.includes('node_modules/d3/')) return 'd3'
+          if (id.includes('node_modules/three/')) return 'three'
           if (id.includes('node_modules/katex/')) return 'katex'
           if (id.includes('node_modules/jszip/')) return 'jszip'
           if (id.includes('node_modules/axios/')) return 'network'

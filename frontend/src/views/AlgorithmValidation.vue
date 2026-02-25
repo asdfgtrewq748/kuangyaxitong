@@ -273,6 +273,7 @@ import { getCoalSeams, getRockParams, getSeamOverburden, mpiCalculateGeo, valida
 import { useViewport } from '../composables/useViewport'
 import { useIndicatorCanvas } from '../composables/useIndicatorCanvas'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
+import { LRUCache } from '../lib/lruCache'
 import ValidationScienceFigures from '../components/validation/ValidationScienceFigures.vue'
 
 const route = useRoute()
@@ -326,7 +327,7 @@ const matrixSelection = ref('all')
 const activePointerId = ref(null)
 const exportStaticMode = ref(false)
 const thumbCanvasRefs = {}
-const spatialCache = new Map()
+const spatialCache = new LRUCache(200)
 const layerParamsCache = new Map()
 const SPATIAL_CACHE_MODEL_REV = 'advanced_v2_asi_calibrated_v1'
 const geoModelJobId = ref('')
@@ -791,9 +792,10 @@ const fetchSpatial = async ({ force = false } = {}) => {
   if (!seamName.value) return
   const requestId = ++latestSpatialRequestId
   const key = cacheKey()
-  if (!force && spatialCache.has(key)) {
+  const cached = force ? undefined : spatialCache.get(key)
+  if (cached !== undefined) {
     if (requestId !== latestSpatialRequestId) return
-    await applySpatialData(spatialCache.get(key))
+    await applySpatialData(cached)
     return
   }
 

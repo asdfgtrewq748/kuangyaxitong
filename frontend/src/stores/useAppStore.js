@@ -12,6 +12,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
+  const SUPPORTED_LANGUAGES = new Set(['zh-CN', 'en-US'])
+
   // State
   const theme = ref('light') // 'light' | 'dark'
   const language = ref('zh-CN')
@@ -42,8 +44,10 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function setLanguage(lang) {
-    language.value = lang
-    localStorage.setItem('language', lang)
+    const normalizedLanguage = SUPPORTED_LANGUAGES.has(lang) ? lang : 'zh-CN'
+    language.value = normalizedLanguage
+    document.documentElement.setAttribute('lang', normalizedLanguage)
+    localStorage.setItem('language', normalizedLanguage)
   }
 
   function setUser(userData) {
@@ -78,9 +82,7 @@ export const useAppStore = defineStore('app', () => {
 
     // 恢复语言
     const savedLanguage = localStorage.getItem('language')
-    if (savedLanguage) {
-      language.value = savedLanguage
-    }
+    setLanguage(savedLanguage || language.value)
 
     // 恢复用户
     const savedUser = localStorage.getItem('user')

@@ -276,6 +276,7 @@ import {
   mpiInterpolate,
   parseMpiWorkfaces
 } from '../api'
+import { LRUCache } from '../lib/lruCache'
 
 // --- State ---
 const loading = ref(false)
@@ -350,7 +351,7 @@ const router = useRouter()
 // Cache
 const layerParamsCache = new Map()
 // Color cache to avoid repeated color calculations (js-cache-function-results pattern)
-const colorCache = new Map()
+const colorCache = new LRUCache(200)
 const getColorCacheKey = (val, min, max) => {
   // Handle null/undefined values safely
   const safeVal = Number.isFinite(val) ? val.toFixed(2) : 'null'
@@ -655,6 +656,10 @@ const computeGlobal = async () => {
 // --- Methods: Canvas Rendering ---
 const getColor = (val, min, max) => {
   if (!Number.isFinite(val)) return [0,0,0,0]
+  const key = getColorCacheKey(val, min, max)
+  const cached = colorCache.get(key)
+  if (cached) return cached
+
   const range = max - min || 1
   const t = Math.max(0, Math.min(1, (val - min) / range))
   
@@ -671,12 +676,15 @@ const getColor = (val, min, max) => {
   const c1 = hexToRgb(odiPalette[Math.min(i, odiPalette.length - 1)])
   const c2 = hexToRgb(odiPalette[Math.min(i + 1, odiPalette.length - 1)])
   
-  return [
+  const color = [
     Math.round(c1[0] + (c2[0] - c1[0]) * f),
     Math.round(c1[1] + (c2[1] - c1[1]) * f),
     Math.round(c1[2] + (c2[2] - c1[2]) * f),
     255
   ]
+
+  colorCache.set(key, color)
+  return color
 }
 
 const getDiscreteColor = (val, thresholds, colors) => {
