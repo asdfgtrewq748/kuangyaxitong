@@ -1,67 +1,66 @@
 ﻿<template>
   <div class="geomodel-viz-page">
-    <!-- 使用 Toolbar 组件替换自定义头部 -->
-    <Toolbar
-      title="地质建模与可视化"
-      description="Geological Modeling & Visualization"
-      size="lg"
+    <PageHeader
+      class="main-header"
+      :title="gv('pageTitle')"
+      :description="gv('pageDescription')"
     >
-      <template #right>
+      <template #actions>
         <button class="btn secondary" @click="showHelp = !showHelp">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
             <circle cx="12" cy="12" r="10" />
             <path d="M9.09 9a3 3 0 0 1 1 5.83" />
             <path d="M12 17h.01" />
           </svg>
-          帮助
+          {{ gv('help') }}
         </button>
       </template>
-    </Toolbar>
+    </PageHeader>
 
     <!-- 帮助面板 -->
     <div v-if="showHelp" class="help-panel">
       <div class="help-content">
-        <h3>地质建模可视化说明</h3>
-        <p>本页面集成地质建模、MPI 联动分析和统计概览。</p>
+        <h3>{{ gv('helpTitle') }}</h3>
+        <p>{{ gv('helpDescription') }}</p>
         <ul>
-          <li>3D 地质模型浏览</li>
-          <li>MPI 热力图联动展示</li>
-          <li>质量评分与钻孔信息</li>
+          <li>{{ gv('helpItemModel') }}</li>
+          <li>{{ gv('helpItemMpi') }}</li>
+          <li>{{ gv('helpItemQuality') }}</li>
         </ul>
-        <button class="btn primary" @click="showHelp = false">关闭</button>
+        <button class="btn primary" @click="showHelp = false">{{ gv('close') }}</button>
       </div>
     </div>
 
     <div class="main-layout">
       <!-- 侧边控制面板 -->
       <SidePanel
-        title="控制面板"
+        :title="gv('controlPanel')"
         position="left"
         :width="320"
         :default-collapsed="false"
       >
         <!-- 数据源 -->
         <div class="panel-section">
-          <h3 class="panel-title">数据源</h3>
+          <h3 class="panel-title">{{ gv('dataSource') }}</h3>
 
           <label class="control-group">
-            <span class="label">选择煤层</span>
+            <span class="label">{{ gv('seam') }}</span>
             <select v-model="selectedSeam" :disabled="loading" @change="onSeamChange">
-              <option value="">-- 请选择 --</option>
+              <option value="">{{ gv('pleaseSelect') }}</option>
               <option v-for="seam in seams" :key="seam" :value="seam">{{ seam }}</option>
             </select>
           </label>
 
           <label class="control-group">
-            <span class="label">地质模型任务</span>
+            <span class="label">{{ gv('geomodelJob') }}</span>
             <div class="geomodel-input-group">
               <select v-model="selectedJobId" :disabled="loading" @change="onJobChange">
-                <option value="">-- 无 --</option>
+                <option value="">{{ gv('noneOption') }}</option>
                 <option v-for="job in geomodelJobs" :key="job.job_id" :value="job.job_id">
                   {{ job.job_id }} ({{ job.status }})
                 </option>
               </select>
-              <button class="icon-btn" @click="refreshJobs" :disabled="loading" title="刷新任务">
+              <button class="icon-btn" @click="refreshJobs" :disabled="loading" :title="gv('refreshJobs')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 2v6h-6" />
                   <path d="M3 12a9 9 0 0 1 15-6l3 2" />
@@ -74,10 +73,10 @@
 
           <div class="action-buttons">
             <button class="btn primary" :disabled="!canRunAnalysis" @click="runAnalysis">
-              {{ loading ? '分析中...' : '运行分析' }}
+              {{ loading ? gv('analyzing') : gv('runAnalysis') }}
             </button>
             <button class="btn secondary" :disabled="!hasData" @click="exportSnapshot">
-              导出快照
+              {{ gv('exportSnapshot') }}
             </button>
           </div>
 
@@ -86,22 +85,22 @@
 
         <!-- 使用 StatCard 组件显示质量评估 -->
         <div v-if="quality" class="panel-section">
-          <h3 class="panel-title">质量评估</h3>
+          <h3 class="panel-title">{{ gv('qualityAssessment') }}</h3>
           <div class="quality-cards">
             <StatCard
-              title="连续性"
+              :title="gv('continuity')"
               :value="formatPercentValue(quality.continuity_score)"
               icon="📈"
               :size="'sm'"
             />
             <StatCard
-              title="完整度"
+              :title="gv('completeness')"
               :value="formatPercentValue(1 - quality.pinchout_ratio)"
               icon="🎯"
               :size="'sm'"
             />
             <StatCard
-              title="稳定性"
+              :title="gv('stability')"
               :value="formatPercentValue(1 - quality.layer_cv)"
               icon="📊"
               :size="'sm'"
@@ -110,7 +109,7 @@
         </div>
 
         <div v-if="boreholes.length" class="panel-section">
-          <h3 class="panel-title">钻孔 ({{ boreholes.length }})</h3>
+          <h3 class="panel-title">{{ gv('boreholesTitle', { count: boreholes.length }) }}</h3>
           <div class="borehole-list">
             <div
               v-for="bh in boreholes.slice(0, showAllBoreholes ? undefined : 5)"
@@ -121,7 +120,7 @@
               <span class="bh-coords">{{ formatCoords(bh) }}</span>
             </div>
             <button v-if="boreholes.length > 5 && !showAllBoreholes" class="text-btn" @click="showAllBoreholes = true">
-              显示全部 ({{ boreholes.length - 5 }}) 更多
+              {{ gv('showAllBoreholes', { count: boreholes.length - 5 }) }}
             </button>
           </div>
         </div>
@@ -144,7 +143,7 @@
           <div v-show="activeTab === 'model'" class="viz-view model-view">
             <GeomodelViewer
               ref="geomodelViewer"
-              :title="`${selectedSeam || '未选择'} - 地质模型`"
+              :title="mainViewerTitle"
               :model-data="geomodelData"
               :layers="layers"
               :boreholes="boreholes"
@@ -172,18 +171,18 @@
                 <ColorLegend
                   v-if="mpiGrid && mpiGrid.length"
                   type="gradient"
-                  title="MPI 分布"
+                  :title="gv('mpiDistribution')"
                   unit="MPa"
                   :gradient="'linear-gradient(90deg, #0e7490, #14b8a6, #84cc16, #facc15, #fb923c, #dc2626)'"
-                  :labels="['低', '', '', '', '', '高']"
+                  :labels="legendLabels"
                   direction="horizontal"
                   class="heatmap-legend"
                 />
                 <LoadingState
                   v-else
                   type="empty"
-                  title="暂无 MPI 数据"
-                  message="请先运行分析生成 MPI 热力图"
+                  :title="gv('emptyMpiTitle')"
+                  :message="gv('emptyMpiMessage')"
                 />
               </div>
             </div>
@@ -193,7 +192,7 @@
             <div class="combined-layout">
               <div class="combined-geomodel">
                 <GeomodelViewer
-                  title="地质模型"
+                  :title="gv('geomodelTitle')"
                   :model-data="geomodelData"
                   :layers="layers"
                   :boreholes="boreholes"
@@ -202,7 +201,7 @@
               </div>
               <div class="combined-mpi">
                 <div class="mpi-legend">
-                  <h4>MPI 分布</h4>
+                  <h4>{{ gv('mpiDistribution') }}</h4>
                   <HeatmapCanvas
                     v-if="mpiGrid && mpiGrid.length"
                     :grid="mpiGrid"
@@ -210,7 +209,7 @@
                     :color-scale="'viridis'"
                   />
                   <div v-else class="mpi-placeholder">
-                    <p>运行分析后显示</p>
+                    <p>{{ gv('showAfterAnalysis') }}</p>
                   </div>
                 </div>
               </div>
@@ -220,29 +219,29 @@
           <div v-show="activeTab === 'stats'" class="viz-view stats-view">
             <div class="stats-grid">
               <StatCard
-                title="钻孔数量"
+                :title="gv('boreholeCount')"
                 :value="boreholes.length"
-                unit="个"
+                :unit="gv('unitCount')"
                 icon="📍"
                 :size="'lg'"
               />
               <StatCard
-                title="模型分辨率"
+                :title="gv('modelResolution')"
                 :value="resolution"
                 unit="m"
                 icon="📐"
                 :size="'lg'"
               />
               <StatCard
-                title="图层数量"
+                :title="gv('layerCount')"
                 :value="layers.length"
-                unit="层"
+                :unit="gv('unitLayer')"
                 icon="🏔️"
                 :size="'lg'"
               />
               <StatCard
                 v-if="bounds"
-                title="空间范围 X"
+                :title="gv('spatialRangeX')"
                 :value="`${bounds.min_x?.toFixed(0)} - ${bounds.max_x?.toFixed(0)}`"
                 unit="m"
                 icon="↔️"
@@ -251,7 +250,7 @@
               />
               <StatCard
                 v-if="bounds"
-                title="空间范围 Y"
+                :title="gv('spatialRangeY')"
                 :value="`${bounds.min_y?.toFixed(0)} - ${bounds.max_y?.toFixed(0)}`"
                 unit="m"
                 icon="↕️"
@@ -262,7 +261,7 @@
 
             <!-- 钻孔详情表格 -->
             <div v-if="boreholes.length" class="borehole-table-section">
-              <h3 class="table-section-title">钻孔详情列表</h3>
+              <h3 class="table-section-title">{{ gv('boreholeDetailList') }}</h3>
               <DataTable
                 :columns="boreholeColumns"
                 :data="boreholes"
@@ -298,7 +297,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Toolbar, StatCard, SidePanel, ColorLegend, DataTable } from '../components/library'
+import { useI18n } from '../composables/useI18n'
+import { PageHeader, StatCard, SidePanel, ColorLegend, DataTable } from '../components/library'
 import { useDataStore, useUIStore } from '../stores'
 import GeomodelViewer from '../components/GeomodelViewer.vue'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
@@ -314,6 +314,8 @@ import {
 // 使用全局状态
 const dataStore = useDataStore()
 const uiStore = useUIStore()
+const { t } = useI18n()
+const gv = (key, params) => t(`geomodelVisualization.${key}`, params)
 
 const showHelp = ref(false)
 const loading = ref(false)
@@ -334,22 +336,24 @@ const fullscreenViewer = ref(false)
 const loadError = ref('')
 
 // 钻孔表格列定义
-const boreholeColumns = [
-  { key: 'name', title: '钻孔名称', sortable: true },
-  { key: 'x', title: 'X 坐标 (m)', sortable: true, align: 'right' },
-  { key: 'y', title: 'Y 坐标 (m)', sortable: true, align: 'right' },
-  { key: 'z', title: 'Z 坐标 (m)', sortable: true, align: 'right' }
-]
+const boreholeColumns = computed(() => ([
+  { key: 'name', title: gv('table.boreholeName'), sortable: true },
+  { key: 'x', title: gv('table.coordX'), sortable: true, align: 'right' },
+  { key: 'y', title: gv('table.coordY'), sortable: true, align: 'right' },
+  { key: 'z', title: gv('table.coordZ'), sortable: true, align: 'right' }
+]))
 
-const tabs = [
-  { id: 'model', label: '3D 模型' },
-  { id: 'mpi', label: 'MPI 热力图' },
-  { id: 'combined', label: '联动视图' },
-  { id: 'stats', label: '统计数据' },
-]
+const tabs = computed(() => ([
+  { id: 'model', label: gv('tabs.model') },
+  { id: 'mpi', label: gv('tabs.mpi') },
+  { id: 'combined', label: gv('tabs.combined') },
+  { id: 'stats', label: gv('tabs.stats') },
+]))
 
 const hasData = computed(() => geomodelData.value || (layers.value && layers.value.length > 0))
 const canRunAnalysis = computed(() => !!selectedSeam.value && !loading.value)
+const legendLabels = computed(() => [gv('legendLow'), '', '', '', '', gv('legendHigh')])
+const mainViewerTitle = computed(() => gv('modelViewerTitle', { seam: selectedSeam.value || gv('unselected') }))
 
 // 格式化百分比值（用于 StatCard）
 const formatPercentValue = (val) => {
@@ -403,7 +407,7 @@ const refreshJobs = async () => {
     const response = await getGeomodelIntegrationJobs()
     geomodelJobs.value = Array.isArray(response.data) ? response.data : []
   } catch (err) {
-    loadError.value = getApiErrorMessage(err, '地质建模任务列表加载失败')
+    loadError.value = getApiErrorMessage(err, gv('errorLoadJobs'))
   } finally {
     loading.value = false
   }
@@ -420,7 +424,7 @@ const loadSeamData = async () => {
     boreholes.value = data.boreholes || []
     bounds.value = data.bounds
   } catch (err) {
-    loadError.value = getApiErrorMessage(err, '煤层上覆岩性数据加载失败')
+    loadError.value = getApiErrorMessage(err, gv('errorLoadSeamData'))
   } finally {
     loading.value = false
   }
@@ -446,7 +450,7 @@ const loadGeomodelData = async () => {
     bounds.value = data.bounds
     quality.value = data.quality_summary || null
   } catch (err) {
-    loadError.value = getApiErrorMessage(err, '地质模型可视化数据加载失败')
+    loadError.value = getApiErrorMessage(err, gv('errorLoadVisualization'))
   } finally {
     loading.value = false
   }
@@ -468,7 +472,7 @@ const runAnalysis = async () => {
     mpiGrid.value = data.mpi_grid || []
     activeTab.value = 'mpi'
   } catch (err) {
-    loadError.value = getApiErrorMessage(err, '联动分析失败，请稍后重试')
+    loadError.value = getApiErrorMessage(err, gv('errorRunAnalysis'))
   } finally {
     loading.value = false
   }
@@ -497,15 +501,15 @@ const exportSnapshot = () => {
     link.click()
     URL.revokeObjectURL(url)
 
-    uiStore.showSuccess('快照导出成功')
+    uiStore.showSuccess(gv('exportSnapshotSuccess'))
   } catch (error) {
-    console.error('导出快照失败:', error)
-    uiStore.showError('导出快照失败')
+    console.error('Failed to export geomodel snapshot:', error)
+    uiStore.showError(gv('exportSnapshotFailed'))
   }
 }
 
 const handleBoreholeClick = (row) => {
-  console.log('点击钻孔:', row)
+  console.log('Borehole row clicked:', row)
   // TODO: 在 3D 视图中高亮显示该钻孔
 }
 
@@ -523,7 +527,7 @@ onMounted(async () => {
       await loadSeamData()
     }
   } catch (err) {
-    loadError.value = getApiErrorMessage(err, '煤层列表加载失败')
+    loadError.value = getApiErrorMessage(err, gv('errorLoadSeams'))
   }
 
   await refreshJobs()
@@ -536,6 +540,10 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   background: var(--color-bg-page);
+}
+
+.main-header {
+  padding: 0 var(--spacing-5);
 }
 
 /* 帮助面板 */

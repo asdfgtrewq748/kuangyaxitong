@@ -21,6 +21,7 @@ export { default as ConfirmDialog } from './feedback/ConfirmDialog.vue'
 // Layout Components
 export { default as SidePanel } from './layout/SidePanel.vue'
 export { default as FormPanel } from './layout/FormPanel.vue'
+export { default as PageHeader } from './layout/PageHeader.vue'
 
 // Visualization Components
 export { default as ColorLegend } from './visualization/ColorLegend.vue'

@@ -1,43 +1,45 @@
 ﻿<template>
   <div class="scene3d-page">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">3D Workspace</p>
-        <h1>三维指标可视化</h1>
-        <p class="subtitle">页面打开后自动加载默认煤层数据，无需手动点击开始。</p>
-      </div>
-      <div class="header-actions">
-        <button class="btn secondary" :disabled="!canLoadData" @click="loadData">刷新</button>
-      </div>
-    </header>
+    <PageHeader
+      class="main-header"
+      :eyebrow="s3('eyebrow')"
+      :title="s3('title')"
+      :description="s3('subtitle')"
+    >
+      <template #actions>
+        <div class="header-actions">
+          <button class="btn secondary" :disabled="!canLoadData" @click="loadData">{{ s3('refresh') }}</button>
+        </div>
+      </template>
+    </PageHeader>
 
     <div class="summary-strip">
-      <span class="chip">当前煤层：{{ selectedSeam || '未选择' }}</span>
-      <span class="chip">分辨率：{{ resolution }}</span>
+      <span class="chip">{{ s3('currentSeam') }}{{ selectedSeam || s3('unselected') }}</span>
+      <span class="chip">{{ s3('resolution') }}{{ resolution }}</span>
       <span class="chip" :class="{ loading, error: !!loadError }">{{ statusText }}</span>
-      <span v-if="lastUpdatedAt" class="chip">更新于：{{ lastUpdatedAt }}</span>
+      <span v-if="lastUpdatedAt" class="chip">{{ s3('updatedAt') }}{{ lastUpdatedAt }}</span>
     </div>
 
     <div class="main-layout">
       <aside class="side-panel">
         <section class="card">
-          <h3>数据源</h3>
+          <h3>{{ s3('dataSource') }}</h3>
           <label class="field">
-            <span>煤层</span>
+            <span>{{ s3('seam') }}</span>
             <select v-model="selectedSeam" :disabled="loading" @change="onSeamChange">
-              <option value="">-- 请选择 --</option>
+              <option value="">-- {{ s3('pleaseSelect') }} --</option>
               <option v-for="seam in seamOptions" :key="seam" :value="seam">{{ seam }}</option>
             </select>
           </label>
           <label class="field">
-            <span>分辨率</span>
+            <span>{{ s3('resolutionLabel') }}</span>
             <input v-model.number="resolution" type="number" min="20" max="150" step="10" />
           </label>
           <p v-if="loadError" class="error-tip">{{ loadError }}</p>
         </section>
 
         <section v-if="hasData" class="card">
-          <h3>显示指标</h3>
+          <h3>{{ s3('displayIndicators') }}</h3>
           <div class="indicator-list">
             <label
               v-for="indicator in indicators"
@@ -46,18 +48,18 @@
             >
               <input v-model="activeIndicator" type="radio" :value="indicator.id" />
               <span class="dot" :style="{ background: indicator.color }"></span>
-              <span class="name">{{ indicator.name }}</span>
-              <span class="desc">{{ indicator.description }}</span>
+              <span class="name">{{ indicatorName(indicator) }}</span>
+              <span class="desc">{{ indicatorDescription(indicator) }}</span>
             </label>
           </div>
         </section>
 
         <section v-if="sceneStats" class="card">
-          <h3>场景信息</h3>
-          <div class="kv"><span>图层</span><strong>{{ sceneStats.layerCount ?? 0 }}</strong></div>
-          <div class="kv"><span>钻孔</span><strong>{{ sceneStats.boreholeCount ?? 0 }}</strong></div>
+          <h3>{{ s3('sceneInfo') }}</h3>
+          <div class="kv"><span>{{ s3('layers') }}</span><strong>{{ sceneStats.layerCount ?? 0 }}</strong></div>
+          <div class="kv"><span>{{ s3('boreholes') }}</span><strong>{{ sceneStats.boreholeCount ?? 0 }}</strong></div>
           <div class="kv stack">
-            <span>范围</span>
+            <span>{{ s3('range') }}</span>
             <small>
               X: {{ sceneStats.bounds?.min_x ?? '-' }} - {{ sceneStats.bounds?.max_x ?? '-' }}
             </small>
@@ -96,15 +98,15 @@
 
       <aside v-if="hasData" class="stats-panel">
         <section class="card">
-          <h3>当前指标</h3>
+          <h3>{{ s3('currentIndicator') }}</h3>
           <div class="indicator-head" :style="{ borderLeftColor: activeIndicatorConfig?.color }">
-            <strong>{{ activeIndicatorConfig?.name }}</strong>
-            <small>{{ activeIndicatorConfig?.fullName }}</small>
+            <strong>{{ activeIndicatorConfig ? indicatorName(activeIndicatorConfig) : '' }}</strong>
+            <small>{{ activeIndicatorConfig ? indicatorFullName(activeIndicatorConfig) : '' }}</small>
           </div>
           <div class="metric-row">
-            <div><small>最小</small><strong>{{ formatValue(activeIndicatorValues.min) }}</strong></div>
-            <div><small>最大</small><strong>{{ formatValue(activeIndicatorValues.max) }}</strong></div>
-            <div><small>平均</small><strong>{{ formatValue(activeIndicatorValues.mean) }}</strong></div>
+            <div><small>{{ s3('min') }}</small><strong>{{ formatValue(activeIndicatorValues.min) }}</strong></div>
+            <div><small>{{ s3('max') }}</small><strong>{{ formatValue(activeIndicatorValues.max) }}</strong></div>
+            <div><small>{{ s3('mean') }}</small><strong>{{ formatValue(activeIndicatorValues.mean) }}</strong></div>
           </div>
           <div class="hist">
             <canvas ref="histogramCanvas"></canvas>
@@ -119,9 +121,13 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Scene3DViewer from '../components/Scene3DViewer.vue'
+import { PageHeader } from '../components/library'
 import { getCoalSeams, getScene3DData, getApiErrorMessage } from '../api'
+import { useI18n } from '../composables/useI18n'
 
 const route = useRoute()
+const { locale, t } = useI18n()
+const s3 = (key, params) => t(`scene3d.${key}`, params)
 
 const selectedSeam = ref('')
 const seamsRaw = ref([])
@@ -140,10 +146,10 @@ const sceneStats = ref(null)
 
 const activeIndicator = ref('mpi')
 const indicators = [
-  { id: 'mpi', name: 'MPI', fullName: '矿压影响指标', description: '综合压力评估', color: '#0f766e' },
-  { id: 'rsi', name: 'RSI', fullName: '顶板稳定指数', description: '稳定状态评估', color: '#3b82f6' },
-  { id: 'bri', name: 'BRI', fullName: '冲击风险指数', description: '危险程度评估', color: '#f59e0b' },
-  { id: 'asi', name: 'ASI', fullName: '支承应力指数', description: '应力分布评估', color: '#10b981' },
+  { id: 'mpi', nameKey: 'indicators.mpi', fullNameKey: 'indicators.mpiFullName', descKey: 'indicators.mpiDesc', color: '#0f766e' },
+  { id: 'rsi', nameKey: 'indicators.rsi', fullNameKey: 'indicators.rsiFullName', descKey: 'indicators.rsiDesc', color: '#3b82f6' },
+  { id: 'bri', nameKey: 'indicators.bri', fullNameKey: 'indicators.briFullName', descKey: 'indicators.briDesc', color: '#f59e0b' },
+  { id: 'asi', nameKey: 'indicators.asi', fullNameKey: 'indicators.asiFullName', descKey: 'indicators.asiDesc', color: '#10b981' },
 ]
 
 const viewerRef = ref(null)
@@ -158,6 +164,9 @@ const seamOptions = computed(() =>
 )
 
 const activeIndicatorConfig = computed(() => indicators.find((i) => i.id === activeIndicator.value))
+const indicatorName = (indicator) => (indicator ? s3(indicator.nameKey) : '')
+const indicatorFullName = (indicator) => (indicator ? s3(indicator.fullNameKey) : '')
+const indicatorDescription = (indicator) => (indicator ? s3(indicator.descKey) : '')
 
 const activeIndicatorValues = computed(() => {
   const source = indicatorValues.value
@@ -179,27 +188,27 @@ const activeIndicatorValues = computed(() => {
   }
 })
 
-const pageTitle = computed(() => `${activeIndicatorConfig.value?.name || 'MPI'} 三维可视化`)
-const pageSubtitle = computed(() => (selectedSeam.value ? `煤层: ${selectedSeam.value}` : '三维指标可视化系统'))
+const pageTitle = computed(() => s3('viewerTitle', { metric: activeIndicatorConfig.value ? indicatorName(activeIndicatorConfig.value) : 'MPI' }))
+const pageSubtitle = computed(() => (selectedSeam.value ? s3('viewerSubtitleWithSeam', { seam: selectedSeam.value }) : s3('viewerSubtitle')))
 const canLoadData = computed(() => !!selectedSeam.value && !loading.value)
 const loadingText = computed(() =>
   loading.value
     ? selectedSeam.value
-      ? `正在自动加载煤层 ${selectedSeam.value} 的场景...`
-      : '正在自动加载场景...'
+      ? s3('loadingWithSeam', { seam: selectedSeam.value })
+      : s3('loading')
     : ''
 )
 const emptyText = computed(() =>
-  selectedSeam.value ? '未获取到场景数据，请检查后端接口返回。' : '请先选择煤层'
+  selectedSeam.value ? s3('emptyNoData') : s3('emptySelectSeam')
 )
 const emptyAction = computed(() =>
-  loadError.value ? { label: '重试加载', onClick: () => loadData() } : null
+  loadError.value ? { label: s3('retryLoad'), onClick: () => loadData() } : null
 )
 const statusText = computed(() => {
-  if (loading.value) return '自动加载中'
-  if (loadError.value) return '加载失败'
-  if (hasData.value) return '已自动加载'
-  return '等待数据'
+  if (loading.value) return s3('statusLoading')
+  if (loadError.value) return s3('statusFailed')
+  if (hasData.value) return s3('statusLoaded')
+  return s3('statusIdle')
 })
 
 const formatValue = (val) => {
@@ -240,13 +249,13 @@ const loadData = async () => {
     bounds.value = data.bounds ?? null
     sceneStats.value = data.stats ?? null
     hasData.value = !!sceneData.value || layers.value.length > 0
-    lastUpdatedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+    lastUpdatedAt.value = new Date().toLocaleTimeString(locale.value === 'zh-CN' ? 'zh-CN' : 'en-US', { hour12: false })
 
     setTimeout(drawHistogram, 60)
   } catch (err) {
     if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED') return
     hasData.value = false
-    loadError.value = getApiErrorMessage(err, '场景加载失败')
+    loadError.value = getApiErrorMessage(err, s3('errorLoadScene'))
     console.error('Failed to load scene data:', err)
   } finally {
     if (loadController?.signal === signal) loadController = null
@@ -310,16 +319,16 @@ const drawHistogram = () => {
 
   ctx.fillStyle = '#334155'
   ctx.font = '12px sans-serif'
-  ctx.fillText(`min ${formatValue(min)}`, 8, height - 4)
-  ctx.fillText(`mean ${formatValue(mean)}`, width / 2 - 30, height - 4)
-  ctx.fillText(`max ${formatValue(max)}`, width - 88, height - 4)
+  ctx.fillText(s3('histMin', { value: formatValue(min) }), 8, height - 4)
+  ctx.fillText(s3('histMean', { value: formatValue(mean) }), width / 2 - 30, height - 4)
+  ctx.fillText(s3('histMax', { value: formatValue(max) }), width - 88, height - 4)
 }
 
 onMounted(async () => {
   try {
     await loadSeams()
   } catch (err) {
-    loadError.value = getApiErrorMessage(err, '煤层列表加载失败')
+    loadError.value = getApiErrorMessage(err, s3('errorLoadSeams'))
     return
   }
 
@@ -351,10 +360,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .scene3d-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg-page); }
-.page-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 24px; border-bottom: 1px solid var(--border-color); background: var(--gradient-card); }
-.eyebrow { margin: 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-primary); }
-h1 { margin: 4px 0 6px; font-size: 38px; line-height: 1.08; }
-.subtitle { margin: 0; color: var(--text-secondary); }
+.main-header { padding: 0 24px; }
 .header-actions { display: flex; gap: 8px; }
 .btn { padding: 8px 14px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
 .btn.secondary { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-color); }

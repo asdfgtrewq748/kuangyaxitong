@@ -11,14 +11,14 @@
           </svg>
         </div>
         <div>
-          <h1 class="page-title">MPI 学术算法展示平台</h1>
-          <p class="page-subtitle">Academic Algorithm Demonstration Platform · 相场断裂 · 矩张量反演 · 统一强度理论 · 贝叶斯网络</p>
+          <h1 class="page-title">{{ aa('pageTitle') }}</h1>
+          <p class="page-subtitle">{{ aa('pageSubtitle') }}</p>
         </div>
       </div>
       <div class="header-actions">
         <div class="mode-tabs">
-          <button :class="['mode-tab', { active: activeTab === 'principle' }]" @click="activeTab = 'principle'">算法原理</button>
-          <button :class="['mode-tab', { active: activeTab === 'calculation' }]" @click="activeTab = 'calculation'">在线计算</button>
+          <button :class="['mode-tab', { active: activeTab === 'principle' }]" @click="activeTab = 'principle'">{{ aa('tabPrinciple') }}</button>
+          <button :class="['mode-tab', { active: activeTab === 'calculation' }]" @click="activeTab = 'calculation'">{{ aa('tabCalculation') }}</button>
         </div>
       </div>
     </div>
@@ -26,17 +26,17 @@
     <!-- 一句话总览 -->
     <section class="card overview-card">
       <div class="overview-text">
-        <h2>算法体系总览</h2>
+        <h2>{{ aa('overviewTitle') }}</h2>
         <p>
-          MPI 学术算法平台融合<strong>相场断裂力学</strong>、<strong>微震矩张量反演</strong>、<strong>统一强度理论</strong>与
-          <strong>动态贝叶斯网络</strong>四大理论，构建多尺度、多物理场的矿压灾害评估体系。
+          {{ aa('overviewTextPrefix') }}<strong>{{ aa('overviewStrong1') }}</strong>、<strong>{{ aa('overviewStrong2') }}</strong>、<strong>{{ aa('overviewStrong3') }}</strong>{{ aa('overviewTextMid') }}
+          <strong>{{ aa('overviewStrong4') }}</strong>{{ aa('overviewTextSuffix') }}
         </p>
       </div>
       <div class="overview-badges">
-        <span class="badge">相场断裂模型</span>
-        <span class="badge">矩张量分解</span>
-        <span class="badge">统一强度理论</span>
-        <span class="badge">概率推理</span>
+        <span class="badge">{{ aa('overviewBadge1') }}</span>
+        <span class="badge">{{ aa('overviewBadge2') }}</span>
+        <span class="badge">{{ aa('overviewBadge3') }}</span>
+        <span class="badge">{{ aa('overviewBadge4') }}</span>
       </div>
     </section>
 
@@ -44,22 +44,22 @@
     <template v-if="activeTab === 'principle'">
       <section class="card onboarding-card">
         <div class="section-header">
-          <h2>新用户导读</h2>
-          <p>先按“问题-证据-结论”三步阅读，再深入公式和推导细节。</p>
+          <h2>{{ aa('onboardingTitle') }}</h2>
+          <p>{{ aa('onboardingDesc') }}</p>
         </div>
         <div class="onboarding-grid">
           <div class="reading-path">
             <div class="reading-step" v-for="item in newcomerJourney" :key="item.step">
               <span class="reading-index">{{ item.step }}</span>
               <div class="reading-body">
-                <h3>{{ item.title }}</h3>
-                <p>{{ item.desc }}</p>
+                <h3>{{ aa(item.titleKey) }}</h3>
+                <p>{{ aa(item.descKey) }}</p>
               </div>
             </div>
           </div>
           <div class="io-map">
-            <h3>输入-处理-输出总示意图</h3>
-            <svg viewBox="0 0 680 220" class="io-map-svg" role="img" aria-label="MPI 输入处理输出总示意图">
+            <h3>{{ aa('ioMapTitle') }}</h3>
+            <svg viewBox="0 0 680 220" class="io-map-svg" role="img" :aria-label="aa('ioMapAriaLabel')">
               <defs>
                 <linearGradient id="ioInputGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" style="stop-color:#e0f2fe"/>
@@ -79,76 +79,76 @@
               </defs>
 
               <rect x="20" y="48" width="190" height="124" rx="14" fill="url(#ioInputGradient)" stroke="#0ea5e9" stroke-width="1.5"/>
-              <text x="115" y="78" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">输入层</text>
-              <text x="115" y="104" text-anchor="middle" font-size="12" fill="#334155">岩层参数、微震事件</text>
-              <text x="115" y="124" text-anchor="middle" font-size="12" fill="#334155">应力边界、支护条件</text>
-              <text x="115" y="144" text-anchor="middle" font-size="12" fill="#334155">历史风险标签</text>
+              <text x="115" y="78" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">{{ aa('ioMap.inputLayer') }}</text>
+              <text x="115" y="104" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.inputLine1') }}</text>
+              <text x="115" y="124" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.inputLine2') }}</text>
+              <text x="115" y="144" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.inputLine3') }}</text>
 
               <rect x="245" y="32" width="190" height="156" rx="14" fill="url(#ioProcessGradient)" stroke="#8b5cf6" stroke-width="1.5"/>
-              <text x="340" y="62" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">机理计算层</text>
-              <text x="340" y="87" text-anchor="middle" font-size="12" fill="#334155">RSI: 裂纹演化</text>
-              <text x="340" y="107" text-anchor="middle" font-size="12" fill="#334155">BRI: 震源机制识别</text>
-              <text x="340" y="127" text-anchor="middle" font-size="12" fill="#334155">ASI: 应力重分布</text>
-              <text x="340" y="147" text-anchor="middle" font-size="12" fill="#334155">DBN: 概率融合推理</text>
-              <text x="340" y="167" text-anchor="middle" font-size="11" fill="#475569">输出中间量: RSI/BRI/ASI</text>
+              <text x="340" y="62" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">{{ aa('ioMap.processLayer') }}</text>
+              <text x="340" y="87" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.processLine1') }}</text>
+              <text x="340" y="107" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.processLine2') }}</text>
+              <text x="340" y="127" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.processLine3') }}</text>
+              <text x="340" y="147" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.processLine4') }}</text>
+              <text x="340" y="167" text-anchor="middle" font-size="11" fill="#475569">{{ aa('ioMap.processLine5') }}</text>
 
               <rect x="470" y="48" width="190" height="124" rx="14" fill="url(#ioOutputGradient)" stroke="#22c55e" stroke-width="1.5"/>
-              <text x="565" y="78" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">决策输出层</text>
-              <text x="565" y="104" text-anchor="middle" font-size="12" fill="#334155">MPI 综合指数</text>
-              <text x="565" y="124" text-anchor="middle" font-size="12" fill="#334155">风险等级与概率分布</text>
-              <text x="565" y="144" text-anchor="middle" font-size="12" fill="#334155">支护与预警建议</text>
+              <text x="565" y="78" text-anchor="middle" font-size="16" fill="#0f172a" font-weight="700">{{ aa('ioMap.outputLayer') }}</text>
+              <text x="565" y="104" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.outputLine1') }}</text>
+              <text x="565" y="124" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.outputLine2') }}</text>
+              <text x="565" y="144" text-anchor="middle" font-size="12" fill="#334155">{{ aa('ioMap.outputLine3') }}</text>
 
               <line x1="210" y1="110" x2="245" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#ioArrow)"/>
               <line x1="435" y1="110" x2="470" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#ioArrow)"/>
             </svg>
-            <p class="io-map-tip">阅读建议：先确认右侧“输出层”含义，再回看中间机理如何支撑结论。</p>
+            <p class="io-map-tip">{{ aa('ioMapTip') }}</p>
           </div>
         </div>
       </section>
 
       <section class="card glossary-card">
         <div class="section-header">
-          <h2>术语速查</h2>
-          <p>把“学术名词”翻译成“业务含义”，第一次看也能快速建立直觉。</p>
+          <h2>{{ aa('glossaryTitle') }}</h2>
+          <p>{{ aa('glossaryDesc') }}</p>
         </div>
         <div class="glossary-grid">
-          <article class="glossary-item" v-for="item in termGlossary" :key="item.term">
-            <h3>{{ item.term }}</h3>
-            <p class="glossary-plain">{{ item.plain }}</p>
-            <p class="glossary-cue">{{ item.cue }}</p>
+          <article class="glossary-item" v-for="item in termGlossary" :key="item.termKey">
+            <h3>{{ aa(item.termKey) }}</h3>
+            <p class="glossary-plain">{{ aa(item.plainKey) }}</p>
+            <p class="glossary-cue">{{ aa(item.cueKey) }}</p>
           </article>
         </div>
       </section>
 
       <section class="card storyboard-card">
         <div class="section-header">
-          <h2>四大算法分镜示意</h2>
-          <p>每个算法都拆成“输入 → 机理 → 输出”，并标注新手优先关注点。</p>
+          <h2>{{ aa('storyboardTitle') }}</h2>
+          <p>{{ aa('storyboardDesc') }}</p>
         </div>
         <div class="storyboard-grid">
           <article class="storyboard-item" v-for="item in algorithmStoryboards" :key="item.key">
             <div class="storyboard-head">
               <span class="storyboard-tag">{{ item.tag }}</span>
-              <h3>{{ item.name }}</h3>
+              <h3>{{ aa(item.nameKey) }}</h3>
             </div>
             <div class="storyboard-strip">
               <div class="story-node input">
-                <span class="story-node-label">输入</span>
-                <span class="story-node-text">{{ item.input }}</span>
+                <span class="story-node-label">{{ aa('storyNodeInput') }}</span>
+                <span class="story-node-text">{{ aa(item.inputKey) }}</span>
               </div>
               <span class="story-arrow">→</span>
               <div class="story-node process">
-                <span class="story-node-label">机理</span>
-                <span class="story-node-text">{{ item.process }}</span>
+                <span class="story-node-label">{{ aa('storyNodeProcess') }}</span>
+                <span class="story-node-text">{{ aa(item.processKey) }}</span>
               </div>
               <span class="story-arrow">→</span>
               <div class="story-node output">
-                <span class="story-node-label">输出</span>
-                <span class="story-node-text">{{ item.output }}</span>
+                <span class="story-node-label">{{ aa('storyNodeOutput') }}</span>
+                <span class="story-node-text">{{ aa(item.outputKey) }}</span>
               </div>
             </div>
-            <p class="storyboard-watch">新手先看：{{ item.watch }}</p>
-            <button class="storyboard-jump" @click="activeAlgo = item.key">查看详细原理</button>
+            <p class="storyboard-watch">{{ aa('storyboardWatchPrefix') }}{{ aa(item.watchKey) }}</p>
+            <button class="storyboard-jump" @click="activeAlgo = item.key">{{ aa('storyboardJump') }}</button>
           </article>
         </div>
       </section>
@@ -156,15 +156,15 @@
       <!-- 总体流程 -->
       <section class="card flow-card">
         <div class="section-header">
-          <h2>总体计算流程</h2>
-          <p>四大算法模块协同工作，实现从微观破裂到宏观稳定的完整评估</p>
+          <h2>{{ aa('flowTitle') }}</h2>
+          <p>{{ aa('flowDesc') }}</p>
         </div>
         <div class="flow-diagram">
           <div class="flow-row">
             <div class="flow-node" v-for="(node, idx) in flowNodes" :key="node.key" :class="{ active: activeFlowNode === idx }" @mouseenter="activeFlowNode = idx">
               <div class="node-icon" v-html="node.icon"></div>
-              <div class="node-title">{{ node.title }}</div>
-              <div class="node-subtitle">{{ node.subtitle }}</div>
+              <div class="node-title">{{ aa(node.titleKey) }}</div>
+              <div class="node-subtitle">{{ aa(node.subtitleKey) }}</div>
             </div>
           </div>
           <div class="flow-arrows">
@@ -177,8 +177,8 @@
         </div>
         <div class="flow-detail" v-if="flowNodes[activeFlowNode]">
           <div class="detail-content">
-            <h4>{{ flowNodes[activeFlowNode].detailTitle }}</h4>
-            <p>{{ flowNodes[activeFlowNode].detail }}</p>
+            <h4>{{ aa(flowNodes[activeFlowNode].detailTitleKey) }}</h4>
+            <p>{{ aa(flowNodes[activeFlowNode].detailKey) }}</p>
           </div>
         </div>
       </section>
@@ -186,8 +186,8 @@
       <!-- 子指标模块 -->
       <section class="card indicators-card">
         <div class="section-header">
-          <h2>核心算法原理</h2>
-          <p>每个算法模块都基于严谨的物理理论，配备完整的数学推导与可视化解释</p>
+          <h2>{{ aa('coreTitle') }}</h2>
+          <p>{{ aa('coreDesc') }}</p>
         </div>
 
         <div class="algorithm-tabs">
@@ -198,32 +198,32 @@
             @click="activeAlgo = algo.key"
           >
             <span class="tab-tag">{{ algo.tag }}</span>
-            <span class="tab-name">{{ algo.name }}</span>
+            <span class="tab-name">{{ aa(algo.nameKey) }}</span>
           </button>
         </div>
 
         <!-- RSI 相场断裂模型 -->
         <div v-if="activeAlgo === 'rsi'" class="algorithm-detail">
           <div class="algo-header">
-            <h3>RSI - 相场断裂模型 (Phase-Field Fracture)</h3>
-            <p class="algo-desc">基于 Griffith 断裂理论，通过相场变量描述裂纹演化过程，评估顶板岩层的断裂风险。</p>
+            <h3>{{ aa('rsiTitle') }}</h3>
+            <p class="algo-desc">{{ aa('rsiDesc') }}</p>
           </div>
 
           <div class="principle-grid">
             <div class="principle-section">
-              <h4>物理原理</h4>
-              <p>相场断裂模型引入连续变量 φ ∈ [0,1] 描述材料损伤状态，其中 φ=0 表示完整材料，φ=1 表示完全断裂。通过能量变分原理，将离散裂纹转化为扩散界面。</p>
+              <h4>{{ aa('rsiPhysicalTitle') }}</h4>
+              <p>{{ aa('rsiPhysicalDesc') }}</p>
 
               <div class="principle-visual">
                 <div class="sci-figure">
                   <div class="figure-caption-top">
-                    <strong>Fig. 1</strong> | Phase-field fracture evolution. (a) Phase-field order parameter φ varies from 0 (intact) to 1 (fully fractured).
-                    (b) Crack propagation through the domain at different time steps.
+                    <strong>Fig. 1</strong> | {{ aa('fig1Caption1') }}
+                    {{ aa('fig1Caption2') }}
                   </div>
                   <div class="phase-field-container">
                     <!-- 相场变量图 -->
                     <div class="pf-subfigure">
-                      <div class="pf-label">(a) Order parameter φ</div>
+                      <div class="pf-label">{{ aa('fig1OrderParameter') }}</div>
                       <svg viewBox="0 0 280 120" class="sci-svg">
                         <defs>
                           <linearGradient id="phiGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -242,12 +242,12 @@
                         <text x="40" y="95" text-anchor="middle" font-size="11" fill="#2c3e50" font-family="Arial">0.0</text>
                         <text x="140" y="95" text-anchor="middle" font-size="11" fill="#2c3e50" font-family="Arial">0.5</text>
                         <text x="240" y="95" text-anchor="middle" font-size="11" fill="#2c3e50" font-family="Arial">1.0</text>
-                        <text x="140" y="15" text-anchor="middle" font-size="12" fill="#2c3e50" font-family="Arial" font-weight="bold">Intact → Fractured</text>
+                        <text x="140" y="15" text-anchor="middle" font-size="12" fill="#2c3e50" font-family="Arial" font-weight="bold">{{ aa('fig1IntactToFractured') }}</text>
                       </svg>
                     </div>
                     <!-- 裂纹扩展序列 -->
                     <div class="pf-subfigure">
-                      <div class="pf-label">(b) Crack propagation sequence</div>
+                      <div class="pf-label">{{ aa('fig1CrackSequence') }}</div>
                       <div class="crack-sequence">
                         <div class="sequence-frame" v-for="t in 4" :key="t">
                           <svg viewBox="0 0 80 80" class="sci-svg-small">
@@ -279,36 +279,36 @@
             </div>
 
             <div class="principle-section">
-              <h4>控制方程</h4>
+              <h4>{{ aa('rsiEquationTitle') }}</h4>
               <div class="formula-block">
-                <div class="formula-title">总能量泛函</div>
+                <div class="formula-title">{{ aa('rsiFormulaEnergy') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.rsi.energy"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">相场演化方程 (Ginzburg-Landau)</div>
+                <div class="formula-title">{{ aa('rsiFormulaEvolution') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.rsi.governing"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">临界断裂应力 (Griffith 准则)</div>
+                <div class="formula-title">{{ aa('rsiFormulaGriffith') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.rsi.griffith"></div>
               </div>
             </div>
           </div>
 
           <div class="principle-section full-width">
-            <h4>RSI 计算指标体系</h4>
+            <h4>{{ aa('rsiIndicatorTitle') }}</h4>
             <div class="indicator-breakdown">
               <div class="breakdown-item">
                 <div class="breakdown-formula formula-katex" v-html="renderedFormulas.rsi.norm"></div>
-                <p>归一化抗拉强度贡献（基于直接顶岩层）</p>
+                <p>{{ aa('rsiIndicatorNormDesc') }}</p>
               </div>
               <div class="breakdown-item">
                 <div class="breakdown-formula formula-katex" v-html="renderedFormulas.rsi.key"></div>
-                <p>关键层稳定性贡献（识别厚硬岩层）</p>
+                <p>{{ aa('rsiIndicatorKeyDesc') }}</p>
               </div>
               <div class="breakdown-item">
                 <div class="breakdown-formula formula-katex" v-html="renderedFormulas.rsi.struct"></div>
-                <p>结构完整性贡献（软岩层占比惩罚）</p>
+                <p>{{ aa('rsiIndicatorStructDesc') }}</p>
               </div>
             </div>
           </div>
@@ -317,30 +317,30 @@
         <!-- BRI 微震矩张量反演 -->
         <div v-if="activeAlgo === 'bri'" class="algorithm-detail">
           <div class="algo-header">
-            <h3>BRI - 微震矩张量反演 (Moment Tensor Inversion)</h3>
-            <p class="algo-desc">基于地震学矩张量理论，通过微震波形反演震源机制，识别岩体破裂类型与能量释放特征。</p>
+            <h3>{{ aa('briTitle') }}</h3>
+            <p class="algo-desc">{{ aa('briDesc') }}</p>
           </div>
 
           <div class="principle-grid">
             <div class="principle-section">
-              <h4>矩张量理论基础</h4>
-              <p>地震矩张量 M 是对称二阶张量，描述震源处力的分布。任意震源可分解为三个基本分量的线性组合：</p>
+              <h4>{{ aa('briTheoryTitle') }}</h4>
+              <p>{{ aa('briTheoryDesc') }}</p>
               <ul class="principle-list">
-                <li><strong>ISO (各向同性)</strong>：体积变化（爆炸/塌陷）</li>
-                <li><strong>DC (双力偶)</strong>：剪切破裂（断层滑动）</li>
-                <li><strong>CLVD (补偿线性矢量偶极)</strong>：拉伸/挤压破裂</li>
+                <li>{{ aa('briIso') }}</li>
+                <li>{{ aa('briDc') }}</li>
+                <li>{{ aa('briClvd') }}</li>
               </ul>
 
               <div class="sci-figure">
                 <div class="figure-caption-top">
-                  <strong>Fig. 2</strong> | Focal mechanism beach balls. The three fundamental moment tensor components
-                  (ISO, DC, CLVD) representing different source mechanisms in microseismic events.
+                  <strong>Fig. 2</strong> | {{ aa('fig2Caption1') }}
+                  {{ aa('fig2Caption2') }}
                 </div>
                 <div class="beachball-container">
                   <div class="beachball-item" v-for="(item, idx) in [
-                    { type: 'ISO', name: 'Isotropic', desc: 'Explosive/implosive', color: '#1a5276' },
-                    { type: 'DC', name: 'Double-Couple', desc: 'Shear faulting', color: '#7b241c' },
-                    { type: 'CLVD', name: 'Compensated LV', desc: 'Tensile cracking', color: '#145a32' }
+                    { type: 'ISO', name: aa('beachballIsotropicName'), desc: aa('beachballIsotropicDesc'), color: '#1a5276' },
+                    { type: 'DC', name: aa('beachballDoubleCoupleName'), desc: aa('beachballDoubleCoupleDesc'), color: '#7b241c' },
+                    { type: 'CLVD', name: aa('beachballClvdName'), desc: aa('beachballClvdDesc'), color: '#145a32' }
                   ]" :key="idx">
                     <svg viewBox="0 0 140 140" class="sci-svg-beachball">
                       <defs>
@@ -391,29 +391,29 @@
             </div>
 
             <div class="principle-section">
-              <h4>数学公式</h4>
+              <h4>{{ aa('briMathTitle') }}</h4>
               <div class="formula-block">
-                <div class="formula-title">矩张量分解</div>
+                <div class="formula-title">{{ aa('briFormulaDecomposition') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.bri.decomposition"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">波形拟合方程</div>
+                <div class="formula-title">{{ aa('briFormulaWaveform') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.bri.waveform"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">BRI 综合指数</div>
+                <div class="formula-title">{{ aa('briFormulaMain') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.bri.main"></div>
               </div>
             </div>
           </div>
 
           <div class="principle-section full-width">
-            <h4>深度-风险关系模型</h4>
+            <h4>{{ aa('briDepthTitle') }}</h4>
             <div class="depth-model">
               <div class="sci-figure">
                 <div class="figure-caption-top">
-                  <strong>Fig. 5</strong> | Depth-risk relationship curve. BRI decreases nonlinearly with burial depth,
-                  showing critical transition at H<sub>crit</sub> = 400m.
+                  <strong>Fig. 5</strong> | {{ aa('fig5Caption1') }}
+                  {{ aa('fig5Caption2') }}
                 </div>
                 <svg viewBox="0 0 420 260" class="sci-svg-depth">
                   <defs>
@@ -445,7 +445,7 @@
 
                   <!-- 轴标签 -->
                   <text x="320" y="230" font-size="13" fill="#2c3e50" font-family="Arial" font-weight="bold">
-                    Burial Depth H (m)
+                    {{ aa('fig5BurialDepthAxis') }}
                   </text>
                   <text x="25" y="50" font-size="13" fill="#2c3e50" font-family="Arial" font-weight="bold">
                     BRI
@@ -478,9 +478,9 @@
                   <text x="162" y="35" font-size="10" fill="#c0392b" font-family="Arial" font-weight="bold">Hcrit</text>
 
                   <!-- 风险区域标注 -->
-                  <text x="110" y="55" text-anchor="middle" font-size="11" fill="#27ae60" font-family="Arial" font-weight="bold">Low Risk</text>
-                  <text x="220" y="55" text-anchor="middle" font-size="11" fill="#d68910" font-family="Arial" font-weight="bold">Medium</text>
-                  <text x="325" y="55" text-anchor="middle" font-size="11" fill="#c0392b" font-family="Arial" font-weight="bold">High Risk</text>
+                  <text x="110" y="55" text-anchor="middle" font-size="11" fill="#27ae60" font-family="Arial" font-weight="bold">{{ aa('risk.low') }}</text>
+                  <text x="220" y="55" text-anchor="middle" font-size="11" fill="#d68910" font-family="Arial" font-weight="bold">{{ aa('risk.medium') }}</text>
+                  <text x="325" y="55" text-anchor="middle" font-size="11" fill="#c0392b" font-family="Arial" font-weight="bold">{{ aa('risk.high') }}</text>
 
                   <!-- 曲线 -->
                   <path d="M 60 40 Q 120 42 167 60 Q 220 100 273 150 Q 330 190 380 195" fill="none" stroke="#1a5276" stroke-width="3"/>
@@ -499,24 +499,24 @@
                   <!-- 图例 -->
                   <g transform="translate(60, 240)">
                     <line x1="0" y1="5" x2="25" y2="5" stroke="#1a5276" stroke-width="3"/>
-                    <text x="32" y="10" font-size="10" fill="#2c3e50" font-family="Arial">BRI Curve</text>
+                    <text x="32" y="10" font-size="10" fill="#2c3e50" font-family="Arial">{{ aa('fig5LegendCurve') }}</text>
 
                     <line x1="100" y1="5" x2="120" y2="5" stroke="#c0392b" stroke-width="2" stroke-dasharray="4,2"/>
-                    <text x="127" y="10" font-size="10" fill="#2c3e50" font-family="Arial">Critical Depth</text>
+                    <text x="127" y="10" font-size="10" fill="#2c3e50" font-family="Arial">{{ aa('fig5LegendCriticalDepth') }}</text>
                   </g>
                 </svg>
               </div>
               <div class="depth-formulas">
                 <div class="formula-block">
-                  <div class="formula-title">深度惩罚项</div>
+                  <div class="formula-title">{{ aa('briDepthPenalty') }}</div>
                   <div class="formula-body formula-katex" v-html="renderedFormulas.bri.depth"></div>
                 </div>
                 <div class="formula-block">
-                  <div class="formula-title">硬层能量项</div>
+                  <div class="formula-title">{{ aa('briHardLayer') }}</div>
                   <div class="formula-body formula-katex" v-html="renderedFormulas.bri.hard"></div>
                 </div>
                 <div class="formula-block">
-                  <div class="formula-title">煤层厚度项</div>
+                  <div class="formula-title">{{ aa('briCoalThickness') }}</div>
                   <div class="formula-body formula-katex" v-html="renderedFormulas.bri.thick"></div>
                 </div>
               </div>
@@ -527,24 +527,24 @@
         <!-- ASI 统一强度理论 -->
         <div v-if="activeAlgo === 'asi'" class="algorithm-detail">
           <div class="algo-header">
-            <h3>ASI - 统一强度理论 (Unified Strength Theory)</h3>
-            <p class="algo-desc">基于俞茂宏院士提出的统一强度理论，考虑中间主应力影响，建立岩土材料从 Mohr-Coulomb 到 Twin-Shear 的完整强度描述。</p>
+            <h3>{{ aa('asiTitle') }}</h3>
+            <p class="algo-desc">{{ aa('asiDesc') }}</p>
           </div>
 
           <div class="principle-grid">
             <div class="principle-section">
-              <h4>统一强度理论</h4>
-              <p>统一强度理论用一个统一的数学表达式涵盖了现有的主要强度理论，通过参数 b 调节中间主应力的影响程度：</p>
+              <h4>{{ aa('asiTheoryTitle') }}</h4>
+              <p>{{ aa('asiTheoryDesc') }}</p>
               <ul class="principle-list">
-                <li><strong>b = 0</strong>：退化为 Mohr-Coulomb 准则</li>
-                <li><strong>b = 1</strong>：退化为双剪强度理论</li>
-                <li><strong>0 &lt; b &lt; 1</strong>：统一强度理论系列</li>
+                <li>{{ aa('asiTheoryCase0') }}</li>
+                <li>{{ aa('asiTheoryCase1') }}</li>
+                <li>{{ aa('asiTheoryCaseBetween') }}</li>
               </ul>
 
               <div class="sci-figure">
                 <div class="figure-caption-top">
-                  <strong>Fig. 3</strong> | Unified Strength Theory (UST) failure envelopes. The theory
-                  interpolates between Mohr-Coulomb (b=0) and Twin-Shear (b=1) criteria through parameter b.
+                  <strong>Fig. 3</strong> | {{ aa('fig3Caption1') }}
+                  {{ aa('fig3Caption2') }}
                 </div>
                 <div class="ust-container">
                   <svg viewBox="0 0 400 320" class="sci-svg-ust">
@@ -625,7 +625,7 @@
 
                     <!-- b参数标注 -->
                     <text x="150" y="120" font-size="12" fill="#7b241c" font-family="Arial" font-weight="bold">
-                      Unified Strength Theory
+                      {{ aa('fig3UnifiedLabel') }}
                     </text>
                     <text x="150" y="135" font-size="10" fill="#5d6d7e" font-family="Arial">
                       0 ≤ b ≤ 1
@@ -636,48 +636,48 @@
             </div>
 
             <div class="principle-section">
-              <h4>核心公式</h4>
+              <h4>{{ aa('asiCoreFormulaTitle') }}</h4>
               <div class="formula-block">
-                <div class="formula-title">统一强度理论表达式</div>
+                <div class="formula-title">{{ aa('asiFormulaUst') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.asi.ust"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">当 σ₂ ≤ (σ₁ + bσ₃)/(1+b) 时</div>
+                <div class="formula-title">{{ aa('asiFormulaCase1') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.asi.case1"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">隧道围岩应力分布 (Kirsch 解)</div>
+                <div class="formula-title">{{ aa('asiFormulaKirsch') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.asi.kirsch"></div>
               </div>
             </div>
           </div>
 
           <div class="principle-section full-width">
-            <h4>ASI 计算体系</h4>
+            <h4>{{ aa('asiCalcTitle') }}</h4>
             <div class="indicator-breakdown">
               <div class="breakdown-item">
                 <div class="breakdown-formula formula-katex" v-html="renderedFormulas.asi.stiff"></div>
-                <p>综合刚度评分（基于弹性模量加权平均）</p>
+                <p>{{ aa('asiCalcStiffDesc') }}</p>
               </div>
               <div class="breakdown-item">
                 <div class="breakdown-formula formula-katex" v-html="renderedFormulas.asi.fric"></div>
-                <p>摩擦特性评分（基于内摩擦角）</p>
+                <p>{{ aa('asiCalcFricDesc') }}</p>
               </div>
             </div>
 
             <!-- ASI 应力分布可视化 - 图文并茂解释算法 -->
             <div class="sci-figure asi-stress-figure">
               <div class="figure-caption-top">
-                <strong>Fig. 6</strong> | ASI algorithm: Stress redistribution around excavation.
-                (a) Cross-section view showing stress trajectories and plastic zone formation.
-                (b) Stress distribution curves based on Kirsch solution.
-                (c) Abutment pressure ahead of working face defining support requirements.
+                <strong>Fig. 6</strong> | {{ aa('fig6Caption1') }}
+                {{ aa('fig6Caption2') }}
+                {{ aa('fig6Caption3') }}
+                {{ aa('fig6Caption4') }}
               </div>
 
               <div class="asi-viz-wrapper">
                 <!-- 左图: 隧道开挖应力轨迹图 -->
                 <div class="asi-viz-panel">
-                  <div class="panel-title">(a) Stress trajectories & plastic zone</div>
+                  <div class="panel-title">{{ aa('fig6PanelA') }}</div>
                   <svg viewBox="0 0 300 320" class="sci-svg-asi">
                     <defs>
                       <!-- 应力轨迹渐变 -->
@@ -735,7 +735,7 @@
 
                     <!-- 隧道开挖轮廓 -->
                     <ellipse cx="150" cy="160" rx="35" ry="32" fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
-                    <text x="150" y="165" text-anchor="middle" font-size="9" fill="#ecf0f1" font-family="Arial">Tunnel</text>
+                    <text x="150" y="165" text-anchor="middle" font-size="9" fill="#ecf0f1" font-family="Arial">{{ aa('fig6Tunnel') }}</text>
 
                     <!-- 应力重分布箭头 (红色 - 切向) -->
                     <path d="M 110 100 Q 130 120 145 135" fill="none" stroke="#c0392b" stroke-width="2" marker-end="url(#arrRed)"/>
@@ -751,9 +751,9 @@
                     <g transform="translate(10, 10)">
                       <rect x="0" y="0" width="100" height="45" fill="white" stroke="#bdc3c7" stroke-width="1" rx="3" opacity="0.9"/>
                       <line x1="8" y1="15" x2="25" y2="15" stroke="#c0392b" stroke-width="2"/>
-                      <text x="30" y="19" font-size="9" fill="#2c3e50" font-family="Arial">σₜ concentration</text>
+                      <text x="30" y="19" font-size="9" fill="#2c3e50" font-family="Arial">{{ aa('fig6SigmaTConcentration') }}</text>
                       <line x1="8" y1="32" x2="25" y2="32" stroke="#2980b9" stroke-width="1.5"/>
-                      <text x="30" y="36" font-size="9" fill="#2c3e50" font-family="Arial">Stress trajectory</text>
+                      <text x="30" y="36" font-size="9" fill="#2c3e50" font-family="Arial">{{ aa('fig6StressTrajectory') }}</text>
                     </g>
 
                     <!-- 坐标轴 -->
@@ -765,13 +765,13 @@
 
                   <!-- 原理说明文字 -->
                   <div class="principle-text">
-                    <p><strong>开挖效应：</strong>隧道开挖后，原岩应力重新分布。切向应力σₜ在洞壁集中（可达2-3倍原岩应力），径向应力σᵣ降为零。</p>
+                    <p><strong>{{ aa('asiExcavationEffectTitle') }}</strong>{{ aa('asiExcavationEffectDesc') }}</p>
                   </div>
                 </div>
 
                 <!-- 中图: Kirsch解曲线 -->
                 <div class="asi-viz-panel">
-                  <div class="panel-title">(b) Kirsch solution</div>
+                  <div class="panel-title">{{ aa('fig6PanelB') }}</div>
                   <svg viewBox="0 0 280 280" class="sci-svg-asi">
                     <!-- 坐标轴 -->
                     <line x1="50" y1="240" x2="260" y2="240" stroke="#2c3e50" stroke-width="2"/>
@@ -818,20 +818,20 @@
                     <g transform="translate(150, 80)">
                       <rect x="0" y="0" width="105" height="50" fill="white" stroke="#bdc3c7" stroke-width="1" rx="3" opacity="0.95"/>
                       <line x1="8" y1="18" x2="28" y2="18" stroke="#2980b9" stroke-width="2.5"/>
-                      <text x="35" y="22" font-size="9" fill="#2c3e50">Radial σᵣ</text>
+                      <text x="35" y="22" font-size="9" fill="#2c3e50">{{ aa('fig6RadialLegend') }}</text>
                       <line x1="8" y1="35" x2="28" y2="35" stroke="#c0392b" stroke-width="2.5"/>
-                      <text x="35" y="39" font-size="9" fill="#2c3e50">Tangential σₜ</text>
+                      <text x="35" y="39" font-size="9" fill="#2c3e50">{{ aa('fig6TangentialLegend') }}</text>
                     </g>
                   </svg>
 
                   <div class="principle-text">
-                    <p><strong>Kirsch解：</strong>弹性力学精确解。σᵣ从σ₀降至洞壁处为0；σₜ在洞壁集中，理论最大值2σ₀，是岩爆发生的直接原因。</p>
+                    <p><strong>{{ aa('asiKirschSolveTitle') }}</strong>{{ aa('asiKirschSolveDesc') }}</p>
                   </div>
                 </div>
 
                 <!-- 右图: 支承压力 -->
                 <div class="asi-viz-panel">
-                  <div class="panel-title">(c) Abutment pressure</div>
+                  <div class="panel-title">{{ aa('fig6PanelC') }}</div>
                   <svg viewBox="0 0 320 280" class="sci-svg-asi">
                     <!-- 坐标轴 -->
                     <line x1="50" y1="240" x2="300" y2="240" stroke="#2c3e50" stroke-width="2"/>
@@ -839,16 +839,16 @@
                     <polygon points="305,240 295,235 295,245" fill="#2c3e50"/>
 
                     <!-- 轴标签 -->
-                    <text x="270" y="258" font-size="11" fill="#2c3e50" font-family="Arial" font-weight="bold">Distance</text>
+                    <text x="270" y="258" font-size="11" fill="#2c3e50" font-family="Arial" font-weight="bold">{{ aa('fig6DistanceAxis') }}</text>
                     <text x="25" y="35" font-size="11" fill="#2c3e50" font-family="Arial" font-weight="bold">K</text>
 
                     <!-- 采空区 -->
                     <rect x="50" y="40" width="60" height="200" fill="#95a5a6" opacity="0.2"/>
-                    <text x="80" y="55" text-anchor="middle" font-size="9" fill="#7f8c8d">Mined</text>
+                    <text x="80" y="55" text-anchor="middle" font-size="9" fill="#7f8c8d">{{ aa('fig6Mined') }}</text>
 
                     <!-- 工作面位置 -->
                     <line x1="110" y1="40" x2="110" y2="240" stroke="#2c3e50" stroke-width="2"/>
-                    <text x="110" y="255" text-anchor="middle" font-size="10" fill="#2c3e50" font-weight="bold">Face</text>
+                    <text x="110" y="255" text-anchor="middle" font-size="10" fill="#2c3e50" font-weight="bold">{{ aa('fig6Face') }}</text>
 
                     <!-- X轴刻度 -->
                     <line x1="170" y1="235" x2="170" y2="245" stroke="#2c3e50" stroke-width="1"/>
@@ -883,20 +883,20 @@
                     <!-- 影响区 -->
                     <rect x="110" y="40" width="120" height="200" fill="#f39c12" opacity="0.08"/>
                     <line x1="230" y1="40" x2="230" y2="240" stroke="#f39c12" stroke-width="1" stroke-dasharray="5,3"/>
-                    <text x="235" y="55" font-size="9" fill="#d68910">Influence zone</text>
+                    <text x="235" y="55" font-size="9" fill="#d68910">{{ aa('fig6InfluenceZone') }}</text>
 
                     <!-- 图例 -->
                     <g transform="translate(165, 95)">
                       <rect x="0" y="0" width="125" height="60" fill="white" stroke="#bdc3c7" stroke-width="1" rx="3" opacity="0.95"/>
                       <line x1="8" y1="20" x2="33" y2="20" stroke="#c0392b" stroke-width="3"/>
-                      <text x="40" y="24" font-size="9" fill="#2c3e50">Abutment pressure</text>
+                      <text x="40" y="24" font-size="9" fill="#2c3e50">{{ aa('fig6AbutmentPressure') }}</text>
                       <line x1="8" y1="40" x2="33" y2="40" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="4,2"/>
-                      <text x="40" y="44" font-size="9" fill="#2c3e50">In-situ stress</text>
+                      <text x="40" y="44" font-size="9" fill="#2c3e50">{{ aa('fig6InSituStress') }}</text>
                     </g>
                   </svg>
 
                   <div class="principle-text">
-                    <p><strong>支承压力：</strong>超前支承压力峰值Kmax位于工作面前方2-5m，应力集中系数可达2-3。这是ASI评估顶板稳定性的关键指标。</p>
+                    <p><strong>{{ aa('asiAbutmentTitle') }}</strong>{{ aa('asiAbutmentDesc') }}</p>
                   </div>
                 </div>
               </div>
@@ -906,28 +906,28 @@
                 <div class="calc-step">
                   <div class="step-num">1</div>
                   <div class="step-content">
-                    <strong>输入参数：</strong>巷道半径a，原岩应力σ₀，围岩力学参数(E, μ, c, φ)，UST参数b
+                    <strong>{{ aa('asiStep1Title') }}</strong>{{ aa('asiStep1Desc') }}
                   </div>
                 </div>
                 <div class="calc-arrow">→</div>
                 <div class="calc-step">
                   <div class="step-num">2</div>
                   <div class="step-content">
-                    <strong>Kirsch解计算：</strong>确定围岩应力分布，识别塑性区范围Rp
+                    <strong>{{ aa('asiStep2Title') }}</strong>{{ aa('asiStep2Desc') }}
                   </div>
                 </div>
                 <div class="calc-arrow">→</div>
                 <div class="calc-step">
                   <div class="step-num">3</div>
                   <div class="step-content">
-                    <strong>UST强度校核：</strong>比较σₜ与围岩强度，判断稳定性
+                    <strong>{{ aa('asiStep3Title') }}</strong>{{ aa('asiStep3Desc') }}
                   </div>
                 </div>
                 <div class="calc-arrow">→</div>
                 <div class="calc-step">
                   <div class="step-num">4</div>
                   <div class="step-content">
-                    <strong>ASI评分：</strong>基于应力集中系数和塑性区大小计算ASI指数
+                    <strong>{{ aa('asiStep4Title') }}</strong>{{ aa('asiStep4Desc') }}
                   </div>
                 </div>
               </div>
@@ -938,22 +938,22 @@
         <!-- DBN 动态贝叶斯网络 -->
         <div v-if="activeAlgo === 'dbn'" class="algorithm-detail">
           <div class="algo-header">
-            <h3>DBN - 动态贝叶斯网络 (Dynamic Bayesian Network)</h3>
-            <p class="algo-desc">结合静态贝叶斯推理与动态时间演化，融合多源异构数据，实现矿压风险的时空预测与不确定性量化。</p>
+            <h3>{{ aa('dbnTitle') }}</h3>
+            <p class="algo-desc">{{ aa('dbnDesc') }}</p>
           </div>
 
           <div class="principle-grid">
             <div class="principle-section">
-              <h4>网络结构</h4>
-              <p>DBN 由时间片组成，每个时间片包含观测节点、隐状态节点与输出节点，时间片之间通过转移概率关联。</p>
+              <h4>{{ aa('dbnNetworkTitle') }}</h4>
+              <p>{{ aa('dbnNetworkDesc') }}</p>
 
               <div class="sci-figure">
                 <div class="figure-caption-top">
-                  <strong>Fig. 4</strong> | Dynamic Bayesian Network (paper style). Observations O update hidden states H;
-                  hidden states evolve over time and generate risk outputs R.
+                  <strong>Fig. 4</strong> | {{ aa('fig4Caption1') }}
+                  {{ aa('fig4Caption2') }}
                 </div>
                 <div class="dbn-container">
-                  <svg viewBox="0 0 860 320" class="sci-svg-dbn" role="img" aria-label="动态贝叶斯网络时间片结构示意图">
+                  <svg viewBox="0 0 860 320" class="sci-svg-dbn" role="img" :aria-label="aa('fig4AriaLabel')">
                     <defs>
                       <marker id="dbnArrowSolid" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
                         <polygon points="0 0, 8 3, 0 6" fill="#111827"/>
@@ -969,51 +969,51 @@
                     <rect x="586" y="44" width="248" height="184" rx="8" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
 
                     <!-- 时间片标签 -->
-                    <text x="150" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">Slice t-1</text>
-                    <text x="430" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">Slice t</text>
-                    <text x="710" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">Slice t+1</text>
+                    <text x="150" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">{{ aa('fig4SliceTMinus1') }}</text>
+                    <text x="430" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">{{ aa('fig4SliceT') }}</text>
+                    <text x="710" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">{{ aa('fig4SliceTPlus1') }}</text>
 
                     <!-- slice t-1 -->
                     <rect x="50" y="136" width="80" height="54" rx="6" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
                     <text x="90" y="158" text-anchor="middle" font-size="17" fill="#111827" font-family="Times New Roman, serif" font-weight="700">O</text>
-                    <text x="90" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Observed</text>
+                    <text x="90" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4Observed') }}</text>
 
                     <ellipse cx="206" cy="161" rx="56" ry="38" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
                     <text x="206" y="154" text-anchor="middle" font-size="18" fill="#111827" font-family="Times New Roman, serif" font-weight="700">H</text>
-                    <text x="206" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Hidden state</text>
-                    <text x="206" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">risk / stress</text>
+                    <text x="206" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4HiddenState') }}</text>
+                    <text x="206" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4RiskStress') }}</text>
 
                     <circle cx="248" cy="96" r="26" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
                     <text x="248" y="93" text-anchor="middle" font-size="16" fill="#111827" font-family="Times New Roman, serif" font-weight="700">R</text>
-                    <text x="248" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">Output</text>
+                    <text x="248" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4Output') }}</text>
 
                     <!-- slice t -->
                     <rect x="330" y="136" width="80" height="54" rx="6" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
                     <text x="370" y="158" text-anchor="middle" font-size="17" fill="#111827" font-family="Times New Roman, serif" font-weight="700">O</text>
-                    <text x="370" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Observed</text>
+                    <text x="370" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4Observed') }}</text>
 
                     <ellipse cx="486" cy="161" rx="56" ry="38" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
                     <text x="486" y="154" text-anchor="middle" font-size="18" fill="#111827" font-family="Times New Roman, serif" font-weight="700">H</text>
-                    <text x="486" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Hidden state</text>
-                    <text x="486" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">risk / stress</text>
+                    <text x="486" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4HiddenState') }}</text>
+                    <text x="486" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4RiskStress') }}</text>
 
                     <circle cx="528" cy="96" r="26" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
                     <text x="528" y="93" text-anchor="middle" font-size="16" fill="#111827" font-family="Times New Roman, serif" font-weight="700">R</text>
-                    <text x="528" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">Output</text>
+                    <text x="528" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4Output') }}</text>
 
                     <!-- slice t+1 -->
                     <rect x="610" y="136" width="80" height="54" rx="6" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
                     <text x="650" y="158" text-anchor="middle" font-size="17" fill="#111827" font-family="Times New Roman, serif" font-weight="700">O</text>
-                    <text x="650" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Observed</text>
+                    <text x="650" y="175" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4Observed') }}</text>
 
                     <ellipse cx="766" cy="161" rx="56" ry="38" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
                     <text x="766" y="154" text-anchor="middle" font-size="18" fill="#111827" font-family="Times New Roman, serif" font-weight="700">H</text>
-                    <text x="766" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">Hidden state</text>
-                    <text x="766" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">risk / stress</text>
+                    <text x="766" y="172" text-anchor="middle" font-size="11" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4HiddenState') }}</text>
+                    <text x="766" y="186" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4RiskStress') }}</text>
 
                     <circle cx="808" cy="96" r="26" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
                     <text x="808" y="93" text-anchor="middle" font-size="16" fill="#111827" font-family="Times New Roman, serif" font-weight="700">R</text>
-                    <text x="808" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">Output</text>
+                    <text x="808" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4Output') }}</text>
 
                     <!-- 片内关系 O -> H -->
                     <path d="M130 156 Q142 140 154 140" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
@@ -1036,78 +1036,78 @@
                       <rect x="0" y="0" width="560" height="54" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1"/>
 
                       <rect x="14" y="17" width="22" height="15" rx="3" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
-                      <text x="46" y="29" font-size="12" fill="#111827" font-family="Times New Roman, serif">O: observed variables</text>
+                      <text x="46" y="29" font-size="12" fill="#111827" font-family="Times New Roman, serif">{{ aa('fig4LegendObserved') }}</text>
 
                       <ellipse cx="302" cy="24" rx="13" ry="9" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
-                      <text x="324" y="29" font-size="12" fill="#111827" font-family="Times New Roman, serif">H: hidden state</text>
+                      <text x="324" y="29" font-size="12" fill="#111827" font-family="Times New Roman, serif">{{ aa('fig4LegendHidden') }}</text>
 
                       <circle cx="26" cy="42" r="8" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
-                      <text x="46" y="46" font-size="12" fill="#111827" font-family="Times New Roman, serif">R: risk output</text>
+                      <text x="46" y="46" font-size="12" fill="#111827" font-family="Times New Roman, serif">{{ aa('fig4LegendRisk') }}</text>
 
                       <line x1="290" y1="42" x2="318" y2="42" stroke="#111827" stroke-width="1.8" stroke-dasharray="6 5"/>
-                      <text x="324" y="46" font-size="12" fill="#111827" font-family="Times New Roman, serif">dashed: temporal transition</text>
+                      <text x="324" y="46" font-size="12" fill="#111827" font-family="Times New Roman, serif">{{ aa('fig4LegendDashed') }}</text>
                     </g>
                   </svg>
                 </div>
               </div>
 
               <div class="node-types dbn-node-types">
-                <div class="node-type"><span class="dot obs"></span>观测节点：微震频次、能量、RSI/BRI/ASI</div>
-                <div class="node-type"><span class="dot hidden"></span>隐状态：风险等级、应力积累程度</div>
-                <div class="node-type"><span class="dot output"></span>输出节点：综合 MPI、风险概率</div>
+                <div class="node-type"><span class="dot obs"></span>{{ aa('dbnObsNode') }}</div>
+                <div class="node-type"><span class="dot hidden"></span>{{ aa('dbnHiddenNode') }}</div>
+                <div class="node-type"><span class="dot output"></span>{{ aa('dbnOutputNode') }}</div>
               </div>
             </div>
 
             <div class="principle-section">
-              <h4>概率推理公式</h4>
+              <h4>{{ aa('dbnFormulaTitle') }}</h4>
               <div class="formula-block">
-                <div class="formula-title">贝叶斯定理</div>
+                <div class="formula-title">{{ aa('dbnFormulaBayes') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.dbn.bayes"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">先验概率融合 (MPI 计算)</div>
+                <div class="formula-title">{{ aa('dbnFormulaPriorFusion') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.dbn.mpi"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">时间演化 (预测)</div>
+                <div class="formula-title">{{ aa('dbnFormulaTransition') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.dbn.transition"></div>
               </div>
               <div class="formula-block">
-                <div class="formula-title">后验更新</div>
+                <div class="formula-title">{{ aa('dbnFormulaPosterior') }}</div>
                 <div class="formula-body formula-katex" v-html="renderedFormulas.dbn.posterior"></div>
               </div>
             </div>
           </div>
 
           <div class="principle-section full-width">
-            <h4>概率推理示例</h4>
+            <h4>{{ aa('inferenceTitle') }}</h4>
             <div class="inference-example">
               <div class="evidence-panel">
-                <h5>观测证据</h5>
+                <h5>{{ aa('evidenceTitle') }}</h5>
                 <div class="evidence-items">
                   <label class="evidence-item">
-                    <span>微震频次异常</span>
+                    <span>{{ aa('evidence.seismic') }}</span>
                     <input type="checkbox" v-model="evidence.seismic"/>
                   </label>
                   <label class="evidence-item">
-                    <span>RSI &lt; 50</span>
+                    <span>{{ aa('evidence.rsiLow') }}</span>
                     <input type="checkbox" v-model="evidence.rsiLow"/>
                   </label>
                   <label class="evidence-item">
-                    <span>BRI &lt; 50</span>
+                    <span>{{ aa('evidence.briLow') }}</span>
                     <input type="checkbox" v-model="evidence.briLow"/>
                   </label>
                   <label class="evidence-item">
-                    <span>ASI &lt; 50</span>
+                    <span>{{ aa('evidence.asiLow') }}</span>
                     <input type="checkbox" v-model="evidence.asiLow"/>
                   </label>
                 </div>
               </div>
               <div class="posterior-panel">
-                <h5>后验概率分布</h5>
+                <h5>{{ aa('posteriorTitle') }}</h5>
                 <div class="prob-bars">
                   <div class="prob-bar-item" v-for="(prob, level) in posteriorProbs" :key="level">
-                    <span class="prob-label">{{ level }}</span>
+                    <span class="prob-label">{{ aa(`risk.${level}`) }}</span>
                     <div class="prob-bar-track">
                       <div class="prob-bar-fill" :style="{ width: prob + '%', background: probColor(prob) }"></div>
                     </div>
@@ -1126,14 +1126,14 @@
       <!-- 指标概览 -->
       <section class="card dashboard-card">
         <div class="section-header">
-          <h2>实时指标监控</h2>
-          <p>基于当前岩层参数计算的各子指标数值</p>
+          <h2>{{ aa('calcDashboardTitle') }}</h2>
+          <p>{{ aa('calcDashboardDesc') }}</p>
         </div>
         <div class="indicator-dashboard">
           <div class="indicator-card" v-for="indicator in indicators" :key="indicator.key">
             <div class="indicator-header">
               <span class="indicator-tag">{{ indicator.tag }}</span>
-              <span class="indicator-name">{{ indicator.name }}</span>
+              <span class="indicator-name">{{ aa(indicator.nameKey) }}</span>
             </div>
             <div class="indicator-value" :class="valueClass(indicator.value)">{{ indicator.value.toFixed(1) }}</div>
             <div class="indicator-progress">
@@ -1141,7 +1141,7 @@
                 <div class="progress-fill" :style="{ width: indicator.value + '%', background: progressColor(indicator.value) }"></div>
               </div>
             </div>
-            <div class="indicator-method">{{ indicator.method }}</div>
+            <div class="indicator-method">{{ aa(indicator.methodKey) }}</div>
           </div>
         </div>
       </section>
@@ -1149,8 +1149,8 @@
       <!-- 算法模块 -->
       <section class="card calculation-card">
         <div class="section-header">
-          <h2>算法计算模块</h2>
-          <p>配置岩层参数并执行各算法计算</p>
+          <h2>{{ aa('calcModuleTitle') }}</h2>
+          <p>{{ aa('calcModuleDesc') }}</p>
         </div>
 
         <div class="calc-grid">
@@ -1158,23 +1158,23 @@
           <div class="calc-module">
             <div class="module-header">
               <span class="module-tag">RSI</span>
-              <h3>相场断裂计算</h3>
+              <h3>{{ aa('calc.rsiTitle') }}</h3>
             </div>
             <div class="module-params">
               <div class="param-group">
-                <label>岩层数据</label>
+                <label>{{ aa('calc.strataData') }}</label>
                 <div class="strata-list">
                   <div class="strata-item" v-for="(layer, i) in strataData" :key="i">
-                    <span>{{ layer.name }}</span>
-                    <span>厚: {{ layer.thickness }}m</span>
-                    <span>抗拉: {{ layer.tensile_strength }}MPa</span>
+                    <span>{{ aa(layer.nameKey) }}</span>
+                    <span>{{ aa('calc.thickness') }}: {{ layer.thickness }}m</span>
+                    <span>{{ aa('calc.tensileStrength') }}: {{ layer.tensile_strength }}MPa</span>
                   </div>
                 </div>
               </div>
             </div>
             <button class="btn calc-btn" @click="calculateRSI" :disabled="calculating.rsi">
               <span v-if="calculating.rsi" class="spinner sm"></span>
-              <span>{{ calculating.rsi ? '计算中...' : '执行计算' }}</span>
+              <span>{{ calculating.rsi ? aa('calc.calculating') : aa('calc.run') }}</span>
             </button>
             <div v-if="results.rsi" class="module-result">
               <div ref="rsiChart" class="chart-container"></div>
@@ -1185,22 +1185,22 @@
           <div class="calc-module">
             <div class="module-header">
               <span class="module-tag">BRI</span>
-              <h3>微震矩张量反演</h3>
+              <h3>{{ aa('calc.briTitle') }}</h3>
             </div>
             <div class="module-params">
               <div class="param-group">
-                <label>微震事件</label>
+                <label>{{ aa('calc.microseismicEvents') }}</label>
                 <div class="event-list">
                   <div class="event-item" v-for="(event, i) in microseismicData" :key="i">
                     <span>{{ event.time }}</span>
-                    <span>震级: M{{ event.magnitude }}</span>
+                    <span>{{ aa('calc.magnitude') }}: M{{ event.magnitude }}</span>
                   </div>
                 </div>
               </div>
             </div>
             <button class="btn calc-btn" @click="calculateBRI" :disabled="calculating.bri">
               <span v-if="calculating.bri" class="spinner sm"></span>
-              <span>{{ calculating.bri ? '计算中...' : '执行计算' }}</span>
+              <span>{{ calculating.bri ? aa('calc.calculating') : aa('calc.run') }}</span>
             </button>
             <div v-if="results.bri" class="module-result">
               <div ref="briChart" class="chart-container"></div>
@@ -1211,33 +1211,33 @@
           <div class="calc-module">
             <div class="module-header">
               <span class="module-tag">ASI</span>
-              <h3>统一强度理论分析</h3>
+              <h3>{{ aa('calc.asiTitle') }}</h3>
             </div>
             <div class="module-params">
               <div class="param-row">
-                <label>隧道半径</label>
+                <label>{{ aa('calc.tunnelRadius') }}</label>
                 <input type="number" v-model.number="tunnelParams.radius" class="param-input"/>
                 <span>m</span>
               </div>
               <div class="param-row">
-                <label>原岩应力</label>
+                <label>{{ aa('calc.inSituStress') }}</label>
                 <input type="number" v-model.number="tunnelParams.original_stress" class="param-input"/>
                 <span>MPa</span>
               </div>
               <div class="param-row">
-                <label>支护压力</label>
+                <label>{{ aa('calc.supportPressure') }}</label>
                 <input type="number" v-model.number="tunnelParams.support_pressure" class="param-input"/>
                 <span>MPa</span>
               </div>
               <div class="param-row">
-                <label>UST 参数 b</label>
+                <label>{{ aa('calc.ustB') }}</label>
                 <input type="range" v-model.number="tunnelParams.ust_b" min="0" max="1" step="0.1" class="param-slider"/>
                 <span>{{ tunnelParams.ust_b }}</span>
               </div>
             </div>
             <button class="btn calc-btn" @click="calculateASI" :disabled="calculating.asi">
               <span v-if="calculating.asi" class="spinner sm"></span>
-              <span>{{ calculating.asi ? '计算中...' : '执行计算' }}</span>
+              <span>{{ calculating.asi ? aa('calc.calculating') : aa('calc.run') }}</span>
             </button>
             <div v-if="results.asi" class="module-result">
               <div ref="asiChart" class="chart-container"></div>
@@ -1248,11 +1248,11 @@
           <div class="calc-module fusion-module">
             <div class="module-header">
               <span class="module-tag">DBN</span>
-              <h3>动态贝叶斯网络融合</h3>
+              <h3>{{ aa('calc.dbnTitle') }}</h3>
             </div>
             <div class="fusion-weights">
               <div class="weight-control" v-for="w in weightItems" :key="w.key">
-                <label>{{ w.label }}</label>
+                <label>{{ aa(w.labelKey) }}</label>
                 <input type="range" v-model.number="weights[w.key]" min="0" max="1" step="0.05"/>
                 <span>{{ (normalizedWeights[w.key] * 100).toFixed(0) }}%</span>
               </div>
@@ -1264,13 +1264,13 @@
             </div>
             <button class="btn calc-btn fusion-btn" @click="calculateComprehensive" :disabled="calculating.fusion">
               <span v-if="calculating.fusion" class="spinner sm"></span>
-              <span>{{ calculating.fusion ? '融合中...' : '综合评估' }}</span>
+              <span>{{ calculating.fusion ? aa('calc.fusing') : aa('calc.comprehensive') }}</span>
             </button>
             <div v-if="results.fusion" class="fusion-result">
               <div class="mpi-display">
-                <span class="mpi-label">综合 MPI</span>
+                <span class="mpi-label">{{ aa('mpiLabel') }}</span>
                 <span class="mpi-value" :class="valueClass(results.fusion.mpi)">{{ results.fusion.mpi.toFixed(1) }}</span>
-                <span class="mpi-risk" :class="results.fusion.riskClass">{{ results.fusion.riskLabel }}</span>
+                <span class="mpi-risk" :class="results.fusion.riskClass">{{ aa(`risk.${results.fusion.riskKey}`) }}</span>
               </div>
             </div>
           </div>
@@ -1285,6 +1285,7 @@ import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import { echarts } from '../lib/echarts'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
+import { useI18n } from '../composables/useI18n'
 
 const API_BASE = (import.meta.env.VITE_ACADEMIC_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '')
 const apiClient = axios.create({
@@ -1292,6 +1293,8 @@ const apiClient = axios.create({
   timeout: 15000
 })
 const { markStepDone } = useWorkspaceFlow()
+const { t } = useI18n()
+const aa = (key, params) => t(`academicAlgorithm.${key}`, params)
 
 // 当前 Tab 和算法
 const activeTab = ref('principle')
@@ -1354,94 +1357,94 @@ const renderFormula = (formula) => {
 const flowNodes = [
   {
     key: 'rsi',
-    title: 'RSI 计算',
-    subtitle: '相场断裂分析',
+    titleKey: 'flow.rsi.title',
+    subtitleKey: 'flow.rsi.subtitle',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
-    detailTitle: '相场断裂分析',
-    detail: '基于 Griffith 断裂理论，通过相场变量 φ 描述裂纹演化，评估顶板岩层的断裂风险。输入岩层抗拉强度、关键层位置等参数。'
+    detailTitleKey: 'flow.rsi.detailTitle',
+    detailKey: 'flow.rsi.detail'
   },
   {
     key: 'bri',
-    title: 'BRI 计算',
-    subtitle: '微震矩张量反演',
+    titleKey: 'flow.bri.title',
+    subtitleKey: 'flow.bri.subtitle',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>',
-    detailTitle: '微震矩张量反演',
-    detail: '利用地震波形反演震源机制张量，分解为 ISO/DC/CLVD 分量，识别岩体破裂类型与能量积累状态。'
+    detailTitleKey: 'flow.bri.detailTitle',
+    detailKey: 'flow.bri.detail'
   },
   {
     key: 'asi',
-    title: 'ASI 计算',
-    subtitle: '统一强度理论',
+    titleKey: 'flow.asi.title',
+    subtitleKey: 'flow.asi.subtitle',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 4.5v9L12 21l-9-4.5v-9L12 3z"/><path d="M12 12l9-4.5"/><path d="M12 12v9"/></svg>',
-    detailTitle: '统一强度理论分析',
-    detail: '应用俞茂宏统一强度理论，考虑中间主应力影响，分析隧道围岩应力分布与支承压力特征。'
+    detailTitleKey: 'flow.asi.detailTitle',
+    detailKey: 'flow.asi.detail'
   },
   {
     key: 'dbn',
-    title: 'DBN 融合',
-    subtitle: '动态贝叶斯网络',
+    titleKey: 'flow.dbn.title',
+    subtitleKey: 'flow.dbn.subtitle',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="M12 8l-4 8"/><path d="M12 8l4 8"/></svg>',
-    detailTitle: '动态贝叶斯网络融合',
-    detail: '融合 RSI/BRI/ASI 多源数据，通过概率推理计算综合 MPI 指数，实现时空风险预测。'
+    detailTitleKey: 'flow.dbn.detailTitle',
+    detailKey: 'flow.dbn.detail'
   }
 ]
 
 // 算法列表
 const algorithms = [
-  { key: 'rsi', tag: 'RSI', name: '相场断裂模型' },
-  { key: 'bri', tag: 'BRI', name: '矩张量反演' },
-  { key: 'asi', tag: 'ASI', name: '统一强度理论' },
-  { key: 'dbn', tag: 'DBN', name: '动态贝叶斯网络' }
+  { key: 'rsi', tag: 'RSI', nameKey: 'algorithms.rsi' },
+  { key: 'bri', tag: 'BRI', nameKey: 'algorithms.bri' },
+  { key: 'asi', tag: 'ASI', nameKey: 'algorithms.asi' },
+  { key: 'dbn', tag: 'DBN', nameKey: 'algorithms.dbn' }
 ]
 
 const newcomerJourney = [
   {
     step: '01',
-    title: '先看输出结论',
-    desc: '先看 MPI 和风险等级，明确这页最终回答的是“哪里更危险、为什么危险”。'
+    titleKey: 'newcomer.step1Title',
+    descKey: 'newcomer.step1Desc'
   },
   {
     step: '02',
-    title: '再看证据来源',
-    desc: '回看 RSI/BRI/ASI 三个子指标分别由哪些数据驱动，建立“数据到结论”的因果链。'
+    titleKey: 'newcomer.step2Title',
+    descKey: 'newcomer.step2Desc'
   },
   {
     step: '03',
-    title: '最后看公式细节',
-    desc: '只有在需要复核时再阅读公式推导，避免新用户一开始就被数学符号劝退。'
+    titleKey: 'newcomer.step3Title',
+    descKey: 'newcomer.step3Desc'
   }
 ]
 
 const termGlossary = [
   {
-    term: 'RSI',
-    plain: '顶板稳定性评分',
-    cue: '看顶板是否容易产生裂纹和失稳，分数越低风险越高。'
+    termKey: 'glossary.rsi.term',
+    plainKey: 'glossary.rsi.plain',
+    cueKey: 'glossary.rsi.cue'
   },
   {
-    term: 'BRI',
-    plain: '冲击地压风险评分',
-    cue: '看深部开采条件下的能量积聚和突发风险。'
+    termKey: 'glossary.bri.term',
+    plainKey: 'glossary.bri.plain',
+    cueKey: 'glossary.bri.cue'
   },
   {
-    term: 'ASI',
-    plain: '支承压力与应力集中评分',
-    cue: '看工作面前方应力峰值与塑性区大小，指导支护强度。'
+    termKey: 'glossary.asi.term',
+    plainKey: 'glossary.asi.plain',
+    cueKey: 'glossary.asi.cue'
   },
   {
-    term: 'DBN',
-    plain: '动态概率融合模型',
-    cue: '把多个子指标和时序证据融合成最终风险概率。'
+    termKey: 'glossary.dbn.term',
+    plainKey: 'glossary.dbn.plain',
+    cueKey: 'glossary.dbn.cue'
   },
   {
-    term: '相场变量 φ',
-    plain: '裂纹状态刻度',
-    cue: 'φ 越接近 1 代表材料越接近完全断裂。'
+    termKey: 'glossary.phi.term',
+    plainKey: 'glossary.phi.plain',
+    cueKey: 'glossary.phi.cue'
   },
   {
-    term: '后验概率',
-    plain: '结合证据后的风险判断',
-    cue: '不是固定值，会随着新观测数据实时更新。'
+    termKey: 'glossary.posterior.term',
+    plainKey: 'glossary.posterior.plain',
+    cueKey: 'glossary.posterior.cue'
   }
 ]
 
@@ -1449,38 +1452,38 @@ const algorithmStoryboards = [
   {
     key: 'rsi',
     tag: 'RSI',
-    name: '相场断裂模型',
-    input: '岩层强度、关键层分布',
-    process: '模拟裂纹起裂与扩展',
-    output: '顶板稳定性评分',
-    watch: 'Fig.1 的裂纹演化 + RSI 指标分解'
+    nameKey: 'storyboards.rsi.name',
+    inputKey: 'storyboards.rsi.input',
+    processKey: 'storyboards.rsi.process',
+    outputKey: 'storyboards.rsi.output',
+    watchKey: 'storyboards.rsi.watch'
   },
   {
     key: 'bri',
     tag: 'BRI',
-    name: '矩张量反演',
-    input: '微震波形、埋深、岩性',
-    process: '分解 ISO/DC/CLVD 震源机制',
-    output: '冲击地压风险评分',
-    watch: 'Beach Ball 机制图 + 深度风险曲线'
+    nameKey: 'storyboards.bri.name',
+    inputKey: 'storyboards.bri.input',
+    processKey: 'storyboards.bri.process',
+    outputKey: 'storyboards.bri.output',
+    watchKey: 'storyboards.bri.watch'
   },
   {
     key: 'asi',
     tag: 'ASI',
-    name: '统一强度理论',
-    input: '原岩应力、支护参数、UST 参数 b',
-    process: 'Kirsch 应力重分布 + 强度判据',
-    output: '支承压力风险评分',
-    watch: '三联图(a)(b)(c) + ASI 四步计算链'
+    nameKey: 'storyboards.asi.name',
+    inputKey: 'storyboards.asi.input',
+    processKey: 'storyboards.asi.process',
+    outputKey: 'storyboards.asi.output',
+    watchKey: 'storyboards.asi.watch'
   },
   {
     key: 'dbn',
     tag: 'DBN',
-    name: '动态贝叶斯网络',
-    input: 'RSI/BRI/ASI 与实时观测证据',
-    process: '时序概率更新与融合推理',
-    output: 'MPI 概率分布与风险等级',
-    watch: '时间片网络结构 + 后验概率条形图'
+    nameKey: 'storyboards.dbn.name',
+    inputKey: 'storyboards.dbn.input',
+    processKey: 'storyboards.dbn.process',
+    outputKey: 'storyboards.dbn.output',
+    watchKey: 'storyboards.dbn.watch'
   }
 ]
 
@@ -1502,11 +1505,17 @@ const posteriorProbs = computed(() => {
   if (evidence.asiLow) { high += 10; medium += 5; low -= 15 }
   const total = high + medium + low
   return {
-    '高风险': (high / total) * 100,
-    '中风险': (medium / total) * 100,
-    '低风险': (low / total) * 100
+    high: (high / total) * 100,
+    medium: (medium / total) * 100,
+    low: (low / total) * 100
   }
 })
+
+const riskLabelKey = (label) => {
+  if (label === '低风险' || label === 'Low Risk') return 'low'
+  if (label === '中风险' || label === 'Medium Risk') return 'medium'
+  return 'high'
+}
 
 const probColor = (prob) => {
   if (prob > 50) return 'linear-gradient(90deg, #ef4444, #dc2626)'
@@ -1516,17 +1525,17 @@ const probColor = (prob) => {
 
 // 指标和权重
 const indicators = ref([
-  { key: "rsi", tag: "RSI", name: "顶板稳定性", value: 0, method: "相场断裂模型" },
-  { key: "bri", tag: "BRI", name: "冲击地压风险", value: 0, method: "矩张量反演" },
-  { key: "asi", tag: "ASI", name: "支承压力分布", value: 0, method: "统一强度理论" },
-  { key: "mpi", tag: "MPI", name: "综合风险指数", value: 0, method: "动态贝叶斯网络" }
+  { key: "rsi", tag: "RSI", nameKey: "indicators.rsi.name", value: 0, methodKey: "indicators.rsi.method" },
+  { key: "bri", tag: "BRI", nameKey: "indicators.bri.name", value: 0, methodKey: "indicators.bri.method" },
+  { key: "asi", tag: "ASI", nameKey: "indicators.asi.name", value: 0, methodKey: "indicators.asi.method" },
+  { key: "mpi", tag: "MPI", nameKey: "indicators.mpi.name", value: 0, methodKey: "indicators.mpi.method" }
 ])
 
 const weights = reactive({ rsi: 0.4, bri: 0.35, asi: 0.25 })
 const weightItems = [
-  { key: 'rsi', label: 'RSI 权重' },
-  { key: 'bri', label: 'BRI 权重' },
-  { key: 'asi', label: 'ASI 权重' }
+  { key: 'rsi', labelKey: 'weights.rsi' },
+  { key: 'bri', labelKey: 'weights.bri' },
+  { key: 'asi', labelKey: 'weights.asi' }
 ]
 
 const weightSum = computed(() => weights.rsi + weights.bri + weights.asi)
@@ -1541,9 +1550,9 @@ const results = reactive({ rsi: false, bri: false, asi: false, fusion: false })
 
 // 样本数据
 const strataData = [
-  { name: "顶板", thickness: 5.0, tensile_strength: 2.5, elastic_modulus: 15.0, compressive_strength: 35 },
-  { name: "煤层", thickness: 3.0, tensile_strength: 1.0, elastic_modulus: 5.0, compressive_strength: 15 },
-  { name: "底板", thickness: 4.0, tensile_strength: 3.0, elastic_modulus: 20.0, compressive_strength: 45 }
+  { name: "顶板", nameKey: "strata.roof", thickness: 5.0, tensile_strength: 2.5, elastic_modulus: 15.0, compressive_strength: 35 },
+  { name: "煤层", nameKey: "strata.coal", thickness: 3.0, tensile_strength: 1.0, elastic_modulus: 5.0, compressive_strength: 15 },
+  { name: "底板", nameKey: "strata.floor", thickness: 4.0, tensile_strength: 3.0, elastic_modulus: 20.0, compressive_strength: 45 }
 ]
 
 const microseismicData = [
@@ -1668,15 +1677,15 @@ const calculateComprehensive = async () => {
       indicators.value[3].value = response.data.fusion.mpi
       results.fusion = {
         mpi: response.data.fusion.mpi,
-        riskLabel: response.data.fusion.risk_label,
-        riskClass: response.data.fusion.risk_label === '低风险' ? 'low' : response.data.fusion.risk_label === '中风险' ? 'medium' : 'high'
+        riskKey: riskLabelKey(response.data.fusion.risk_label),
+        riskClass: riskLabelKey(response.data.fusion.risk_label)
       }
     }
   } catch (error) {
     const mpi = normalizedWeights.value.rsi * 65.3 + normalizedWeights.value.bri * 58.7 + normalizedWeights.value.asi * 72.5
     indicators.value[3].value = mpi
-    const label = mpi >= 70 ? '低风险' : mpi >= 50 ? '中风险' : '高风险'
-    results.fusion = { mpi, riskLabel: label, riskClass: label === '低风险' ? 'low' : label === '中风险' ? 'medium' : 'high' }
+    const riskKey = mpi >= 70 ? 'low' : mpi >= 50 ? 'medium' : 'high'
+    results.fusion = { mpi, riskKey, riskClass: riskKey }
   }
   calculating.fusion = false
 }
@@ -1686,10 +1695,10 @@ const renderRSIChart = (data) => {
   if (!rsiChart.value) return
   if (!rsiChartInst) rsiChartInst = echarts.init(rsiChart.value, null, { renderer: 'canvas' })
   rsiChartInst.setOption({
-    title: { text: '相场断裂分布', textStyle: { color: '#5a6378', fontSize: 14 } },
+    title: { text: aa('chart.rsiTitle'), textStyle: { color: '#5a6378', fontSize: 14 } },
     grid: { left: '10%', right: '10%', top: '20%', bottom: '15%' },
-    xAxis: { type: 'value', name: 'X (m)', nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
-    yAxis: { type: 'value', name: 'Y (m)', nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
+    xAxis: { type: 'value', name: aa('chart.axisX'), nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
+    yAxis: { type: 'value', name: aa('chart.axisY'), nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
     series: [{
       type: 'scatter',
       symbolSize: 10,
@@ -1704,11 +1713,11 @@ const renderBRIChart = (data) => {
   if (!briChartInst) briChartInst = echarts.init(briChart.value, null, { renderer: 'canvas' })
   const tensors = data.moment_tensors || [{ iso_percent: 15, dc_percent: 70, clvd_percent: 15 }]
   briChartInst.setOption({
-    title: { text: '矩张量分解', textStyle: { color: '#5a6378', fontSize: 14 } },
+    title: { text: aa('chart.briTitle'), textStyle: { color: '#5a6378', fontSize: 14 } },
     legend: { data: ['ISO%', 'DC%', 'CLVD%'], textStyle: { color: '#5a6378' }, top: '10%' },
     grid: { left: '10%', right: '10%', top: '25%', bottom: '10%' },
-    xAxis: { type: 'category', data: tensors.map((_, i) => `Event ${i+1}`), axisLine: { lineStyle: { color: '#d0d5dc' } } },
-    yAxis: { type: 'value', name: '百分比 (%)', nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
+    xAxis: { type: 'category', data: tensors.map((_, i) => `${aa('chart.eventPrefix')} ${i + 1}`), axisLine: { lineStyle: { color: '#d0d5dc' } } },
+    yAxis: { type: 'value', name: aa('chart.percentage'), nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
     series: [
       { name: 'ISO%', type: 'bar', data: tensors.map(t => t.iso_percent), itemStyle: { color: '#22c55e' } },
       { name: 'DC%', type: 'bar', data: tensors.map(t => t.dc_percent), itemStyle: { color: '#5a6378' } },
@@ -1724,14 +1733,14 @@ const renderASIChart = (data) => {
   const radial = data.radial_stress || [5, 7, 8, 8.5, 9, 9.2, 9.5, 10]
   const tangential = data.tangential_stress || [25, 20, 17, 15, 14, 13, 12, 11]
   asiChartInst.setOption({
-    title: { text: '围岩应力分布', textStyle: { color: '#5a6378', fontSize: 14 } },
-    legend: { data: ['径向应力', '切向应力'], textStyle: { color: '#5a6378' }, top: '10%' },
+    title: { text: aa('chart.asiTitle'), textStyle: { color: '#5a6378', fontSize: 14 } },
+    legend: { data: [aa('chart.radialStress'), aa('chart.tangentialStress')], textStyle: { color: '#5a6378' }, top: '10%' },
     grid: { left: '12%', right: '10%', top: '25%', bottom: '15%' },
-    xAxis: { type: 'value', name: '径向距离 (m)', nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
-    yAxis: { type: 'value', name: '应力 (MPa)', nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
+    xAxis: { type: 'value', name: aa('chart.radialDistance'), nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
+    yAxis: { type: 'value', name: aa('chart.stressMpa'), nameTextStyle: { color: '#8892a8' }, axisLine: { lineStyle: { color: '#d0d5dc' } } },
     series: [
-      { name: '径向应力', type: 'line', smooth: true, data: distances.map((r, i) => [r, radial[i]]), itemStyle: { color: '#5a6378' }, lineStyle: { width: 3 } },
-      { name: '切向应力', type: 'line', smooth: true, data: distances.map((r, i) => [r, tangential[i]]), itemStyle: { color: '#ef4444' }, lineStyle: { width: 3 } }
+      { name: aa('chart.radialStress'), type: 'line', smooth: true, data: distances.map((r, i) => [r, radial[i]]), itemStyle: { color: '#5a6378' }, lineStyle: { width: 3 } },
+      { name: aa('chart.tangentialStress'), type: 'line', smooth: true, data: distances.map((r, i) => [r, tangential[i]]), itemStyle: { color: '#ef4444' }, lineStyle: { width: 3 } }
     ]
   })
 }

@@ -1,43 +1,45 @@
 ﻿<template>
   <div class="report-page">
-    <header class="card hero">
-      <div>
-        <h1>结果报告中心</h1>
-        <p>默认自动生成报告，进入页面后立即汇总指标统计、MPI专题分析与明细表。</p>
-      </div>
-      <div class="hero-actions">
-        <button class="btn primary" :disabled="loading" @click="generateReport(true)">
-          <span v-if="loading" class="spinner"></span>
-          {{ loading ? '刷新中...' : '刷新报告' }}
-        </button>
-        <button class="btn secondary" :disabled="!summary.length" @click="exportReport">导出CSV</button>
-        <button class="btn secondary" @click="goValidation">返回实证页</button>
-      </div>
-    </header>
+    <PageHeader
+      class="main-header"
+      :title="rp('title')"
+      :description="rp('subtitle')"
+    >
+      <template #actions>
+        <div class="hero-actions">
+          <button class="btn primary" :disabled="loading" @click="generateReport(true)">
+            <span v-if="loading" class="spinner"></span>
+            {{ loading ? rp('refreshing') : rp('refreshReport') }}
+          </button>
+          <button class="btn secondary" :disabled="!summary.length" @click="exportReport">{{ rp('exportCsv') }}</button>
+          <button class="btn secondary" @click="goValidation">{{ rp('backToValidation') }}</button>
+        </div>
+      </template>
+    </PageHeader>
 
     <section class="card controls">
       <div class="control-item">
-        <label>专题煤层</label>
+        <label>{{ rp('seam') }}</label>
         <select v-model="selectedSeam" :disabled="!seamOptions.length">
           <option v-for="item in seamOptions" :key="item.name" :value="item.name">{{ item.name }}</option>
         </select>
       </div>
       <div class="control-item status">
-        <label>报告状态</label>
+        <label>{{ rp('reportStatus') }}</label>
         <span class="status-chip" :class="loading ? 'loading' : summary.length ? 'ready' : 'idle'">
-          {{ loading ? '自动计算中' : summary.length ? '已生成' : '暂无数据' }}
+          {{ loading ? rp('statusCalculating') : summary.length ? rp('statusReady') : rp('statusEmpty') }}
         </span>
       </div>
       <div class="control-item status">
-        <label>最近更新</label>
+        <label>{{ rp('lastUpdated') }}</label>
         <span>{{ generatedAt || '-' }}</span>
       </div>
       <div class="control-item geomodel-control">
-        <label>Geomodel任务ID</label>
+        <label>{{ rp('geomodelJobId') }}</label>
         <div class="geomodel-input-row">
-          <input v-model.trim="geomodelJobId" type="text" placeholder="输入任务ID，如 a1b2c3d4e5f6">
+          <input v-model.trim="geomodelJobId" type="text" :placeholder="rp('geomodelJobPlaceholder')">
           <button class="btn secondary small" :disabled="geomodelLoading || !geomodelJobId" @click="loadGeomodelQuality(true)">
-            {{ geomodelLoading ? '读取中...' : '读取质量' }}
+            {{ geomodelLoading ? rp('loadingGeomodel') : rp('loadGeomodelQuality') }}
           </button>
         </div>
       </div>
@@ -48,122 +50,122 @@
     </section>
 
     <section class="card">
-      <h2>总览统计</h2>
+      <h2>{{ rp('overviewStats') }}</h2>
       <div class="cards-grid" v-if="summary.length">
-        <article class="metric-card" v-for="row in summary" :key="row.name">
-          <h3>{{ row.name }}</h3>
+        <article class="metric-card" v-for="row in summary" :key="row.nameKey || row.name">
+          <h3>{{ summaryDisplayName(row) }}</h3>
           <div class="metric-main">{{ formatNumber(row.stats.mean, 3) }}</div>
           <div class="metric-sub">
-            <span>Min {{ formatNumber(row.stats.min, 3) }}</span>
-            <span>Max {{ formatNumber(row.stats.max, 3) }}</span>
+            <span>{{ rp('min') }} {{ formatNumber(row.stats.min, 3) }}</span>
+            <span>{{ rp('max') }} {{ formatNumber(row.stats.max, 3) }}</span>
           </div>
           <div class="metric-sub">
-            <span>Std {{ formatNumber(row.stats.std, 3) }}</span>
-            <span>P50 {{ formatNumber(row.stats.p50, 3) }}</span>
+            <span>{{ rp('std') }} {{ formatNumber(row.stats.std, 3) }}</span>
+            <span>{{ rp('p50') }} {{ formatNumber(row.stats.p50, 3) }}</span>
           </div>
         </article>
       </div>
-      <div v-else class="empty-block">{{ loading ? '正在自动生成总览统计...' : '暂无总览统计数据' }}</div>
+      <div v-else class="empty-block">{{ loading ? rp('generatingOverviewStats') : rp('noOverviewStats') }}</div>
     </section>
 
     <section class="card">
-      <h2>MPI专题分析</h2>
+      <h2>{{ rp('mpiAnalysis') }}</h2>
       <div v-if="mpiSummary" class="mpi-layout">
         <div class="mpi-stats">
-          <div class="stat-item"><span>煤层</span><strong>{{ mpiSummary.seamName }}</strong></div>
-          <div class="stat-item"><span>MPI均值</span><strong>{{ formatNumber(mpiSummary.stats.mean, 2) }}</strong></div>
-          <div class="stat-item"><span>MPI最小</span><strong>{{ formatNumber(mpiSummary.stats.min, 2) }}</strong></div>
-          <div class="stat-item"><span>MPI最大</span><strong>{{ formatNumber(mpiSummary.stats.max, 2) }}</strong></div>
-          <div class="stat-item"><span>RSI均值</span><strong>{{ formatNumber(mpiSummary.breakdown.rsi, 2) }}</strong></div>
-          <div class="stat-item"><span>BRI均值</span><strong>{{ formatNumber(mpiSummary.breakdown.bri, 2) }}</strong></div>
-          <div class="stat-item"><span>ASI均值</span><strong>{{ formatNumber(mpiSummary.breakdown.asi, 2) }}</strong></div>
+          <div class="stat-item"><span>{{ rp('seam') }}</span><strong>{{ mpiSummary.seamName }}</strong></div>
+          <div class="stat-item"><span>{{ rp('mpiMean') }}</span><strong>{{ formatNumber(mpiSummary.stats.mean, 2) }}</strong></div>
+          <div class="stat-item"><span>{{ rp('mpiMin') }}</span><strong>{{ formatNumber(mpiSummary.stats.min, 2) }}</strong></div>
+          <div class="stat-item"><span>{{ rp('mpiMax') }}</span><strong>{{ formatNumber(mpiSummary.stats.max, 2) }}</strong></div>
+          <div class="stat-item"><span>{{ rp('rsiMean') }}</span><strong>{{ formatNumber(mpiSummary.breakdown.rsi, 2) }}</strong></div>
+          <div class="stat-item"><span>{{ rp('briMean') }}</span><strong>{{ formatNumber(mpiSummary.breakdown.bri, 2) }}</strong></div>
+          <div class="stat-item"><span>{{ rp('asiMean') }}</span><strong>{{ formatNumber(mpiSummary.breakdown.asi, 2) }}</strong></div>
         </div>
 
         <div class="mpi-extremes">
           <article>
-            <h3>高MPI区域（低风险）</h3>
+            <h3>{{ rp('highMpiArea') }}</h3>
             <ul>
               <li v-for="item in mpiSummary.high" :key="`high-${item.id}`">{{ item.id }}: {{ formatNumber(item.mpi, 2) }}</li>
             </ul>
           </article>
           <article>
-            <h3>低MPI区域（高风险）</h3>
+            <h3>{{ rp('lowMpiArea') }}</h3>
             <ul>
               <li v-for="item in mpiSummary.low" :key="`low-${item.id}`">{{ item.id }}: {{ formatNumber(item.mpi, 2) }}</li>
             </ul>
           </article>
         </div>
       </div>
-      <div v-else class="empty-block">{{ loading ? '正在自动生成MPI专题分析...' : '暂无MPI专题分析数据' }}</div>
+      <div v-else class="empty-block">{{ loading ? rp('generatingMpiAnalysis') : rp('noMpiAnalysis') }}</div>
     </section>
 
     <section class="card">
-      <h2>地质模型质量章节</h2>
+      <h2>{{ rp('geomodelQualitySection') }}</h2>
       <div v-if="geomodelError" class="error">{{ geomodelError }}</div>
       <div v-else-if="geomodelQuality" class="geomodel-quality-grid">
         <article class="metric-card">
-          <h3>任务状态</h3>
-          <div class="metric-main">{{ geomodelQuality.status || '-' }}</div>
-          <div class="metric-sub"><span>任务ID</span><span>{{ geomodelJobId }}</span></div>
+          <h3>{{ rp('jobStatus') }}</h3>
+          <div class="metric-main">{{ geomodelStatusLabel(geomodelQuality.status) }}</div>
+          <div class="metric-sub"><span>{{ rp('jobId') }}</span><span>{{ geomodelJobId }}</span></div>
         </article>
         <article class="metric-card">
-          <h3>连续性评分</h3>
+          <h3>{{ rp('continuityScore') }}</h3>
           <div class="metric-main">{{ formatNumber(geomodelQuality.summary?.continuity_score, 3) }}</div>
-          <div class="metric-sub"><span>尖灭比例</span><span>{{ formatNumber(geomodelQuality.summary?.pinchout_ratio, 3) }}</span></div>
+          <div class="metric-sub"><span>{{ rp('pinchoutRatio') }}</span><span>{{ formatNumber(geomodelQuality.summary?.pinchout_ratio, 3) }}</span></div>
         </article>
         <article class="metric-card">
-          <h3>层厚变异系数</h3>
+          <h3>{{ rp('layerCv') }}</h3>
           <div class="metric-main">{{ formatNumber(geomodelQuality.summary?.layer_cv, 3) }}</div>
-          <div class="metric-sub"><span>零/负厚比</span><span>{{ formatNumber(geomodelQuality.summary?.zero_or_negative_ratio, 3) }}</span></div>
+          <div class="metric-sub"><span>{{ rp('zeroOrNegativeRatio') }}</span><span>{{ formatNumber(geomodelQuality.summary?.zero_or_negative_ratio, 3) }}</span></div>
         </article>
         <article class="metric-card warning-card">
-          <h3>质量告警</h3>
+          <h3>{{ rp('qualityWarning') }}</h3>
           <div class="warning-list">
-            <span v-if="geomodelQuality.warning_flags?.low_continuity">低连续性</span>
-            <span v-if="geomodelQuality.warning_flags?.high_pinchout">尖灭比例高</span>
-            <span v-if="geomodelQuality.warning_flags?.high_variability">层厚变异高</span>
-            <span v-if="!geomodelQuality.warning_flags || (!geomodelQuality.warning_flags.low_continuity && !geomodelQuality.warning_flags.high_pinchout && !geomodelQuality.warning_flags.high_variability)">无明显告警</span>
+            <span v-if="geomodelQuality.warning_flags?.low_continuity">{{ rp('warningLowContinuity') }}</span>
+            <span v-if="geomodelQuality.warning_flags?.high_pinchout">{{ rp('warningHighPinchout') }}</span>
+            <span v-if="geomodelQuality.warning_flags?.high_variability">{{ rp('warningHighVariability') }}</span>
+            <span v-if="!geomodelQuality.warning_flags || (!geomodelQuality.warning_flags.low_continuity && !geomodelQuality.warning_flags.high_pinchout && !geomodelQuality.warning_flags.high_variability)">{{ rp('warningNone') }}</span>
           </div>
         </article>
       </div>
-      <div v-else class="empty-block">输入 Geomodel 任务ID 后读取质量摘要并纳入报告。</div>
+      <div v-else class="empty-block">{{ rp('geomodelPrompt') }}</div>
     </section>
 
     <section class="card">
-      <h2>Week3实验进展</h2>
+      <h2>{{ rp('week3Progress') }}</h2>
       <div v-if="week3Research && week3Research.status !== 'missing'" class="week3-layout">
         <article class="metric-card week3-perf-card" v-if="reportPerformance">
-          <h3>报告接口性能</h3>
-          <div class="metric-sub"><span>请求总数</span><span>{{ reportPerformance.requests_total ?? '-' }}</span></div>
-          <div class="metric-sub"><span>缓存命中率</span><span>{{ formatPercent(reportPerformance.cache_hit_rate) }}</span></div>
-          <div class="metric-sub"><span>平均冷启动(ms)</span><span>{{ formatNumber(reportPerformance.avg_compute_ms, 2) }}</span></div>
-          <div class="metric-sub"><span>平均命中(ms)</span><span>{{ formatNumber(reportPerformance.avg_cached_ms, 2) }}</span></div>
-          <div class="metric-sub"><span>最近一次来源</span><span>{{ reportCacheHit ? '缓存命中' : '冷启动' }}</span></div>
+          <h3>{{ rp('reportApiPerformance') }}</h3>
+          <div class="metric-sub"><span>{{ rp('requestsTotal') }}</span><span>{{ reportPerformance.requests_total ?? '-' }}</span></div>
+          <div class="metric-sub"><span>{{ rp('cacheHitRate') }}</span><span>{{ formatPercent(reportPerformance.cache_hit_rate) }}</span></div>
+          <div class="metric-sub"><span>{{ rp('avgColdStartMs') }}</span><span>{{ formatNumber(reportPerformance.avg_compute_ms, 2) }}</span></div>
+          <div class="metric-sub"><span>{{ rp('avgCachedMs') }}</span><span>{{ formatNumber(reportPerformance.avg_cached_ms, 2) }}</span></div>
+          <div class="metric-sub"><span>{{ rp('latestSource') }}</span><span>{{ reportCacheHit ? rp('sourceCacheHit') : rp('sourceColdStart') }}</span></div>
         </article>
 
         <article class="metric-card week3-split-card">
-          <h3>切分泄漏审计</h3>
+          <h3>{{ rp('splitLeakageAudit') }}</h3>
           <div class="metric-sub">
-            <span>状态</span>
+            <span>{{ rp('status') }}</span>
             <strong :class="week3Research.split_audit?.all_overlap_zero ? 'ok-text' : 'warn-text'">
-              {{ week3Research.split_audit?.all_overlap_zero ? '通过' : '需关注' }}
+              {{ week3Research.split_audit?.all_overlap_zero ? rp('pass') : rp('needsAttention') }}
             </strong>
           </div>
-          <div class="metric-sub"><span>策略</span><span>{{ week3Research.split_audit?.strategy || '-' }}</span></div>
-          <div class="metric-sub"><span>Fold数</span><span>{{ week3Research.split_audit?.n_splits ?? '-' }}</span></div>
-          <div class="metric-sub"><span>样本数</span><span>{{ week3Research.split_audit?.row_count ?? '-' }}</span></div>
+          <div class="metric-sub"><span>{{ rp('strategy') }}</span><span>{{ week3Research.split_audit?.strategy || '-' }}</span></div>
+          <div class="metric-sub"><span>{{ rp('foldCount') }}</span><span>{{ week3Research.split_audit?.n_splits ?? '-' }}</span></div>
+          <div class="metric-sub"><span>{{ rp('sampleCount') }}</span><span>{{ week3Research.split_audit?.row_count ?? '-' }}</span></div>
         </article>
 
         <article class="metric-card week3-suite-card" v-for="suite in week3Research.suites || []" :key="suite.suite_id">
           <h3>{{ suite.template_name || suite.suite_id }}</h3>
-          <div class="metric-sub"><span>Suite</span><span>{{ suite.suite_id }}</span></div>
-          <div class="metric-sub"><span>Best AUC</span><span>{{ suite.best_auc_experiment || '-' }} / {{ formatNumber(suite.best_auc_value, 3) }}</span></div>
-          <div class="metric-sub"><span>Best Brier</span><span>{{ suite.best_brier_experiment || '-' }} / {{ formatNumber(suite.best_brier_value, 3) }}</span></div>
+          <div class="metric-sub"><span>{{ rp('suite') }}</span><span>{{ suite.suite_id }}</span></div>
+          <div class="metric-sub"><span>{{ rp('bestAuc') }}</span><span>{{ suite.best_auc_experiment || '-' }} / {{ formatNumber(suite.best_auc_value, 3) }}</span></div>
+          <div class="metric-sub"><span>{{ rp('bestBrier') }}</span><span>{{ suite.best_brier_experiment || '-' }} / {{ formatNumber(suite.best_brier_value, 3) }}</span></div>
           <div class="mini-table-wrap" v-if="suite.runs?.length">
             <table class="mini-table">
               <thead>
                 <tr>
-                  <th>实验</th>
+                  <th>{{ rp('experiment') }}</th>
                   <th>AUC</th>
                   <th>Brier</th>
                 </tr>
@@ -180,13 +182,13 @@
         </article>
       </div>
       <div class="week3-compare" v-if="week3Research?.stability_compare?.length">
-        <h3>28 vs 36 稳定性对比</h3>
+        <h3>{{ rp('stabilityCompare') }}</h3>
         <div class="compare-table-wrap" v-for="item in week3Research.stability_compare" :key="`cmp-${item.template_name}`">
-          <div class="compare-caption">{{ item.template_name }}（{{ item.datasets?.join(' vs ') }}）</div>
+          <div class="compare-caption">{{ rp('compareCaption', { name: item.template_name, datasets: item.datasets?.join(' vs ') }) }}</div>
           <table class="mini-table">
             <thead>
               <tr>
-                <th>实验</th>
+                <th>{{ rp('experiment') }}</th>
                 <th>ΔAUC</th>
                 <th>ΔBrier</th>
                 <th>ΔF1</th>
@@ -203,28 +205,28 @@
           </table>
         </div>
       </div>
-      <div v-if="!(week3Research && week3Research.status !== 'missing')" class="empty-block">暂无Week3实验摘要（未检测到 split 审计或 suite 结果文件）。</div>
+      <div v-if="!(week3Research && week3Research.status !== 'missing')" class="empty-block">{{ rp('noWeek3Summary') }}</div>
     </section>
 
     <section class="card">
-      <h2>详细统计表</h2>
+      <h2>{{ rp('detailStatsTable') }}</h2>
       <div class="table-wrap" v-if="summary.length">
         <table>
           <thead>
             <tr>
-              <th>指标</th>
-              <th>最小值</th>
-              <th>最大值</th>
-              <th>平均值</th>
-              <th>标准差</th>
+              <th>{{ rp('metric') }}</th>
+              <th>{{ rp('minValue') }}</th>
+              <th>{{ rp('maxValue') }}</th>
+              <th>{{ rp('meanValue') }}</th>
+              <th>{{ rp('stdValue') }}</th>
               <th>P10</th>
               <th>P50</th>
               <th>P90</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in summary" :key="`table-${row.name}`">
-              <td>{{ row.name }}</td>
+            <tr v-for="row in summary" :key="`table-${row.nameKey || row.name}`">
+              <td>{{ summaryDisplayName(row) }}</td>
               <td>{{ formatNumber(row.stats.min, 3) }}</td>
               <td>{{ formatNumber(row.stats.max, 3) }}</td>
               <td>{{ formatNumber(row.stats.mean, 3) }}</td>
@@ -236,7 +238,7 @@
           </tbody>
         </table>
       </div>
-      <div v-else class="empty-block">{{ loading ? '正在自动生成明细统计...' : '暂无明细统计数据' }}</div>
+      <div v-else class="empty-block">{{ loading ? rp('generatingDetailStats') : rp('noDetailStats') }}</div>
     </section>
   </div>
 </template>
@@ -246,6 +248,8 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
+import { useI18n } from '../composables/useI18n'
+import { PageHeader } from '../components/library'
 import {
   downloadGeomodelArtifact,
   getCoalSeams,
@@ -264,6 +268,8 @@ const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 const { setSelectedSeam, markStepDone } = useWorkspaceFlow()
+const { t } = useI18n()
+const rp = (key, params) => t(`report.${key}`, params)
 
 const loading = ref(false)
 const summary = ref([])
@@ -293,6 +299,23 @@ const formatNumber = (value, digits = 3) => {
 const formatPercent = (value) => {
   const n = Number(value)
   return Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '-'
+}
+
+const summaryDisplayName = (row) => {
+  const key = row?.nameKey ? `summaryLabels.${row.nameKey}` : ''
+  if (key) {
+    const translated = rp(key)
+    if (translated !== `report.${key}`) return translated
+  }
+  return row?.name || '-'
+}
+
+const geomodelStatusLabel = (status) => {
+  const value = String(status || '').toLowerCase()
+  if (!value) return '-'
+  const key = `statusLabel.${value}`
+  const translated = rp(key)
+  return translated === `report.${key}` ? status : translated
 }
 
 const normalizeQuerySeam = (value) => {
@@ -336,7 +359,7 @@ const loadGeomodelQuality = async (notify = false) => {
         summary,
         warning_flags: {}
       }
-      if (notify) toast.add(`建模任务状态：${job?.status || 'pending'}`, 'warning')
+      if (notify) toast.add(rp('geomodelStatusTip', { status: geomodelStatusLabel(job?.status || 'pending') }), 'warning')
       return
     }
 
@@ -359,9 +382,9 @@ const loadGeomodelQuality = async (notify = false) => {
       },
       warning_flags: detail?.warning_flags || {}
     }
-    if (notify) toast.add('已加载地质模型质量摘要', 'success')
+    if (notify) toast.add(rp('geomodelQualityLoaded'), 'success')
   } catch (error) {
-    geomodelError.value = error?.response?.data?.detail || '读取地质建模质量失败'
+    geomodelError.value = error?.response?.data?.detail || rp('errorLoadGeomodelQuality')
     if (notify) toast.add(geomodelError.value, 'error')
   } finally {
     geomodelLoading.value = false
@@ -526,10 +549,10 @@ const generateReport = async (notify = false) => {
     reportCacheHit.value = Boolean(reportResp?.data?.cache?.hit)
     if (reportSummary?.index && reportSummary?.index_workfaces && reportSummary?.steps && reportSummary?.steps_workfaces) {
       summary.value = [
-        { name: '矿压指标', stats: reportSummary.index },
-        { name: '矿压指标-工作面', stats: reportSummary.index_workfaces },
-        { name: '来压步距', stats: reportSummary.steps },
-        { name: '来压步距-工作面', stats: reportSummary.steps_workfaces }
+        { nameKey: 'index', stats: reportSummary.index },
+        { nameKey: 'indexWorkfaces', stats: reportSummary.index_workfaces },
+        { nameKey: 'steps', stats: reportSummary.steps },
+        { nameKey: 'stepsWorkfaces', stats: reportSummary.steps_workfaces }
       ]
     } else {
       week3Research.value = null
@@ -563,10 +586,10 @@ const generateReport = async (notify = false) => {
         })
       ])
       summary.value = [
-        { name: '矿压指标', stats: a.data.grid },
-        { name: '矿压指标-工作面', stats: b.data.grid },
-        { name: '来压步距', stats: c.data.grid },
-        { name: '来压步距-工作面', stats: d.data.grid }
+        { nameKey: 'index', stats: a.data.grid },
+        { nameKey: 'indexWorkfaces', stats: b.data.grid },
+        { nameKey: 'steps', stats: c.data.grid },
+        { nameKey: 'stepsWorkfaces', stats: d.data.grid }
       ]
     }
 
@@ -574,9 +597,9 @@ const generateReport = async (notify = false) => {
     generatedAt.value = new Date().toLocaleString()
     markStepDone('Report', { reportGeneratedAt: new Date().toISOString() })
 
-    if (notify) toast.add('报告已刷新', 'success')
+    if (notify) toast.add(rp('reportRefreshed'), 'success')
   } catch (error) {
-    reportError.value = error?.response?.data?.detail || '报告生成失败'
+    reportError.value = error?.response?.data?.detail || rp('errorGenerateReport')
     if (notify) toast.add(reportError.value, 'error')
   } finally {
     loading.value = false
@@ -593,27 +616,36 @@ const goValidation = () => {
 const exportReport = () => {
   if (!summary.value.length) return
 
+  const keyMetric = rp('csv.metric')
+  const keyMin = rp('csv.min')
+  const keyMax = rp('csv.max')
+  const keyMean = rp('csv.mean')
+  const keyStd = rp('csv.std')
+  const keyP10 = rp('csv.p10')
+  const keyP50 = rp('csv.p50')
+  const keyP90 = rp('csv.p90')
+
   const rows = summary.value.map((row) => ({
-    指标: row.name,
-    最小值: formatNumber(row.stats.min, 3),
-    最大值: formatNumber(row.stats.max, 3),
-    平均值: formatNumber(row.stats.mean, 3),
-    标准差: formatNumber(row.stats.std, 3),
-    P10: formatNumber(row.stats.p10, 3),
-    P50: formatNumber(row.stats.p50, 3),
-    P90: formatNumber(row.stats.p90, 3)
+    [keyMetric]: summaryDisplayName(row),
+    [keyMin]: formatNumber(row.stats.min, 3),
+    [keyMax]: formatNumber(row.stats.max, 3),
+    [keyMean]: formatNumber(row.stats.mean, 3),
+    [keyStd]: formatNumber(row.stats.std, 3),
+    [keyP10]: formatNumber(row.stats.p10, 3),
+    [keyP50]: formatNumber(row.stats.p50, 3),
+    [keyP90]: formatNumber(row.stats.p90, 3)
   }))
 
   if (mpiSummary.value) {
     rows.push({
-      指标: `MPI综合指标(${mpiSummary.value.seamName})`,
-      最小值: formatNumber(mpiSummary.value.stats.min, 3),
-      最大值: formatNumber(mpiSummary.value.stats.max, 3),
-      平均值: formatNumber(mpiSummary.value.stats.mean, 3),
-      标准差: formatNumber(mpiSummary.value.stats.std, 3),
-      P10: '',
-      P50: '',
-      P90: ''
+      [keyMetric]: rp('csv.mpiComposite', { seam: mpiSummary.value.seamName }),
+      [keyMin]: formatNumber(mpiSummary.value.stats.min, 3),
+      [keyMax]: formatNumber(mpiSummary.value.stats.max, 3),
+      [keyMean]: formatNumber(mpiSummary.value.stats.mean, 3),
+      [keyStd]: formatNumber(mpiSummary.value.stats.std, 3),
+      [keyP10]: '',
+      [keyP50]: '',
+      [keyP90]: ''
     })
   }
 
@@ -628,7 +660,7 @@ const exportReport = () => {
   a.click()
   URL.revokeObjectURL(url)
 
-  toast.add('报告导出成功', 'success')
+  toast.add(rp('reportExportSuccess'), 'success')
 }
 
 const autoRefreshAfterSeamChange = (() => {
@@ -694,28 +726,6 @@ onMounted(async () => {
 .card:hover {
   box-shadow: var(--shadow-md);
   border-color: rgba(14, 116, 144, 0.24);
-}
-
-.hero {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-lg);
-  align-items: center;
-  background:
-    radial-gradient(circle at right top, rgba(15, 118, 110, 0.12), transparent 55%),
-    linear-gradient(145deg, #ffffff 0%, #f1f7f5 100%);
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: 26px;
-  color: var(--text-primary);
-}
-
-.hero p {
-  margin: var(--spacing-sm) 0 0;
-  font-size: 13px;
-  color: var(--text-secondary);
 }
 
 .hero-actions {
@@ -1142,11 +1152,6 @@ tbody tr:hover {
 }
 
 @media (max-width: 760px) {
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .hero-actions {
     width: 100%;
     justify-content: flex-start;

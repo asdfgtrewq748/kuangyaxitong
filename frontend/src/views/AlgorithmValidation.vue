@@ -2,32 +2,32 @@
   <div ref="pageRoot" class="validation-page">
     <nav class="top-nav">
       <div class="nav-left">
-        <button class="icon-btn" type="button" title="返回" @click="router.back()">
+        <button class="icon-btn" type="button" :title="av('back')" @click="router.back()">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m0 0 6-6m-6 6 6 6" /></svg>
         </button>
-        <h1>新算法实证</h1>
+        <h1>{{ av('title') }}</h1>
         <span class="divider"></span>
         <label class="seam-select">
-          <span>煤层</span>
+          <span>{{ av('seam') }}</span>
           <select v-model="seamName">
             <option v-for="item in seamOptions" :key="item.name" :value="item.name">{{ item.name }}</option>
           </select>
         </label>
         <div class="mini-stats" v-if="hasSpatialData">
-          <span>均值 <b>{{ fmt(currentMetricStats.mean) }}</b></span>
-          <span>最低 <b>{{ fmt(currentMetricStats.min) }}</b></span>
-          <span class="danger">高风险点 <b>{{ currentHighRiskCount }}</b></span>
+          <span>{{ av('mean') }} <b>{{ fmt(currentMetricStats.mean) }}</b></span>
+          <span>{{ av('min') }} <b>{{ fmt(currentMetricStats.min) }}</b></span>
+          <span class="danger">{{ av('highRiskPoints') }} <b>{{ currentHighRiskCount }}</b></span>
         </div>
       </div>
 
       <div class="nav-right">
-        <button class="tool-btn" type="button" :class="{ active: showWeightPanel }" @click="showWeightPanel = !showWeightPanel">权重</button>
-        <button class="tool-btn" type="button" :class="{ active: showGeoPanel }" @click="showGeoPanel = !showGeoPanel">地质对照</button>
-        <button class="tool-btn" type="button" :class="{ active: showEvalPanel }" @click="showEvalPanel = !showEvalPanel">评估</button>
-        <button class="tool-btn" type="button" @click="exportCurrentFigure">导出高清图</button>
-        <button class="tool-btn" type="button" :disabled="exportingPack || !hasSpatialData" @click="exportSciencePackage">{{ exportingPack ? '打包中...' : '导出图组包' }}</button>
-        <button class="tool-btn" type="button" :disabled="!hasSpatialData" @click="goReport">下一步：结果报告</button>
-        <button class="tool-btn" type="button" @click="toggleFullscreen">全屏</button>
+        <button class="tool-btn" type="button" :class="{ active: showWeightPanel }" @click="showWeightPanel = !showWeightPanel">{{ av('weight') }}</button>
+        <button class="tool-btn" type="button" :class="{ active: showGeoPanel }" @click="showGeoPanel = !showGeoPanel">{{ av('geologyCompare') }}</button>
+        <button class="tool-btn" type="button" :class="{ active: showEvalPanel }" @click="showEvalPanel = !showEvalPanel">{{ av('evaluation') }}</button>
+        <button class="tool-btn" type="button" @click="exportCurrentFigure">{{ av('exportHd') }}</button>
+        <button class="tool-btn" type="button" :disabled="exportingPack || !hasSpatialData" @click="exportSciencePackage">{{ exportingPack ? av('packing') : av('exportPack') }}</button>
+        <button class="tool-btn" type="button" :disabled="!hasSpatialData" @click="goReport">{{ av('nextReport') }}</button>
+        <button class="tool-btn" type="button" @click="toggleFullscreen">{{ av('fullscreen') }}</button>
       </div>
     </nav>
 
@@ -41,12 +41,12 @@
         @click="activeMetric = item.key"
       >
         <div class="head">
-          <strong>{{ item.label }}</strong>
-          <span>{{ item.desc }}</span>
-          <em v-if="isIndicatorProblem(item.key)" class="problem-dot">! 异常</em>
+          <strong>{{ metricLabel(item.key) }}</strong>
+          <span>{{ metricDesc(item.key) }}</span>
+          <em v-if="isIndicatorProblem(item.key)" class="problem-dot">! {{ av('abnormal') }}</em>
         </div>
         <div class="value">{{ fmt(spatialData?.statistics?.[item.key]?.mean) }}</div>
-        <div class="meta"><span>最低 {{ fmt(spatialData?.statistics?.[item.key]?.min) }}</span><span>最高 {{ fmt(spatialData?.statistics?.[item.key]?.max) }}</span></div>
+        <div class="meta"><span>{{ av('min') }} {{ fmt(spatialData?.statistics?.[item.key]?.min) }}</span><span>{{ av('max') }} {{ fmt(spatialData?.statistics?.[item.key]?.max) }}</span></div>
         <div class="risk-bar" :style="{ background: legendGradient(item.key) }"></div>
       </button>
     </section>
@@ -55,38 +55,38 @@
       <div class="main-canvas-card">
         <header class="canvas-head">
           <div>
-            <h2>{{ metricLabel(activeMetric) }}全矿区插值热力图</h2>
-            <p>双击适配视图，拖拽平移，滚轮缩放</p>
+            <h2>{{ av('heatmapTitle', { metric: metricLabel(activeMetric) }) }}</h2>
+            <p>{{ av('interactionHint') }}</p>
           </div>
           <div class="canvas-controls">
-            <label>分辨率<input v-model.number="resolution" type="number" min="20" max="120" step="5"></label>
-            <label>线级<input v-model.number="contourLevels" type="number" min="5" max="24" step="1"></label>
-            <label>插值
+            <label>{{ av('resolution') }}<input v-model.number="resolution" type="number" min="20" max="120" step="5"></label>
+            <label>{{ av('contourLevels') }}<input v-model.number="contourLevels" type="number" min="5" max="24" step="1"></label>
+            <label>{{ av('interpolation') }}
               <select v-model="method">
-                <option value="idw">反距离权重</option>
-                <option value="linear">线性插值</option>
-                <option value="nearest">最近邻</option>
-                <option value="kriging">克里金</option>
+                <option value="idw">{{ av('method.idw') }}</option>
+                <option value="linear">{{ av('method.linear') }}</option>
+                <option value="nearest">{{ av('method.nearest') }}</option>
+                <option value="kriging">{{ av('method.kriging') }}</option>
               </select>
             </label>
-            <label class="check"><input v-model="showContours" type="checkbox">等值线</label>
-            <label class="check"><input v-model="useFixedScale" type="checkbox">固定量程(0-100)</label>
+            <label class="check"><input v-model="showContours" type="checkbox">{{ av('contours') }}</label>
+            <label class="check"><input v-model="useFixedScale" type="checkbox">{{ av('fixedScale') }}</label>
           </div>
         </header>
 
         <div v-if="hasSpatialData" class="trust-banner">
-          <span class="trust-chip real">空间图：真实钻孔与坐标数据</span>
-          <span class="trust-chip warn">评估：{{ evalSourceLabel }}</span>
-          <span class="trust-chip info">算法：{{ algorithmModeLabel }}</span>
+          <span class="trust-chip real">{{ av('trustSpatialReal') }}</span>
+          <span class="trust-chip warn">{{ av('trustEvaluation') }}{{ evalSourceLabel }}</span>
+          <span class="trust-chip info">{{ av('trustAlgorithm') }}{{ algorithmModeLabel }}</span>
           <span v-if="problemIndicatorLabels.length" class="trust-chip danger">
-            指标异常：{{ problemIndicatorLabels.join('、') }}
+            {{ av('trustIndicatorAbnormal') }}{{ problemIndicatorLabels.join('、') }}
           </span>
-          <span v-if="showLowContrastHint" class="trust-chip hint">当前指标范围 {{ fmt(currentMetricRange) }}，固定量程会压缩色差</span>
+          <span v-if="showLowContrastHint" class="trust-chip hint">{{ av('trustLowContrastHint', { range: fmt(currentMetricRange) }) }}</span>
           <span v-if="matrixSelection !== 'all' && matrixSelectionCount > 0" class="trust-chip link">
-            联动高亮 {{ matrixRoleLabel(matrixSelection) }} · {{ matrixSelectionCount }}点
+            {{ av('trustLinkHighlight', { role: matrixRoleLabel(matrixSelection), count: matrixSelectionCount }) }}
           </span>
-          <span v-if="evalSourceFile" class="trust-meta">标签源 {{ evalSourceFile }}</span>
-          <span class="trust-meta">钻孔 {{ spatialData?.borehole_count || 0 }} 个 · 坐标源 zuobiao.csv</span>
+          <span v-if="evalSourceFile" class="trust-meta">{{ av('trustLabelSource', { file: evalSourceFile }) }}</span>
+          <span class="trust-meta">{{ av('trustBoreholeAndCoord', { count: spatialData?.borehole_count || 0 }) }}</span>
         </div>
 
         <div
@@ -106,7 +106,7 @@
           <div v-if="loading" class="loading-mask">
             <div class="skeleton"></div>
             <div class="skeleton"></div>
-            <p>正在计算 {{ seamName || '目标煤层' }} 空间指标...</p>
+            <p>{{ av('loadingSpatial', { seam: seamName || av('targetSeam') }) }}</p>
           </div>
         </div>
 
@@ -122,8 +122,8 @@
 
       <aside ref="thumbPanelRef" class="thumb-panel" :class="{ collapsed: thumbsCollapsed }">
         <header>
-          <h3>指标缩略图</h3>
-          <button class="icon-btn mini" type="button" @click="thumbsCollapsed = !thumbsCollapsed">{{ thumbsCollapsed ? '展开' : '收起' }}</button>
+          <h3>{{ av('thumbsTitle') }}</h3>
+          <button class="icon-btn mini" type="button" @click="thumbsCollapsed = !thumbsCollapsed">{{ thumbsCollapsed ? av('expand') : av('collapse') }}</button>
         </header>
         <div class="thumb-list">
           <button
@@ -139,26 +139,26 @@
           >
             <canvas :ref="setThumbCanvasRef(item.key)" class="thumb-canvas"></canvas>
             <div class="thumb-meta">
-              <strong>{{ item.label }}</strong>
-              <span>均值 {{ fmt(metricStats[item.key]?.mean) }}</span>
+              <strong>{{ metricLabel(item.key) }}</strong>
+              <span>{{ av('mean') }} {{ fmt(metricStats[item.key]?.mean) }}</span>
               <span>σ {{ fmt(metricStats[item.key]?.std) }}</span>
             </div>
           </button>
         </div>
         <div v-if="thumbHover.visible && thumbHoverStats" class="thumb-tooltip" :style="{ left: `${thumbHover.x + 12}px`, top: `${thumbHover.y + 12}px` }">
-          <p><strong>{{ metricLabel(thumbHover.metric) }}统计</strong></p>
-          <p>最小值 {{ fmt(thumbHoverStats.min) }}</p>
-          <p>最大值 {{ fmt(thumbHoverStats.max) }}</p>
-          <p>均值 {{ fmt(thumbHoverStats.mean) }}</p>
-          <p>标准差 {{ fmt(thumbHoverStats.std) }}</p>
+          <p><strong>{{ av('thumbStatsTitle', { metric: metricLabel(thumbHover.metric) }) }}</strong></p>
+          <p>{{ av('minValue') }} {{ fmt(thumbHoverStats.min) }}</p>
+          <p>{{ av('maxValue') }} {{ fmt(thumbHoverStats.max) }}</p>
+          <p>{{ av('meanValue') }} {{ fmt(thumbHoverStats.mean) }}</p>
+          <p>{{ av('stdValue') }} {{ fmt(thumbHoverStats.std) }}</p>
         </div>
       </aside>
     </section>
 
     <transition name="fade-up">
       <aside v-if="showWeightPanel" class="floating-panel">
-        <header><h3>权重配置</h3><button type="button" class="close-btn" @click="showWeightPanel = false">×</button></header>
-        <p>RSI / BRI / ASI 自动归一化。调整后 300ms 内自动重算。</p>
+        <header><h3>{{ av('weightConfig') }}</h3><button type="button" class="close-btn" @click="showWeightPanel = false">×</button></header>
+        <p>{{ av('weightDesc') }}</p>
         <label class="weight-row"><span>RSI</span><input v-model.number="weights.rsi" type="range" min="0" max="1" step="0.05"><strong>{{ pct(normalizedWeights.rsi) }}</strong></label>
         <label class="weight-row"><span>BRI</span><input v-model.number="weights.bri" type="range" min="0" max="1" step="0.05"><strong>{{ pct(normalizedWeights.bri) }}</strong></label>
         <label class="weight-row"><span>ASI</span><input v-model.number="weights.asi" type="range" min="0" max="1" step="0.05"><strong>{{ pct(normalizedWeights.asi) }}</strong></label>
@@ -167,22 +167,22 @@
 
     <transition name="fade-up">
       <aside v-if="showGeoPanel" class="floating-panel geo-panel">
-        <header><h3>Geology-aware 对照</h3><button type="button" class="close-btn" @click="showGeoPanel = false">×</button></header>
-        <p>基于当前煤层首个有效钻孔，计算 baseline 与 geology-aware 对照结果。</p>
+        <header><h3>{{ av('geoCompareTitle') }}</h3><button type="button" class="close-btn" @click="showGeoPanel = false">×</button></header>
+        <p>{{ av('geoCompareDesc') }}</p>
         <label class="geo-row">
-          <span>Geomodel任务ID</span>
-          <input v-model.trim="geoModelJobId" type="text" placeholder="可选，不填时走默认特征">
+          <span>{{ av('geomodelJobId') }}</span>
+          <input v-model.trim="geoModelJobId" type="text" :placeholder="av('geomodelJobPlaceholder')">
         </label>
         <button class="tool-btn small geo-run-btn" type="button" :disabled="geoCompareLoading || !seamName" @click="runGeoCompare">
-          {{ geoCompareLoading ? '计算中...' : '执行对照' }}
+          {{ geoCompareLoading ? av('computing') : av('runCompare') }}
         </button>
         <p v-if="geoCompareError" class="geo-error">{{ geoCompareError }}</p>
         <div v-if="geoCompareResult" class="geo-result-grid">
-          <div class="geo-cell"><span>模式</span><strong>{{ geoCompareResult.algorithm_mode }}</strong></div>
-          <div class="geo-cell"><span>Baseline</span><strong>{{ fmt(geoCompareResult.baseline?.mpi) }}</strong></div>
-          <div class="geo-cell"><span>Geo-aware</span><strong>{{ fmt(geoCompareResult.geology_aware?.mpi) }}</strong></div>
-          <div class="geo-cell"><span>差值</span><strong>{{ fmt((geoCompareResult.geology_aware?.mpi || 0) - (geoCompareResult.baseline?.mpi || 0)) }}</strong></div>
-          <div class="geo-cell"><span>回退</span><strong>{{ geoCompareResult.fallback_used ? '是' : '否' }}</strong></div>
+          <div class="geo-cell"><span>{{ av('geoMode') }}</span><strong>{{ geoCompareResult.algorithm_mode }}</strong></div>
+          <div class="geo-cell"><span>{{ av('baseline') }}</span><strong>{{ fmt(geoCompareResult.baseline?.mpi) }}</strong></div>
+          <div class="geo-cell"><span>{{ av('geoAware') }}</span><strong>{{ fmt(geoCompareResult.geology_aware?.mpi) }}</strong></div>
+          <div class="geo-cell"><span>{{ av('delta') }}</span><strong>{{ fmt((geoCompareResult.geology_aware?.mpi || 0) - (geoCompareResult.baseline?.mpi || 0)) }}</strong></div>
+          <div class="geo-cell"><span>{{ av('fallback') }}</span><strong>{{ geoCompareResult.fallback_used ? t('common.yes') : t('common.no') }}</strong></div>
         </div>
       </aside>
     </transition>
@@ -190,12 +190,12 @@
     <transition name="drawer-up">
       <section v-if="showEvalPanel" class="eval-drawer">
         <header>
-          <h3>算法评估面板（当前煤层批量结果）</h3>
-          <div class="actions"><button type="button" class="tool-btn small" @click="exportSpatialJson">导出数据</button><button type="button" class="close-btn" @click="showEvalPanel = false">×</button></div>
+          <h3>{{ av('evalDrawerTitle') }}</h3>
+          <div class="actions"><button type="button" class="tool-btn small" @click="exportSpatialJson">{{ av('exportData') }}</button><button type="button" class="close-btn" @click="showEvalPanel = false">×</button></div>
         </header>
 
-        <div v-if="evalLoading" class="panel-empty">正在计算评估指标...</div>
-        <div v-else-if="!evalData" class="panel-empty">{{ evalMessage || '暂无评估数据' }}</div>
+        <div v-if="evalLoading" class="panel-empty">{{ av('evaluating') }}</div>
+        <div v-else-if="!evalData" class="panel-empty">{{ evalMessage || av('noEvalData') }}</div>
         <template v-else>
           <div class="eval-grid">
             <div class="metric"><span>AUC</span><strong>{{ fmt(evalData.auc, 4) }}</strong></div>
@@ -207,7 +207,7 @@
 
           <div class="eval-content">
             <div class="cm-card">
-              <h4>混淆矩阵</h4>
+              <h4>{{ av('confusionMatrix') }}</h4>
               <div class="cm-grid">
                 <div class="cm-cell"><span>TN</span><b>{{ evalData.confusion_matrix?.tn ?? 0 }}</b></div>
                 <div class="cm-cell warn"><span>FP</span><b>{{ evalData.confusion_matrix?.fp ?? 0 }}</b></div>
@@ -216,18 +216,18 @@
               </div>
             </div>
             <div class="baseline-card">
-              <h4>基线对比（SVG）</h4>
+              <h4>{{ av('baselineCompareSvg') }}</h4>
               <svg viewBox="0 0 560 170" class="baseline-svg">
                 <rect x="0" y="0" width="560" height="170" fill="#fff" />
-                <text x="14" y="26">基线 MPI</text>
+                <text x="14" y="26">{{ av('baselineMpi') }}</text>
                 <rect x="112" y="12" width="360" height="18" rx="9" fill="#e2e8f0"/>
                 <rect x="112" y="12" :width="barWidth(baselineMpi)" height="18" rx="9" fill="#64748b"/>
                 <text x="485" y="26">{{ fmt(baselineMpi, 3) }}</text>
-                <text x="14" y="90">新算法 MPI</text>
+                <text x="14" y="90">{{ av('newAlgoMpi') }}</text>
                 <rect x="112" y="76" width="360" height="18" rx="9" fill="#e2e8f0"/>
                 <rect x="112" y="76" :width="barWidth(currentMpiMean)" height="18" rx="9" fill="#0f766e"/>
                 <text x="485" y="90">{{ fmt(currentMpiMean, 3) }}</text>
-                <text x="14" y="148" fill="#64748b">注：基于当前煤层批量钻孔的空间实证均值。</text>
+                <text x="14" y="148" fill="#64748b">{{ av('baselineNote') }}</text>
               </svg>
             </div>
           </div>
@@ -237,30 +237,30 @@
 
     <section v-if="hasSpatialData" class="science-section">
       <header>
-        <h3>期刊级图组（自动生成）</h3>
-        <p>全部图件已直接展示，满足对比、消融、校准、判别与机制解释需求。</p>
-        <p class="data-note">说明：评估与部分机制曲线目前为模型推导/示意，不等同于真实标签实验结果。</p>
+        <h3>{{ av('scienceTitle') }}</h3>
+        <p>{{ av('scienceDesc') }}</p>
+        <p class="data-note">{{ av('scienceNoteModelDerivation') }}</p>
         <p class="data-note">
-          图11支持点击 TP/TN/FP/FN 联动主图高亮。
-          <template v-if="matrixSelection !== 'all'">可按 Esc 快速清除筛选。</template>
-          <template v-if="!matrixLinkable">当前样本与钻孔点未一一对齐，联动高亮不可用。</template>
+          {{ av('scienceNoteMatrixLink') }}
+          <template v-if="matrixSelection !== 'all'">{{ av('scienceNoteEsc') }}</template>
+          <template v-if="!matrixLinkable">{{ av('scienceNoteUnavailable') }}</template>
         </p>
-        <p class="data-note">导出高清图与图组包时会自动冻结脉冲动画，保证稿件图件为静态一致版。</p>
-        <button v-if="matrixSelection !== 'all'" type="button" class="tool-btn small" @click="clearMatrixSelection">清除联动高亮</button>
+        <p class="data-note">{{ av('scienceNoteExport') }}</p>
+        <button v-if="matrixSelection !== 'all'" type="button" class="tool-btn small" @click="clearMatrixSelection">{{ av('clearLink') }}</button>
         <p v-if="exportNote" class="export-note">{{ exportNote }}</p>
       </header>
       <ValidationScienceFigures :result="scienceResult" :evaluation="evalData" @matrix-select="onMatrixSelect" />
     </section>
 
     <div v-if="hoverInfo && hasSpatialData" class="hover-tooltip" :style="{ left: `${hoverPos.x + 14}px`, top: `${hoverPos.y + 14}px` }">
-      <p>坐标：{{ fmt(hoverInfo.worldX, 2) }}, {{ fmt(hoverInfo.worldY, 2) }}</p>
-      <p>{{ metricLabel(activeMetric) }}插值：{{ fmt(hoverInfo.gridValue, 3) }}</p>
-      <p>最近钻孔：{{ hoverInfo.nearestBorehole?.borehole_name || '--' }}（{{ fmt(hoverInfo.nearestDistance, 1) }} m）</p>
+      <p>{{ av('hoverCoord', { x: fmt(hoverInfo.worldX, 2), y: fmt(hoverInfo.worldY, 2) }) }}</p>
+      <p>{{ av('hoverInterpolated', { metric: metricLabel(activeMetric), value: fmt(hoverInfo.gridValue, 3) }) }}</p>
+      <p>{{ av('hoverNearest', { name: hoverInfo.nearestBorehole?.borehole_name || '--', distance: fmt(hoverInfo.nearestDistance, 1) }) }}</p>
       <template v-if="hoverInfo.borehole">
         <p><strong>{{ hoverInfo.borehole.borehole_name }}</strong></p>
-        <p>RSI {{ fmt(hoverInfo.borehole.rsi, 2) }} | BRI {{ fmt(hoverInfo.borehole.bri, 2) }}</p>
-        <p>ASI {{ fmt(hoverInfo.borehole.asi, 2) }} | MPI {{ fmt(hoverInfo.borehole.mpi, 2) }}</p>
-        <p class="risk">{{ riskLabelZh(hoverInfo.borehole.risk_label) }}</p>
+        <p>{{ av('hoverRsiBri', { rsi: fmt(hoverInfo.borehole.rsi, 2), bri: fmt(hoverInfo.borehole.bri, 2) }) }}</p>
+        <p>{{ av('hoverAsiMpi', { asi: fmt(hoverInfo.borehole.asi, 2), mpi: fmt(hoverInfo.borehole.mpi, 2) }) }}</p>
+        <p class="risk">{{ riskLabel(hoverInfo.borehole.risk_label) }}</p>
       </template>
     </div>
   </div>
@@ -273,23 +273,26 @@ import { getCoalSeams, getRockParams, getSeamOverburden, mpiCalculateGeo, valida
 import { useViewport } from '../composables/useViewport'
 import { useIndicatorCanvas } from '../composables/useIndicatorCanvas'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
+import { useI18n } from '../composables/useI18n'
 import { LRUCache } from '../lib/lruCache'
 import ValidationScienceFigures from '../components/validation/ValidationScienceFigures.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { workspaceState, setSelectedSeam, markStepDone } = useWorkspaceFlow()
+const { t } = useI18n()
+const av = (key, params) => t(`algorithmValidation.${key}`, params)
 const metricDefs = [
-  { key: 'mpi', label: 'MPI', desc: '综合指标' },
-  { key: 'rsi', label: 'RSI', desc: '顶板稳定' },
-  { key: 'bri', label: 'BRI', desc: '冲击风险' },
-  { key: 'asi', label: 'ASI', desc: '支承应力' }
+  { key: 'mpi' },
+  { key: 'rsi' },
+  { key: 'bri' },
+  { key: 'asi' }
 ]
 const matrixRoleMeta = {
-  tp: { label: 'TP 真阳性', color: '#15803d' },
-  tn: { label: 'TN 真阴性', color: '#0e7490' },
-  fp: { label: 'FP 假阳性', color: '#d97706' },
-  fn: { label: 'FN 假阴性', color: '#b91c1c' }
+  tp: { labelKey: 'matrix.tp', color: '#15803d' },
+  tn: { labelKey: 'matrix.tn', color: '#0e7490' },
+  fp: { labelKey: 'matrix.fp', color: '#d97706' },
+  fn: { labelKey: 'matrix.fn', color: '#b91c1c' }
 }
 
 const pageRoot = ref(null)
@@ -340,7 +343,7 @@ const getJSZipCtor = async () => {
   if (jsZipCtor) return jsZipCtor
   const mod = await import('jszip')
   jsZipCtor = mod?.default || mod?.JSZip || window.JSZip || null
-  if (!jsZipCtor) throw new Error('JSZip 加载失败')
+  if (!jsZipCtor) throw new Error(av('jszipLoadFailed'))
   return jsZipCtor
 }
 
@@ -355,8 +358,8 @@ const normalizedWeights = computed(() => {
 const hasSpatialData = computed(() => !!(spatialData.value?.grids && spatialData.value?.statistics && spatialData.value?.boreholes))
 const algorithmModeLabel = computed(() => {
   const mode = String(spatialData.value?.algorithm_mode || '')
-  if (mode === 'advanced_v2') return '新算法(advanced_v2)'
-  if (!mode) return '未标记'
+  if (mode === 'advanced_v2') return av('algorithmModeAdvancedV2')
+  if (!mode) return av('algorithmModeUnmarked')
   return mode
 })
 const problemIndicators = computed(() => {
@@ -385,10 +388,10 @@ const currentMpiMean = computed(() => Number(spatialData.value?.statistics?.mpi?
 const baselineMpi = computed(() => Math.max(0, currentMpiMean.value - 4.5))
 const currentHighRiskCount = computed(() => highRiskCount(activeMetric.value))
 const evalSourceLabel = computed(() => {
-  if (evalSourceType.value === 'real_label_stream') return '真实标签流'
-  if (evalSourceType.value === 'pseudo_threshold') return '伪标签估计（阈值构造）'
-  if (evalSourceType.value === 'none') return '无可评估样本'
-  return '未知来源'
+  if (evalSourceType.value === 'real_label_stream') return av('evalSource.realLabelStream')
+  if (evalSourceType.value === 'pseudo_threshold') return av('evalSource.pseudoThreshold')
+  if (evalSourceType.value === 'none') return av('evalSource.none')
+  return av('evalSource.unknown')
 })
 const legendStats = computed(() => {
   if (useFixedScale.value) return { min: 0, mean: 50, max: 100 }
@@ -470,7 +473,11 @@ const scienceResult = computed(() => {
   }
 })
 
-const matrixRoleLabel = (role) => matrixRoleMeta[String(role || '').toLowerCase()]?.label || '全部'
+const matrixRoleLabel = (role) => {
+  const key = String(role || '').toLowerCase()
+  const labelKey = matrixRoleMeta[key]?.labelKey
+  return labelKey ? av(labelKey) : av('matrix.all')
+}
 const matrixSelectionMap = computed(() => {
   const rows = spatialData.value?.boreholes || []
   const evalInputs = scienceResult.value?.evaluation_inputs || {}
@@ -535,18 +542,27 @@ const onResize = () => {
   }, 80)
 }
 
-const metricLabel = (metric) => metricDefs.find((item) => item.key === metric)?.label || metric.toUpperCase()
+const metricLabel = (metric) => {
+  const key = String(metric || '').toLowerCase()
+  const translated = av(`metrics.${key}`)
+  return translated === `algorithmValidation.metrics.${key}` ? key.toUpperCase() : translated
+}
+const metricDesc = (metric) => {
+  const key = String(metric || '').toLowerCase()
+  const translated = av(`metricsDesc.${key}`)
+  return translated === `algorithmValidation.metricsDesc.${key}` ? '' : translated
+}
 const isIndicatorProblem = (metric) => problemIndicators.value.includes(metric)
 const legendGradient = (metric) => getLegendGradient(metric)
 const fmt = (value, digit = 2) => (value === undefined || value === null || Number.isNaN(Number(value)) ? '--' : Number(value).toFixed(digit))
 const pct = (value) => `${(Number(value || 0) * 100).toFixed(0)}%`
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
-const riskLabelZh = (label) => {
+const riskLabel = (label) => {
   const t = String(label || '').toLowerCase()
-  if (t.includes('high') || t.includes('高')) return '高风险'
-  if (t.includes('medium') || t.includes('中')) return '中风险'
-  if (t.includes('low') || t.includes('低')) return '低风险'
-  return '未知'
+  if (t.includes('high') || t.includes('高')) return av('risk.high')
+  if (t.includes('medium') || t.includes('中')) return av('risk.medium')
+  if (t.includes('low') || t.includes('低')) return av('risk.low')
+  return av('risk.unknown')
 }
 const barWidth = (v) => `${clamp(Number(v || 0), 0, 100) * 3.6}`
 const highRiskCount = (metric) => (spatialData.value?.boreholes || []).filter((item) => Number(item[metric]) < 50).length
@@ -631,7 +647,7 @@ const drawMatrixSelectionOverlay = (ctx, boreholes, bounds) => {
   ctx.fillRect(12, 10, 250, 28)
   ctx.fillStyle = '#f4f9f8'
   ctx.font = "600 12px 'Noto Sans SC', 'Segoe UI', sans-serif"
-  ctx.fillText(`联动筛选: ${meta.label} (${selected.length})  Esc清除`, 22, 29)
+  ctx.fillText(av('matrixOverlay', { role: av(meta.labelKey), count: selected.length }), 22, 29)
   ctx.restore()
 }
 
@@ -753,7 +769,7 @@ const runEvaluation = async () => {
     evalSourceType.value = 'none'
     evalSourceFile.value = ''
     evalData.value = null
-    evalMessage.value = '当前煤层钻孔点不足，无法计算评估指标。'
+    evalMessage.value = av('errorInsufficientBoreholes')
     return
   }
   if (evaluationRequestId !== latestEvaluationRequestId) return
@@ -768,7 +784,7 @@ const runEvaluation = async () => {
   } catch (error) {
     if (evaluationRequestId !== latestEvaluationRequestId) return
     evalData.value = null
-    evalMessage.value = error?.response?.data?.detail || '评估指标计算失败'
+    evalMessage.value = error?.response?.data?.detail || av('errorEvaluateFailed')
   } finally {
     if (evaluationRequestId === latestEvaluationRequestId) {
       evalLoading.value = false
@@ -809,7 +825,7 @@ const fetchSpatial = async ({ force = false } = {}) => {
     markStepDone('AlgorithmValidation', { validationReady: true })
   } catch (error) {
     if (requestId !== latestSpatialRequestId) return
-    evalMessage.value = error?.response?.data?.detail || '空间总览加载失败'
+    evalMessage.value = error?.response?.data?.detail || av('errorSpatialOverviewFailed')
   } finally {
     if (requestId === latestSpatialRequestId) {
       loading.value = false
@@ -938,7 +954,7 @@ const canvasToBlob = (canvas, type = 'image/png', quality = 1) => (
   new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(blob)
-      else reject(new Error('Canvas 导出失败'))
+      else reject(new Error(av('errorCanvasExportFailed')))
     }, type, quality)
   })
 )
@@ -957,7 +973,7 @@ const svgStringToPngBlob = async (svgText, width, height, scale = 3) => {
     const img = await new Promise((resolve, reject) => {
       const i = new Image()
       i.onload = () => resolve(i)
-      i.onerror = () => reject(new Error('SVG 转 PNG 失败'))
+      i.onerror = () => reject(new Error(av('errorSvgToPngFailed')))
       i.src = url
     })
     const canvas = document.createElement('canvas')
@@ -1005,7 +1021,7 @@ const exportCurrentFigure = async () => {
     ctx.drawImage(overlayCanvas.value, 0, 0)
     ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'
     ctx.font = "14px 'Times New Roman', 'Noto Serif SC', serif"
-    ctx.fillText(`煤层：${seamName.value || '--'} | 指标：${metricLabel(activeMetric.value)} | 分辨率：${resolution.value}`, 16, 26)
+    ctx.fillText(av('exportCaption', { seam: seamName.value || '--', metric: metricLabel(activeMetric.value), resolution: resolution.value }), 16, 26)
     const link = document.createElement('a')
     link.href = merged.toDataURL('image/png', 1)
     link.download = `algorithm_validation_${seamName.value || 'seam'}_${activeMetric.value}_hd.png`
@@ -1037,14 +1053,14 @@ const exportSciencePackage = async () => {
       ctx.drawImage(overlayCanvas.value, 0, 0)
       ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'
       ctx.font = "14px 'Times New Roman', 'Noto Serif SC', serif"
-      ctx.fillText(`煤层：${seamName.value || '--'} | 指标：${metricLabel(activeMetric.value)} | 分辨率：${resolution.value}`, 16, 26)
+      ctx.fillText(av('exportCaption', { seam: seamName.value || '--', metric: metricLabel(activeMetric.value), resolution: resolution.value }), 16, 26)
       zip.file('figures/main_heatmap_hd.png', await canvasToBlob(mainCanvas, 'image/png', 1))
 
       const cards = pageRoot.value.querySelectorAll('.science-section .figure-card')
       let cardIndex = 0
       for (const card of cards) {
         cardIndex += 1
-        const title = card.querySelector('h4')?.textContent?.trim() || `图${cardIndex}`
+        const title = card.querySelector('h4')?.textContent?.trim() || av('figureFallbackTitle', { index: cardIndex })
         const svg = card.querySelector('.science-chart svg')
         if (!svg) continue
         const rect = svg.getBoundingClientRect()
@@ -1061,27 +1077,27 @@ const exportSciencePackage = async () => {
       zip.file('data/evaluation.json', JSON.stringify(evalData.value || {}, null, 2))
       zip.file('data/science_result.json', JSON.stringify(scienceResult.value || {}, null, 2))
       zip.file('README.txt', [
-        '新算法实证图组导出包',
-        `时间: ${new Date().toLocaleString()}`,
-        `煤层: ${seamName.value || '--'}`,
-        `主图指标: ${metricLabel(activeMetric.value)}`,
+        av('readme.title'),
+        av('readme.time', { value: new Date().toLocaleString() }),
+        av('readme.seam', { seam: seamName.value || '--' }),
+        av('readme.mainMetric', { metric: metricLabel(activeMetric.value) }),
         '',
-        '内容说明:',
-        '- figures/: 主热力图和图2-图11（SVG+PNG）',
-        '- data/: 统计与评估原始数据'
+        av('readme.content'),
+        av('readme.figures'),
+        av('readme.data')
       ].join('\n'))
 
       const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `新算法实证图组_${safeFilename(seamName.value || 'seam')}_${timestamp}.zip`
+      link.download = `${safeFilename(av('exportPackageNamePrefix'))}_${safeFilename(seamName.value || 'seam')}_${timestamp}.zip`
       link.click()
       URL.revokeObjectURL(url)
     })
-    exportNote.value = '图组包导出完成。'
+    exportNote.value = av('exportPackDone')
   } catch (error) {
-    exportNote.value = error?.message || '图组包导出失败'
+    exportNote.value = error?.message || av('exportPackFailed')
   } finally {
     exportingPack.value = false
   }
@@ -1127,7 +1143,7 @@ const loadSeams = async () => {
     seamName.value = preferred?.name || seams[0].name
     setSelectedSeam(seamName.value)
   } catch (error) {
-    evalMessage.value = error?.response?.data?.detail || '煤层列表加载失败'
+    evalMessage.value = error?.response?.data?.detail || av('errorLoadSeams')
   }
 }
 
@@ -1193,7 +1209,7 @@ const runGeoCompare = async () => {
   try {
     const point = await buildGeoComparePoint()
     if (!point) {
-      geoCompareError.value = '未找到可用于对照的钻孔数据'
+      geoCompareError.value = av('errorNoGeoCompareBorehole')
       return
     }
     const { data } = await mpiCalculateGeo({
@@ -1203,7 +1219,7 @@ const runGeoCompare = async () => {
     })
     geoCompareResult.value = data
   } catch (error) {
-    geoCompareError.value = error?.response?.data?.detail || error?.message || '地质对照计算失败'
+    geoCompareError.value = error?.response?.data?.detail || error?.message || av('errorGeoCompareFailed')
   } finally {
     geoCompareLoading.value = false
   }
