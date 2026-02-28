@@ -52,16 +52,11 @@
             </div>
           </div>
 
-          <div v-else class="empty-tip">
-            <div class="empty-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-            </div>
-            <p>璇蜂笂浼犲伐浣滈潰鍧愭爣鏂囦欢</p>
-          </div>
+          <EmptyState
+            v-else
+            title="暂无工作面文件"
+            description="请上传 CSV / JSON / TXT 工作面坐标文件。"
+          />
         </Card>
 
         <Card>
