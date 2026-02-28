@@ -34,28 +34,30 @@
     <template v-if="activeTab === 'principle'">
       <Suspense>
         <template #default>
-          <AcademicPrincipleIntro
-            :aa="aa"
-            :newcomer-journey="newcomerJourney"
-            :term-glossary="termGlossary"
-            :algorithm-storyboards="algorithmStoryboards"
-            :flow-nodes="flowNodes"
-            :active-flow-node="activeFlowNode"
-            @update:active-flow-node="activeFlowNode = $event"
-            @update:active-algo="activeAlgo = $event"
-          />
+          <div class="tab-stack">
+            <AcademicPrincipleIntro
+              :aa="aa"
+              :newcomer-journey="newcomerJourney"
+              :term-glossary="termGlossary"
+              :algorithm-storyboards="algorithmStoryboards"
+              :flow-nodes="flowNodes"
+              :active-flow-node="activeFlowNode"
+              @update:active-flow-node="activeFlowNode = $event"
+              @update:active-algo="activeAlgo = $event"
+            />
 
-          <AcademicIndicatorsPanel
-            :aa="aa"
-            :algorithms="algorithms"
-            :active-algo="activeAlgo"
-            :rendered-formulas="renderedFormulas"
-            :evidence="evidence"
-            :posterior-probs="posteriorProbs"
-            :prob-color="probColor"
-            @update:active-algo="activeAlgo = $event"
-            @update:evidence="updateEvidence"
-          />
+            <AcademicIndicatorsPanel
+              :aa="aa"
+              :algorithms="algorithms"
+              :active-algo="activeAlgo"
+              :rendered-formulas="renderedFormulas"
+              :evidence="evidence"
+              :posterior-probs="posteriorProbs"
+              :prob-color="probColor"
+              @update:active-algo="activeAlgo = $event"
+              @update:evidence="updateEvidence"
+            />
+          </div>
         </template>
         <template #fallback>
           <SkeletonPanel :rows="7" />
@@ -66,34 +68,36 @@
     <template v-if="activeTab === 'calculation'">
       <Suspense>
         <template #default>
-          <AcademicCalcDashboard
-            :aa="aa"
-            :indicators="indicators"
-            :value-class="valueClass"
-            :progress-color="progressColor"
-          />
+          <div class="tab-stack">
+            <AcademicCalcDashboard
+              :aa="aa"
+              :indicators="indicators"
+              :value-class="valueClass"
+              :progress-color="progressColor"
+            />
 
-          <AcademicCalculationModules
-            :aa="aa"
-            :strata-data="strataData"
-            :microseismic-data="microseismicData"
-            :tunnel-params="tunnelParams"
-            :weight-items="weightItems"
-            :weights="weights"
-            :normalized-weights="normalizedWeights"
-            :calculating="calculating"
-            :results="results"
-            :value-class="valueClass"
-            :set-rsi-chart-ref="setRsiChartRef"
-            :set-bri-chart-ref="setBriChartRef"
-            :set-asi-chart-ref="setAsiChartRef"
-            :update-tunnel-param="updateTunnelParam"
-            :update-weight="updateWeight"
-            @calculate-rsi="calculateRSI"
-            @calculate-bri="calculateBRI"
-            @calculate-asi="calculateASI"
-            @calculate-comprehensive="calculateComprehensive"
-          />
+            <AcademicCalculationModules
+              :aa="aa"
+              :strata-data="strataData"
+              :microseismic-data="microseismicData"
+              :tunnel-params="tunnelParams"
+              :weight-items="weightItems"
+              :weights="weights"
+              :normalized-weights="normalizedWeights"
+              :calculating="calculating"
+              :results="results"
+              :value-class="valueClass"
+              :set-rsi-chart-ref="setRsiChartRef"
+              :set-bri-chart-ref="setBriChartRef"
+              :set-asi-chart-ref="setAsiChartRef"
+              :update-tunnel-param="updateTunnelParam"
+              :update-weight="updateWeight"
+              @calculate-rsi="calculateRSI"
+              @calculate-bri="calculateBRI"
+              @calculate-asi="calculateASI"
+              @calculate-comprehensive="calculateComprehensive"
+            />
+          </div>
         </template>
         <template #fallback>
           <SkeletonPanel :rows="8" />
@@ -186,6 +190,12 @@ onMounted(async () => {
   margin: 0 auto;
   line-height: 1.75;
   animation: pageIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 @keyframes pageIn {
