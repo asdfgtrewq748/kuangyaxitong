@@ -1,11 +1,12 @@
-<template>
+﻿<template>
   <div class="page">
-    <div class="page-header">
-      <h1 class="page-title">📈 矿压指标</h1>
-      <p class="page-subtitle">基于岩性参数计算矿压影响指数，生成压力分布图</p>
-    </div>
+    <PageHeader
+      class="main-header"
+      :title="pi('pageTitle')"
+      :description="pi('pageSubtitle')"
+    />
 
-    <!-- 选项卡切换 -->
+    <!-- 閫夐」鍗″垏鎹?-->
     <div class="tabs">
       <button
         v-for="tab in tabs"
@@ -18,140 +19,140 @@
       </button>
     </div>
 
-    <!-- 传统矿压指标选项卡 -->
+    <!-- 浼犵粺鐭垮帇鎸囨爣閫夐」鍗?-->
     <div v-show="activeTab === 'traditional'" class="tab-content">
     <div class="grid grid-2">
-      <!-- 参数设置 -->
+      <!-- 鍙傛暟璁剧疆 -->
       <div class="card">
-        <h3 class="section-title">权重设置</h3>
-        <p class="section-desc">设置各岩性参数的权重（总和会自动归一化）</p>
+        <h3 class="section-title">{{ pi('traditional.weightsTitle') }}</h3>
+        <p class="section-desc">{{ pi('traditional.weightsDesc') }}</p>
 
         <div class="weight-inputs">
           <div class="weight-item">
-            <label class="weight-label">弹性模量</label>
+            <label class="weight-label">{{ pi('traditional.elasticModulus') }}</label>
             <input v-model.number="wElastic" type="number" step="0.1" min="0" class="weight-input">
             <span class="weight-percent">{{ (wElastic / totalWeight * 100).toFixed(0) }}%</span>
           </div>
           <div class="weight-item">
-            <label class="weight-label">容重</label>
+            <label class="weight-label">{{ pi('traditional.density') }}</label>
             <input v-model.number="wDensity" type="number" step="0.1" min="0" class="weight-input">
             <span class="weight-percent">{{ (wDensity / totalWeight * 100).toFixed(0) }}%</span>
           </div>
           <div class="weight-item">
-            <label class="weight-label">抗拉强度</label>
+            <label class="weight-label">{{ pi('traditional.tensileStrength') }}</label>
             <input v-model.number="wTensile" type="number" step="0.1" min="0" class="weight-input">
             <span class="weight-percent">{{ (wTensile / totalWeight * 100).toFixed(0) }}%</span>
           </div>
         </div>
 
         <div class="param-group">
-          <label class="param-label">插值方法</label>
+          <label class="param-label">{{ pi('traditional.interpolationMethod') }}</label>
           <select v-model="method" class="param-select">
-            <option value="kriging">Kriging</option>
-            <option value="idw">IDW</option>
-            <option value="linear">Linear</option>
-            <option value="nearest">Nearest</option>
+            <option value="kriging">{{ pi('interpolation.kriging') }}</option>
+            <option value="idw">{{ pi('interpolation.idw') }}</option>
+            <option value="linear">{{ pi('interpolation.linear') }}</option>
+            <option value="nearest">{{ pi('interpolation.nearest') }}</option>
           </select>
         </div>
 
         <div class="param-group">
-          <label class="param-label">网格大小</label>
+          <label class="param-label">{{ pi('traditional.gridSize') }}</label>
           <input v-model.number="gridSize" type="number" min="20" max="120" class="param-input">
         </div>
 
         <div class="action-buttons">
           <button class="btn primary" @click="handleIndexGrid" :disabled="loading">
             <span v-if="loading" class="spinner sm"></span>
-            {{ loading ? '计算中...' : '计算指标网格' }}
+            {{ loading ? pi('calculating') : pi('traditional.calcIndexGrid') }}
           </button>
           <button v-if="indexGrid" class="btn secondary" @click="handleExport" :disabled="loading">
-            导出指标
+            {{ pi('traditional.exportIndex') }}
           </button>
           <button v-if="indexGrid" class="btn secondary" @click="goValidation" :disabled="loading">
-            下一步：实证验证
+            {{ pi('traditional.nextValidation') }}
           </button>
         </div>
       </div>
 
-      <!-- 指标结果 -->
+      <!-- 鎸囨爣缁撴灉 -->
       <div class="card">
-        <h3 class="section-title">矿压指标分布</h3>
+        <h3 class="section-title">{{ pi('traditional.indexDistribution') }}</h3>
 
         <div v-if="indexGrid" class="result-content">
           <HeatmapCanvas :grid="indexGrid.values" :size="420" />
           <div class="legend">
-            <div class="legend-label">压力指数</div>
+            <div class="legend-label">{{ pi('traditional.pressureIndexLabel') }}</div>
             <div class="legend-bar">
-              <span class="legend-low">低压力</span>
-              <span class="legend-high">高压力</span>
+              <span class="legend-low">{{ pi('traditional.lowPressure') }}</span>
+              <span class="legend-high">{{ pi('traditional.highPressure') }}</span>
             </div>
           </div>
           <div class="stats-row">
             <div class="stat-item">
-              <span class="stat-label">最小值</span>
+              <span class="stat-label">{{ pi('common.min') }}</span>
               <span class="stat-value">{{ indexGrid.min?.toFixed(3) || '-' }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">最大值</span>
+              <span class="stat-label">{{ pi('common.max') }}</span>
               <span class="stat-value">{{ indexGrid.max?.toFixed(3) || '-' }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">平均值</span>
+              <span class="stat-label">{{ pi('common.mean') }}</span>
               <span class="stat-value">{{ indexGrid.mean?.toFixed(3) || '-' }}</span>
             </div>
           </div>
         </div>
 
         <div v-else class="empty-state">
-          <div class="empty-icon">📈</div>
-          <p>请先设置权重并计算指标网格</p>
+          <div class="empty-icon">馃搱</div>
+          <p>{{ pi('traditional.emptyState') }}</p>
         </div>
       </div>
     </div>
 
-    <!-- 工作面调整 -->
+    <!-- 宸ヤ綔闈㈣皟鏁?-->
     <div class="card">
-      <h3 class="section-title">工作面矿压调整</h3>
-      <p class="section-desc">根据工作面推进方向调整矿压分布</p>
+      <h3 class="section-title">{{ pi('workface.title') }}</h3>
+      <p class="section-desc">{{ pi('workface.description') }}</p>
 
       <div class="grid grid-5">
         <div class="param-group">
-          <label class="param-label">工作面数</label>
+          <label class="param-label">{{ pi('workface.count') }}</label>
           <input v-model.number="faceCount" type="number" min="1" class="param-input">
         </div>
         <div class="param-group">
-          <label class="param-label">方向轴</label>
+          <label class="param-label">{{ pi('workface.axis') }}</label>
           <select v-model="faceAxis" class="param-select">
-            <option value="x">X 轴</option>
-            <option value="y">Y 轴</option>
+            <option value="x">{{ pi('workface.axisX') }}</option>
+            <option value="y">{{ pi('workface.axisY') }}</option>
           </select>
         </div>
         <div class="param-group">
-          <label class="param-label">推进方向</label>
+          <label class="param-label">{{ pi('workface.direction') }}</label>
           <select v-model="faceDirection" class="param-select">
-            <option value="ascending">正向</option>
-            <option value="descending">反向</option>
+            <option value="ascending">{{ pi('workface.directionAscending') }}</option>
+            <option value="descending">{{ pi('workface.directionDescending') }}</option>
           </select>
         </div>
         <div class="param-group">
-          <label class="param-label">影响模式</label>
+          <label class="param-label">{{ pi('workface.mode') }}</label>
           <select v-model="faceMode" class="param-select">
-            <option value="decrease">递减</option>
-            <option value="increase">递增</option>
+            <option value="decrease">{{ pi('workface.modeDecrease') }}</option>
+            <option value="increase">{{ pi('workface.modeIncrease') }}</option>
           </select>
         </div>
         <div class="param-group">
-          <label class="param-label">衰减系数</label>
+          <label class="param-label">{{ pi('workface.decay') }}</label>
           <input v-model.number="faceDecay" type="number" step="0.01" class="param-input">
         </div>
       </div>
 
       <div class="action-buttons">
         <button class="btn primary" @click="handleWorkfaces" :disabled="loading">
-          计算调整后指标
+          {{ pi('workface.calcAdjusted') }}
         </button>
         <button v-if="workfaceGrid" class="btn secondary" @click="handleExportWorkfaces" :disabled="loading">
-          导出调整结果
+          {{ pi('workface.exportAdjusted') }}
         </button>
       </div>
 
@@ -161,66 +162,66 @@
     </div>
     </div>
 
-    <!-- MPI指标选项卡 -->
+    <!-- MPI鎸囨爣閫夐」鍗?-->
     <div v-show="activeTab === 'mpi'" class="tab-content">
       <div class="grid grid-2">
-        <!-- MPI权重设置 -->
+        <!-- MPI鏉冮噸璁剧疆 -->
         <div class="card">
-          <h3 class="section-title">MPI权重配置</h3>
-          <p class="section-desc">设置矿压影响指标各子项的权重</p>
+          <h3 class="section-title">{{ pi('mpi.weightsTitle') }}</h3>
+          <p class="section-desc">{{ pi('mpi.weightsDesc') }}</p>
 
           <div class="weight-inputs">
             <div class="weight-item">
-              <label class="weight-label">顶板稳定性 (RSI)</label>
+              <label class="weight-label">{{ pi('mpi.roofStability') }}</label>
               <input v-model.number="mpiWeights.roof_stability" type="number" step="0.05" min="0" max="1" class="weight-input">
               <span class="weight-percent">{{ (mpiWeights.roof_stability * 100).toFixed(0) }}%</span>
             </div>
             <div class="weight-item">
-              <label class="weight-label">冲击地压风险 (BRI)</label>
+              <label class="weight-label">{{ pi('mpi.burstRisk') }}</label>
               <input v-model.number="mpiWeights.burst_risk" type="number" step="0.05" min="0" max="1" class="weight-input">
               <span class="weight-percent">{{ (mpiWeights.burst_risk * 100).toFixed(0) }}%</span>
             </div>
             <div class="weight-item">
-              <label class="weight-label">支承压力分布 (ASI)</label>
+              <label class="weight-label">{{ pi('mpi.abutmentStress') }}</label>
               <input v-model.number="mpiWeights.abutment_stress" type="number" step="0.05" min="0" max="1" class="weight-input">
               <span class="weight-percent">{{ (mpiWeights.abutment_stress * 100).toFixed(0) }}%</span>
             </div>
           </div>
 
           <div class="weight-total" :class="{ invalid: !isWeightValid }">
-            <span>权重总和: {{ mpiWeightTotal }}</span>
-            <span v-if="!isWeightValid" class="weight-warning">（应为1.0）</span>
+            <span>{{ pi('mpi.weightTotal', { total: mpiWeightTotal }) }}</span>
+            <span v-if="!isWeightValid" class="weight-warning">{{ pi('mpi.weightWarning') }}</span>
           </div>
 
           <div class="param-group">
-            <label class="param-label">插值方法</label>
+            <label class="param-label">{{ pi('mpi.interpolationMethod') }}</label>
             <select v-model="mpiMethod" class="param-select">
-              <option value="kriging">Kriging - 普通克里金</option>
-              <option value="idw">IDW - 反距离加权</option>
-              <option value="linear">Linear - 线性插值</option>
-              <option value="nearest">Nearest - 最近邻</option>
+              <option value="kriging">{{ pi('interpolation.kriging') }}</option>
+              <option value="idw">{{ pi('interpolation.idw') }}</option>
+              <option value="linear">{{ pi('interpolation.linear') }}</option>
+              <option value="nearest">{{ pi('interpolation.nearest') }}</option>
             </select>
           </div>
 
           <div class="param-group">
-            <label class="param-label">网格分辨率</label>
+            <label class="param-label">{{ pi('mpi.gridResolution') }}</label>
             <input v-model.number="mpiGridSize" type="number" min="20" max="150" class="param-input">
           </div>
 
           <div class="action-buttons">
             <button class="btn primary" @click="handleMpiCalculate" :disabled="loading || !isWeightValid">
               <span v-if="loading" class="spinner sm"></span>
-              {{ loading ? '计算中...' : '计算MPI网格' }}
+              {{ loading ? pi('calculating') : pi('mpi.calcGrid') }}
             </button>
             <button v-if="mpiGrid" class="btn secondary" @click="handleMpiExport" :disabled="loading">
-              导出MPI数据
+              {{ pi('mpi.exportData') }}
             </button>
           </div>
         </div>
 
-        <!-- MPI网格结果 -->
+        <!-- MPI缃戞牸缁撴灉 -->
         <div class="card">
-          <h3 class="section-title">MPI综合指标分布</h3>
+          <h3 class="section-title">{{ pi('mpi.compositeDistribution') }}</h3>
 
           <div v-if="mpiGrid" class="result-content">
             <div class="mpi-legend-tabs">
@@ -237,108 +238,108 @@
             <HeatmapCanvas :grid="currentMpiGrid" :size="420" />
 
             <div class="legend">
-              <div class="legend-label">MPI值 ({{ mpiDisplayModeLabel }})</div>
+              <div class="legend-label">{{ pi('mpi.valueLabel', { mode: mpiDisplayModeLabel }) }}</div>
               <div class="legend-bar mpi-gradient">
-                <span class="legend-low">高风险 (低MPI)</span>
-                <span class="legend-high">低风险 (高MPI)</span>
+                <span class="legend-low">{{ pi('mpi.highRiskLowMpi') }}</span>
+                <span class="legend-high">{{ pi('mpi.lowRiskHighMpi') }}</span>
               </div>
             </div>
 
             <div class="stats-row">
               <div class="stat-item">
-                <span class="stat-label">最小值</span>
+                <span class="stat-label">{{ pi('common.min') }}</span>
                 <span class="stat-value">{{ mpiStats.min?.toFixed(2) || '-' }}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">最大值</span>
+                <span class="stat-label">{{ pi('common.max') }}</span>
                 <span class="stat-value">{{ mpiStats.max?.toFixed(2) || '-' }}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">平均值</span>
+                <span class="stat-label">{{ pi('common.mean') }}</span>
                 <span class="stat-value">{{ mpiStats.mean?.toFixed(2) || '-' }}</span>
               </div>
             </div>
 
             <div v-if="mpiPointCount > 0" class="mpi-info">
-              <span class="mpi-info-item">数据点: {{ mpiPointCount }}</span>
-              <span class="mpi-info-item">插值方法: {{ mpiMethod }}</span>
+              <span class="mpi-info-item">{{ pi('mpi.dataPoints', { count: mpiPointCount }) }}</span>
+              <span class="mpi-info-item">{{ pi('mpi.interpolationUsed', { method: formatInterpolationMethod(mpiMethod) }) }}</span>
             </div>
           </div>
 
           <div v-else class="empty-state">
-            <div class="empty-icon">📊</div>
-            <p>请先设置权重并计算MPI网格</p>
-            <p class="empty-hint">需要先导入钻孔数据和坐标数据</p>
+            <div class="empty-icon">馃搳</div>
+            <p>{{ pi('mpi.emptyState') }}</p>
+            <p class="empty-hint">{{ pi('mpi.emptyHint') }}</p>
           </div>
         </div>
       </div>
 
-      <!-- 分项指标说明 -->
+      <!-- 鍒嗛」鎸囨爣璇存槑 -->
       <div class="card">
-        <h3 class="section-title">MPI分项指标说明</h3>
+        <h3 class="section-title">{{ pi('definitions.title') }}</h3>
         <div class="mpi-definitions">
           <div class="mpi-def-item">
             <div class="mpi-def-header">
-              <span class="mpi-def-icon">🏠</span>
-              <span class="mpi-def-title">RSI - 顶板稳定性指标</span>
+              <span class="mpi-def-icon">馃彔</span>
+              <span class="mpi-def-title">{{ pi('definitions.rsi.title') }}</span>
             </div>
-            <p class="mpi-def-desc">评估顶板岩层的稳定性，基于直接顶抗拉强度、关键层数量和岩层结构综合计算。分数越高顶板越稳定。</p>
+            <p class="mpi-def-desc">{{ pi('definitions.rsi.desc') }}</p>
             <div class="mpi-def-breakdown">
-              <span>抗拉强度 (40%)</span>
-              <span>关键层数量 (30%)</span>
-              <span>岩层结构 (30%)</span>
+              <span>{{ pi('definitions.rsi.part1') }}</span>
+              <span>{{ pi('definitions.rsi.part2') }}</span>
+              <span>{{ pi('definitions.rsi.part3') }}</span>
             </div>
           </div>
           <div class="mpi-def-item">
             <div class="mpi-def-header">
-              <span class="mpi-def-icon">💥</span>
-              <span class="mpi-def-title">BRI - 冲击地压风险指标</span>
+              <span class="mpi-def-icon">馃挜</span>
+              <span class="mpi-def-title">{{ pi('definitions.bri.title') }}</span>
             </div>
-            <p class="mpi-def-desc">评估冲击地压发生的风险程度，考虑采深、硬厚岩层能量积聚和煤层厚度影响。分数越高风险越低。</p>
+            <p class="mpi-def-desc">{{ pi('definitions.bri.desc') }}</p>
             <div class="mpi-def-breakdown">
-              <span>采深因子</span>
-              <span>硬岩能量积聚</span>
-              <span>煤层厚度</span>
+              <span>{{ pi('definitions.bri.part1') }}</span>
+              <span>{{ pi('definitions.bri.part2') }}</span>
+              <span>{{ pi('definitions.bri.part3') }}</span>
             </div>
           </div>
           <div class="mpi-def-item">
             <div class="mpi-def-header">
-              <span class="mpi-def-icon">⚖️</span>
-              <span class="mpi-def-title">ASI - 支承压力分布指标</span>
+              <span class="mpi-def-icon">鈿栵笍</span>
+              <span class="mpi-def-title">{{ pi('definitions.asi.title') }}</span>
             </div>
-            <p class="mpi-def-desc">评估支承压力分布的合理性，基于岩层综合刚度和内摩擦角计算。分数越高应力分布越合理。</p>
+            <p class="mpi-def-desc">{{ pi('definitions.asi.desc') }}</p>
             <div class="mpi-def-breakdown">
-              <span>综合刚度 (50%)</span>
-              <span>内摩擦角 (50%)</span>
+              <span>{{ pi('definitions.asi.part1') }}</span>
+              <span>{{ pi('definitions.asi.part2') }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 风险等级说明 -->
+      <!-- 椋庨櫓绛夌骇璇存槑 -->
       <div class="card">
-        <h3 class="section-title">MPI风险等级划分</h3>
+        <h3 class="section-title">{{ pi('riskLevels.title') }}</h3>
         <div class="risk-levels">
           <div class="risk-level low">
             <div class="risk-header">
-              <span class="risk-badge low">低风险</span>
-              <span class="risk-range">MPI ≥ 70</span>
+              <span class="risk-badge low">{{ pi('riskLevels.low.label') }}</span>
+              <span class="risk-range">{{ pi('riskLevels.low.range') }}</span>
             </div>
-            <p class="risk-desc">围岩条件较好，可采用常规支护方式。</p>
+            <p class="risk-desc">{{ pi('riskLevels.low.desc') }}</p>
           </div>
           <div class="risk-level medium">
             <div class="risk-header">
-              <span class="risk-badge medium">中等风险</span>
-              <span class="risk-range">50 ≤ MPI < 70</span>
+              <span class="risk-badge medium">{{ pi('riskLevels.medium.label') }}</span>
+              <span class="risk-range">{{ pi('riskLevels.medium.range') }}</span>
             </div>
-            <p class="risk-desc">建议加强顶板支护，增加锚杆/锚索密度。</p>
+            <p class="risk-desc">{{ pi('riskLevels.medium.desc') }}</p>
           </div>
           <div class="risk-level high">
             <div class="risk-header">
-              <span class="risk-badge high">高风险</span>
-              <span class="risk-range">MPI < 50</span>
+              <span class="risk-badge high">{{ pi('riskLevels.high.label') }}</span>
+              <span class="risk-range">{{ pi('riskLevels.high.range') }}</span>
             </div>
-            <p class="risk-desc">围岩条件较差，建议采用加强支护联合方式，必要时采取卸压措施。</p>
+            <p class="risk-desc">{{ pi('riskLevels.high.desc') }}</p>
           </div>
         </div>
       </div>
@@ -349,9 +350,11 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from '../composables/useI18n'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
+import { PageHeader } from '../components/library'
 import {
   pressureIndexGrid,
   pressureIndexWorkfaces,
@@ -365,16 +368,17 @@ import {
 const toast = useToast()
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const { workspaceState, setSelectedSeam, markStepDone } = useWorkspaceFlow()
+const pi = (key, params) => t(`pressureIndex.${key}`, params)
 
-// 选项卡
-const tabs = [
-  { key: 'traditional', label: '传统指标', icon: '📈' },
-  { key: 'mpi', label: 'MPI指标', icon: '📊' }
-]
+// 閫夐」鍗?const tabs = computed(() => ([
+  { key: 'traditional', label: pi('tabs.traditional'), icon: '馃搱' },
+  { key: 'mpi', label: pi('tabs.mpi'), icon: '馃搳' }
+]))
 const activeTab = ref('traditional')
 
-// 传统指标
+// 浼犵粺鎸囨爣
 const method = ref('kriging')
 const gridSize = ref(60)
 const wElastic = ref(0.4)
@@ -390,7 +394,7 @@ const faceDirection = ref('ascending')
 const faceMode = ref('decrease')
 const faceDecay = ref(0.08)
 
-// MPI相关
+// MPI鐩稿叧
 const mpiWeights = ref({
   roof_stability: 0.4,
   burst_risk: 0.35,
@@ -402,12 +406,12 @@ const mpiGrid = ref(null)
 const mpiBreakdown = ref({ rsi: null, bri: null, asi: null })
 const mpiPointCount = ref(0)
 const mpiDisplayMode = ref('mpi') // mpi, rsi, bri, asi
-const mpiDisplayModes = [
-  { key: 'mpi', label: '综合MPI' },
-  { key: 'rsi', label: '顶板稳定性' },
-  { key: 'bri', label: '冲击地压风险' },
-  { key: 'asi', label: '支承压力分布' }
-]
+const mpiDisplayModes = computed(() => ([
+  { key: 'mpi', label: pi('mpi.displayMode.mpi') },
+  { key: 'rsi', label: pi('mpi.displayMode.rsi') },
+  { key: 'bri', label: pi('mpi.displayMode.bri') },
+  { key: 'asi', label: pi('mpi.displayMode.asi') }
+]))
 
 const totalWeight = computed(() => {
   return (wElastic.value || 0) + (wDensity.value || 0) + (wTensile.value || 0) || 1
@@ -422,7 +426,7 @@ const normalizedWeights = computed(() => {
   }
 })
 
-// MPI相关计算属性
+// MPI鐩稿叧璁＄畻灞炴€?
 const mpiWeightTotal = computed(() => {
   const total = mpiWeights.value.roof_stability + mpiWeights.value.burst_risk + mpiWeights.value.abutment_stress
   return total.toFixed(2)
@@ -455,9 +459,18 @@ const currentMpiGrid = computed(() => {
 })
 
 const mpiDisplayModeLabel = computed(() => {
-  const mode = mpiDisplayModes.find(m => m.key === mpiDisplayMode.value)
-  return mode ? mode.label : 'MPI'
+  const mode = mpiDisplayModes.value.find(m => m.key === mpiDisplayMode.value)
+  return mode ? mode.label : pi('mpi.displayMode.mpi')
 })
+
+const formatInterpolationMethod = (methodName) => {
+  const key = String(methodName || '').toLowerCase()
+  if (key === 'kriging') return pi('interpolation.kriging')
+  if (key === 'idw') return pi('interpolation.idw')
+  if (key === 'linear') return pi('interpolation.linear')
+  if (key === 'nearest') return pi('interpolation.nearest')
+  return methodName || '-'
+}
 
 // Save weights to localStorage
 const saveWeights = () => {
@@ -494,9 +507,9 @@ const handleIndexGrid = async () => {
     )
     indexGrid.value = data.grid
     markStepDone('PressureIndex', { pressureReady: true })
-    toast.add('指标网格计算完成', 'success')
+    toast.add(pi('toast.indexGridDone'), 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || '计算失败', 'error')
+    toast.add(err.response?.data?.detail || pi('toast.calcFailed'), 'error')
   } finally {
     loading.value = false
   }
@@ -519,9 +532,9 @@ const handleWorkfaces = async () => {
     })
     workfaceGrid.value = data.workfaces.adjusted
     markStepDone('PressureIndex', { pressureReady: true })
-    toast.add('工作面调整完成', 'success')
+    toast.add(pi('toast.workfaceDone'), 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || '计算失败', 'error')
+    toast.add(err.response?.data?.detail || pi('toast.calcFailed'), 'error')
   } finally {
     loading.value = false
   }
@@ -537,9 +550,9 @@ const handleExport = async () => {
     a.download = `pressure_index_${method.value}_${gridSize.value}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.add('导出成功', 'success')
+    toast.add(pi('toast.exportDone'), 'success')
   } catch (err) {
-    toast.add('导出失败', 'error')
+    toast.add(pi('toast.exportFailed'), 'error')
   } finally {
     loading.value = false
   }
@@ -566,21 +579,21 @@ const handleExportWorkfaces = async () => {
     a.download = `pressure_index_workfaces_${faceAxis.value}_${faceCount.value}_${gridSize.value}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.add('导出成功', 'success')
+    toast.add(pi('toast.exportDone'), 'success')
   } catch (err) {
-    toast.add('导出失败', 'error')
+    toast.add(pi('toast.exportFailed'), 'error')
   } finally {
     loading.value = false
   }
 }
 
-// MPI相关函数
+// MPI鐩稿叧鍑芥暟
 const loadMpiWeights = async () => {
   try {
     const { data } = await getMpiWeights()
     mpiWeights.value = data
   } catch (err) {
-    // 使用默认权重
+    // 浣跨敤榛樿鏉冮噸
   }
 }
 
@@ -588,21 +601,21 @@ const saveMpiWeights = async () => {
   if (!isWeightValid.value) return
   try {
     await setMpiWeights(mpiWeights.value)
-    toast.add('权重配置已保存', 'success')
+    toast.add(pi('toast.weightsSaved'), 'success')
   } catch (err) {
-    toast.add('保存权重失败', 'error')
+    toast.add(pi('toast.saveWeightsFailed'), 'error')
   }
 }
 
 const handleMpiCalculate = async () => {
   if (!isWeightValid.value) {
-    toast.add('MPI 权重总和需为 1.00', 'warning')
+    toast.add(pi('toast.weightTotalInvalid'), 'warning')
     return
   }
 
   loading.value = true
   try {
-    const seamName = workspaceState.selectedSeam || normalizeQuerySeam(route.query?.seam) || '16-3煤'
+    const seamName = workspaceState.selectedSeam || normalizeQuerySeam(route.query?.seam) || '16-3鐓?
     const weights = {
       rsi: mpiWeights.value.roof_stability,
       bri: mpiWeights.value.burst_risk,
@@ -624,9 +637,9 @@ const handleMpiCalculate = async () => {
     mpiPointCount.value = Number(data?.borehole_count || 0)
     mpiDisplayMode.value = 'mpi'
     markStepDone('PressureIndex', { pressureReady: true })
-    toast.add('MPI网格计算完成', 'success')
+    toast.add(pi('toast.mpiGridDone'), 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || 'MPI计算失败', 'error')
+    toast.add(err.response?.data?.detail || pi('toast.mpiCalcFailed'), 'error')
   } finally {
     loading.value = false
   }
@@ -635,7 +648,7 @@ const handleMpiCalculate = async () => {
 const handleMpiExport = async () => {
   if (!mpiGrid.value) return
 
-  // 导出CSV
+  // 瀵煎嚭CSV
   const rows = [['x', 'y', 'mpi', 'rsi', 'bri', 'asi']]
   const grid = mpiGrid.value || []
   const rsiGrid = mpiBreakdown.value.rsi || []
@@ -663,7 +676,7 @@ const handleMpiExport = async () => {
   a.download = `mpi_grid_${mpiMethod.value}_${mpiGridSize.value}.csv`
   a.click()
   URL.revokeObjectURL(url)
-  toast.add('导出成功', 'success')
+  toast.add(pi('toast.exportDone'), 'success')
 }
 
 const normalizeQuerySeam = (value) => {
@@ -688,28 +701,19 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-title {
-  margin: 0 0 8px 0;
-  font-size: 26px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.page-subtitle {
-  margin: 0 0 24px 0;
-  font-size: 14px;
-  color: #64748b;
+.main-header {
+  margin-bottom: 20px;
 }
 
 .section-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 17px;
   font-weight: 700;
   color: #0f172a;
 }
 
 .section-desc {
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: 13px;
   color: #64748b;
 }
@@ -726,7 +730,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: var(--spacing-3) var(--spacing-4);
   background: #f3f8f7;
   border-radius: 10px;
 }
@@ -740,7 +744,7 @@ onMounted(() => {
 
 .weight-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid #d8e5e2;
   border-radius: 8px;
   font-size: 14px;
@@ -769,7 +773,7 @@ onMounted(() => {
 .param-select,
 .param-input {
   width: 100%;
-  padding: 10px 14px;
+  padding: var(--spacing-3) var(--spacing-4);
   border: 1px solid #d8e5e2;
   border-radius: 10px;
   font-size: 14px;
@@ -792,7 +796,7 @@ onMounted(() => {
 }
 
 .btn {
-  padding: 10px 18px;
+  padding: var(--spacing-3) var(--spacing-5);
   border: 1px solid transparent;
   border-radius: 10px;
   font-size: 14px;
@@ -885,7 +889,7 @@ onMounted(() => {
   justify-content: center;
   gap: 24px;
   margin-top: 16px;
-  padding: 12px;
+  padding: var(--spacing-3);
   background: #f3f8f7;
   border-radius: 10px;
 }
@@ -910,7 +914,7 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: calc(var(--spacing-12) + var(--spacing-3)) var(--spacing-5);
   color: #94a3b8;
 }
 
@@ -942,7 +946,7 @@ onMounted(() => {
   background: linear-gradient(145deg, #ffffff 0%, #f7fbfa 100%);
   border: 1px solid rgba(14, 116, 144, 0.14);
   border-radius: 16px;
-  padding: 20px;
+  padding: var(--spacing-5);
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
 }
 
@@ -964,9 +968,9 @@ onMounted(() => {
 /* Tabs */
 .tabs {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
   margin-bottom: 20px;
-  padding: 6px;
+  padding: var(--spacing-1);
   background: #e8f1ef;
   border-radius: 14px;
 }
@@ -974,8 +978,8 @@ onMounted(() => {
 .tab {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-5);
   border: none;
   border-radius: 10px;
   background: transparent;
@@ -1017,8 +1021,8 @@ onMounted(() => {
 .weight-total {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
   margin-bottom: 16px;
   background: #f0fdf4;
   border-radius: 10px;
@@ -1046,7 +1050,7 @@ onMounted(() => {
 }
 
 .mpi-legend-tab {
-  padding: 6px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   border: 1px solid #d6e6e2;
   border-radius: 8px;
   background: white;
@@ -1077,7 +1081,7 @@ onMounted(() => {
   justify-content: center;
   gap: 20px;
   margin-top: 12px;
-  padding: 10px;
+  padding: var(--spacing-3);
   background: #f3f8f7;
   border-radius: 10px;
   font-size: 12px;
@@ -1097,7 +1101,7 @@ onMounted(() => {
 }
 
 .mpi-def-item {
-  padding: 16px;
+  padding: var(--spacing-4);
   background: #f4f9f8;
   border-radius: 12px;
   border-left: 4px solid var(--color-primary);
@@ -1121,7 +1125,7 @@ onMounted(() => {
 }
 
 .mpi-def-desc {
-  margin: 0 0 10px 0;
+  margin: 0 0 var(--spacing-3) 0;
   font-size: 13px;
   color: #64748b;
   line-height: 1.6;
@@ -1134,7 +1138,7 @@ onMounted(() => {
 }
 
 .mpi-def-breakdown span {
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   background: white;
   border-radius: 6px;
   font-size: 11px;
@@ -1149,7 +1153,7 @@ onMounted(() => {
 }
 
 .risk-level {
-  padding: 14px 16px;
+  padding: var(--spacing-4) var(--spacing-4);
   border-radius: 12px;
   border-left: 4px solid;
 }
@@ -1177,7 +1181,7 @@ onMounted(() => {
 }
 
 .risk-badge {
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 700;
@@ -1211,3 +1215,4 @@ onMounted(() => {
   line-height: 1.5;
 }
 </style>
+

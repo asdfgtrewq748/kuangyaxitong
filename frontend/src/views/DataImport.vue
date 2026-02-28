@@ -108,30 +108,42 @@
         </div>
 
         <!-- 手动输入坐标 -->
-        <div v-if="coordMode === 'manual'" class="coord-input">
-          <div class="coord-list">
-            <div v-for="(b, i) in boreholes" :key="i" class="coord-item">
-              <span class="coord-num">#{{ i + 1 }}</span>
-              <input type="text" v-model="b.name" placeholder="名称" class="coord-name-input">
-              <input type="number" v-model.number="b.x" placeholder="X (m)" class="coord-value-input">
-              <input type="number" v-model.number="b.y" placeholder="Y (m)" class="coord-value-input">
-              <button class="coord-remove" @click="removeBorehole(i)" title="删除">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
+        <FormPanel
+          v-if="coordMode === 'manual'"
+          title="手动坐标录入"
+          description="支持增删钻孔并批量保存坐标"
+          :auto-grid="false"
+          :show-actions="true"
+          :show-cancel="false"
+          @submit="saveCoordinates"
+        >
+          <div class="coord-input">
+            <div class="coord-list">
+              <div v-for="(b, i) in boreholes" :key="i" class="coord-item">
+                <span class="coord-num">#{{ i + 1 }}</span>
+                <input type="text" v-model="b.name" placeholder="名称" class="coord-name-input">
+                <input type="number" v-model.number="b.x" placeholder="X (m)" class="coord-value-input">
+                <input type="number" v-model.number="b.y" placeholder="Y (m)" class="coord-value-input">
+                <button class="coord-remove" @click="removeBorehole(i)" title="删除">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-          <div class="coord-actions">
-            <button class="btn outline small" @click="addBorehole">
-              + 添加
-            </button>
-            <button class="btn primary small" @click="saveCoordinates" :disabled="loading || boreholes.length === 0">
-              保存坐标
-            </button>
-          </div>
-        </div>
+          <template #actions>
+            <div class="coord-actions">
+              <button class="btn outline small" type="button" @click="addBorehole">
+                + 添加
+              </button>
+              <button class="btn primary small" type="submit" :disabled="loading || boreholes.length === 0">
+                保存坐标
+              </button>
+            </div>
+          </template>
+        </FormPanel>
 
         <!-- 文件上传坐标 -->
         <div v-else class="coord-file">
@@ -216,8 +228,8 @@
             >
           </div>
           <div class="table-wrapper">
-            <!-- Use virtual list for large datasets (>100 items) -->
-            <template v-if="filteredBoreholes.length > 100">
+            <!-- Use virtual list for medium/large datasets (>=50 items) -->
+            <template v-if="useVirtualList">
               <div class="virtual-table-header">
                 <div class="virtual-row virtual-header">
                   <div class="virtual-cell" style="width: 50px;">序号</div>
@@ -229,9 +241,9 @@
               </div>
               <VirtualList
                 :items="filteredBoreholes"
-                :item-height="44"
-                :height="320"
-                :buffer="5"
+                :item-height="VIRTUAL_LIST_ITEM_HEIGHT"
+                :height="VIRTUAL_LIST_VIEWPORT_HEIGHT"
+                :buffer="virtualListBuffer"
                 key-field="name"
                 item-class="virtual-row"
               >
@@ -306,15 +318,32 @@
         <p class="empty-hint">请先上传数据文件或手动输入坐标</p>
       </div>
     </div>
+
+    <ConfirmDialog
+      v-model="clearDialogVisible"
+      title="确认清空坐标"
+      message="清空后会删除当前全部钻孔坐标，并移除本地缓存，是否继续？"
+      confirm-text="确认清空"
+      cancel-text="取消"
+      variant="danger"
+      @confirm="confirmClearCoords"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { ConfirmDialog, FormPanel } from '../components/library'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import BoreholeMap from '../components/BoreholeMap.vue'
 import VirtualList from '../components/VirtualList.vue'
+import {
+  VIRTUAL_LIST_DEFAULT_BUFFER,
+  VIRTUAL_LIST_ITEM_HEIGHT,
+  VIRTUAL_LIST_THRESHOLD,
+  VIRTUAL_LIST_VIEWPORT_HEIGHT
+} from '../constants/performance'
 import { scanBoreholes, uploadBoreholes, previewBorehole } from '../api'
 
 const toast = useToast()
@@ -328,6 +357,7 @@ const scanResult = ref(null)
 const coordMode = ref('manual')
 const selectedBorehole = ref(null)
 const searchQuery = ref('')
+const clearDialogVisible = ref(false)
 
 // 钻孔坐标数据
 const boreholes = ref([])
@@ -347,6 +377,15 @@ const filteredBoreholes = computed(() => {
     b.x?.toString().includes(q) ||
     b.y?.toString().includes(q)
   )
+})
+
+const useVirtualList = computed(() => filteredBoreholes.value.length >= VIRTUAL_LIST_THRESHOLD)
+const virtualListBuffer = computed(() => {
+  const size = filteredBoreholes.value.length
+  if (size >= 2000) return 14
+  if (size >= 800) return 12
+  if (size >= 300) return 10
+  return VIRTUAL_LIST_DEFAULT_BUFFER
 })
 
 // 监听选中状态，同步到地图组件
@@ -406,28 +445,28 @@ const extractCoordinatesFromFiles = async () => {
 
   for (const file of files.value) {
     try {
-      // 使用预览 API 获取文件内容
+      // 使用预览 API 获取文件内容（兼容 rows/data 两种返回字段）
       const { data } = await previewBorehole(file.name, 100)
+      const previewRows = data?.rows || data?.data || []
 
       // 检查数据中是否包含坐标列
-      if (data.data && data.data.length > 0) {
-        const columns = Object.keys(data.data[0]).map(k => k.toLowerCase())
+      if (previewRows.length > 0) {
 
         // 查找可能的坐标列
-        const xCol = Object.keys(data.data[0]).find(k =>
+        const xCol = Object.keys(previewRows[0]).find(k =>
           k.toLowerCase().includes('x') || k === '坐标x' || k === 'x坐标'
         )
-        const yCol = Object.keys(data.data[0]).find(k =>
+        const yCol = Object.keys(previewRows[0]).find(k =>
           k.toLowerCase().includes('y') || k === '坐标y' || k === 'y坐标'
         )
-        const nameCol = Object.keys(data.data[0]).find(k =>
+        const nameCol = Object.keys(previewRows[0]).find(k =>
           k.toLowerCase().includes('name') || k.toLowerCase().includes('钻孔') ||
           k === '钻孔号' || k === '孔号'
         )
 
         if (xCol && yCol) {
           // 提取第一个包含坐标的行（通常每个文件代表一个钻孔）
-          const firstRow = data.data[0]
+          const firstRow = previewRows[0]
           const x = parseFloat(firstRow[xCol])
           const y = parseFloat(firstRow[yCol])
 
@@ -629,12 +668,15 @@ const exportCoords = () => {
 }
 
 const clearCoords = () => {
-  if (confirm('确定要清空所有坐标吗？')) {
-    boreholes.value = []
-    selectedBorehole.value = null
-    localStorage.removeItem('borehole_coordinates')
-    toast.add('坐标已清空', 'success')
-  }
+  if (!boreholes.value.length) return
+  clearDialogVisible.value = true
+}
+
+const confirmClearCoords = () => {
+  boreholes.value = []
+  selectedBorehole.value = null
+  localStorage.removeItem('borehole_coordinates')
+  toast.add('坐标已清空', 'success')
 }
 
 onMounted(() => {
@@ -644,26 +686,26 @@ onMounted(() => {
 
 <style scoped>
 .page-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 26px;
   font-weight: 700;
   color: #0f172a;
 }
 
 .page-subtitle {
-  margin: 0 0 24px 0;
+  margin: 0 0 var(--spacing-6) 0;
   font-size: 14px;
   color: #64748b;
 }
 
 .section-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 17px;
   font-weight: 700;
   color: #0f172a;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .section-icon {
@@ -674,20 +716,20 @@ onMounted(() => {
 }
 
 .section-desc {
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: 13px;
   color: #64748b;
 }
 
 .subsection-title {
-  margin: 12px 0 4px 0;
+  margin: var(--spacing-3) 0 var(--spacing-1) 0;
   font-size: 13px;
   font-weight: 600;
   color: #475569;
 }
 
 .subsection-desc {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 12px;
   color: #64748b;
 }
@@ -695,7 +737,7 @@ onMounted(() => {
 /* Grid */
 .grid {
   display: grid;
-  gap: 20px;
+  gap: var(--spacing-5);
 }
 
 .grid-2 {
@@ -706,12 +748,12 @@ onMounted(() => {
 .card {
   background: white;
   border-radius: 16px;
-  padding: 20px;
+  padding: var(--spacing-5);
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
 .preview-card {
-  padding: 16px;
+  padding: var(--spacing-4);
 }
 
 /* Upload Card - with scroll */
@@ -743,7 +785,7 @@ onMounted(() => {
 .upload-area {
   border: 3px dashed #cbd5e1;
   border-radius: 16px;
-  padding: 32px 24px;
+  padding: var(--spacing-8) var(--spacing-6);
   text-align: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -787,13 +829,13 @@ onMounted(() => {
 }
 
 .upload-area.compact {
-  padding: 16px;
+  padding: var(--spacing-4);
 }
 
 .upload-icon {
   width: 56px;
   height: 56px;
-  margin: 0 auto 12px;
+  margin: 0 auto var(--spacing-3);
   color: #7cb7ae;
   display: flex;
   align-items: center;
@@ -814,7 +856,7 @@ onMounted(() => {
 }
 
 .upload-text {
-  margin: 0 0 6px 0;
+  margin: 0 0 var(--spacing-1) 0;
   font-size: 15px;
   font-weight: 600;
   color: #1f2937;
@@ -830,8 +872,8 @@ onMounted(() => {
 
 /* File List */
 .file-list {
-  margin-top: 20px;
-  padding: 16px;
+  margin-top: var(--spacing-5);
+  padding: var(--spacing-4);
   background: linear-gradient(135deg, #f4faf8 0%, #edf8f5 100%);
   border-radius: 14px;
   border: 1px solid rgba(14, 116, 144, 0.14);
@@ -842,7 +884,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-3);
   font-size: 13px;
   font-weight: 600;
   color: #475569;
@@ -851,14 +893,14 @@ onMounted(() => {
 .file-items {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
   background: white;
   border-radius: 10px;
   font-size: 13px;
@@ -929,19 +971,19 @@ onMounted(() => {
 /* Actions */
 .action-buttons {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
   flex-wrap: wrap;
 }
 
 .coord-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
 }
 
 .btn {
-  padding: 8px 16px;
+  padding: var(--spacing-2) var(--spacing-4);
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -951,7 +993,7 @@ onMounted(() => {
 }
 
 .btn.small {
-  padding: 6px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 12px;
 }
 
@@ -1027,9 +1069,9 @@ onMounted(() => {
 .result-box {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 16px;
-  padding: 10px 14px;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
   border-radius: 10px;
 }
 
@@ -1068,8 +1110,8 @@ onMounted(() => {
 
 /* Extracted Coords */
 .extracted-coords {
-  margin-top: 16px;
-  padding: 12px;
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3);
   background: #e8f7f3;
   border-radius: 10px;
   border-left: 4px solid var(--color-primary);
@@ -1078,16 +1120,16 @@ onMounted(() => {
 /* Tab Buttons */
 .tab-buttons {
   display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-  padding: 4px;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-1);
   background: #edf5f3;
   border-radius: 12px;
 }
 
 .tab-btn {
   flex: 1;
-  padding: 10px 16px;
+  padding: var(--spacing-3) var(--spacing-4);
   border: none;
   background: transparent;
   border-radius: 10px;
@@ -1121,15 +1163,15 @@ onMounted(() => {
 .coord-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-3);
 }
 
 .coord-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
   background: #f8fafc;
   border-radius: 8px;
   transition: background 0.15s;
@@ -1147,7 +1189,7 @@ onMounted(() => {
 
 .coord-name-input {
   flex: 1;
-  padding: 5px 8px;
+  padding: var(--spacing-1) var(--spacing-2);
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 12px;
@@ -1155,7 +1197,7 @@ onMounted(() => {
 
 .coord-value-input {
   width: 60px;
-  padding: 5px 6px;
+  padding: var(--spacing-1);
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 12px;
@@ -1186,15 +1228,15 @@ onMounted(() => {
 }
 
 .coord-stats {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-1);
 }
 
 .stat-badge {
   display: inline-block;
-  padding: 6px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   background: #e8f7f3;
   border-radius: 8px;
   color: var(--color-info);
@@ -1204,7 +1246,7 @@ onMounted(() => {
 .stat-range {
   font-size: 11px;
   color: #64748b;
-  padding: 0 4px;
+  padding: 0 var(--spacing-1);
 }
 
 .coord-file {
@@ -1212,8 +1254,8 @@ onMounted(() => {
 }
 
 .coord-format-hint {
-  margin-top: 12px;
-  padding: 8px 10px;
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
   background: #f4faf8;
   border-radius: 8px;
   font-size: 11px;
@@ -1223,7 +1265,7 @@ onMounted(() => {
 
 .coord-format-hint code {
   background: #e2e8f0;
-  padding: 2px 4px;
+  padding: var(--spacing-1);
   border-radius: 4px;
   font-size: 10px;
 }
@@ -1233,12 +1275,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-4);
 }
 
 .preview-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--spacing-1);
 }
 
 .icon-btn {
@@ -1276,7 +1318,7 @@ onMounted(() => {
 .preview-grid {
   display: grid;
   grid-template-columns: 340px 1fr;
-  gap: 20px;
+  gap: var(--spacing-5);
 }
 
 .map-section {
@@ -1294,7 +1336,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: var(--spacing-3);
 }
 
 .table-header h4 {
@@ -1305,7 +1347,7 @@ onMounted(() => {
 }
 
 .search-input {
-  padding: 6px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 12px;
@@ -1322,8 +1364,8 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   max-height: 320px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
 }
 
 .table {
@@ -1334,50 +1376,50 @@ onMounted(() => {
 
 .table.compact th,
 .table.compact td {
-  padding: 8px 10px;
+  padding: var(--spacing-2) var(--spacing-3);
 }
 
 .table th {
   text-align: left;
-  background: #edf5f3;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
   font-weight: 600;
-  color: #475569;
+  color: var(--text-secondary);
   position: sticky;
   top: 0;
 }
 
 .table td {
-  border-bottom: 1px solid #f1f5f9;
-  color: #0f172a;
+  border-bottom: 1px solid var(--border-color-light);
+  color: var(--text-primary);
 }
 
 .table tbody tr {
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background-color var(--transition-fast);
 }
 
 .table tbody tr:hover {
-  background: #f4faf8;
+  background: var(--bg-secondary);
 }
 
 .table tbody tr.selected {
-  background: #e8f7f3;
+  background: var(--bg-tertiary);
 }
 
 .table tbody tr.selected td {
-  color: var(--color-info);
-  font-weight: 500;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .table-btn {
   background: none;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: var(--spacing-1);
   font-size: 10px;
   cursor: pointer;
-  margin-right: 4px;
+  margin-right: var(--spacing-1);
 }
 
 .table-btn:hover {
@@ -1386,28 +1428,28 @@ onMounted(() => {
 }
 
 .table-btn.danger:hover {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 .table-empty {
-  padding: 24px;
+  padding: var(--spacing-6);
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   font-size: 13px;
 }
 
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: var(--spacing-10) var(--spacing-5);
   color: #94a3b8;
 }
 
 .empty-icon {
   width: 56px;
   height: 56px;
-  margin: 0 auto 10px;
+  margin: 0 auto var(--spacing-3);
   color: #94a3b8;
   opacity: 0.6;
   display: flex;
@@ -1450,7 +1492,7 @@ onMounted(() => {
 .virtual-row {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
+  padding: var(--spacing-3);
   border-bottom: 1px solid #edf5f3;
   transition: all 0.15s ease;
   cursor: pointer;
@@ -1467,7 +1509,7 @@ onMounted(() => {
 
 .virtual-cell {
   flex: 1;
-  padding: 0 8px;
+  padding: 0 var(--spacing-2);
   font-size: 13px;
   color: #334155;
   overflow: hidden;
@@ -1482,7 +1524,7 @@ onMounted(() => {
 /* Ensure virtual list container has proper height */
 .table-wrapper :deep(.virtual-list-container) {
   border-radius: 0 0 8px 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   border-top: none;
 }
 </style>

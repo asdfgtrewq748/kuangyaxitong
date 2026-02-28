@@ -2,24 +2,21 @@
   <div class="research-portal page">
     <header class="portal-hero card">
       <div class="hero-copy">
-        <p class="kicker">RESEARCH FRONTEND</p>
-        <h1>MPI Research Portal</h1>
-        <p>
-          独立科研入口：论文草稿、门禁报告、可复现实验三条线并行。
-          这个页面只面向科研产出，不承载生产流程配置。
-        </p>
+        <p class="kicker">{{ t('researchPortal.kicker') }}</p>
+        <h1>{{ t('researchPortal.title') }}</h1>
+        <p>{{ t('researchPortal.subtitle') }}</p>
       </div>
       <div class="hero-stats">
         <div class="stat">
-          <span>Paper Drafts</span>
+          <span>{{ t('researchPortal.paperDrafts') }}</span>
           <strong>{{ papers.length }}</strong>
         </div>
         <div class="stat">
-          <span>Gate Pass</span>
+          <span>{{ t('researchPortal.gatePass') }}</span>
           <strong>{{ passCount }}/{{ papers.length || 0 }}</strong>
         </div>
         <div class="stat">
-          <span>Last Sync</span>
+          <span>{{ t('researchPortal.lastSync') }}</span>
           <strong>{{ syncedAt || '-' }}</strong>
         </div>
       </div>
@@ -27,22 +24,22 @@
 
     <section class="quick-grid">
       <article class="card quick-card">
-        <h2>Quick Actions</h2>
+        <h2>{{ t('researchPortal.quickActions') }}</h2>
         <div class="quick-actions">
-          <button class="btn" type="button" @click="go('/research-workbench')">科研工作台</button>
-          <button class="btn secondary" type="button" @click="go('/algorithm-validation')">算法实证</button>
-          <button class="btn secondary" type="button" @click="go('/academic-algorithm')">新算法原理</button>
+          <button class="btn" type="button" @click="go('/research-workbench')">{{ t('nav.researchWorkbench') }}</button>
+          <button class="btn secondary" type="button" @click="go('/algorithm-validation')">{{ t('nav.algorithmValidation') }}</button>
+          <button class="btn secondary" type="button" @click="go('/academic-algorithm')">{{ t('nav.academicAlgorithm') }}</button>
         </div>
       </article>
 
       <article class="card quick-card timeline">
-        <h2>12-Month Track</h2>
+        <h2>{{ t('researchPortal.trackTitle') }}</h2>
         <ol>
-          <li><b>A1-A2:</b> 数据治理与评估协议固化</li>
-          <li><b>A3-A6:</b> RSI 相场主论文实证</li>
-          <li><b>A5-A9:</b> ASI-UST 强度论文实证</li>
-          <li><b>A8-A10:</b> 图表脚本与复现实验材料包</li>
-          <li><b>A10-A12:</b> 双稿错峰投稿与返修准备</li>
+          <li><b>{{ t('researchPortal.trackA1A2') }}:</b> {{ t('researchPortal.trackA1A2Desc') }}</li>
+          <li><b>{{ t('researchPortal.trackA3A6') }}:</b> {{ t('researchPortal.trackA3A6Desc') }}</li>
+          <li><b>{{ t('researchPortal.trackA5A9') }}:</b> {{ t('researchPortal.trackA5A9Desc') }}</li>
+          <li><b>{{ t('researchPortal.trackA8A10') }}:</b> {{ t('researchPortal.trackA8A10Desc') }}</li>
+          <li><b>{{ t('researchPortal.trackA10A12') }}:</b> {{ t('researchPortal.trackA10A12Desc') }}</li>
         </ol>
       </article>
     </section>
@@ -50,33 +47,37 @@
     <section class="card leaderboard-panel">
       <div class="panel-head">
         <div>
-          <h2>Experiment Leaderboard</h2>
-          <p>基于 <code>data/research/experiments/*/result.json</code> 自动统计。</p>
+          <h2>{{ t('researchPortal.experimentLeaderboard') }}</h2>
+          <p>{{ t('researchPortal.leaderboardDesc') }} <code>data/research/experiments/*/result.json</code>。</p>
         </div>
         <div class="leaderboard-actions">
           <select v-model="leaderboardMetric" @change="loadLeaderboard">
             <option v-for="item in metricOptions" :key="item" :value="item">{{ item }}</option>
           </select>
           <button class="btn secondary" type="button" :disabled="leaderboardLoading" @click="loadLeaderboard">
-            {{ leaderboardLoading ? '刷新中...' : '刷新榜单' }}
+            {{ leaderboardLoading ? t('researchPortal.refreshing') : t('researchPortal.refreshLeaderboard') }}
           </button>
         </div>
       </div>
 
-      <div v-if="leaderboardLoading" class="state">正在计算实验榜单...</div>
+      <SkeletonPanel v-if="leaderboardLoading" :rows="6" />
       <div v-else-if="leaderboardError" class="state error">{{ leaderboardError }}</div>
-      <div v-else-if="!leaderboardRows.length" class="state">暂无实验结果，请先在科研工作台运行实验。</div>
+      <EmptyState
+        v-else-if="!leaderboardRows.length"
+        :title="t('researchPortal.noLeaderboardData')"
+        :description="t('researchPortal.loadingLeaderboard')"
+      />
       <div v-else class="leaderboard-grid">
         <article class="result-card">
-          <h3>Top Runs ({{ leaderboardMetric }})</h3>
+          <h3>{{ t('researchPortal.topRuns', { metric: leaderboardMetric }) }}</h3>
           <table class="table compact">
             <thead>
               <tr>
                 <th>#</th>
                 <th>exp_id</th>
-                <th>model</th>
-                <th>value</th>
-                <th>action</th>
+                <th>{{ t('researchPortal.model') }}</th>
+                <th>{{ t('researchPortal.value') }}</th>
+                <th>{{ t('researchPortal.action') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -87,7 +88,7 @@
                 <td>{{ formatNumber(row.value, 6) }}</td>
                 <td>
                   <button class="btn secondary btn-mini" type="button" @click="openExperiment(row.exp_id)">
-                    在工作台打开
+                    {{ t('researchPortal.openInWorkbench') }}
                   </button>
                 </td>
               </tr>
@@ -96,15 +97,15 @@
         </article>
 
         <article class="result-card">
-          <h3>Model Summary</h3>
+          <h3>{{ t('researchPortal.modelSummary') }}</h3>
           <table class="table compact">
             <thead>
               <tr>
-                <th>model</th>
-                <th>count</th>
-                <th>datasets</th>
-                <th>mean</th>
-                <th>best</th>
+                <th>{{ t('researchPortal.model') }}</th>
+                <th>{{ t('researchPortal.count') }}</th>
+                <th>{{ t('researchPortal.datasets') }}</th>
+                <th>{{ t('researchPortal.mean') }}</th>
+                <th>{{ t('researchPortal.best') }}</th>
                 <th>best_exp</th>
               </tr>
             </thead>
@@ -122,7 +123,7 @@
                     :disabled="!row.best_exp_id"
                     @click="openExperiment(row.best_exp_id)"
                   >
-                    {{ row.best_exp_id ? '打开' : '-' }}
+                    {{ row.best_exp_id ? t('researchPortal.open') : '-' }}
                   </button>
                 </td>
               </tr>
@@ -135,17 +136,23 @@
     <section class="card paper-panel">
       <div class="panel-head">
         <div>
-          <h2>Manuscripts & Gate Reports</h2>
-          <p>后端读取 <code>docs/papers</code>，直接展示当前稿件与门禁状态。</p>
+          <h2>{{ t('researchPortal.manuscriptsAndGates') }}</h2>
+          <p>{{ t('researchPortal.paperPanelDesc') }} <code>docs/papers</code>，{{ t('researchPortal.paperPanelDescTail') }}</p>
         </div>
         <button class="btn secondary" type="button" :disabled="loading" @click="loadOverview">
-          {{ loading ? '刷新中...' : '刷新状态' }}
+          {{ loading ? t('researchPortal.refreshing') : t('researchPortal.refreshStatus') }}
         </button>
       </div>
 
-      <div v-if="loading" class="state">正在同步科研资产...</div>
+      <SkeletonPanel v-if="loading" :rows="8" />
       <div v-else-if="errorMessage" class="state error">{{ errorMessage }}</div>
-
+      <EmptyState
+        v-else-if="!papers.length"
+        :title="t('researchPortal.noPaperAssets')"
+        :description="t('researchPortal.noPaperAssetsHint')"
+        :action-label="t('researchPortal.refreshStatus')"
+        @action="loadOverview"
+      />
       <div v-else class="paper-list">
         <article v-for="paper in papers" :key="paper.paper_id" class="paper-card">
           <header class="paper-head">
@@ -154,14 +161,14 @@
               <p>{{ paper.language.toUpperCase() }} · {{ paper.paper_id }}</p>
             </div>
             <span class="gate-pill" :class="paper.gate_summary?.overall_pass ? 'ok' : 'warn'">
-              {{ paper.gate_summary?.overall_pass ? 'Gates PASS' : 'Gates BLOCKED' }}
+              {{ paper.gate_summary?.overall_pass ? t('researchPortal.gatesPass') : t('researchPortal.gatesBlocked') }}
             </span>
           </header>
 
           <div class="paper-meta">
-            <span>manuscript: <b>{{ paper.manuscript?.exists ? 'ready' : 'missing' }}</b></span>
-            <span v-if="paper.manuscript?.updated_at">updated: <b>{{ formatTime(paper.manuscript.updated_at) }}</b></span>
-            <span v-if="paper.gate_summary">passed: <b>{{ paper.gate_summary.passed }}/{{ paper.gate_summary.total_gates }}</b></span>
+            <span>{{ t('researchPortal.manuscript') }}: <b>{{ paper.manuscript?.exists ? t('researchPortal.ready') : t('researchPortal.missing') }}</b></span>
+            <span v-if="paper.manuscript?.updated_at">{{ t('researchPortal.updated') }}: <b>{{ formatTime(paper.manuscript.updated_at) }}</b></span>
+            <span v-if="paper.gate_summary">{{ t('researchPortal.passed') }}: <b>{{ paper.gate_summary.passed }}/{{ paper.gate_summary.total_gates }}</b></span>
           </div>
           <div class="paper-actions">
             <button
@@ -170,7 +177,7 @@
               :disabled="isDownloadingBundle(paper.paper_id)"
               @click="downloadBundle(paper.paper_id)"
             >
-              {{ isDownloadingBundle(paper.paper_id) ? '打包中...' : '下载投稿包 ZIP' }}
+              {{ isDownloadingBundle(paper.paper_id) ? t('researchPortal.packing') : t('researchPortal.downloadBundleZip') }}
             </button>
           </div>
 
@@ -178,10 +185,10 @@
             <table class="table compact">
               <thead>
                 <tr>
-                  <th>Asset</th>
-                  <th>Status</th>
-                  <th>Updated</th>
-                  <th>Action</th>
+                  <th>{{ t('researchPortal.asset') }}</th>
+                  <th>{{ t('researchPortal.status') }}</th>
+                  <th>{{ t('researchPortal.updated') }}</th>
+                  <th>{{ t('researchPortal.action') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -189,7 +196,7 @@
                   <td>{{ asset.kind }}</td>
                   <td>
                     <span class="tag" :class="asset.exists ? 'tag-ok' : 'tag-missing'">
-                      {{ asset.exists ? 'ready' : 'missing' }}
+                      {{ asset.exists ? t('researchPortal.ready') : t('researchPortal.missing') }}
                     </span>
                   </td>
                   <td>{{ asset.updated_at ? formatTime(asset.updated_at) : '-' }}</td>
@@ -200,7 +207,7 @@
                       :disabled="!asset.exists || isDownloading(paper.paper_id, asset.kind)"
                       @click="downloadAsset(paper.paper_id, asset.kind, asset.name)"
                     >
-                      {{ isDownloading(paper.paper_id, asset.kind) ? '下载中...' : '下载' }}
+                      {{ isDownloading(paper.paper_id, asset.kind) ? t('researchPortal.downloading') : t('researchPortal.download') }}
                     </button>
                   </td>
                 </tr>
@@ -222,10 +229,13 @@ import {
   researchExperimentLeaderboard,
   researchPapersOverview
 } from '../api'
+import { EmptyState, SkeletonPanel } from '../components/library'
+import { useI18n } from '../composables/useI18n'
 import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 const toast = useToast()
+const { t } = useI18n()
 
 const papers = ref([])
 const loading = ref(false)
@@ -299,7 +309,7 @@ const loadOverview = async () => {
     papers.value = data?.papers || []
     syncedAt.value = formatTime(data?.generated_at_utc)
   } catch (error) {
-    errorMessage.value = error?.response?.data?.detail || error?.message || '科研资产同步失败'
+    errorMessage.value = error?.response?.data?.detail || error?.message || t('researchPortal.errorSyncFailed')
   } finally {
     loading.value = false
   }
@@ -313,7 +323,7 @@ const loadLeaderboard = async () => {
     leaderboardRows.value = data?.rows || []
     leaderboardModels.value = data?.model_summary || []
   } catch (error) {
-    leaderboardError.value = error?.response?.data?.detail || error?.message || '实验榜单读取失败'
+    leaderboardError.value = error?.response?.data?.detail || error?.message || t('researchPortal.errorLeaderboardFailed')
   } finally {
     leaderboardLoading.value = false
   }
@@ -325,9 +335,9 @@ const downloadAsset = async (paperId, kind, fallbackName) => {
     const response = await researchDownloadPaperAsset(paperId, kind)
     const filename = parseFilename(response?.headers?.['content-disposition'], fallbackName || `${paperId}_${kind}`)
     saveBlob(response.data, filename)
-    toast.success(`已下载 ${filename}`)
+    toast.success(t('researchPortal.downloadedFile', { filename }))
   } catch (error) {
-    toast.error(error?.response?.data?.detail || '下载失败')
+    toast.error(error?.response?.data?.detail || t('researchPortal.errorDownloadFailed'))
   } finally {
     markDownloading(paperId, kind, false)
   }
@@ -339,9 +349,9 @@ const downloadBundle = async (paperId) => {
     const response = await researchDownloadPaperBundle(paperId)
     const filename = parseFilename(response?.headers?.['content-disposition'], `${paperId}_research_bundle.zip`)
     saveBlob(response.data, filename)
-    toast.success(`已下载 ${filename}`)
+    toast.success(t('researchPortal.downloadedFile', { filename }))
   } catch (error) {
-    toast.error(error?.response?.data?.detail || '投稿包下载失败')
+    toast.error(error?.response?.data?.detail || t('researchPortal.errorBundleDownloadFailed'))
   } finally {
     markDownloading('bundle', paperId, false)
   }
@@ -352,7 +362,6 @@ onMounted(() => {
   loadLeaderboard()
 })
 </script>
-
 <style scoped>
 .research-portal {
   display: flex;
@@ -379,7 +388,7 @@ onMounted(() => {
 }
 
 .hero-copy h1 {
-  margin: 8px 0 10px;
+  margin: var(--spacing-2) 0 var(--spacing-3);
   font-size: 34px;
   line-height: 1.1;
   font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
@@ -393,14 +402,14 @@ onMounted(() => {
 
 .hero-stats {
   display: grid;
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .stat {
   border: 1px solid rgba(14, 116, 144, 0.22);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.86);
-  padding: 10px 12px;
+  padding: var(--spacing-3);
 }
 
 .stat span {
@@ -411,7 +420,7 @@ onMounted(() => {
 
 .stat strong {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
   font-size: 24px;
   color: #0f172a;
 }
@@ -430,16 +439,16 @@ onMounted(() => {
 
 .quick-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
   flex-wrap: wrap;
 }
 
 .timeline ol {
-  margin: 10px 0 0;
-  padding-left: 18px;
+  margin: var(--spacing-3) 0 0;
+  padding-left: var(--spacing-4);
   display: grid;
-  gap: 6px;
+  gap: var(--spacing-1);
   color: #475569;
   font-size: 13px;
 }
@@ -448,18 +457,18 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .panel-head p {
-  margin: 6px 0 0;
+  margin: var(--spacing-1) 0 0;
   color: #64748b;
   font-size: 12px;
 }
 
 .leaderboard-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
   align-items: center;
 }
 
@@ -468,28 +477,28 @@ onMounted(() => {
 }
 
 .leaderboard-grid {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .result-card {
   border: 1px solid var(--border-color-light);
   border-radius: 12px;
   background: #fff;
-  padding: 12px;
+  padding: var(--spacing-3);
 }
 
 .result-card h3 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--spacing-2);
   font-size: 14px;
 }
 
 .state {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: var(--spacing-3);
   border: 1px dashed #cbd5e1;
   background: #f8fafc;
   color: #475569;
@@ -503,22 +512,22 @@ onMounted(() => {
 }
 
 .paper-list {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   display: grid;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .paper-card {
   border: 1px solid var(--border-color-light);
   border-radius: 12px;
   background: #fff;
-  padding: 12px;
+  padding: var(--spacing-3);
 }
 
 .paper-head {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--spacing-3);
   align-items: center;
 }
 
@@ -528,14 +537,14 @@ onMounted(() => {
 }
 
 .paper-head p {
-  margin: 4px 0 0;
+  margin: var(--spacing-1) 0 0;
   font-size: 12px;
   color: #64748b;
 }
 
 .gate-pill {
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 11px;
   font-weight: 700;
   border: 1px solid transparent;
@@ -554,25 +563,25 @@ onMounted(() => {
 }
 
 .paper-meta {
-  margin-top: 8px;
+  margin-top: var(--spacing-2);
   display: flex;
-  gap: 12px;
+  gap: var(--spacing-3);
   flex-wrap: wrap;
   font-size: 12px;
   color: #64748b;
 }
 
 .paper-actions {
-  margin-top: 10px;
+  margin-top: var(--spacing-3);
 }
 
 .asset-table-wrap {
-  margin-top: 10px;
+  margin-top: var(--spacing-3);
 }
 
 .tag {
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: var(--spacing-1) var(--spacing-2);
   font-size: 11px;
   font-weight: 600;
   border: 1px solid transparent;
@@ -591,13 +600,8 @@ onMounted(() => {
 }
 
 .btn-mini {
-  padding: 6px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 12px;
-}
-
-.table.compact th,
-.table.compact td {
-  padding: 8px 10px;
 }
 
 @media (max-width: 1080px) {
@@ -614,4 +618,47 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .panel-head {
+    flex-direction: column;
+  }
+
+  .leaderboard-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .leaderboard-actions select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .paper-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .paper-meta {
+    flex-direction: column;
+    gap: var(--spacing-1);
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-copy h1 {
+    font-size: 24px;
+  }
+
+  .quick-actions .btn {
+    width: 100%;
+  }
+
+  .paper-card,
+  .result-card {
+    padding: var(--spacing-2);
+  }
+}
 </style>
+
+

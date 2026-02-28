@@ -12,20 +12,20 @@
       </header>
 
       <div class="tile-body">
-        <div v-if="loading" class="tile-empty">Refreshing...</div>
+        <div v-if="loading" class="tile-empty">{{ t('geoMpiStudio.refreshing') }}</div>
         <HeatmapCanvas
           v-else-if="hasGrid(tile.grid)"
           :grid="tile.grid"
           :size="280"
           @select="(payload) => emitSelect(tile.key, payload)"
         />
-        <div v-else class="tile-empty">{{ tile.placeholder || 'No data' }}</div>
+        <div v-else class="tile-empty">{{ tile.placeholder || t('geoMpiStudio.noData') }}</div>
       </div>
 
       <footer class="tile-stats">
-        <span>min: {{ formatNumber(tile.stats?.min) }}</span>
-        <span>max: {{ formatNumber(tile.stats?.max) }}</span>
-        <span>mean: {{ formatNumber(tile.stats?.mean) }}</span>
+        <span>{{ t('geoMpiStudio.min') }}: {{ formatNumber(tile.stats?.min) }}</span>
+        <span>{{ t('geoMpiStudio.max') }}: {{ formatNumber(tile.stats?.max) }}</span>
+        <span>{{ t('geoMpiStudio.mean') }}: {{ formatNumber(tile.stats?.mean) }}</span>
       </footer>
     </section>
   </div>
@@ -33,6 +33,7 @@
 
 <script setup>
 import HeatmapCanvas from './HeatmapCanvas.vue'
+import { useI18n } from '../composables/useI18n'
 
 const props = defineProps({
   tiles: {
@@ -49,6 +50,7 @@ const props = defineProps({
   },
 })
 const emit = defineEmits(['select-cell'])
+const { t } = useI18n()
 
 const hasGrid = (grid) => Array.isArray(grid) && grid.length > 0 && Array.isArray(grid[0]) && grid[0].length > 0
 

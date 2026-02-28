@@ -1,7 +1,7 @@
 <template>
   <div class="geo-mpi-3d-linkage" data-testid="geo-mpi-3d-linkage">
     <div class="viewer">
-      <svg viewBox="0 0 320 220" role="img" aria-label="Geo-MPI pseudo 3D linkage viewer">
+      <svg viewBox="0 0 320 220" role="img" :aria-label="t('geoMpiStudio.viewerAriaLabel')">
         <polygon class="block top" points="78,44 250,44 286,82 114,82" />
         <polygon class="block left" points="78,44 114,82 114,180 78,142" />
         <polygon class="block right" points="250,44 286,82 286,180 250,142" />
@@ -13,31 +13,33 @@
         <line v-if="anchorPoint" class="anchor-line" x1="96" y1="202" :x2="anchorPoint.x" :y2="anchorPoint.y" />
         <circle v-if="anchorPoint" class="anchor-dot" :cx="anchorPoint.x" :cy="anchorPoint.y" r="5" />
         <text v-if="anchorPoint" class="anchor-label" :x="anchorPoint.x + 8" :y="anchorPoint.y - 8">
-          Anchor
+          {{ t('geoMpiStudio.anchor') }}
         </text>
       </svg>
     </div>
 
     <div class="meta">
       <div v-if="anchorInfo" class="kv-grid">
-        <div class="kv"><span>Anchor</span><b>{{ anchorInfo.cell }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.anchor') }}</span><b>{{ anchorInfo.cell }}</b></div>
         <div class="kv"><span>X/Y</span><b>{{ anchorInfo.xy }}</b></div>
-        <div class="kv"><span>Z-depth</span><b>{{ anchorInfo.depth }} m</b></div>
-        <div class="kv"><span>Mode</span><b>{{ mode || '-' }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.zDepth') }}</span><b>{{ anchorInfo.depth }} m</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.mode') }}</span><b>{{ modeText }}</b></div>
       </div>
-      <p v-else class="placeholder">Select a matrix cell to sync anchor with pseudo-3D seam context.</p>
+      <p v-else class="placeholder">{{ t('geoMpiStudio.selectCellHint') }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from '../composables/useI18n'
 
 const props = defineProps({
   selectedCell: { type: Object, default: null },
   geomodelQuality: { type: Object, default: null },
   mode: { type: String, default: 'baseline' },
 })
+const { t } = useI18n()
 
 const verticalGrid = [142, 170, 198, 226, 254]
 const depthGrid = [104, 126, 148, 170]
@@ -82,6 +84,14 @@ const anchorInfo = computed(() => {
     xy: `${anchorPoint.value.u.toFixed(3)}, ${anchorPoint.value.v.toFixed(3)}`,
     depth: depth.toFixed(2),
   }
+})
+
+const modeText = computed(() => {
+  if (!props.mode) return '-'
+  if (props.mode === 'baseline') return t('geoMpiStudio.modeBaseline')
+  if (props.mode === 'geo-aware') return t('geoMpiStudio.modeGeoAware')
+  if (props.mode === 'delta') return t('geoMpiStudio.modeDelta')
+  return props.mode
 })
 </script>
 

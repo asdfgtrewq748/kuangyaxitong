@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="app-layout">
-    <aside class="sidebar">
+    <aside class="sidebar" role="navigation" :aria-label="t('layout.mainNavigation')">
       <div class="sidebar-logo">MPI</div>
       <nav class="sidebar-nav">
         <router-link
@@ -12,6 +12,9 @@
           :aria-label="navTitle(routeItem)"
           :data-title="navTitle(routeItem)"
           active-class="active"
+          @mouseenter="preloadRoute(routeItem)"
+          @focus="preloadRoute(routeItem)"
+          @touchstart.passive="preloadRoute(routeItem)"
         >
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -21,13 +24,25 @@
           <span class="sr-only">{{ navTitle(routeItem) }}</span>
         </router-link>
       </nav>
+      <div class="sidebar-footer">
+        <button
+          type="button"
+          class="lang-toggle"
+          :title="t('layout.toggleLanguage')"
+          :aria-label="t('layout.toggleLanguage')"
+          @click="toggleLanguage"
+        >
+          <span class="lang-label">{{ locale === 'zh-CN' ? '中' : 'EN' }}</span>
+          <span class="sr-only">{{ t('layout.toggleLanguage') }}</span>
+        </button>
+      </div>
     </aside>
 
-    <main class="main-content">
+    <main class="main-content" role="main">
       <div class="content-wrapper">
         <section v-if="showWorkflowStrip" class="workflow-strip">
           <div class="workflow-head">
-            <div class="workflow-progress" :title="`娴佺▼杩涘害 ${Math.round(completionRate * 100)}%`" :aria-label="`娴佺▼杩涘害 ${Math.round(completionRate * 100)}%`">
+            <div class="workflow-progress" :title="workflowProgressLabel" :aria-label="workflowProgressLabel">
               <span class="progress-dot" aria-hidden="true"></span>
               <span class="workflow-rate">{{ Math.round(completionRate * 100) }}%</span>
             </div>
@@ -35,7 +50,7 @@
               <span
                 v-if="workspaceState.selectedSeam"
                 class="workflow-seam"
-                :title="`褰撳墠鐓ゅ眰 ${workspaceState.selectedSeam}`"
+                :title="seamTitle"
               >
                 {{ workspaceState.selectedSeam }}
               </span>
@@ -43,28 +58,28 @@
                 v-if="recommendedFlowRoute"
                 type="button"
                 class="workflow-btn icon"
-                :title="`鍓嶅線 ${recommendedFlowRoute.meta.title}`"
-                :aria-label="`鍓嶅線 ${recommendedFlowRoute.meta.title}`"
+                :title="t('layout.goTo', { target: routeLabel(recommendedFlowRoute) })"
+                :aria-label="t('layout.goTo', { target: routeLabel(recommendedFlowRoute) })"
                 @click="goRecommendedFlow"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M5 12h14"></path>
                   <path d="m13 5 7 7-7 7"></path>
                 </svg>
-                <span class="sr-only">鍓嶅線鎺ㄨ崘姝ラ</span>
+                <span class="sr-only">{{ t('layout.goToRecommendedStep') }}</span>
               </button>
               <button
                 type="button"
                 class="workflow-btn icon ghost"
-                title="閲嶇疆娴佺▼"
-                aria-label="閲嶇疆娴佺▼"
+                :title="t('layout.resetWorkflow')"
+                :aria-label="t('layout.resetWorkflow')"
                 @click="resetFlow"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
                   <path d="M21 3v6h-6"></path>
                 </svg>
-                <span class="sr-only">閲嶇疆娴佺▼</span>
+                <span class="sr-only">{{ t('layout.resetWorkflow') }}</span>
               </button>
             </div>
           </div>
@@ -76,8 +91,8 @@
               type="button"
               class="workflow-step"
               :class="{ active: item.name === activeRouteName, done: isFlowDone(item.name) }"
-              :title="`姝ラ ${index + 1} 路 ${item.meta.title}`"
-              :aria-label="`姝ラ ${index + 1} 路 ${item.meta.title}`"
+              :title="workflowStepLabel(index, item)"
+              :aria-label="workflowStepLabel(index, item)"
               @click="goFlowRoute(item)"
             >
               <span class="step-icon" aria-hidden="true">
@@ -85,27 +100,27 @@
                   <path v-for="(segment, iconIndex) in navIconSegments(item)" :key="iconIndex" :d="segment" />
                 </svg>
               </span>
-              <span class="sr-only">{{ item.meta.title }}</span>
+              <span class="sr-only">{{ routeLabel(item) }}</span>
             </button>
           </div>
 
           <div v-if="flowGuard" class="workflow-guard">
             <div class="workflow-guard-text">
               <span class="guard-dot" aria-hidden="true"></span>
-              <span class="workflow-guard-label">流程保护已启用</span>
+              <span class="workflow-guard-label">{{ t('layout.flowGuardEnabled') }}</span>
             </div>
             <button
               type="button"
               class="workflow-btn guard icon"
-              :title="`鍓嶅線鍓嶇疆姝ラ ${flowGuard.blockedBy.meta.title}`"
-              :aria-label="`鍓嶅線鍓嶇疆姝ラ ${flowGuard.blockedBy.meta.title}`"
+              :title="t('layout.goTo', { target: routeLabel(flowGuard.blockedBy) })"
+              :aria-label="t('layout.goTo', { target: routeLabel(flowGuard.blockedBy) })"
               @click="goFlowRoute(flowGuard.blockedBy)"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M10 14 4 8l6-6"></path>
                 <path d="M20 20v-3a9 9 0 0 0-9-9H4"></path>
               </svg>
-              <span class="sr-only">鍓嶅線鍓嶇疆姝ラ</span>
+              <span class="sr-only">{{ t('layout.goToPrerequisiteStep') }}</span>
             </button>
           </div>
         </section>
@@ -116,7 +131,7 @@
         <div class="ai-search-container">
           <AiSearchBar
             v-if="showAiSearch"
-            label="AI 助手"
+            :label="t('layout.aiAssistant')"
             :expanded="false"
           />
         </div>
@@ -130,21 +145,24 @@
 <script setup>
 import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Toast from '../components/Toast.vue'
+import Toast from '../components/library/feedback/Toast.vue'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import AiSearchBar from '../components/AiSearchBar.vue'
+import { useI18n } from '../composables/useI18n'
 
 const route = useRoute()
 const router = useRouter()
 const toast = ref(null)
 const { flowOrder, workspaceState, completionRate, resetFlow } = useWorkspaceFlow()
+const { t, locale, toggleLanguage } = useI18n()
 const appToastRef = getCurrentInstance()?.appContext?.config?.globalProperties?.$toast
 const showAiSearch = ref(true) // 控制 AI 搜索栏显示
+const preloadedRoutes = new Set()
 
 const routes = computed(() => (
   router
     .getRoutes()
-    .filter((r) => r.meta?.title && r.meta?.nav !== false)
+    .filter((r) => (r.meta?.title || r.meta?.titleKey) && r.meta?.nav !== false)
     .sort((a, b) => Number(a.meta?.navOrder || 999) - Number(b.meta?.navOrder || 999))
 ))
 
@@ -191,12 +209,31 @@ const flowGuard = computed(() => {
   return { blockedBy: missing, current }
 })
 
+const routeLabel = (routeItem) => {
+  if (!routeItem) return t('layout.navigation')
+  if (routeItem.meta?.titleKey) return t(routeItem.meta.titleKey)
+  return String(routeItem.meta?.title || routeItem.name || t('layout.navigation'))
+}
+
+const workflowProgressLabel = computed(() => {
+  return `${t('layout.workflowProgress')} ${Math.round(completionRate.value * 100)}%`
+})
+
+const seamTitle = computed(() => {
+  if (!workspaceState.selectedSeam) return t('layout.currentSeam')
+  return `${t('layout.currentSeam')} ${workspaceState.selectedSeam}`
+})
+
+const workflowStepLabel = (index, item) => {
+  return `${t('layout.step')} ${index + 1} · ${routeLabel(item)}`
+}
+
 const goFlowRoute = (item) => {
   if (!item?.name) return
 
   const missing = findMissingPrerequisite(item.name)
   if (missing && toast.value?.add) {
-    toast.value.add(`建议先完成：${missing.meta?.title || missing.name}`, 'warning', 2600)
+    toast.value.add(t('layout.completeFirst', { target: routeLabel(missing) }), { type: 'warning', duration: 2600 })
   }
 
   router.push({ name: item.name, query: seamQuery.value })
@@ -207,7 +244,31 @@ const goRecommendedFlow = () => {
   router.push({ name: recommendedFlowRoute.value.name, query: seamQuery.value })
 }
 
-const navTitle = (routeItem) => String(routeItem?.meta?.title || routeItem?.name || '导航')
+const navTitle = (routeItem) => routeLabel(routeItem)
+
+const resolveRouteLoader = (routeItem) => {
+  if (!routeItem) return null
+  if (routeItem.components?.default && typeof routeItem.components.default === 'function') {
+    return routeItem.components.default
+  }
+  if (typeof routeItem.component === 'function') {
+    return routeItem.component
+  }
+  return null
+}
+
+const preloadRoute = (routeItem) => {
+  const routeName = String(routeItem?.name || routeItem?.path || '')
+  if (!routeName || preloadedRoutes.has(routeName)) return
+
+  const loader = resolveRouteLoader(routeItem)
+  if (!loader) return
+
+  preloadedRoutes.add(routeName)
+  Promise.resolve(loader()).catch(() => {
+    preloadedRoutes.delete(routeName)
+  })
+}
 
 const navIconMap = {
   upload: ['M12 3v10', 'm8 9 4 4 4-4', 'M5 20h14'],
@@ -242,10 +303,7 @@ onBeforeUnmount(() => {
 .app-layout {
   min-height: 100vh;
   display: flex;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(15, 118, 110, 0.12) 0%, transparent 42%),
-    radial-gradient(circle at 85% 88%, rgba(180, 83, 9, 0.1) 0%, transparent 44%),
-    linear-gradient(150deg, #eef3f1 0%, #f8fbfa 52%, #fdf8f1 100%);
+  background: var(--bg-secondary);
 }
 
 .sidebar {
@@ -254,14 +312,14 @@ onBeforeUnmount(() => {
   left: 0;
   top: 0;
   bottom: 0;
-  border-right: 1px solid rgba(15, 23, 42, 0.1);
-  background: rgba(255, 255, 255, 0.9);
+  border-right: 1px solid var(--border-color-light);
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 10;
   backdrop-filter: blur(14px);
-  box-shadow: 8px 0 24px rgba(15, 23, 42, 0.06);
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.06);
 }
 
 .sidebar::before {
@@ -270,7 +328,7 @@ onBeforeUnmount(() => {
   height: 2px;
   border-radius: 999px;
   margin-top: 14px;
-  background: rgba(15, 118, 110, 0.38);
+  background: var(--border-color-dark);
 }
 
 .sidebar-logo {
@@ -279,15 +337,15 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   margin-top: 12px;
   margin-bottom: 14px;
-  background: linear-gradient(145deg, #0f766e 0%, #0e7490 100%);
-  color: #f8fafc;
+  background: var(--color-primary);
+  color: var(--text-inverted);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   letter-spacing: 0.04em;
   font-size: 12px;
-  box-shadow: 0 6px 18px rgba(15, 118, 110, 0.24);
+  box-shadow: var(--shadow-sm);
 }
 
 .sidebar-nav {
@@ -301,6 +359,46 @@ onBeforeUnmount(() => {
   z-index: 1;
 }
 
+.sidebar-footer {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 16px;
+}
+
+.lang-toggle {
+  width: 52px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.lang-toggle:hover {
+  border-color: var(--border-color-dark);
+  color: var(--color-primary);
+  background: var(--color-primary-lighter);
+}
+
+.lang-toggle:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.lang-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .nav-item {
   width: 52px;
   height: 52px;
@@ -310,7 +408,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #5f6b7c;
+  color: var(--text-secondary);
   border: 1px solid transparent;
   background: transparent;
   transition: transform var(--transition-fast), background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -324,8 +422,8 @@ onBeforeUnmount(() => {
   transform: translateY(-50%) translateX(-6px);
   padding: 6px 10px;
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.92);
-  color: #f8fafc;
+  background: var(--bg-tooltip);
+  color: var(--text-inverted);
   font-size: 11px;
   line-height: 1;
   letter-spacing: 0.01em;
@@ -336,17 +434,17 @@ onBeforeUnmount(() => {
 }
 
 .nav-item:hover {
-  border-color: rgba(15, 118, 110, 0.34);
-  background: rgba(15, 118, 110, 0.09);
+  border-color: var(--border-color-dark);
+  background: var(--color-primary-lighter);
   color: var(--color-primary);
   transform: translateY(-1px) scale(1.01);
 }
 
 .nav-item.active {
-  border-color: rgba(15, 118, 110, 0.38);
+  border-color: var(--border-color-dark);
   background: var(--color-primary-light);
   color: var(--color-primary);
-  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.14);
+  box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 
@@ -369,8 +467,8 @@ onBeforeUnmount(() => {
 
 .nav-item:focus-visible {
   outline: none;
-  border-color: rgba(15, 118, 110, 0.45);
-  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .nav-icon {
@@ -413,10 +511,10 @@ onBeforeUnmount(() => {
 .workflow-strip {
   margin-bottom: 14px;
   padding: 8px 10px;
-  border: 1px solid rgba(14, 116, 144, 0.22);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .workflow-head {
@@ -436,8 +534,8 @@ onBeforeUnmount(() => {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #0f766e, #0e7490);
-  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-light);
 }
 
 .workflow-rate {
@@ -459,7 +557,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   border: 1px solid var(--border-color-light);
   border-radius: 9px;
-  background: #ffffff;
+  background: var(--bg-primary);
   color: var(--text-secondary);
   padding: 6px 7px;
   min-height: 38px;
@@ -469,22 +567,22 @@ onBeforeUnmount(() => {
 }
 
 .workflow-step:hover {
-  border-color: rgba(15, 118, 110, 0.36);
+  border-color: var(--border-color-dark);
   color: var(--color-primary);
-  background: rgba(15, 118, 110, 0.07);
+  background: var(--bg-secondary);
   transform: translateY(-1px);
 }
 
 .workflow-step.done {
-  border-color: #86efac;
-  background: #f0fdf4;
-  color: #166534;
+  border-color: var(--color-success-light);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .workflow-step.active {
-  border-color: rgba(14, 116, 144, 0.42);
-  background: rgba(20, 184, 166, 0.13);
-  color: #0f766e;
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .step-icon {
@@ -503,7 +601,7 @@ onBeforeUnmount(() => {
 
 .workflow-step:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .workflow-actions {
@@ -516,8 +614,8 @@ onBeforeUnmount(() => {
 .workflow-seam {
   font-size: 11px;
   color: var(--text-secondary);
-  background: rgba(15, 118, 110, 0.12);
-  border: 1px solid rgba(15, 118, 110, 0.18);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 999px;
   padding: 2px 8px;
   max-width: 120px;
@@ -530,7 +628,7 @@ onBeforeUnmount(() => {
 .workflow-btn {
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 12px;
   padding: 5px 8px;
@@ -539,8 +637,8 @@ onBeforeUnmount(() => {
 }
 
 .workflow-btn:hover {
-  border-color: rgba(15, 118, 110, 0.4);
-  background: var(--color-primary-light);
+  border-color: var(--border-color-dark);
+  background: var(--bg-secondary);
   color: var(--color-primary);
 }
 
@@ -561,7 +659,7 @@ onBeforeUnmount(() => {
 
 .workflow-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .workflow-btn.ghost {
@@ -569,20 +667,20 @@ onBeforeUnmount(() => {
 }
 
 .workflow-btn.guard {
-  border-color: rgba(180, 83, 9, 0.25);
-  background: var(--color-warning-light);
+  border-color: var(--color-warning-light);
+  background: var(--color-warning-bg);
   color: var(--color-warning);
 }
 
 .workflow-btn.guard:hover {
-  border-color: rgba(180, 83, 9, 0.45);
-  background: #ffedd5;
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
 }
 
 .workflow-guard {
   margin-top: 6px;
-  border: 1px solid rgba(180, 83, 9, 0.25);
-  background: rgba(255, 247, 237, 0.88);
+  border: 1px solid var(--color-warning-light);
+  background: var(--color-warning-bg);
   border-radius: 8px;
   padding: 5px 8px;
   display: flex;
@@ -602,13 +700,13 @@ onBeforeUnmount(() => {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+  background: var(--color-warning);
+  box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.16);
 }
 
 .workflow-guard-label {
   font-size: 11px;
-  color: #9a3412;
+  color: var(--color-warning);
   font-weight: 600;
 }
 
@@ -637,6 +735,11 @@ onBeforeUnmount(() => {
     height: 44px;
   }
 
+  .lang-toggle {
+    width: 44px;
+    height: 30px;
+  }
+
   .main-content {
     margin-left: 68px;
     width: calc(100% - 68px);
@@ -656,6 +759,54 @@ onBeforeUnmount(() => {
 
   .workflow-track {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    width: 56px;
+  }
+
+  .main-content {
+    margin-left: 56px;
+    width: calc(100% - 56px);
+  }
+
+  .content-wrapper {
+    padding: 10px;
+  }
+
+  .nav-item {
+    width: 40px;
+    height: 40px;
+  }
+
+  .lang-toggle {
+    width: 40px;
+    height: 28px;
+  }
+
+  .workflow-head {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .workflow-track {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .workflow-step {
+    flex: 0 0 42px;
+    min-width: 42px;
+    min-height: 34px;
+  }
+
+  .ai-search-container {
+    right: 12px;
+    bottom: 12px;
   }
 }
 

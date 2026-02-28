@@ -3,16 +3,27 @@
     ref="containerRef"
     class="virtual-list-container"
     :style="containerStyle"
-    @scroll="onScroll"
+    role="list"
+    tabindex="0"
+    aria-label="虚拟列表"
+    @scroll.passive="onScroll"
   >
     <div class="virtual-list-spacer" :style="spacerStyle">
       <div
-        v-for="item in visibleItems"
-        :key="getKey(item)"
-        :class="itemClass"
-        :style="getItemStyle(item.index)"
+        class="virtual-list-window"
+        :style="windowStyle"
       >
-        <slot :item="item.data" :index="item.index" />
+        <div
+          v-for="item in visibleItems"
+          :key="getKey(item)"
+          :class="itemClass"
+          :style="itemStyle"
+          role="listitem"
+          :aria-posinset="item.index + 1"
+          :aria-setsize="props.items.length"
+        >
+          <slot :item="item.data" :index="item.index" />
+        </div>
       </div>
     </div>
   </div>
@@ -20,6 +31,7 @@
 
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue'
+import { VIRTUAL_LIST_DEFAULT_BUFFER } from '../constants/performance'
 
 const props = defineProps({
   items: {
@@ -36,7 +48,7 @@ const props = defineProps({
   },
   buffer: {
     type: Number,
-    default: 5
+    default: VIRTUAL_LIST_DEFAULT_BUFFER
   },
   keyField: {
     type: String,
@@ -67,15 +79,14 @@ const spacerStyle = computed(() => ({
   position: 'relative'
 }))
 
-// Get item style with position
-const getItemStyle = (index) => ({
+const itemStyle = computed(() => ({
   height: `${props.itemHeight}px`,
-  position: 'absolute',
-  top: `${index * props.itemHeight}px`,
-  left: 0,
-  right: 0,
+  position: 'relative',
+  width: '100%',
   boxSizing: 'border-box'
-})
+}))
+
+const safeBuffer = computed(() => Math.max(2, Number(props.buffer) || 2))
 
 // Calculate visible range
 const visibleRange = computed(() => {
@@ -83,11 +94,17 @@ const visibleRange = computed(() => {
   const visibleCount = Math.ceil(props.height / props.itemHeight)
 
   // Apply buffer
-  const start = Math.max(0, startIdx - props.buffer)
-  const end = Math.min(props.items.length, startIdx + visibleCount + props.buffer)
+  const start = Math.max(0, startIdx - safeBuffer.value)
+  const end = Math.min(props.items.length, startIdx + visibleCount + safeBuffer.value)
 
   return { start, end }
 })
+
+const startOffset = computed(() => visibleRange.value.start * props.itemHeight)
+const windowStyle = computed(() => ({
+  transform: `translateY(${startOffset.value}px)`,
+  willChange: 'transform'
+}))
 
 // Get visible items with their positions
 const visibleItems = computed(() => {
@@ -152,10 +169,22 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .virtual-list-container {
-  will-change: transform;
+  overflow-anchor: none;
+}
+
+.virtual-list-container:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 0;
 }
 
 .virtual-list-spacer {
   position: relative;
+}
+
+.virtual-list-window {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
 }
 </style>

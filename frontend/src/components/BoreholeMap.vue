@@ -19,6 +19,9 @@
         ref="canvas"
         :width="canvasSize"
         :height="canvasSize"
+        tabindex="0"
+        role="img"
+        aria-label="钻孔分布画布，支持拖拽平移、滚轮或双指缩放。"
         @pointerdown="startDrag"
         @pointermove="handlePointerMove"
         @pointerup="endDrag"
@@ -26,6 +29,7 @@
         @pointercancel="handlePointerCancel"
         @wheel.prevent="handleWheel"
         @click="handleClick"
+        @keydown="handleCanvasKeydown"
         @contextmenu.prevent
       ></canvas>
       <div v-if="boreholes.length === 0" class="map-empty">
@@ -84,6 +88,9 @@ const offsetX = ref(0)
 const offsetY = ref(0)
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
+const activePointers = ref(new Map())
+const pinchStartDistance = ref(0)
+const pinchStartScale = ref(1)
 let drawRaf = 0
 
 const canvasSize = computed(() => props.size)
@@ -507,11 +514,29 @@ const toggleBoundary = () => {
   queueDraw()
 }
 
+const clampScale = (nextScale) => Math.max(0.2, Math.min(5, nextScale))
+
+const getPointerDistance = (pointsMap) => {
+  const values = Array.from(pointsMap.values())
+  if (values.length < 2) return 0
+  const [a, b] = values
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
 const startDrag = (e) => {
   if (!canvas.value) return
   if (e.pointerType === 'mouse' && e.button !== 0) return
-  isDragging.value = true
   canvas.value.setPointerCapture?.(e.pointerId)
+  activePointers.value.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+  if (activePointers.value.size === 2) {
+    isDragging.value = false
+    pinchStartDistance.value = getPointerDistance(activePointers.value)
+    pinchStartScale.value = scale.value
+    return
+  }
+
+  isDragging.value = true
   dragStart.value = { x: e.clientX - offsetX.value, y: e.clientY - offsetY.value }
 }
 
@@ -519,7 +544,13 @@ const endDrag = (e) => {
   if (canvas.value && e?.pointerId !== undefined && canvas.value.hasPointerCapture?.(e.pointerId)) {
     canvas.value.releasePointerCapture(e.pointerId)
   }
-  isDragging.value = false
+  if (e?.pointerId !== undefined) {
+    activePointers.value.delete(e.pointerId)
+  }
+  if (activePointers.value.size < 2) {
+    pinchStartDistance.value = 0
+  }
+  isDragging.value = activePointers.value.size === 1
   if (canvas.value) {
     canvas.value.style.cursor = hoveredBorehole.value ? 'pointer' : 'grab'
   }
@@ -527,6 +558,19 @@ const endDrag = (e) => {
 
 const handlePointerMove = (e) => {
   if (!canvas.value?.scaledBoreholes) return
+  if (activePointers.value.has(e.pointerId)) {
+    activePointers.value.set(e.pointerId, { x: e.clientX, y: e.clientY })
+  }
+
+  if (activePointers.value.size === 2) {
+    const distance = getPointerDistance(activePointers.value)
+    if (pinchStartDistance.value > 0 && distance > 0) {
+      scale.value = clampScale(pinchStartScale.value * (distance / pinchStartDistance.value))
+      queueDraw()
+    }
+    return
+  }
+
   const rect = canvas.value.getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
@@ -539,11 +583,13 @@ const handlePointerMove = (e) => {
   }
 
   let found = null
-  for (const bh of canvas.value.scaledBoreholes) {
-    const dist = Math.sqrt((x - bh.canvasX) ** 2 + (y - bh.canvasY) ** 2)
-    if (dist < 12) {
-      found = bh
-      break
+  if (e.pointerType !== 'touch') {
+    for (const bh of canvas.value.scaledBoreholes) {
+      const dist = Math.sqrt((x - bh.canvasX) ** 2 + (y - bh.canvasY) ** 2)
+      if (dist < 12) {
+        found = bh
+        break
+      }
     }
   }
   const prevHoverIndex = hoveredBorehole.value?.index ?? -1
@@ -560,8 +606,50 @@ const handlePointerMove = (e) => {
 
 const handleWheel = (e) => {
   const delta = e.deltaY > 0 ? 0.9 : 1.1
-  scale.value = Math.max(0.2, Math.min(5, scale.value * delta))
+  scale.value = clampScale(scale.value * delta)
   queueDraw()
+}
+
+const handleCanvasKeydown = (e) => {
+  const step = e.shiftKey ? 40 : 20
+  switch (e.key) {
+    case 'ArrowUp':
+      e.preventDefault()
+      offsetY.value += step
+      queueDraw()
+      break
+    case 'ArrowDown':
+      e.preventDefault()
+      offsetY.value -= step
+      queueDraw()
+      break
+    case 'ArrowLeft':
+      e.preventDefault()
+      offsetX.value += step
+      queueDraw()
+      break
+    case 'ArrowRight':
+      e.preventDefault()
+      offsetX.value -= step
+      queueDraw()
+      break
+    case '+':
+    case '=':
+      e.preventDefault()
+      zoomIn()
+      break
+    case '-':
+      e.preventDefault()
+      zoomOut()
+      break
+    case 'r':
+    case 'R':
+      e.preventDefault()
+      resetView()
+      break
+    default:
+      break
+  }
 }
 
 const handleClick = (e) => {
@@ -616,6 +704,7 @@ onUnmounted(() => {
     cancelAnimationFrame(drawRaf)
     drawRaf = 0
   }
+  activePointers.value.clear()
 })
 
 watch(() => props.boreholes, () => {
@@ -667,6 +756,11 @@ watch(showBoundary, queueDraw)
 
 .map-wrapper canvas:active {
   cursor: grabbing;
+}
+
+.map-wrapper canvas:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .map-controls {

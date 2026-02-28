@@ -1,25 +1,16 @@
-<template>
+﻿<template>
   <div class="page mpi-heatmap-page">
-    <div class="page-header">
-      <div class="page-header-content">
-        <div class="page-header-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-            <path d="M12 6v6l4 2"/>
-          </svg>
-        </div>
-        <div>
-          <h1 class="page-title">MPI热力图分析</h1>
-          <p class="page-subtitle">独立展示MPI综合指标分布，支持多工作面上传、切换与热力图渲染</p>
-        </div>
-      </div>
-    </div>
+    <PageHeader
+      class="main-header"
+      title="MPI鐑姏鍥惧垎鏋?
+      description="鐙珛灞曠ずMPI缁煎悎鎸囨爣鍒嗗竷锛屾敮鎸佸宸ヤ綔闈笂浼犮€佸垏鎹笌鐑姏鍥炬覆鏌?
+    />
 
     <div class="mpi-layout">
       <div class="left-panel">
-        <div class="card">
-          <h3 class="section-title">工作面坐标文件</h3>
-          <p class="section-desc">上传多工作面坐标文件（矩形为主，多边形可选）</p>
+        <Card>
+          <h3 class="section-title">宸ヤ綔闈㈠潗鏍囨枃浠?/h3>
+          <p class="section-desc">涓婁紶澶氬伐浣滈潰鍧愭爣鏂囦欢锛堢煩褰负涓伙紝澶氳竟褰㈠彲閫夛級</p>
 
           <div class="upload-box" @click="triggerWorkfaceUpload" tabindex="0" @keydown.enter="triggerWorkfaceUpload">
             <input ref="workfaceInput" type="file" accept=".csv,.json,.txt" @change="onWorkfaceFile" style="display:none">
@@ -30,23 +21,23 @@
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
             </div>
-            <div class="upload-text">上传工作面坐标文件</div>
-            <div class="upload-hint">支持 CSV / JSON / TXT</div>
+            <div class="upload-text">涓婁紶宸ヤ綔闈㈠潗鏍囨枃浠?/div>
+            <div class="upload-hint">鏀寔 CSV / JSON / TXT</div>
           </div>
 
           <div class="helper-text">
-            未上传工作面时，将使用全部网格边界进行渲染。
+            鏈笂浼犲伐浣滈潰鏃讹紝灏嗕娇鐢ㄥ叏閮ㄧ綉鏍艰竟鐣岃繘琛屾覆鏌撱€?
           </div>
 
           <div class="sample-actions">
-            <button class="btn ghost" @click.stop="downloadSample('csv')">下载CSV示例</button>
-            <button class="btn ghost" @click.stop="downloadSample('json')">下载JSON示例</button>
+            <button class="btn ghost" @click.stop="downloadSample('csv')">涓嬭浇CSV绀轰緥</button>
+            <button class="btn ghost" @click.stop="downloadSample('json')">涓嬭浇JSON绀轰緥</button>
           </div>
 
           <div v-if="workfaces.length" class="workface-list">
             <div class="workface-header">
-              <span>已解析 {{ workfaces.length }} 个工作面</span>
-              <button class="btn small ghost" @click="clearWorkfaces">清空</button>
+              <span>宸茶В鏋?{{ workfaces.length }} 涓伐浣滈潰</span>
+              <button class="btn small ghost" @click="clearWorkfaces">娓呯┖</button>
             </div>
             <div class="workface-items">
               <button
@@ -55,8 +46,8 @@
                 :class="['workface-btn', { active: activeWorkfaceIndex === idx }]"
                 @click="activeWorkfaceIndex = idx"
               >
-                {{ face.name || `工作面 ${idx + 1}` }}
-                <span class="workface-type">{{ face.type === 'polygon' ? '多边形' : '矩形' }}</span>
+                {{ face.name || `宸ヤ綔闈?${idx + 1}` }}
+                <span class="workface-type">{{ face.type === 'polygon' ? '澶氳竟褰? : '鐭╁舰' }}</span>
               </button>
             </div>
           </div>
@@ -69,20 +60,20 @@
                 <polyline points="21 15 16 10 5 21"></polyline>
               </svg>
             </div>
-            <p>请上传工作面坐标文件</p>
+            <p>璇蜂笂浼犲伐浣滈潰鍧愭爣鏂囦欢</p>
           </div>
-        </div>
+        </Card>
 
-        <div class="card">
-          <h3 class="section-title">MPI计算设置</h3>
+        <Card>
+          <h3 class="section-title">MPI璁＄畻璁剧疆</h3>
           <div class="param-group">
-            <label class="param-label">煤层</label>
+            <label class="param-label">鐓ゅ眰</label>
             <select v-model="seam" class="param-select">
               <option v-for="item in seams" :key="item.name" :value="item.name">{{ item.name }}</option>
             </select>
           </div>
           <div class="param-group">
-            <label class="param-label">插值方法</label>
+            <label class="param-label">鎻掑€兼柟娉?/label>
             <select v-model="method" class="param-select">
               <option value="idw">IDW</option>
               <option value="linear">Linear</option>
@@ -90,55 +81,55 @@
             </select>
           </div>
           <div class="param-group">
-            <label class="param-label">网格分辨率</label>
+            <label class="param-label">缃戞牸鍒嗚鲸鐜?/label>
             <input v-model.number="gridSize" type="number" min="20" max="200" class="param-input">
           </div>
 
           <div class="action-buttons">
             <button class="btn primary" @click="handleMpiCompute" :disabled="loading || !seam">
               <span v-if="loading" class="spinner sm"></span>
-              {{ loading ? '计算中...' : '计算MPI热力图' }}
+              {{ loading ? '璁＄畻涓?..' : '璁＄畻MPI鐑姏鍥? }}
             </button>
             <button class="btn secondary" @click="refreshHeatmapImage" :disabled="loading || !hasGrid">
-              刷新图像
+              鍒锋柊鍥惧儚
             </button>
           </div>
-        </div>
+        </Card>
 
-        <div class="card">
-          <h3 class="section-title">显示设置</h3>
+        <Card>
+          <h3 class="section-title">鏄剧ず璁剧疆</h3>
           <div class="toggle-row">
             <label class="toggle-item">
               <input type="checkbox" v-model="showBoundary">
-              显示边界
+              鏄剧ず杈圭晫
             </label>
             <label class="toggle-item">
               <input type="checkbox" v-model="showMask">
-              显示遮罩
+              鏄剧ず閬僵
             </label>
           </div>
           <div class="param-group">
-            <label class="param-label">渲染模式</label>
+            <label class="param-label">娓叉煋妯″紡</label>
             <div class="mode-tabs">
-              <button :class="['mode-tab', { active: renderMode === 'image' }]" @click="renderMode = 'image'">图像</button>
+              <button :class="['mode-tab', { active: renderMode === 'image' }]" @click="renderMode = 'image'">鍥惧儚</button>
               <button :class="['mode-tab', { active: renderMode === 'canvas' }]" @click="renderMode = 'canvas'">Canvas</button>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       <div class="right-panel">
-        <div class="card">
+        <Card>
           <div class="heatmap-header">
-            <h3 class="section-title">MPI综合指标分布</h3>
+            <h3 class="section-title">MPI缁煎悎鎸囨爣鍒嗗竷</h3>
             <div class="heatmap-actions">
-              <span v-if="activeWorkface" class="tag">当前：{{ activeWorkface.name }}</span>
-              <span v-else class="tag ghost">未选择工作面</span>
+              <span v-if="activeWorkface" class="tag">褰撳墠锛歿{ activeWorkface.name }}</span>
+              <span v-else class="tag ghost">鏈€夋嫨宸ヤ綔闈?/span>
             </div>
           </div>
 
           <div v-if="activeWorkface?.bounds" class="workface-bounds">
-            范围：X {{ activeWorkface.bounds.min_x }} ~ {{ activeWorkface.bounds.max_x }}，
+            鑼冨洿锛歑 {{ activeWorkface.bounds.min_x }} ~ {{ activeWorkface.bounds.max_x }}锛?
             Y {{ activeWorkface.bounds.min_y }} ~ {{ activeWorkface.bounds.max_y }}
           </div>
 
@@ -156,29 +147,29 @@
           />
 
           <div v-if="hasGrid" class="legend">
-            <div class="legend-label">MPI风险渐变（ODI色盘）</div>
+            <div class="legend-label">MPI椋庨櫓娓愬彉锛圤DI鑹茬洏锛?/div>
             <div class="legend-bar" :style="{ background: legendGradient }"></div>
             <div class="legend-scale">
-              <span>高风险（低MPI）</span>
-              <span>低风险（高MPI）</span>
+              <span>楂橀闄╋紙浣嶮PI锛?/span>
+              <span>浣庨闄╋紙楂楳PI锛?/span>
             </div>
           </div>
 
           <div v-if="hasGrid" class="stats-grid">
             <div class="stat-item">
-              <span class="stat-label">最小值</span>
+              <span class="stat-label">鏈€灏忓€?/span>
               <span class="stat-value">{{ stats.min?.toFixed(2) || '-' }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">最大值</span>
+              <span class="stat-label">鏈€澶у€?/span>
               <span class="stat-value">{{ stats.max?.toFixed(2) || '-' }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">平均值</span>
+              <span class="stat-label">骞冲潎鍊?/span>
               <span class="stat-value">{{ stats.mean?.toFixed(2) || '-' }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">悬停值</span>
+              <span class="stat-label">鎮仠鍊?/span>
               <span class="stat-value">{{ hoverInfo?.value?.toFixed(2) || '-' }}</span>
             </div>
           </div>
@@ -191,9 +182,9 @@
                 <line x1="9" y1="21" x2="9" y2="9"></line>
               </svg>
             </div>
-            <p>请选择煤层并计算MPI热力图</p>
+            <p>璇烽€夋嫨鐓ゅ眰骞惰绠桵PI鐑姏鍥?/p>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   </div>
@@ -203,6 +194,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from '../composables/useToast'
 import MpiHeatmapViewer from '../components/MpiHeatmapViewer.vue'
+import { Card, PageHeader } from '../components/library'
 import {
   getCoalSeams,
   getSeamOverburden,
@@ -211,6 +203,7 @@ import {
   parseMpiWorkfaces,
   mpiHeatmapImage
 } from '../api'
+import { LRUCache } from '../lib/lruCache'
 
 const toast = useToast()
 const seams = ref([])
@@ -230,7 +223,7 @@ const gridBounds = ref(null)
 const stats = ref({})
 const hoverInfo = ref(null)
 
-const layerParamsCache = new Map()
+const layerParamsCache = new LRUCache(120)
 
 const odiPalette = [
   '#0e7490',
@@ -283,15 +276,15 @@ const onWorkfaceFile = async (event) => {
     workfaces.value = data.workfaces || []
     activeWorkfaceIndex.value = 0
     saveWorkfaces()
-    toast.add(`已导入 ${workfaces.value.length} 个工作面`, 'success')
+    toast.add(`宸插鍏?${workfaces.value.length} 涓伐浣滈潰`, 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || '工作面解析失败', 'error')
+    toast.add(err.response?.data?.detail || '宸ヤ綔闈㈣В鏋愬け璐?, 'error')
   }
 }
 
 const downloadSample = (type) => {
   if (type === 'csv') {
-    const content = 'name,xmin,xmax,ymin,ymax\n工作面A,100,400,200,600\n工作面B,450,750,150,500\n'
+    const content = 'name,xmin,xmax,ymin,ymax\n宸ヤ綔闈,100,400,200,600\n宸ヤ綔闈,450,750,150,500\n'
     triggerDownload(content, 'workfaces_example.csv', 'text/csv')
     return
   }
@@ -299,11 +292,11 @@ const downloadSample = (type) => {
   const payload = {
     workfaces: [
       {
-        name: '工作面A',
+        name: '宸ヤ綔闈',
         bounds: { min_x: 100, max_x: 400, min_y: 200, max_y: 600 }
       },
       {
-        name: '工作面B',
+        name: '宸ヤ綔闈',
         points: [
           [450, 150],
           [750, 150],
@@ -334,7 +327,7 @@ const loadSeams = async () => {
       seam.value = seams.value[0].name
     }
   } catch (err) {
-    toast.add('加载煤层失败', 'error')
+    toast.add('鍔犺浇鐓ゅ眰澶辫触', 'error')
   }
 }
 
@@ -400,7 +393,7 @@ const handleMpiCompute = async () => {
     const { data } = await getSeamOverburden(seam.value)
     const boreholes = data.boreholes || []
     if (!boreholes.length) {
-      toast.add('当前煤层无可用钻孔数据', 'error')
+      toast.add('褰撳墠鐓ゅ眰鏃犲彲鐢ㄩ捇瀛旀暟鎹?, 'error')
       return
     }
 
@@ -420,9 +413,9 @@ const handleMpiCompute = async () => {
       await refreshHeatmapImage()
     }
 
-    toast.add('MPI热力图计算完成', 'success')
+    toast.add('MPI鐑姏鍥捐绠楀畬鎴?, 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || 'MPI计算失败', 'error')
+    toast.add(err.response?.data?.detail || 'MPI璁＄畻澶辫触', 'error')
   } finally {
     loading.value = false
   }
@@ -433,14 +426,14 @@ const validateWorkfaceBounds = (workfaceBounds, gridBounds) => {
   const outX = workfaceBounds.min_x < gridBounds.min_x || workfaceBounds.max_x > gridBounds.max_x
   const outY = workfaceBounds.min_y < gridBounds.min_y || workfaceBounds.max_y > gridBounds.max_y
   if (outX || outY) {
-    toast.add('工作面范围超出MPI网格边界，显示可能被裁剪', 'warning')
+    toast.add('宸ヤ綔闈㈣寖鍥磋秴鍑篗PI缃戞牸杈圭晫锛屾樉绀哄彲鑳借瑁佸壀', 'warning')
   }
 }
 
 const refreshHeatmapImage = async () => {
   if (!grid.value || !gridBounds.value) return
   try {
-    const title = activeWorkface.value?.name ? `MPI热力图 - ${activeWorkface.value.name}` : 'MPI热力图'
+    const title = activeWorkface.value?.name ? `MPI鐑姏鍥?- ${activeWorkface.value.name}` : 'MPI鐑姏鍥?
     const { data } = await mpiHeatmapImage({
       grid: grid.value,
       bounds: gridBounds.value,
@@ -453,14 +446,14 @@ const refreshHeatmapImage = async () => {
     })
     imageUrl.value = `data:image/png;base64,${data.image}`
   } catch (err) {
-    toast.add(err.response?.data?.detail || '热力图图像生成失败', 'error')
+    toast.add(err.response?.data?.detail || '鐑姏鍥惧浘鍍忕敓鎴愬け璐?, 'error')
   }
 }
 
 const handleImageError = () => {
   if (renderMode.value !== 'image') return
   renderMode.value = 'canvas'
-  toast.add('图像加载失败，已切换到Canvas模式', 'warning')
+  toast.add('鍥惧儚鍔犺浇澶辫触锛屽凡鍒囨崲鍒癈anvas妯″紡', 'warning')
 }
 
 watch(renderMode, async (value) => {
@@ -475,7 +468,7 @@ watch(activeWorkfaceIndex, () => {
   gridBounds.value = null
   imageUrl.value = ''
   stats.value = {}
-  toast.add('工作面已切换，请重新计算MPI热力图', 'info')
+  toast.add('宸ヤ綔闈㈠凡鍒囨崲锛岃閲嶆柊璁＄畻MPI鐑姏鍥?, 'info')
 })
 
 onMounted(() => {
@@ -489,65 +482,8 @@ onMounted(() => {
   animation: pageIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.page-header {
+.main-header {
   margin-bottom: var(--spacing-3xl);
-  padding: var(--spacing-2xl);
-  background: var(--bg-primary);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-md);
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-}
-
-.page-header::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--gradient-primary);
-}
-
-.page-header-content {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  position: relative;
-  z-index: 1;
-}
-
-.page-header-icon {
-  width: 52px;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--gradient-primary);
-  border-radius: var(--border-radius-md);
-  color: white;
-  box-shadow: var(--shadow-sm);
-}
-
-.page-header-icon svg {
-  width: 26px;
-  height: 26px;
-}
-
-.page-title {
-  margin: 0 0 var(--spacing-xs) 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-}
-
-.page-subtitle {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
 }
 
 .mpi-layout {
@@ -775,7 +711,7 @@ onMounted(() => {
 .workface-type {
   background: rgba(0, 0, 0, 0.06);
   color: inherit;
-  padding: 2px 8px;
+  padding: var(--spacing-1) var(--spacing-2);
   border-radius: 999px;
   font-size: 10px;
   font-weight: 600;
@@ -836,7 +772,7 @@ onMounted(() => {
   width: 100%;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
-  padding: 10px 12px;
+  padding: var(--spacing-3) var(--spacing-3);
   font-size: 14px;
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -879,7 +815,7 @@ onMounted(() => {
   gap: var(--spacing-sm);
   border: none;
   border-radius: var(--border-radius-sm);
-  padding: 10px 16px;
+  padding: var(--spacing-3) var(--spacing-4);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -940,7 +876,7 @@ onMounted(() => {
 }
 
 .btn.small {
-  padding: 6px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 12px;
 }
 
@@ -1034,7 +970,7 @@ onMounted(() => {
 .tag {
   background: var(--color-info-light);
   color: var(--color-info);
-  padding: 6px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
@@ -1189,3 +1125,4 @@ onMounted(() => {
   }
 }
 </style>
+

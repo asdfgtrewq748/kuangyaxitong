@@ -169,7 +169,14 @@
     </transition>
 
     <!-- Main Canvas Container -->
-    <div ref="stageContainer" class="stage-container">
+    <div
+      ref="stageContainer"
+      class="stage-container"
+      tabindex="0"
+      role="region"
+      aria-label="MPI热力图画布，支持拖拽平移、滚轮或双指缩放。"
+      @keydown="handleStageKeydown"
+    >
       <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">全域数据计算中...</div>
@@ -248,7 +255,7 @@
 
     <!-- Floating Hint -->
     <div class="floating-hint">
-      拖拽移动 · 滚轮缩放 · 空格播放 · R 重置
+      拖拽移动 · 滚轮/双指缩放 · 空格播放 · R 重置
     </div>
 
     <!-- Tooltip -->
@@ -276,6 +283,7 @@ import {
   mpiInterpolate,
   parseMpiWorkfaces
 } from '../api'
+import { LRUCache } from '../lib/lruCache'
 
 // --- State ---
 const loading = ref(false)
@@ -348,9 +356,9 @@ const toast = useToast()
 const router = useRouter()
 
 // Cache
-const layerParamsCache = new Map()
+const layerParamsCache = new LRUCache(120)
 // Color cache to avoid repeated color calculations (js-cache-function-results pattern)
-const colorCache = new Map()
+const colorCache = new LRUCache(200)
 const getColorCacheKey = (val, min, max) => {
   // Handle null/undefined values safely
   const safeVal = Number.isFinite(val) ? val.toFixed(2) : 'null'
@@ -368,8 +376,15 @@ const viewport = reactive({
   scale: 1,
   isDragging: false,
   lastX: 0,
-  lastY: 0
+  lastY: 0,
+  startX: 0,
+  startY: 0
 })
+
+const activePointers = new Map()
+let primaryPointerId = null
+let pinchStartDistance = 0
+let pinchStartScale = 1
 
 // --- Computed ---
 const hasData = computed(() => !!globalGrid.value)
@@ -655,6 +670,10 @@ const computeGlobal = async () => {
 // --- Methods: Canvas Rendering ---
 const getColor = (val, min, max) => {
   if (!Number.isFinite(val)) return [0,0,0,0]
+  const key = getColorCacheKey(val, min, max)
+  const cached = colorCache.get(key)
+  if (cached) return cached
+
   const range = max - min || 1
   const t = Math.max(0, Math.min(1, (val - min) / range))
   
@@ -671,12 +690,15 @@ const getColor = (val, min, max) => {
   const c1 = hexToRgb(odiPalette[Math.min(i, odiPalette.length - 1)])
   const c2 = hexToRgb(odiPalette[Math.min(i + 1, odiPalette.length - 1)])
   
-  return [
+  const color = [
     Math.round(c1[0] + (c2[0] - c1[0]) * f),
     Math.round(c1[1] + (c2[1] - c1[1]) * f),
     Math.round(c1[2] + (c2[2] - c1[2]) * f),
     255
   ]
+
+  colorCache.set(key, color)
+  return color
 }
 
 const getDiscreteColor = (val, thresholds, colors) => {
@@ -1413,64 +1435,150 @@ const fitToScreen = () => {
   requestRender()
 }
 
-const handleMouseDown = (e) => {
+const clampScale = (nextScale) => Math.max(0.1, Math.min(50, nextScale))
+
+const getPointerDistance = () => {
+  const points = Array.from(activePointers.values())
+  if (points.length < 2) return 0
+  const [a, b] = points
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
+const getStagePoint = (clientX, clientY) => {
   if (!stageContainer.value) return
+  const rect = stageContainer.value.getBoundingClientRect()
+  return { sx: clientX - rect.left, sy: clientY - rect.top }
+}
+
+const zoomAtScreenPoint = (nextScale, sx, sy) => {
+  if (!gridBounds.value) return
+  const { min_x, max_y } = gridBounds.value
+  const worldPos = screenToWorld(sx, sy)
+  viewport.scale = clampScale(nextScale)
+  viewport.x = sx - (worldPos.x - min_x) * viewport.scale
+  viewport.y = sy - (max_y - worldPos.y) * viewport.scale
+}
+
+const updateHoverInfo = (clientX, clientY, pointerType = 'mouse') => {
+  const stagePoint = getStagePoint(clientX, clientY)
+  if (!stagePoint) return
+  const { sx, sy } = stagePoint
+  hoverPos.value = { x: sx, y: sy }
+
+  if (pointerType === 'touch' || !globalGrid.value || !gridBounds.value) {
+    hoverInfo.value = null
+    return
+  }
+
+  const wPos = screenToWorld(sx, sy)
+  const { min_x, max_x, min_y, max_y } = gridBounds.value
+  const rows = globalGrid.value.length
+  const cols = globalGrid.value[0].length
+  const c = Math.floor((wPos.x - min_x) / ((max_x - min_x) / cols))
+  const r = Math.floor((max_y - wPos.y) / ((max_y - min_y) / rows))
+
+  if (r >= 0 && r < rows && c >= 0 && c < cols) {
+    const val = globalGrid.value[r][c]
+    if (val !== null) {
+      hoverInfo.value = { x: wPos.x, y: wPos.y, value: val }
+      return
+    }
+  }
+  hoverInfo.value = null
+}
+
+const handlePointerDown = (e) => {
+  if (!stageContainer.value) return
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+  stageContainer.value.setPointerCapture?.(e.pointerId)
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+  if (activePointers.size === 2) {
+    viewport.isDragging = false
+    primaryPointerId = null
+    pinchStartDistance = getPointerDistance()
+    pinchStartScale = viewport.scale
+    return
+  }
+
+  primaryPointerId = e.pointerId
   viewport.isDragging = true
   viewport.lastX = e.clientX
   viewport.lastY = e.clientY
-  viewport.startX = e.clientX // Record start for click detection
+  viewport.startX = e.clientX
   viewport.startY = e.clientY
 }
 
-const handleMouseMove = (e) => {
-  // Tooltip
+const handlePointerMove = (e) => {
   if (!stageContainer.value) return
-  const rect = stageContainer.value.getBoundingClientRect()
-  const sx = e.clientX - rect.left
-  const sy = e.clientY - rect.top
-  hoverPos.value = { x: sx, y: sy }
-  
-  const wPos = screenToWorld(sx, sy)
-  
-  // Find grid val
-  if (globalGrid.value && gridBounds.value) {
-    const { min_x, max_x, min_y, max_y } = gridBounds.value
-    const rows = globalGrid.value.length
-    const cols = globalGrid.value[0].length
-    const c = Math.floor((wPos.x - min_x) / ((max_x - min_x) / cols))
-    const r = Math.floor((max_y - wPos.y) / ((max_y - min_y) / rows))
-    
-    if (r >= 0 && r < rows && c >= 0 && c < cols) {
-      const val = globalGrid.value[r][c]
-      if (val !== null) {
-        hoverInfo.value = { x: wPos.x, y: wPos.y, value: val }
-      } else {
-        hoverInfo.value = null
-      }
-    } else {
-      hoverInfo.value = null
-    }
+  if (activePointers.has(e.pointerId)) {
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
   }
 
-  // Dragging
-  if (!viewport.isDragging) return
+  if (activePointers.size === 2) {
+    const distance = getPointerDistance()
+    if (pinchStartDistance > 0 && distance > 0) {
+      const [a, b] = Array.from(activePointers.values())
+      const centerX = (a.x + b.x) / 2
+      const centerY = (a.y + b.y) / 2
+      const stagePoint = getStagePoint(centerX, centerY)
+      if (stagePoint) {
+        zoomAtScreenPoint(pinchStartScale * (distance / pinchStartDistance), stagePoint.sx, stagePoint.sy)
+        requestRender()
+      }
+    }
+    hoverInfo.value = null
+    return
+  }
+
+  updateHoverInfo(e.clientX, e.clientY, e.pointerType)
+
+  if (!viewport.isDragging || primaryPointerId !== e.pointerId) return
   const dx = e.clientX - viewport.lastX
   const dy = e.clientY - viewport.lastY
   viewport.x += dx
   viewport.y += dy
   viewport.lastX = e.clientX
   viewport.lastY = e.clientY
-
   requestRender()
 }
 
-const handleMouseUp = (e) => {
-  // Detect Click
-  const dist = Math.hypot(e.clientX - viewport.startX, e.clientY - viewport.startY)
-  if (viewport.isDragging && dist < 5) {
-     handleCanvasClick(e)
+const handlePointerUp = (e) => {
+  if (stageContainer.value?.hasPointerCapture?.(e.pointerId)) {
+    stageContainer.value.releasePointerCapture(e.pointerId)
   }
-  viewport.isDragging = false
+  const wasPrimaryPointer = primaryPointerId === e.pointerId
+  const movedDistance = Math.hypot(e.clientX - viewport.startX, e.clientY - viewport.startY)
+
+  activePointers.delete(e.pointerId)
+
+  if (wasPrimaryPointer && viewport.isDragging && movedDistance < 5 && pinchStartDistance === 0) {
+    handleCanvasClick(e)
+  }
+
+  if (activePointers.size === 0) {
+    viewport.isDragging = false
+    primaryPointerId = null
+    pinchStartDistance = 0
+    return
+  }
+
+  if (activePointers.size === 1) {
+    const [nextPointerId, nextPoint] = Array.from(activePointers.entries())[0]
+    primaryPointerId = nextPointerId
+    viewport.isDragging = true
+    viewport.lastX = nextPoint.x
+    viewport.lastY = nextPoint.y
+    viewport.startX = nextPoint.x
+    viewport.startY = nextPoint.y
+    pinchStartDistance = 0
+  }
+}
+
+const handlePointerLeave = () => {
+  if (activePointers.size === 0) {
+    hoverInfo.value = null
+  }
 }
 
 const handleCanvasClick = (e) => {
@@ -1496,11 +1604,12 @@ const handleCanvasClick = (e) => {
 
 const handleWheel = (e) => {
   e.preventDefault()
+  if (!stageContainer.value) return
   const zoomSensitivity = 0.001
   const delta = -e.deltaY * zoomSensitivity
-  const newScale = viewport.scale * (1 + delta)
-
-  viewport.scale = Math.max(0.1, Math.min(50, newScale))
+  const stagePoint = getStagePoint(e.clientX, e.clientY)
+  if (!stagePoint) return
+  zoomAtScreenPoint(viewport.scale * (1 + delta), stagePoint.sx, stagePoint.sy)
   requestRender()
 }
 
@@ -1558,6 +1667,51 @@ const startAnimationLoop = () => {
   }
 
   animationLoopRef.value = requestAnimationFrame(loop)
+}
+
+const handleStageKeydown = (e) => {
+  const panStep = e.shiftKey ? 40 : 20
+  switch (e.key) {
+    case 'w':
+    case 'W':
+      e.preventDefault()
+      viewport.y += panStep
+      requestRender()
+      break
+    case 's':
+    case 'S':
+      e.preventDefault()
+      viewport.y -= panStep
+      requestRender()
+      break
+    case 'a':
+    case 'A':
+      e.preventDefault()
+      viewport.x += panStep
+      requestRender()
+      break
+    case 'd':
+    case 'D':
+      e.preventDefault()
+      viewport.x -= panStep
+      requestRender()
+      break
+    case '+':
+    case '=':
+      e.preventDefault()
+      zoomIn()
+      break
+    case '-':
+      e.preventDefault()
+      zoomOut()
+      break
+    case '0':
+      e.preventDefault()
+      fitToScreen()
+      break
+    default:
+      break
+  }
 }
 
 // Keyboard shortcuts for playback control
@@ -1632,11 +1786,17 @@ onUnmounted(() => {
   stressParticles.stopAnimation()
   reliefParticles.stopAnimation()
   if (stage) {
-    stage.removeEventListener('mousedown', handleMouseDown)
+    stage.removeEventListener('pointerdown', handlePointerDown)
+    stage.removeEventListener('pointermove', handlePointerMove)
+    stage.removeEventListener('pointerup', handlePointerUp)
+    stage.removeEventListener('pointercancel', handlePointerUp)
+    stage.removeEventListener('pointerleave', handlePointerLeave)
     stage.removeEventListener('wheel', handleWheel)
   }
-  window.removeEventListener('mousemove', handleMouseMove)
-  window.removeEventListener('mouseup', handleMouseUp)
+  activePointers.clear()
+  viewport.isDragging = false
+  primaryPointerId = null
+  pinchStartDistance = 0
   // Remove keyboard listener
   window.removeEventListener('keydown', handleKeyboard)
 })
@@ -1647,9 +1807,11 @@ onMounted(() => {
 
   const stage = stageContainer.value
   if (!stage) return
-  stage.addEventListener('mousedown', handleMouseDown)
-  window.addEventListener('mousemove', handleMouseMove)
-  window.addEventListener('mouseup', handleMouseUp)
+  stage.addEventListener('pointerdown', handlePointerDown)
+  stage.addEventListener('pointermove', handlePointerMove)
+  stage.addEventListener('pointerup', handlePointerUp)
+  stage.addEventListener('pointercancel', handlePointerUp)
+  stage.addEventListener('pointerleave', handlePointerLeave)
   stage.addEventListener('wheel', handleWheel, { passive: false })
   // Add keyboard shortcuts
   window.addEventListener('keydown', handleKeyboard)
@@ -1675,12 +1837,12 @@ const handleFileUpload = async (e) => {
 }
 
 const zoomIn = () => {
-  viewport.scale = Math.min(50, viewport.scale * 1.15)
+  viewport.scale = clampScale(viewport.scale * 1.15)
   requestRender()
 }
 
 const zoomOut = () => {
-  viewport.scale = Math.max(0.1, viewport.scale / 1.15)
+  viewport.scale = clampScale(viewport.scale / 1.15)
   requestRender()
 }
 
@@ -1865,6 +2027,13 @@ const resetView = () => {
   inset: 0;
   cursor: crosshair;
   z-index: 1;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.stage-container:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .layer-canvas {

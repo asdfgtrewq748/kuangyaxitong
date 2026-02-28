@@ -1,88 +1,91 @@
 <template>
   <div class="geo-mpi-studio page">
-    <header class="card hero">
-      <div class="hero-main">
-        <p class="eyebrow">Geo-MPI Studio</p>
-        <h1>Geology and MPI Spatial Studio</h1>
-        <p class="subtitle">
-          One-screen linkage for Geomodel, MPI, and the three sub-indicators (RSI/BRI/ASI).
-          Supports baseline, geo-aware, and delta comparison modes.
-        </p>
-      </div>
-      <div class="hero-actions">
-        <button class="btn" type="button" :disabled="loadingMatrix || loadingSeams" @click="refreshMatrix">
-          {{ loadingMatrix ? 'Refreshing...' : 'Run Spatial Analysis' }}
-        </button>
-        <button class="btn secondary" type="button" disabled>Export Snapshot</button>
-      </div>
-    </header>
+    <PageHeader
+      class="main-header"
+      :eyebrow="t('geoMpiStudio.eyebrow')"
+      :title="t('geoMpiStudio.title')"
+      :description="t('geoMpiStudio.subtitle')"
+    >
+      <template #actions>
+        <div class="hero-actions">
+          <button class="btn" type="button" :disabled="loadingMatrix || loadingSeams" @click="refreshMatrix">
+            {{ loadingMatrix ? t('geoMpiStudio.refreshing') : t('geoMpiStudio.runSpatialAnalysis') }}
+          </button>
+          <button class="btn secondary" type="button" disabled>{{ t('geoMpiStudio.exportSnapshot') }}</button>
+        </div>
+      </template>
+    </PageHeader>
 
     <section class="grid grid-main">
       <article class="card panel controls">
         <div class="panel-head">
-          <h2>Control Panel</h2>
+          <h2>{{ t('geoMpiStudio.controlPanel') }}</h2>
           <span class="tag">P3</span>
         </div>
 
         <div class="form-grid">
           <label>
-            Seam
+            {{ t('geoMpiStudio.seam') }}
             <select v-model="seamName">
               <option v-for="item in seamOptions" :key="item" :value="item">{{ item }}</option>
             </select>
           </label>
 
           <label>
-            Geomodel Job ID
-            <input v-model.trim="geomodelJobId" type="text" placeholder="e.g. gm_20260212_xxx" />
+            {{ t('geoMpiStudio.geomodelJobId') }}
+            <input
+              v-model.trim="geomodelJobId"
+              type="text"
+              :placeholder="t('geoMpiStudio.geomodelJobPlaceholder')"
+            />
           </label>
 
           <label>
-            Resolution
+            {{ t('geoMpiStudio.resolution') }}
             <input v-model.number="resolution" type="number" min="20" max="150" step="5" />
           </label>
 
           <label>
-            Method
+            {{ t('geoMpiStudio.method') }}
             <select v-model="method">
-              <option value="idw">IDW</option>
-              <option value="linear">Linear</option>
-              <option value="nearest">Nearest</option>
+              <option value="idw">{{ t('geoMpiStudio.methodIdw') }}</option>
+              <option value="linear">{{ t('geoMpiStudio.methodLinear') }}</option>
+              <option value="nearest">{{ t('geoMpiStudio.methodNearest') }}</option>
             </select>
           </label>
         </div>
 
         <div class="mode-block">
-          <p class="mode-title">Mode</p>
+          <p class="mode-title">{{ t('geoMpiStudio.mode') }}</p>
           <div class="mode-row">
             <label class="mode-item">
               <input v-model="mode" type="radio" value="baseline" />
-              <span>Baseline</span>
+              <span>{{ t('geoMpiStudio.modeBaseline') }}</span>
             </label>
             <label class="mode-item">
               <input v-model="mode" type="radio" value="geo-aware" />
-              <span>Geo-aware</span>
+              <span>{{ t('geoMpiStudio.modeGeoAware') }}</span>
             </label>
             <label class="mode-item">
               <input v-model="mode" type="radio" value="delta" />
-              <span>Delta</span>
+              <span>{{ t('geoMpiStudio.modeDelta') }}</span>
             </label>
           </div>
         </div>
 
         <div class="hint">
-          <span><b>mode:</b> {{ mode }}</span>
-          <span><b>algorithm:</b> {{ algorithmMode || '-' }}</span>
-          <span><b>fallback:</b> {{ fallbackUsed ? 'yes' : 'no' }}</span>
-          <span><b>feature source:</b> {{ featureSourceMode || '-' }}</span>
-          <span><b>updated:</b> {{ formatTime(lastUpdated) }}</span>
+          <span><b>{{ t('geoMpiStudio.hintMode') }}:</b> {{ modeLabel(mode) }}</span>
+          <span><b>{{ t('geoMpiStudio.hintAlgorithm') }}:</b> {{ algorithmMode || '-' }}</span>
+          <span><b>{{ t('geoMpiStudio.hintFallback') }}:</b> {{ fallbackUsed ? t('common.yes') : t('common.no') }}</span>
+          <span><b>{{ t('geoMpiStudio.hintFeatureSource') }}:</b> {{ featureSourceMode || '-' }}</span>
+          <span><b>{{ t('geoMpiStudio.hintUpdated') }}:</b> {{ formatTime(lastUpdated) }}</span>
         </div>
         <p v-if="error" class="error">{{ error }}</p>
       </article>
 
       <article class="card panel matrix">
         <div class="panel-head">
-          <h2>2 x 2 Metric Matrix</h2>
+          <h2>{{ t('geoMpiStudio.matrixTitle') }}</h2>
           <span class="tag">MPI / RSI / BRI / ASI</span>
         </div>
         <GeoMpiMapMatrix
@@ -95,7 +98,7 @@
 
       <article class="card panel explain">
         <div class="panel-head">
-          <h2>3D Linkage and Explainability</h2>
+          <h2>{{ t('geoMpiStudio.explainTitle') }}</h2>
           <span class="tag">P4</span>
         </div>
         <GeoMpi3DLinkage
@@ -125,10 +128,13 @@ import { computed, ref } from 'vue'
 import GeoMpi3DLinkage from '../components/GeoMpi3DLinkage.vue'
 import GeoMpiExplainPanel from '../components/GeoMpiExplainPanel.vue'
 import GeoMpiMapMatrix from '../components/GeoMpiMapMatrix.vue'
+import { PageHeader } from '../components/library'
 import { useGeoMpiData } from '../composables/useGeoMpiData'
 import { useGeoMpiStudioState } from '../composables/useGeoMpiStudioState'
+import { useI18n } from '../composables/useI18n'
 
 const state = useGeoMpiStudioState()
+const { t } = useI18n()
 const { seamOptions, seamName, geomodelJobId, resolution, method, mode } = state
 
 const {
@@ -145,7 +151,7 @@ const {
   geomodelArtifacts,
   geomodelError,
   refreshMatrix,
-} = useGeoMpiData(state)
+} = useGeoMpiData(state, { t })
 
 const selectedCell = ref(null)
 
@@ -174,6 +180,13 @@ const formatTime = (value) => {
   if (Number.isNaN(d.getTime())) return String(value)
   return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`
 }
+
+const modeLabel = (value) => {
+  if (value === 'baseline') return t('geoMpiStudio.modeBaseline')
+  if (value === 'geo-aware') return t('geoMpiStudio.modeGeoAware')
+  if (value === 'delta') return t('geoMpiStudio.modeDelta')
+  return value || '-'
+}
 </script>
 
 <style scoped>
@@ -190,32 +203,6 @@ const formatTime = (value) => {
   border-radius: var(--border-radius-lg);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-sm);
-}
-
-.hero {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-lg);
-  align-items: flex-start;
-}
-
-.hero-main h1 {
-  margin: 4px 0 8px;
-  font-size: 28px;
-}
-
-.eyebrow {
-  margin: 0;
-  color: var(--color-primary);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.subtitle {
-  margin: 0;
-  color: var(--text-secondary);
-  max-width: 860px;
 }
 
 .hero-actions {
@@ -332,9 +319,28 @@ const formatTime = (value) => {
   }
 }
 
+@media (max-width: 1024px) {
+  .card {
+    padding: var(--spacing-lg);
+  }
+}
+
 @media (max-width: 768px) {
-  .hero {
-    flex-direction: column;
+  .hero-actions {
+    width: 100%;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+  }
+
+  .mode-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tag {
+    font-size: 10px;
+    padding: 2px 8px;
   }
 }
 </style>

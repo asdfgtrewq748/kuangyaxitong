@@ -7,22 +7,7 @@ import {
   listGeomodelArtifacts,
   mpiInterpolateGeo,
 } from '../api'
-
-const METRIC_META = [
-  { key: 'mpi', title: 'MPI', note: 'Composite index' },
-  { key: 'rsi', title: 'RSI', note: 'Roof stability' },
-  { key: 'bri', title: 'BRI', note: 'Burst risk' },
-  { key: 'asi', title: 'ASI', note: 'Abutment stress' },
-]
-
-const EMPTY_TILE_HINT = 'No grid data'
-
-const createEmptyTiles = () => METRIC_META.map((meta) => ({
-  ...meta,
-  grid: [],
-  stats: null,
-  placeholder: EMPTY_TILE_HINT,
-}))
+import { LRUCache } from '../lib/lruCache'
 
 const pickSeamNames = (payload) => {
   const rawItems = payload?.seams || []
@@ -107,7 +92,26 @@ const selectModePayload = (data, mode) => {
   }
 }
 
-export const useGeoMpiData = (state) => {
+export const useGeoMpiData = (state, i18n = {}) => {
+  const tr = (key, fallback, params) => {
+    if (typeof i18n?.t !== 'function') return fallback
+    const translated = i18n.t(key, params)
+    return translated === key ? fallback : translated
+  }
+  const metricMeta = () => ([
+    { key: 'mpi', title: 'MPI', note: tr('geoMpiStudio.metricNoteMpi', '综合指标') },
+    { key: 'rsi', title: 'RSI', note: tr('geoMpiStudio.metricNoteRsi', '顶板稳定') },
+    { key: 'bri', title: 'BRI', note: tr('geoMpiStudio.metricNoteBri', '冲击风险') },
+    { key: 'asi', title: 'ASI', note: tr('geoMpiStudio.metricNoteAsi', '支承应力') },
+  ])
+  const emptyTileHint = () => tr('geoMpiStudio.noGridData', '暂无栅格数据')
+  const createEmptyTiles = () => metricMeta().map((meta) => ({
+    ...meta,
+    grid: [],
+    stats: null,
+    placeholder: emptyTileHint(),
+  }))
+
   const metricTiles = ref(createEmptyTiles())
   const loadingSeams = ref(false)
   const loadingMatrix = ref(false)
@@ -122,7 +126,7 @@ export const useGeoMpiData = (state) => {
   const geomodelArtifacts = ref([])
   const geomodelError = ref('')
 
-  const layerParamsCache = new Map()
+  const layerParamsCache = new LRUCache(120)
 
   const resetTiles = () => {
     metricTiles.value = createEmptyTiles()
@@ -136,14 +140,14 @@ export const useGeoMpiData = (state) => {
     }
     const selectedMode = String(state.mode.value || 'baseline')
     const modePayload = selectModePayload(payload, selectedMode)
-    metricTiles.value = METRIC_META.map((meta) => {
+    metricTiles.value = metricMeta().map((meta) => {
       const grid = modePayload?.grids?.[meta.key] || []
       const stats = modePayload?.stats?.[meta.key] || null
       return {
         ...meta,
         grid,
         stats,
-        placeholder: Array.isArray(grid) && grid.length > 0 ? '' : EMPTY_TILE_HINT,
+        placeholder: Array.isArray(grid) && grid.length > 0 ? '' : emptyTileHint(),
       }
     })
   }
@@ -155,7 +159,7 @@ export const useGeoMpiData = (state) => {
       const { data } = await getCoalSeams()
       state.setSeamOptions(pickSeamNames(data))
     } catch (err) {
-      error.value = err?.response?.data?.detail || err?.message || 'Failed to load seams.'
+      error.value = err?.response?.data?.detail || err?.message || tr('geoMpiStudio.errorLoadSeams', '煤层列表加载失败。')
       state.setSeamOptions([])
     } finally {
       loadingSeams.value = false
@@ -190,7 +194,7 @@ export const useGeoMpiData = (state) => {
       geomodelStatus.value = 'unavailable'
       geomodelQuality.value = null
       geomodelArtifacts.value = []
-      geomodelError.value = err?.response?.data?.detail || err?.message || 'Failed to load Geomodel context.'
+      geomodelError.value = err?.response?.data?.detail || err?.message || tr('geoMpiStudio.errorLoadGeomodelContext', '地质模型上下文加载失败。')
     }
   }
 
@@ -261,13 +265,13 @@ export const useGeoMpiData = (state) => {
     try {
       const seamName = String(state.seamName.value || '').trim()
       if (!seamName) {
-        throw new Error('Please select a seam first.')
+        throw new Error(tr('geoMpiStudio.errorSelectSeam', '请先选择煤层。'))
       }
 
       const { data: overburdenPayload } = await getSeamOverburden(seamName)
       const points = await buildPoints(overburdenPayload?.boreholes || [], seamName)
       if (points.length < 3) {
-        throw new Error('At least 3 valid boreholes are required for interpolation.')
+        throw new Error(tr('geoMpiStudio.errorNeedBoreholes', '插值计算至少需要 3 个有效钻孔点。'))
       }
 
       const payload = {
@@ -291,7 +295,7 @@ export const useGeoMpiData = (state) => {
     } catch (err) {
       latestGeoPayload.value = null
       resetTiles()
-      error.value = err?.response?.data?.detail || err?.message || 'Failed to refresh spatial matrix.'
+      error.value = err?.response?.data?.detail || err?.message || tr('geoMpiStudio.errorRefreshMatrix', '空间矩阵刷新失败。')
     } finally {
       loadingMatrix.value = false
     }

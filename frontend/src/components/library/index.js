@@ -16,9 +16,16 @@ export { default as Viewer3DToolbar } from './controls/Viewer3DToolbar.vue'
 // Feedback Components
 export { default as LoadingState } from './feedback/LoadingState.vue'
 export { default as Toast } from './feedback/Toast.vue'
+export { default as ConfirmDialog } from './feedback/ConfirmDialog.vue'
+export { default as EmptyState } from './feedback/EmptyState.vue'
+export { default as SkeletonPanel } from './feedback/SkeletonPanel.vue'
 
 // Layout Components
 export { default as SidePanel } from './layout/SidePanel.vue'
+export { default as FormPanel } from './layout/FormPanel.vue'
+export { default as PageHeader } from './layout/PageHeader.vue'
+export { default as Card } from './layout/Card.vue'
 
 // Visualization Components
 export { default as ColorLegend } from './visualization/ColorLegend.vue'
+export { default as ChartContainer } from './visualization/ChartContainer.vue'

@@ -1,85 +1,84 @@
 <template>
   <div class="research-page page">
-    <!-- Toolbar -->
-    <Toolbar
-      title="科研工作台"
-      description="面向论文复现：数据版本化、泄漏审计、实验运行、结果归档一体化"
-      size="lg"
+    <PageHeader
+      class="main-header"
+      :title="rw('title')"
+      :description="rw('description')"
     >
-      <template #right>
+      <template #actions>
         <div class="status-pills">
-          <span class="status-pill info">Dataset {{ manifest?.dataset_id || '-' }}</span>
-          <span class="status-pill" :class="splitManifest ? 'ok' : 'idle'">Split {{ splitManifest?.split_id || '-' }}</span>
-          <span class="status-pill" :class="displayResult ? 'ok' : 'idle'">Experiment {{ displayResult?.exp_id || '-' }}</span>
+          <span class="status-pill info">{{ rw('statusDataset') }} {{ manifest?.dataset_id || '-' }}</span>
+          <span class="status-pill" :class="splitManifest ? 'ok' : 'idle'">{{ rw('statusSplit') }} {{ splitManifest?.split_id || '-' }}</span>
+          <span class="status-pill" :class="displayResult ? 'ok' : 'idle'">{{ rw('statusExperiment') }} {{ displayResult?.exp_id || '-' }}</span>
         </div>
       </template>
-    </Toolbar>
+    </PageHeader>
 
     <section class="grid grid-2">
       <article class="card panel">
         <div class="panel-head">
-          <h2>1) 数据集注册</h2>
-          <span class="tip">固定标签口径与版本哈希</span>
+          <h2>{{ rw('section1Title') }}</h2>
+          <span class="tip">{{ rw('section1Tip') }}</span>
         </div>
         <div class="form-grid">
           <label>
-            <span>dataset_id</span>
-            <input v-model.trim="registerForm.dataset_id" class="input" placeholder="例如 research_demo" />
+            <span>{{ rw('datasetId') }}</span>
+            <input v-model.trim="registerForm.dataset_id" class="input" :placeholder="rw('placeholderDatasetId')" />
           </label>
           <label>
-            <span>label_column</span>
-            <input v-model.trim="registerForm.label_column" class="input" placeholder="例如 label" />
+            <span>{{ rw('labelColumn') }}</span>
+            <input v-model.trim="registerForm.label_column" class="input" :placeholder="rw('placeholderLabelColumn')" />
           </label>
           <label>
-            <span>positive_values (逗号分隔)</span>
-            <input v-model.trim="registerForm.positive_values" class="input" placeholder="例如 1,true,high" />
+            <span>{{ rw('positiveValuesComma') }}</span>
+            <input v-model.trim="registerForm.positive_values" class="input" :placeholder="rw('placeholderPositiveValues')" />
           </label>
           <label>
-            <span>event_definition</span>
+            <span>{{ rw('eventDefinition') }}</span>
             <input v-model.trim="registerForm.event_definition" class="input" />
           </label>
           <label>
-            <span>time_window_hours</span>
+            <span>{{ rw('timeWindowHours') }}</span>
             <input v-model.number="registerForm.time_window_hours" type="number" min="1" class="input" />
           </label>
           <label>
-            <span>threshold (可选)</span>
-            <input v-model.trim="registerForm.threshold" class="input" placeholder="留空表示 null" />
+            <span>{{ rw('thresholdOptional') }}</span>
+            <input v-model.trim="registerForm.threshold" class="input" :placeholder="rw('placeholderThreshold')" />
           </label>
           <label class="full">
-            <span>description</span>
-            <textarea v-model.trim="registerForm.description" class="input textarea" rows="3" placeholder="数据来源、标签定义、时间空间对齐说明"></textarea>
+            <span>{{ rw('descriptionLabel') }}</span>
+            <textarea v-model.trim="registerForm.description" class="input textarea" rows="3" :placeholder="rw('placeholderDescription')"></textarea>
           </label>
         </div>
         <div class="actions">
           <button class="btn" :disabled="busy.register || !registerForm.dataset_id || !registerForm.label_column" @click="registerDataset">
-            {{ busy.register ? '注册中...' : '注册数据集' }}
+            {{ busy.register ? rw('registering') : rw('registerDataset') }}
           </button>
         </div>
       </article>
 
       <article class="card panel">
         <div class="panel-head">
-          <h2>2) 数据集查询与切分</h2>
-          <span class="tip">防止时间/钻孔泄漏</span>
+          <h2>{{ rw('section2Title') }}</h2>
+          <span class="tip">{{ rw('section2Tip') }}</span>
         </div>
         <div class="lookup-row">
-          <input v-model.trim="datasetQueryId" class="input" placeholder="输入 dataset_id 查询 manifest" />
+          <input v-model.trim="datasetQueryId" class="input" :placeholder="rw('placeholderQueryManifest')" />
           <button class="btn secondary" :disabled="busy.loadDataset || !datasetQueryId" @click="loadDataset">
-            {{ busy.loadDataset ? '查询中...' : '查询' }}
+            {{ busy.loadDataset ? rw('querying') : rw('query') }}
           </button>
         </div>
 
         <div v-if="manifest" class="manifest-stats">
-          <StatCard title="版本" :value="manifest.dataset_version" size="sm" />
-          <StatCard title="行数" :value="manifest.row_count" size="sm" />
-          <StatCard title="列数" :value="manifest.column_count" size="sm" />
-          <StatCard title="文件" :value="manifest.dataset_file" size="sm" />
+          <StatCard :title="rw('version')" :value="manifest.dataset_version" size="sm" />
+          <StatCard :title="rw('rowCount')" :value="manifest.row_count" size="sm" />
+          <StatCard :title="rw('columnCount')" :value="manifest.column_count" size="sm" />
+          <StatCard :title="rw('file')" :value="manifest.dataset_file" size="sm" />
         </div>
 
         <div class="form-grid">
           <label>
-            <span>strategy</span>
+            <span>{{ rw('strategy') }}</span>
             <select v-model="splitForm.strategy">
               <option value="time_borehole_block">time_borehole_block</option>
               <option value="borehole_block">borehole_block</option>
@@ -88,51 +87,51 @@
             </select>
           </label>
           <label>
-            <span>train_ratio</span>
+            <span>{{ rw('trainRatio') }}</span>
             <input v-model.number="splitForm.train_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
           </label>
           <label>
-            <span>val_ratio</span>
+            <span>{{ rw('valRatio') }}</span>
             <input v-model.number="splitForm.val_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
           </label>
           <label>
-            <span>test_ratio</span>
+            <span>{{ rw('testRatio') }}</span>
             <input v-model.number="splitForm.test_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
           </label>
           <label>
-            <span>time_column (可选)</span>
-            <input v-model.trim="splitForm.time_column" class="input" placeholder="例如 event_time" />
+            <span>{{ rw('timeColumnOptional') }}</span>
+            <input v-model.trim="splitForm.time_column" class="input" :placeholder="rw('placeholderTimeColumn')" />
           </label>
           <label>
-            <span>borehole_column (可选)</span>
-            <input v-model.trim="splitForm.borehole_column" class="input" placeholder="例如 borehole_name" />
+            <span>{{ rw('boreholeColumnOptional') }}</span>
+            <input v-model.trim="splitForm.borehole_column" class="input" :placeholder="rw('placeholderBoreholeColumn')" />
           </label>
           <label>
-            <span>seed</span>
+            <span>{{ rw('seed') }}</span>
             <input v-model.number="splitForm.seed" type="number" class="input" />
           </label>
         </div>
 
         <div class="actions">
           <button class="btn" :disabled="busy.split || !targetDatasetId" @click="splitDataset">
-            {{ busy.split ? '切分中...' : '执行切分' }}
+            {{ busy.split ? rw('splitting') : rw('executeSplit') }}
           </button>
         </div>
 
         <div v-if="splitManifest" class="split-summary">
           <div class="summary-grid">
-            <div><span>train</span><strong>{{ splitManifest.counts?.train ?? 0 }}</strong></div>
-            <div><span>val</span><strong>{{ splitManifest.counts?.val ?? 0 }}</strong></div>
-            <div><span>test</span><strong>{{ splitManifest.counts?.test ?? 0 }}</strong></div>
+            <div><span>{{ rw('train') }}</span><strong>{{ splitManifest.counts?.train ?? 0 }}</strong></div>
+            <div><span>{{ rw('val') }}</span><strong>{{ splitManifest.counts?.val ?? 0 }}</strong></div>
+            <div><span>{{ rw('test') }}</span><strong>{{ splitManifest.counts?.test ?? 0 }}</strong></div>
           </div>
           <div class="leakage" :class="hasLeakage ? 'warn' : 'safe'">
-            <span>泄漏审计</span>
+            <span>{{ rw('leakageAudit') }}</span>
             <b v-if="hasLeakage">
               train-val {{ splitManifest.leakage_audit?.overlap?.boreholes_train_val || 0 }},
               train-test {{ splitManifest.leakage_audit?.overlap?.boreholes_train_test || 0 }},
               val-test {{ splitManifest.leakage_audit?.overlap?.boreholes_val_test || 0 }}
             </b>
-            <b v-else>钻孔无交叉</b>
+            <b v-else>{{ rw('noLeakage') }}</b>
           </div>
         </div>
       </article>
@@ -141,50 +140,52 @@
     <section class="grid grid-2">
       <article class="card panel">
         <div class="panel-head">
-          <h2>3) 单实验运行</h2>
-          <span class="tip">输出 metrics + calibration + ci95</span>
+          <h2>{{ rw('section3Title') }}</h2>
+          <span class="tip">{{ rw('section3Tip') }}</span>
         </div>
         <div class="form-grid">
           <label>
-            <span>dataset_id</span>
+            <span>{{ rw('datasetId') }}</span>
             <input v-model.trim="experimentForm.dataset_id" class="input" />
           </label>
           <label>
-            <span>dataset_version</span>
+            <span>{{ rw('datasetVersion') }}</span>
             <input v-model.trim="experimentForm.dataset_version" class="input" />
           </label>
           <label>
-            <span>split_id</span>
+            <span>{{ rw('splitId') }}</span>
             <input v-model.trim="experimentForm.split_id" class="input" />
           </label>
           <label>
-            <span>experiment_name</span>
+            <span>{{ rw('experimentName') }}</span>
             <input v-model.trim="experimentForm.experiment_name" class="input" />
           </label>
           <label>
-            <span>model_type</span>
+            <span>{{ rw('modelType') }}</span>
             <select v-model="experimentForm.model_type">
               <option value="baseline">baseline</option>
               <option value="rsi_phase_field">rsi_phase_field</option>
               <option value="asi_ust">asi_ust</option>
               <option value="geomodel_aware">geomodel_aware</option>
               <option value="geomodel_ablation">geomodel_ablation</option>
+              <option value="hybrid_augmented">hybrid_augmented</option>
               <option value="pinchout_sensitive">pinchout_sensitive</option>
+              <option value="pinchout_no_zoning">pinchout_no_zoning</option>
               <option value="rk_enhanced">rk_enhanced</option>
               <option value="kriging_baseline">kriging_baseline</option>
               <option value="custom">custom</option>
             </select>
           </label>
           <label>
-            <span>target_label_column (可选)</span>
+            <span>{{ rw('targetLabelColumnOptional') }}</span>
             <input v-model.trim="experimentForm.target_label_column" class="input" />
           </label>
           <label>
-            <span>metrics (逗号分隔)</span>
+            <span>{{ rw('metricsComma') }}</span>
             <input v-model.trim="experimentForm.metrics" class="input" />
           </label>
           <label>
-            <span>seed</span>
+            <span>{{ rw('seed') }}</span>
             <input v-model.number="experimentForm.seed" type="number" class="input" />
           </label>
         </div>
@@ -194,30 +195,30 @@
             :disabled="busy.runExperiment || !canRunExperiment"
             @click="runExperiment"
           >
-            {{ busy.runExperiment ? '运行中...' : '运行实验' }}
+            {{ busy.runExperiment ? rw('running') : rw('runExperiment') }}
           </button>
         </div>
       </article>
 
       <article class="card panel">
         <div class="panel-head">
-          <h2>4) 模板批量实验</h2>
-          <span class="tip">论文主实验与基线对照</span>
+          <h2>{{ rw('section4Title') }}</h2>
+          <span class="tip">{{ rw('section4Tip') }}</span>
         </div>
         <div class="lookup-row">
           <select v-model="selectedTemplate">
             <option v-for="name in templateNames" :key="name" :value="name">{{ name }}</option>
           </select>
           <button class="btn secondary" :disabled="busy.loadTemplates" @click="loadTemplates">
-            {{ busy.loadTemplates ? '刷新中...' : '刷新模板' }}
+            {{ busy.loadTemplates ? rw('refreshing') : rw('refreshTemplate') }}
           </button>
         </div>
         <div class="template-preview" v-if="templateSteps.length">
           <table class="table">
             <thead>
               <tr>
-                <th>experiment_name</th>
-                <th>model_type</th>
+                <th>{{ rw('experimentName') }}</th>
+                <th>{{ rw('modelType') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -234,37 +235,37 @@
             :disabled="busy.runSuite || !canRunSuite || !selectedTemplate"
             @click="runSuite"
           >
-            {{ busy.runSuite ? '运行中...' : '运行模板实验' }}
+            {{ busy.runSuite ? rw('running') : rw('runTemplateExperiment') }}
           </button>
         </div>
         <div v-if="suiteResult" class="suite-summary">
-          <div class="meta-item">suite_id: <b>{{ suiteResult.suite_id }}</b></div>
-          <div class="meta-item">runs: <b>{{ suiteResult.runs?.length || 0 }}</b></div>
+          <div class="meta-item">{{ rw('suiteId') }}: <b>{{ suiteResult.suite_id }}</b></div>
+          <div class="meta-item">{{ rw('runs') }}: <b>{{ suiteResult.runs?.length || 0 }}</b></div>
         </div>
       </article>
     </section>
 
     <section class="card panel">
       <div class="panel-head">
-        <h2>5) 实验结果与产物查询</h2>
-        <span class="tip">按 exp_id 回溯证据链</span>
+        <h2>{{ rw('section5Title') }}</h2>
+        <span class="tip">{{ rw('section5Tip') }}</span>
       </div>
       <div class="lookup-row">
-        <input v-model.trim="resultQueryExpId" class="input" placeholder="输入 exp_id 查询" />
+        <input v-model.trim="resultQueryExpId" class="input" :placeholder="rw('placeholderQueryExpId')" />
         <button class="btn secondary" :disabled="busy.loadResult || !resultQueryExpId" @click="loadExperimentResult">
-          {{ busy.loadResult ? '查询中...' : '查结果' }}
+          {{ busy.loadResult ? rw('querying') : rw('queryResult') }}
         </button>
         <button class="btn secondary" :disabled="busy.loadArtifacts || !resultQueryExpId" @click="loadArtifacts">
-          {{ busy.loadArtifacts ? '查询中...' : '查产物' }}
+          {{ busy.loadArtifacts ? rw('querying') : rw('queryArtifacts') }}
         </button>
         <button class="btn secondary" :disabled="busy.exportEvidence || (!displayResult && !comparisonRows.length)" @click="exportEvidenceBundle">
-          {{ busy.exportEvidence ? '打包中...' : '导出证据 ZIP' }}
+          {{ busy.exportEvidence ? rw('packing') : rw('exportEvidenceZip') }}
         </button>
       </div>
 
       <div v-if="displayResult" class="result-grid">
         <article class="result-card">
-          <h3>关键指标</h3>
+          <h3>{{ rw('keyMetrics') }}</h3>
           <div class="metric-grid">
             <div v-for="[name, value] in metricEntries" :key="name" class="metric-item">
               <span>{{ name }}</span>
@@ -274,13 +275,13 @@
         </article>
 
         <article class="result-card">
-          <h3>95% 置信区间</h3>
+          <h3>{{ rw('ci95') }}</h3>
           <table class="table compact">
             <thead>
               <tr>
-                <th>metric</th>
-                <th>low</th>
-                <th>high</th>
+                <th>{{ rw('metric') }}</th>
+                <th>{{ rw('low') }}</th>
+                <th>{{ rw('high') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -296,20 +297,20 @@
 
       <div class="result-grid" v-if="displayResult">
         <article class="result-card">
-          <h3>校准报告</h3>
+          <h3>{{ rw('calibrationReport') }}</h3>
           <div class="meta-row">
             <span>ECE: <b>{{ formatNumber(displayResult.calibration?.ece, 6) }}</b></span>
             <span>MCE: <b>{{ formatNumber(displayResult.calibration?.mce, 6) }}</b></span>
-            <span>Bins: <b>{{ displayResult.calibration?.bin_count ?? 0 }}</b></span>
+            <span>{{ rw('bins') }}: <b>{{ displayResult.calibration?.bin_count ?? 0 }}</b></span>
           </div>
           <table class="table compact">
             <thead>
               <tr>
-                <th>bin</th>
-                <th>count</th>
-                <th>acc</th>
-                <th>conf</th>
-                <th>gap</th>
+                <th>{{ rw('bin') }}</th>
+                <th>{{ rw('count') }}</th>
+                <th>{{ rw('acc') }}</th>
+                <th>{{ rw('conf') }}</th>
+                <th>{{ rw('gap') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -325,31 +326,31 @@
         </article>
 
         <article class="result-card">
-          <h3>Traceability</h3>
+          <h3>{{ rw('traceability') }}</h3>
           <div class="trace-row">
-            <span>dataset_manifest</span>
+            <span>{{ rw('datasetManifest') }}</span>
             <code>{{ displayResult.traceability?.dataset_manifest || '-' }}</code>
           </div>
           <div class="trace-row">
-            <span>split_manifest</span>
+            <span>{{ rw('splitManifest') }}</span>
             <code>{{ displayResult.traceability?.split_manifest || '-' }}</code>
           </div>
           <div class="trace-row">
-            <span>created_at</span>
+            <span>{{ rw('createdAt') }}</span>
             <code>{{ displayResult.created_at || '-' }}</code>
           </div>
         </article>
       </div>
 
       <article v-if="artifacts.length" class="result-card">
-        <h3>Artifacts</h3>
+        <h3>{{ rw('artifacts') }}</h3>
         <table class="table">
           <thead>
             <tr>
-              <th>name</th>
-              <th>size</th>
-              <th>path</th>
-              <th>action</th>
+              <th>{{ rw('name') }}</th>
+              <th>{{ rw('size') }}</th>
+              <th>{{ rw('path') }}</th>
+              <th>{{ rw('action') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -363,7 +364,7 @@
                   :disabled="busy.downloadArtifact && downloadingArtifactName === item.name"
                   @click="downloadArtifact(item)"
                 >
-                  {{ busy.downloadArtifact && downloadingArtifactName === item.name ? '下载中...' : '下载' }}
+                  {{ busy.downloadArtifact && downloadingArtifactName === item.name ? rw('downloading') : rw('download') }}
                 </button>
               </td>
             </tr>
@@ -374,11 +375,11 @@
 
     <section class="card panel">
       <div class="panel-head">
-        <h2>6) 实验对比看板</h2>
-        <span class="tip">按多个 exp_id 横向比较，支持 CSV/JSON 导出</span>
+        <h2>{{ rw('section6Title') }}</h2>
+        <span class="tip">{{ rw('section6Tip') }}</span>
       </div>
       <label class="compare-label">
-        <span>exp_id 列表（逗号、空格或换行分隔）</span>
+        <span>{{ rw('expIdList') }}</span>
         <textarea
           v-model.trim="compareExpIdsText"
           class="input textarea"
@@ -388,19 +389,19 @@
       </label>
       <div class="actions actions-split">
         <button class="btn" :disabled="busy.compare" @click="loadComparison">
-          {{ busy.compare ? '加载中...' : '加载对比' }}
+          {{ busy.compare ? rw('loading') : rw('loadComparison') }}
         </button>
         <button class="btn secondary" :disabled="!comparisonRows.length" @click="exportComparisonCsv">
-          导出 CSV
+          {{ rw('exportCsv') }}
         </button>
         <button class="btn secondary" :disabled="!comparisonRows.length" @click="exportComparisonJson">
-          导出 JSON
+          {{ rw('exportJson') }}
         </button>
       </div>
 
       <div v-if="comparisonRows.length" class="viz-controls">
         <label>
-          <span>可视化指标</span>
+          <span>{{ rw('visualMetric') }}</span>
           <select v-model="compareVizMetric">
             <option v-for="metric in comparisonMetricOrder" :key="`viz-${metric}`" :value="metric">{{ metric }}</option>
           </select>
@@ -409,7 +410,7 @@
 
       <div v-if="comparisonPointChart" class="result-grid">
         <article class="result-card">
-          <h3>实验分布与95%CI（{{ compareVizMetric }}）</h3>
+          <h3>{{ rw('comparisonDistWithCi', { metric: compareVizMetric }) }}</h3>
           <svg class="compare-svg" :viewBox="`0 0 ${comparisonPointChart.width} ${comparisonPointChart.height}`" preserveAspectRatio="none">
             <rect
               :x="comparisonPointChart.margin.left"
@@ -466,7 +467,7 @@
         </article>
 
         <article class="result-card" v-if="comparisonModelBarChart">
-          <h3>模型均值条形图（{{ compareVizMetric }}）</h3>
+          <h3>{{ rw('modelMeanBar', { metric: compareVizMetric }) }}</h3>
           <svg class="compare-svg" :viewBox="`0 0 ${comparisonModelBarChart.width} ${comparisonModelBarChart.height}`" preserveAspectRatio="none">
             <rect
               :x="comparisonModelBarChart.margin.left"
@@ -501,8 +502,8 @@
         <table class="table">
           <thead>
             <tr>
-              <th>exp_id</th>
-              <th>model_type</th>
+              <th>{{ rw('expId') }}</th>
+              <th>{{ rw('modelType') }}</th>
               <th v-for="metric in comparisonMetricOrder" :key="`head-${metric}`">{{ metric }}</th>
             </tr>
           </thead>
@@ -521,12 +522,12 @@
       </div>
 
       <div v-if="comparisonModelRows.length" class="result-card">
-        <h3>按模型聚合（均值）</h3>
+        <h3>{{ rw('aggregateByModel') }}</h3>
         <table class="table compact">
           <thead>
             <tr>
-              <th>model_type</th>
-              <th>samples</th>
+              <th>{{ rw('modelType') }}</th>
+              <th>{{ rw('samples') }}</th>
               <th v-for="metric in comparisonMetricOrder" :key="`model-head-${metric}`">{{ metric }}</th>
             </tr>
           </thead>
@@ -543,14 +544,14 @@
       </div>
 
       <div v-if="comparisonChampionRows.length" class="result-card">
-        <h3>指标冠军</h3>
+        <h3>{{ rw('metricChampions') }}</h3>
         <table class="table compact">
           <thead>
             <tr>
-              <th>metric</th>
-              <th>best_value</th>
-              <th>exp_id</th>
-              <th>model_type</th>
+              <th>{{ rw('metric') }}</th>
+              <th>{{ rw('bestValue') }}</th>
+              <th>{{ rw('expId') }}</th>
+              <th>{{ rw('modelType') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -581,21 +582,24 @@ import {
   researchRunExperimentSuite,
   researchSplitDataset
 } from '../api'
+import { useI18n } from '../composables/useI18n'
 import { useToast } from '../composables/useToast'
-import { Toolbar, StatCard, DataTable, LoadingState } from '../components/library'
+import { PageHeader, StatCard, DataTable, LoadingState } from '../components/library'
 import { useUIStore } from '../stores'
 
 const toast = useToast()
+const { t } = useI18n()
 const uiStore = useUIStore()
 const route = useRoute()
 const router = useRouter()
+const rw = (key, params) => t(`researchWorkbench.${key}`, params)
 
 // DataTable columns for artifacts
 const artifactColumns = [
-  { key: 'name', title: '名称', sortable: true },
-  { key: 'size', title: '大小', align: 'right' },
-  { key: 'path', title: '路径' },
-  { key: 'action', title: '操作' }
+  { key: 'name', title: rw('name'), sortable: true },
+  { key: 'size', title: rw('size'), align: 'right' },
+  { key: 'path', title: rw('path') },
+  { key: 'action', title: rw('action') }
 ]
 
 const artifactRows = computed(() => artifacts.value.map(item => ({
@@ -960,7 +964,7 @@ const getJSZipCtor = async () => {
   const mod = await import('jszip')
   jsZipCtor = mod?.default || mod?.JSZip || null
   if (!jsZipCtor) {
-    throw new Error('JSZip 加载失败')
+    throw new Error(rw('jszipLoadFailed'))
   }
   return jsZipCtor
 }
@@ -1135,9 +1139,9 @@ const registerDataset = async () => {
     manifest.value = data
     splitManifest.value = null
     applyManifestToForms(data)
-    toast.success(`注册成功：${data.dataset_id}`)
+    toast.success(rw('registerSuccess', { id: data.dataset_id }))
   } catch (error) {
-    toast.error(getErrorMessage(error, '数据集注册失败'))
+    toast.error(getErrorMessage(error, rw('errorRegisterDataset')))
   } finally {
     busy.register = false
   }
@@ -1150,9 +1154,9 @@ const loadDataset = async () => {
     const { data } = await researchGetDataset(datasetQueryId.value)
     manifest.value = data
     applyManifestToForms(data)
-    toast.success(`已加载 manifest：${data.dataset_id}`)
+    toast.success(rw('loadedManifest', { id: data.dataset_id }))
   } catch (error) {
-    toast.error(getErrorMessage(error, '数据集查询失败'))
+    toast.error(getErrorMessage(error, rw('errorQueryDataset')))
   } finally {
     busy.loadDataset = false
   }
@@ -1175,10 +1179,10 @@ const splitDataset = async () => {
     splitManifest.value = data
     experimentForm.split_id = data.split_id || experimentForm.split_id
     toast[hasLeakage.value ? 'warning' : 'success'](
-      hasLeakage.value ? '切分完成，但检测到钻孔交叉' : `切分成功：${data.split_id}`
+      hasLeakage.value ? rw('splitWithLeakage') : rw('splitSuccess', { id: data.split_id })
     )
   } catch (error) {
-    toast.error(getErrorMessage(error, '数据切分失败'))
+    toast.error(getErrorMessage(error, rw('errorSplitDataset')))
   } finally {
     busy.split = false
   }
@@ -1203,9 +1207,9 @@ const runExperiment = async () => {
     resultQueryExpId.value = data.exp_id
     syncRouteExpId(data.exp_id)
     artifacts.value = []
-    toast.success(`实验完成：${data.exp_id}`)
+    toast.success(rw('experimentDone', { id: data.exp_id }))
   } catch (error) {
-    toast.error(getErrorMessage(error, '实验运行失败'))
+    toast.error(getErrorMessage(error, rw('errorRunExperiment')))
   } finally {
     busy.runExperiment = false
   }
@@ -1220,7 +1224,7 @@ const loadTemplates = async () => {
       selectedTemplate.value = templateNames.value[0]
     }
   } catch (error) {
-    toast.error(getErrorMessage(error, '模板查询失败'))
+    toast.error(getErrorMessage(error, rw('errorLoadTemplates')))
   } finally {
     busy.loadTemplates = false
   }
@@ -1244,9 +1248,9 @@ const runSuite = async () => {
       resultQueryExpId.value = firstExpId
       syncRouteExpId(firstExpId)
     }
-    toast.success(`模板实验完成：${data.suite_id}`)
+    toast.success(rw('templateRunDone', { id: data.suite_id }))
   } catch (error) {
-    toast.error(getErrorMessage(error, '模板实验运行失败'))
+    toast.error(getErrorMessage(error, rw('errorRunTemplateExperiment')))
   } finally {
     busy.runSuite = false
   }
@@ -1259,9 +1263,9 @@ const loadExperimentResult = async () => {
     const { data } = await researchGetExperiment(resultQueryExpId.value)
     loadedResult.value = data
     syncRouteExpId(data.exp_id)
-    toast.success(`已加载结果：${data.exp_id}`)
+    toast.success(rw('loadedResult', { id: data.exp_id }))
   } catch (error) {
-    toast.error(getErrorMessage(error, '实验结果查询失败'))
+    toast.error(getErrorMessage(error, rw('errorQueryExperimentResult')))
   } finally {
     busy.loadResult = false
   }
@@ -1273,9 +1277,9 @@ const loadArtifacts = async () => {
   try {
     const { data } = await researchGetArtifacts(resultQueryExpId.value)
     artifacts.value = data?.artifacts || []
-    toast.success(`已加载产物：${artifacts.value.length} 个`)
+    toast.success(rw('loadedArtifacts', { count: artifacts.value.length }))
   } catch (error) {
-    toast.error(getErrorMessage(error, '实验产物查询失败'))
+    toast.error(getErrorMessage(error, rw('errorQueryArtifacts')))
   } finally {
     busy.loadArtifacts = false
   }
@@ -1291,9 +1295,9 @@ const downloadArtifact = async (item) => {
     const response = await researchDownloadArtifact(expId, artifactName)
     const filename = parseFilenameFromHeader(response?.headers?.['content-disposition'], artifactName)
     saveBlob(response.data, filename)
-    toast.success(`已下载：${filename}`)
+    toast.success(rw('downloadedFile', { filename }))
   } catch (error) {
-    toast.error(getErrorMessage(error, '产物下载失败'))
+    toast.error(getErrorMessage(error, rw('errorDownloadArtifact')))
   } finally {
     busy.downloadArtifact = false
     downloadingArtifactName.value = ''
@@ -1303,7 +1307,7 @@ const downloadArtifact = async (item) => {
 const loadComparison = async () => {
   const expIds = parseFlexibleList(compareExpIdsText.value)
   if (!expIds.length) {
-    toast.warning('请先输入至少一个 exp_id')
+    toast.warning(rw('warnNeedOneExpId'))
     return
   }
   busy.compare = true
@@ -1325,15 +1329,15 @@ const loadComparison = async () => {
       syncRouteExpId(okRows[0].exp_id)
     }
     if (failed.length > 0) {
-      toast.warning(`部分实验加载失败：${failed.join(', ')}`)
+      toast.warning(rw('warnPartialFailed', { failed: failed.join(', ') }))
     }
     if (okRows.length > 0) {
-      toast.success(`已加载 ${okRows.length} 个实验用于对比`)
+      toast.success(rw('comparisonLoaded', { count: okRows.length }))
     } else {
-      toast.error('没有可用实验结果')
+      toast.error(rw('noValidExperimentResult'))
     }
   } catch (error) {
-    toast.error(getErrorMessage(error, '实验对比加载失败'))
+    toast.error(getErrorMessage(error, rw('errorLoadComparison')))
   } finally {
     busy.compare = false
   }
@@ -1343,7 +1347,7 @@ const exportComparisonCsv = () => {
   if (!comparisonRows.value.length) return
   const blob = new Blob([buildComparisonCsvText(comparisonRows.value)], { type: 'text/csv;charset=utf-8;' })
   saveBlob(blob, `research_comparison_${safeStamp()}.csv`)
-  toast.success('对比 CSV 已导出')
+  toast.success(rw('comparisonCsvExported'))
 }
 
 const exportComparisonJson = () => {
@@ -1355,7 +1359,7 @@ const exportComparisonJson = () => {
   }
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' })
   saveBlob(blob, `research_comparison_${safeStamp()}.json`)
-  toast.success('对比 JSON 已导出')
+  toast.success(rw('comparisonJsonExported'))
 }
 
 const exportEvidenceBundle = async () => {
@@ -1450,12 +1454,12 @@ const exportEvidenceBundle = async () => {
     })
     saveBlob(blob, `research_evidence_bundle_${stamp}.zip`)
     if (failed.length) {
-      toast.warning(`证据包已导出，${failed.length} 个产物未能打包`)
+      toast.warning(rw('evidenceExportedWithFailures', { count: failed.length }))
     } else {
-      toast.success('证据包 ZIP 已导出')
+      toast.success(rw('evidenceZipExported'))
     }
   } catch (error) {
-    toast.error(getErrorMessage(error, '证据包导出失败'))
+    toast.error(getErrorMessage(error, rw('errorExportEvidenceBundle')))
   } finally {
     busy.exportEvidence = false
   }
@@ -1524,7 +1528,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 11px;
   border: 1px solid var(--border-color-light);
   background: #fff;
@@ -1551,13 +1555,13 @@ onMounted(async () => {
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .panel-head {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--spacing-2);
   align-items: baseline;
 }
 
@@ -1598,7 +1602,7 @@ onMounted(async () => {
 .lookup-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
+  gap: var(--spacing-2);
   align-items: center;
 }
 
@@ -1666,18 +1670,18 @@ onMounted(async () => {
 .actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
 }
 
 .actions.actions-split {
   justify-content: flex-start;
-  gap: 8px;
+  gap: var(--spacing-2);
   flex-wrap: wrap;
 }
 
 .compare-label {
   display: grid;
-  gap: 6px;
+  gap: var(--spacing-1);
   font-size: 12px;
   color: #475569;
 }
@@ -1689,7 +1693,7 @@ onMounted(async () => {
 
 .viz-controls label {
   display: inline-grid;
-  gap: 6px;
+  gap: var(--spacing-1);
   font-size: 12px;
   color: #475569;
 }
@@ -1699,7 +1703,7 @@ onMounted(async () => {
 }
 
 .btn-inline {
-  padding: 5px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 12px;
 }
 
@@ -1710,14 +1714,14 @@ onMounted(async () => {
 
 .suite-summary {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
   flex-wrap: wrap;
 }
 
 .result-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .result-card {
@@ -1814,12 +1818,6 @@ onMounted(async () => {
   word-break: break-all;
 }
 
-.table.compact th,
-.table.compact td {
-  padding: 8px 9px;
-  font-size: 12px;
-}
-
 @media (max-width: 1200px) {
   .result-grid {
     grid-template-columns: 1fr;
@@ -1855,4 +1853,3 @@ onMounted(async () => {
   }
 }
 </style>
-

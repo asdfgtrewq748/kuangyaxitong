@@ -24,11 +24,16 @@
         ref="canvas"
         :width="canvasSize"
         :height="canvasSize"
-        @mousedown="startDrag"
-        @mousemove="handleMouseMove"
-        @mouseup="endDrag"
-        @mouseleave="endDrag"
+        tabindex="0"
+        role="img"
+        :aria-label="`${fieldLabel}插值画布，支持拖拽平移、滚轮或双指缩放。`"
+        @pointerdown="startDrag"
+        @pointermove="handlePointerMove"
+        @pointerup="endDrag"
+        @pointerleave="endDrag"
+        @pointercancel="endDrag"
         @wheel.prevent="handleWheel"
+        @keydown="handleCanvasKeydown"
       ></canvas>
 
       <!-- 悬停信息 -->
@@ -96,6 +101,9 @@ const offsetX = ref(0)
 const offsetY = ref(0)
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
+const activePointers = ref(new Map())
+const pinchStartDistance = ref(0)
+const pinchStartScale = ref(1)
 const hoverInfo = ref(null)
 const hoverPos = ref({ x: 0, y: 0 })
 const showBoreholes = ref(true)
@@ -478,13 +486,22 @@ const computeConvexHull = (points) => {
   return hull
 }
 
+const clampScale = (nextScale) => Math.max(0.3, Math.min(5, nextScale))
+
+const getPointerDistance = (pointsMap) => {
+  const values = Array.from(pointsMap.values())
+  if (values.length < 2) return 0
+  const [a, b] = values
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
 const zoomIn = () => {
-  scale.value = Math.min(scale.value * 1.25, 5)
+  scale.value = clampScale(scale.value * 1.25)
   draw()
 }
 
 const zoomOut = () => {
-  scale.value = Math.max(scale.value / 1.25, 0.3)
+  scale.value = clampScale(scale.value / 1.25)
   draw()
 }
 
@@ -496,16 +513,48 @@ const resetView = () => {
 }
 
 const startDrag = (e) => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+  canvas.value?.setPointerCapture?.(e.pointerId)
+  activePointers.value.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+  if (activePointers.value.size === 2) {
+    isDragging.value = false
+    pinchStartDistance.value = getPointerDistance(activePointers.value)
+    pinchStartScale.value = scale.value
+    return
+  }
+
   isDragging.value = true
   dragStart.value = { x: e.clientX - offsetX.value, y: e.clientY - offsetY.value }
 }
 
-const endDrag = () => {
-  isDragging.value = false
+const endDrag = (e) => {
+  if (canvas.value && e?.pointerId !== undefined && canvas.value.hasPointerCapture?.(e.pointerId)) {
+    canvas.value.releasePointerCapture(e.pointerId)
+  }
+  if (e?.pointerId !== undefined) {
+    activePointers.value.delete(e.pointerId)
+  }
+  if (activePointers.value.size < 2) {
+    pinchStartDistance.value = 0
+  }
+  isDragging.value = activePointers.value.size === 1
 }
 
-const handleMouseMove = (e) => {
+const handlePointerMove = (e) => {
   if (!canvas.value) return
+  if (activePointers.value.has(e.pointerId)) {
+    activePointers.value.set(e.pointerId, { x: e.clientX, y: e.clientY })
+  }
+  if (activePointers.value.size === 2) {
+    const distance = getPointerDistance(activePointers.value)
+    if (pinchStartDistance.value > 0 && distance > 0) {
+      scale.value = clampScale(pinchStartScale.value * (distance / pinchStartDistance.value))
+      draw()
+    }
+    return
+  }
+
   const rect = canvas.value.getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
@@ -519,7 +568,7 @@ const handleMouseMove = (e) => {
 
   // 检测是否悬停在钻孔点上
   let found = null
-  if (canvas.value.boreholePositions) {
+  if (e.pointerType !== 'touch' && canvas.value.boreholePositions) {
     for (const bh of canvas.value.boreholePositions) {
       const dist = Math.sqrt((x - bh.canvasX) ** 2 + (y - bh.canvasY) ** 2)
       if (dist < 12) {
@@ -560,8 +609,50 @@ const handleMouseMove = (e) => {
 
 const handleWheel = (e) => {
   const delta = e.deltaY > 0 ? 0.9 : 1.1
-  scale.value = Math.max(0.3, Math.min(5, scale.value * delta))
+  scale.value = clampScale(scale.value * delta)
   draw()
+}
+
+const handleCanvasKeydown = (e) => {
+  const step = e.shiftKey ? 40 : 20
+  switch (e.key) {
+    case 'ArrowUp':
+      e.preventDefault()
+      offsetY.value += step
+      draw()
+      break
+    case 'ArrowDown':
+      e.preventDefault()
+      offsetY.value -= step
+      draw()
+      break
+    case 'ArrowLeft':
+      e.preventDefault()
+      offsetX.value += step
+      draw()
+      break
+    case 'ArrowRight':
+      e.preventDefault()
+      offsetX.value -= step
+      draw()
+      break
+    case '+':
+    case '=':
+      e.preventDefault()
+      zoomIn()
+      break
+    case '-':
+      e.preventDefault()
+      zoomOut()
+      break
+    case 'r':
+    case 'R':
+      e.preventDefault()
+      resetView()
+      break
+    default:
+      break
+  }
 }
 
 onMounted(() => {
@@ -572,7 +663,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // Cleanup
+  activePointers.value.clear()
 })
 
 watch(() => [props.boreholes, props.interpolationGrid, props.field, showBoreholes.value, showValues.value], () => {
@@ -605,10 +696,17 @@ watch(() => [props.boreholes, props.interpolationGrid, props.field, showBorehole
 .map-wrapper canvas {
   display: block;
   cursor: grab;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .map-wrapper canvas:active {
   cursor: grabbing;
+}
+
+.map-wrapper canvas:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .map-controls {

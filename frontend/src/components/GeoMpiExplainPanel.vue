@@ -1,52 +1,53 @@
 <template>
   <div class="geo-mpi-explain" data-testid="geo-mpi-explain-panel">
     <section class="section">
-      <h3>Selected Cell</h3>
+      <h3>{{ t('geoMpiStudio.selectedCell') }}</h3>
       <div v-if="selectedCell" class="selection-grid">
-        <div class="kv"><span>Cell</span><b>({{ selectedCell.row }}, {{ selectedCell.col }})</b></div>
-        <div class="kv"><span>Mode</span><b>{{ mode }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.cell') }}</span><b>({{ selectedCell.row }}, {{ selectedCell.col }})</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.mode') }}</span><b>{{ modeText }}</b></div>
         <div class="kv"><span>MPI</span><b>{{ fmt(selectedValues?.mpi) }}</b></div>
         <div class="kv"><span>RSI</span><b>{{ fmt(selectedValues?.rsi) }}</b></div>
         <div class="kv"><span>BRI</span><b>{{ fmt(selectedValues?.bri) }}</b></div>
         <div class="kv"><span>ASI</span><b>{{ fmt(selectedValues?.asi) }}</b></div>
       </div>
-      <p v-else class="placeholder">Click any matrix cell to inspect values and geology context.</p>
+      <p v-else class="placeholder">{{ t('geoMpiStudio.inspectHint') }}</p>
     </section>
 
     <section class="section">
-      <h3>Model Context</h3>
+      <h3>{{ t('geoMpiStudio.modelContext') }}</h3>
       <div class="selection-grid">
-        <div class="kv"><span>Algorithm</span><b>{{ algorithmMode || '-' }}</b></div>
-        <div class="kv"><span>Fallback</span><b>{{ fallbackUsed ? 'yes' : 'no' }}</b></div>
-        <div class="kv"><span>Feature source</span><b>{{ featureSourceMode || '-' }}</b></div>
-        <div class="kv"><span>Geomodel</span><b>{{ geomodelStatus || '-' }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.hintAlgorithm') }}</span><b>{{ algorithmMode || '-' }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.hintFallback') }}</span><b>{{ fallbackUsed ? t('common.yes') : t('common.no') }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.hintFeatureSource') }}</span><b>{{ featureSourceMode || '-' }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.geomodel') }}</span><b>{{ geomodelStatus || '-' }}</b></div>
       </div>
       <p v-if="geomodelError" class="warn">{{ geomodelError }}</p>
     </section>
 
     <section class="section">
-      <h3>Geomodel Quality</h3>
+      <h3>{{ t('geoMpiStudio.geomodelQuality') }}</h3>
       <div v-if="hasQuality" class="selection-grid">
-        <div class="kv"><span>Continuity</span><b>{{ fmt(geomodelQuality.continuity_score) }}</b></div>
-        <div class="kv"><span>Pinchout ratio</span><b>{{ fmt(geomodelQuality.pinchout_ratio) }}</b></div>
-        <div class="kv"><span>Layer CV</span><b>{{ fmt(geomodelQuality.layer_cv) }}</b></div>
-        <div class="kv"><span>Key layer span</span><b>{{ fmt(geomodelQuality.key_layer_span) }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.continuity') }}</span><b>{{ fmt(geomodelQuality.continuity_score) }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.pinchoutRatio') }}</span><b>{{ fmt(geomodelQuality.pinchout_ratio) }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.layerCv') }}</span><b>{{ fmt(geomodelQuality.layer_cv) }}</b></div>
+        <div class="kv"><span>{{ t('geoMpiStudio.keyLayerSpan') }}</span><b>{{ fmt(geomodelQuality.key_layer_span) }}</b></div>
       </div>
-      <p v-else class="placeholder">No Geomodel quality summary loaded.</p>
+      <p v-else class="placeholder">{{ t('geoMpiStudio.noGeomodelQuality') }}</p>
     </section>
 
     <section class="section">
-      <h3>Artifacts</h3>
+      <h3>{{ t('geoMpiStudio.artifacts') }}</h3>
       <div v-if="Array.isArray(geomodelArtifacts) && geomodelArtifacts.length" class="chips">
         <span v-for="item in geomodelArtifacts.slice(0, 6)" :key="item.name" class="chip">{{ item.name }}</span>
       </div>
-      <p v-else class="placeholder">No artifact list loaded.</p>
+      <p v-else class="placeholder">{{ t('geoMpiStudio.noArtifacts') }}</p>
     </section>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from '../composables/useI18n'
 
 const props = defineProps({
   selectedCell: { type: Object, default: null },
@@ -60,6 +61,7 @@ const props = defineProps({
   geomodelArtifacts: { type: Array, default: () => [] },
   geomodelError: { type: String, default: '' },
 })
+const { t } = useI18n()
 
 const hasQuality = computed(() => {
   const q = props.geomodelQuality || {}
@@ -72,6 +74,14 @@ const fmt = (value) => {
   if (!Number.isFinite(n)) return '-'
   return n.toFixed(3)
 }
+
+const modeText = computed(() => {
+  if (!props.mode) return '-'
+  if (props.mode === 'baseline') return t('geoMpiStudio.modeBaseline')
+  if (props.mode === 'geo-aware') return t('geoMpiStudio.modeGeoAware')
+  if (props.mode === 'delta') return t('geoMpiStudio.modeDelta')
+  return props.mode
+})
 </script>
 
 <style scoped>
