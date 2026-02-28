@@ -1,196 +1,196 @@
-# 矿压系统前端深度优化提案
+﻿# 鐭垮帇绯荤粺鍓嶇娣卞害浼樺寲鎻愭
 
-> **项目**：矿山压力评估系统（Mining Pressure Index）  
-> **版本**：v1.0  
-> **编制日期**：2026-02-25  
-> **技术栈**：Vue 3 + Vite + Pinia + ECharts + D3.js + Three.js  
-> **页面总数**：16 个视图 + 30+ 组件  
-
----
-
-## 目录
-
-- [一、现状审计摘要](#一现状审计摘要)
-- [二、优化任务总表](#二优化任务总表)
-- [三、任务详细方案](#三任务详细方案)
-  - [P0 — 紧急修复](#p0--紧急修复)
-  - [P1 — 配色体系重构（黑白灰）](#p1--配色体系重构黑白灰)
-  - [P2 — 全站中文化 + 中英文切换](#p2--全站中文化--中英文切换)
-  - [P3 — 布局与排版优化](#p3--布局与排版优化)
-  - [P4 — 组件质量提升](#p4--组件质量提升)
-  - [P5 — 性能优化](#p5--性能优化)
-  - [P6 — 可访问性与响应式](#p6--可访问性与响应式)
-- [四、实施路线图](#四实施路线图)
-- [五、风险与依赖](#五风险与依赖)
+> **椤圭洰**锛氱熆灞卞帇鍔涜瘎浼扮郴缁燂紙Mining Pressure Index锛? 
+> **鐗堟湰**锛歷1.0  
+> **缂栧埗鏃ユ湡**锛?026-02-25  
+> **鎶€鏈爤**锛歏ue 3 + Vite + Pinia + ECharts + D3.js + Three.js  
+> **椤甸潰鎬绘暟**锛?6 涓鍥?+ 30+ 缁勪欢  
 
 ---
 
-## 进度快照（更新于 2026-02-28）
+## 鐩綍
 
-| 任务 | 状态 | 说明 |
+- [涓€銆佺幇鐘跺璁℃憳瑕乚(#涓€鐜扮姸瀹¤鎽樿)
+- [浜屻€佷紭鍖栦换鍔℃€昏〃](#浜屼紭鍖栦换鍔℃€昏〃)
+- [涓夈€佷换鍔¤缁嗘柟妗圿(#涓変换鍔¤缁嗘柟妗?
+  - [P0 鈥?绱ф€ヤ慨澶峕(#p0--绱ф€ヤ慨澶?
+  - [P1 鈥?閰嶈壊浣撶郴閲嶆瀯锛堥粦鐧界伆锛塢(#p1--閰嶈壊浣撶郴閲嶆瀯榛戠櫧鐏?
+  - [P2 鈥?鍏ㄧ珯涓枃鍖?+ 涓嫳鏂囧垏鎹(#p2--鍏ㄧ珯涓枃鍖?-涓嫳鏂囧垏鎹?
+  - [P3 鈥?甯冨眬涓庢帓鐗堜紭鍖朷(#p3--甯冨眬涓庢帓鐗堜紭鍖?
+  - [P4 鈥?缁勪欢璐ㄩ噺鎻愬崌](#p4--缁勪欢璐ㄩ噺鎻愬崌)
+  - [P5 鈥?鎬ц兘浼樺寲](#p5--鎬ц兘浼樺寲)
+  - [P6 鈥?鍙闂€т笌鍝嶅簲寮廬(#p6--鍙闂€т笌鍝嶅簲寮?
+- [鍥涖€佸疄鏂借矾绾垮浘](#鍥涘疄鏂借矾绾垮浘)
+- [浜斻€侀闄╀笌渚濊禆](#浜旈闄╀笌渚濊禆)
+
+---
+
+## 杩涘害蹇収锛堟洿鏂颁簬 2026-02-28锛?
+
+| 浠诲姟 | 鐘舵€?| 璇存槑 |
 |------|------|------|
-| T20 空状态组件 | 部分完成 | 已新增 `EmptyState.vue` 并在 `ResearchPortal.vue` 接入，其他页面待补齐 |
-| T21 骨架屏加载态 | 部分完成 | 已新增 `SkeletonPanel.vue`，并在 `ResearchPortal.vue`、`AcademicAlgorithm.vue` 接入，待扩展至更多异步场景 |
-| T22 AiSearchBar 事件泄漏 | 已完成 | `addEventListener` / `removeEventListener` 已成对处理 |
-| T23 缓存大小限制（LRU） | 已完成 | 相关缓存已切换 LRU 并限制容量 |
-| T24 路由级代码分割 | 已完成 | 路由 chunk 命名与 `manualChunks` 已生效，构建输出已验证 |
-| T25 大型图表懒加载 | 已完成 | `AcademicAlgorithm` 采用 `defineAsyncComponent + Suspense` |
-| T26 虚拟列表阈值调优 | 已完成 | 虚拟列表阈值已调整到 `>=50`，并优化滚动渲染 |
-| T27 响应式断点补全 | 部分完成 | 已补关键页面断点，仍需全页面验收覆盖 |
-| T28 键盘导航与 ARIA | 部分完成 | `AppLayout`、`DataTable`、主要交互画布已补齐，`axe-core` 验证待执行 |
-| T29 触控手势支持 | 已完成 | `AlgorithmValidation`、`MpiHeatmapPro`、`InterpolationMap/BoreholeMap` 已支持触控拖拽与缩放 |
+| T20 绌虹姸鎬佺粍浠?| 閮ㄥ垎瀹屾垚 | 宸插湪 `ResearchPortal.vue`銆乣GeoMpiStudio.vue`銆乣Scene3DPage.vue`銆乣ResearchWorkbench.vue`銆乣Report.vue` 鎺ュ叆锛屼粛闇€鍏ㄧ珯鏀跺彛 |
+| T21 楠ㄦ灦灞忓姞杞芥€?| 閮ㄥ垎瀹屾垚 | 宸插湪 `ResearchPortal.vue`銆乣AcademicAlgorithm.vue`銆乣GeoMpiStudio.vue`銆乣Scene3DPage.vue`銆乣ResearchWorkbench.vue`銆乣Report.vue` 鎺ュ叆 |
+| T22 AiSearchBar 浜嬩欢娉勬紡 | 宸插畬鎴?| `addEventListener` / `removeEventListener` 宸叉垚瀵瑰鐞?|
+| T23 缂撳瓨澶у皬闄愬埗锛圠RU锛?| 宸插畬鎴?| 鐩稿叧缂撳瓨宸插垏鎹?LRU 骞堕檺鍒跺閲?|
+| T24 璺敱绾т唬鐮佸垎鍓?| 宸插畬鎴?| 璺敱 chunk 鍛藉悕涓?`manualChunks` 宸茬敓鏁堬紝鏋勫缓杈撳嚭宸查獙璇?|
+| T25 澶у瀷鍥捐〃鎳掑姞杞?| 宸插畬鎴?| `AcademicAlgorithm` 閲囩敤 `defineAsyncComponent + Suspense` |
+| T26 铏氭嫙鍒楄〃闃堝€艰皟浼?| 宸插畬鎴?| 铏氭嫙鍒楄〃闃堝€煎凡璋冩暣鍒?`>=50`锛屽苟浼樺寲婊氬姩娓叉煋 |
+| T27 鍝嶅簲寮忔柇鐐硅ˉ鍏?| 宸插畬鎴?| 宸插畬鎴?12 璺敱 脳 5 鏂偣鑷姩鍖栧璁★紝鏈彂鐜版按骞虫孩鍑猴紙瑙?`data/research/stage_e/ui_accessibility/20260228T144805/`锛?|
+| T28 键盘导航与 ARIA | 已完成 | 已完成 `axe-core` 自动扫描收敛（critical=0, serious=0），见 `data/research/stage_e/ui_accessibility/20260228T153205/` |
+| T29 瑙︽帶鎵嬪娍鏀寔 | 宸插畬鎴?| `AlgorithmValidation`銆乣MpiHeatmapPro`銆乣InterpolationMap/BoreholeMap` 宸叉敮鎸佽Е鎺ф嫋鎷戒笌缂╂斁 |
 
 ---
 
-## 一、现状审计摘要
+## 涓€銆佺幇鐘跺璁℃憳瑕?
 
-### 1.1 配色现状
+### 1.1 閰嶈壊鐜扮姸
 
-| 问题 | 严重程度 | 说明 |
+| 闂 | 涓ラ噸绋嬪害 | 璇存槑 |
 |------|---------|------|
-| CSS 变量双重定义 | 🔴 严重 | `style.css` 与 `design-tokens.css` 对 `--color-primary`、`--color-success` 等定义了**不同的值**，导致样式行为不可预测 |
-| 大量彩色主题色 | 🔴 严重 | 当前主色为 Teal（`#0f766e`），辅以蓝、绿、橙、紫、粉六种强调色，与科研黑白灰定位不符 |
-| 硬编码颜色泛滥 | 🔴 严重 | 全站超过 **150+ 处**硬编码的十六进制/RGB 颜色值绕过 CSS 变量系统，分布在 AlgorithmValidation（60+）、AcademicAlgorithm（50+）、ResearchPortal（31）、MpiAlgorithm（40+）等文件中 |
-| 渐变色过多 | ⚠ 中等 | `--gradient-primary`、`--gradient-header`、`--gradient-card` 等渐变色不符合黑白灰学术风格 |
-| 阴影带色偏 | ⚠ 中等 | 阴影使用 `rgba(15, 118, 110, ...)` 带有绿色色偏，应使用纯灰色阴影 |
+| CSS 鍙橀噺鍙岄噸瀹氫箟 | 馃敶 涓ラ噸 | `style.css` 涓?`design-tokens.css` 瀵?`--color-primary`銆乣--color-success` 绛夊畾涔変簡**涓嶅悓鐨勫€?*锛屽鑷存牱寮忚涓轰笉鍙娴?|
+| 澶ч噺褰╄壊涓婚鑹?| 馃敶 涓ラ噸 | 褰撳墠涓昏壊涓?Teal锛坄#0f766e`锛夛紝杈呬互钃濄€佺豢銆佹銆佺传銆佺矇鍏寮鸿皟鑹诧紝涓庣鐮旈粦鐧界伆瀹氫綅涓嶇 |
+| 纭紪鐮侀鑹叉硾婊?| 馃敶 涓ラ噸 | 鍏ㄧ珯瓒呰繃 **150+ 澶?*纭紪鐮佺殑鍗佸叚杩涘埗/RGB 棰滆壊鍊肩粫杩?CSS 鍙橀噺绯荤粺锛屽垎甯冨湪 AlgorithmValidation锛?0+锛夈€丄cademicAlgorithm锛?0+锛夈€丷esearchPortal锛?1锛夈€丮piAlgorithm锛?0+锛夌瓑鏂囦欢涓?|
+| 娓愬彉鑹茶繃澶?| 鈿?涓瓑 | `--gradient-primary`銆乣--gradient-header`銆乣--gradient-card` 绛夋笎鍙樿壊涓嶇鍚堥粦鐧界伆瀛︽湳椋庢牸 |
+| 闃村奖甯﹁壊鍋?| 鈿?涓瓑 | 闃村奖浣跨敤 `rgba(15, 118, 110, ...)` 甯︽湁缁胯壊鑹插亸锛屽簲浣跨敤绾伆鑹查槾褰?|
 
-### 1.2 中英文现状
+### 1.2 涓嫳鏂囩幇鐘?
 
-| 问题 | 严重程度 | 涉及文件 |
+| 闂 | 涓ラ噸绋嬪害 | 娑夊強鏂囦欢 |
 |------|---------|---------|
-| GeoMpiStudio.vue 全英文 | 🔴 严重 | 标题、标签、按钮、描述、提示全部为英文 |
-| ResearchPortal.vue 大量英文 | 🔴 严重 | 页面标题、统计卡片、表头、状态标签均为英文 |
-| ResearchWorkbench.vue 英文表单 | 🟡 中等 | 表单字段名（dataset_id、split_id 等）、表头、标签为英文 |
-| AcademicAlgorithm.vue 英文图注 | 🟡 中等 | 科学图的 Figure 标题、坐标轴标签为英文 |
-| AlgorithmValidation.vue 部分英文 | 🟡 中等 | "Geology-aware 对照"、AUC/PR-AUC 等专业术语 |
-| Report.vue 部分英文 | 🟢 轻微 | Min/Max/Std/P50/AUC/Brier 等统计指标名 |
-| AppLayout.vue 乱码 | 🔴 严重 | tooltip/aria-label 出现编码损坏的乱码（如 `娴佺▼杩涘害`） |
+| GeoMpiStudio.vue 鍏ㄨ嫳鏂?| 馃敶 涓ラ噸 | 鏍囬銆佹爣绛俱€佹寜閽€佹弿杩般€佹彁绀哄叏閮ㄤ负鑻辨枃 |
+| ResearchPortal.vue 澶ч噺鑻辨枃 | 馃敶 涓ラ噸 | 椤甸潰鏍囬銆佺粺璁″崱鐗囥€佽〃澶淬€佺姸鎬佹爣绛惧潎涓鸿嫳鏂?|
+| ResearchWorkbench.vue 鑻辨枃琛ㄥ崟 | 馃煛 涓瓑 | 琛ㄥ崟瀛楁鍚嶏紙dataset_id銆乻plit_id 绛夛級銆佽〃澶淬€佹爣绛句负鑻辨枃 |
+| AcademicAlgorithm.vue 鑻辨枃鍥炬敞 | 馃煛 涓瓑 | 绉戝鍥剧殑 Figure 鏍囬銆佸潗鏍囪酱鏍囩涓鸿嫳鏂?|
+| AlgorithmValidation.vue 閮ㄥ垎鑻辨枃 | 馃煛 涓瓑 | "Geology-aware 瀵圭収"銆丄UC/PR-AUC 绛変笓涓氭湳璇?|
+| Report.vue 閮ㄥ垎鑻辨枃 | 馃煝 杞诲井 | Min/Max/Std/P50/AUC/Brier 绛夌粺璁℃寚鏍囧悕 |
+| AppLayout.vue 涔辩爜 | 馃敶 涓ラ噸 | tooltip/aria-label 鍑虹幇缂栫爜鎹熷潖鐨勪贡鐮侊紙濡?`濞翠胶鈻兼潻娑樺`锛?|
 
-### 1.3 布局与排版现状
+### 1.3 甯冨眬涓庢帓鐗堢幇鐘?
 
-| 问题 | 涉及范围 |
+| 闂 | 娑夊強鑼冨洿 |
 |------|---------|
-| AcademicAlgorithm.vue 3715 行巨型单文件 | 严重影响维护性 |
-| 各页面卡片样式不统一 | 部分用 `.card` 全局类，部分自定义 scoped 样式 |
-| 表格样式碎片化 | 至少 3 种不同的表格实现方式 |
-| 页面间距/内边距不一致 | 有的用 `--spacing-*` 变量，有的直接写 `16px`、`24px` |
-| 页面标题结构不统一 | header 区域有 5 种以上不同的排版方式 |
+| AcademicAlgorithm.vue 3715 琛屽法鍨嬪崟鏂囦欢 | 涓ラ噸褰卞搷缁存姢鎬?|
+| 鍚勯〉闈㈠崱鐗囨牱寮忎笉缁熶竴 | 閮ㄥ垎鐢?`.card` 鍏ㄥ眬绫伙紝閮ㄥ垎鑷畾涔?scoped 鏍峰紡 |
+| 琛ㄦ牸鏍峰紡纰庣墖鍖?| 鑷冲皯 3 绉嶄笉鍚岀殑琛ㄦ牸瀹炵幇鏂瑰紡 |
+| 椤甸潰闂磋窛/鍐呰竟璺濅笉涓€鑷?| 鏈夌殑鐢?`--spacing-*` 鍙橀噺锛屾湁鐨勭洿鎺ュ啓 `16px`銆乣24px` |
+| 椤甸潰鏍囬缁撴瀯涓嶇粺涓€ | header 鍖哄煙鏈?5 绉嶄互涓婁笉鍚岀殑鎺掔増鏂瑰紡 |
 
-### 1.4 组件质量现状
+### 1.4 缁勪欢璐ㄩ噺鐜扮姸
 
-| 问题 | 说明 |
+| 闂 | 璇存槑 |
 |------|------|
-| HealthCheck.vue 编译失败 | HTML 嵌套错误、未导入 `useRouter`/`onBeforeUnmount`、`useHead` 不存在 |
-| Toast 组件重复实现 | `components/Toast.vue` 与 `components/library/feedback/Toast.vue` 两套 |
-| 空状态缺失 | GeoMpiStudio、Scene3DPage、ResearchWorkbench 等多页面无数据时无引导 |
-| 内存泄漏风险 | AlgorithmValidation 的 `spatialCache`、MpiHeatmapPro 的 `colorCache` 无大小限制 |
-| AiSearchBar 事件泄漏 | `onMounted` 注册的 `window.addEventListener` 未在卸载时移除 |
+| HealthCheck.vue 缂栬瘧澶辫触 | HTML 宓屽閿欒銆佹湭瀵煎叆 `useRouter`/`onBeforeUnmount`銆乣useHead` 涓嶅瓨鍦?|
+| Toast 缁勪欢閲嶅瀹炵幇 | `components/Toast.vue` 涓?`components/library/feedback/Toast.vue` 涓ゅ |
+| 绌虹姸鎬佺己澶?| GeoMpiStudio銆丼cene3DPage銆丷esearchWorkbench 绛夊椤甸潰鏃犳暟鎹椂鏃犲紩瀵?|
+| 鍐呭瓨娉勬紡椋庨櫓 | AlgorithmValidation 鐨?`spatialCache`銆丮piHeatmapPro 鐨?`colorCache` 鏃犲ぇ灏忛檺鍒?|
+| AiSearchBar 浜嬩欢娉勬紡 | `onMounted` 娉ㄥ唽鐨?`window.addEventListener` 鏈湪鍗歌浇鏃剁Щ闄?|
 
 ---
 
-## 二、优化任务总表
+## 浜屻€佷紭鍖栦换鍔℃€昏〃
 
-| 编号 | 优先级 | 任务名称 | 预估工时 | 涉及文件数 |
+| 缂栧彿 | 浼樺厛绾?| 浠诲姟鍚嶇О | 棰勪及宸ユ椂 | 娑夊強鏂囦欢鏁?|
 |------|-------|---------|---------|-----------|
-| T01 | P0 | 修复 HealthCheck.vue 编译错误 | 2h | 1 |
-| T02 | P0 | 修复 AppLayout.vue 乱码文本 | 1h | 1 |
-| T03 | P0 | 统一 CSS 变量定义，消除双重冲突 | 3h | 2 |
-| T04 | P1 | 设计系统重构：黑白灰配色体系 | 6h | 2 |
-| T05 | P1 | 全站硬编码颜色替换为 CSS 变量 | 12h | 15+ |
-| T06 | P1 | 阴影与渐变去色：改为纯灰色 | 3h | 5+ |
-| T07 | P2 | 构建 i18n 国际化基础架构 | 6h | 5 |
-| T08 | P2 | GeoMpiStudio.vue 全文中文化 | 3h | 1 |
-| T09 | P2 | ResearchPortal.vue 全文中文化 | 3h | 1 |
-| T10 | P2 | ResearchWorkbench.vue 中文化 | 4h | 1 |
-| T11 | P2 | AcademicAlgorithm.vue 中文化 | 4h | 1 |
-| T12 | P2 | 其他页面零散英文中文化 | 4h | 8+ |
-| T13 | P2 | 中英文切换功能实现 | 4h | 5+ |
-| T14 | P3 | 统一页面标题/Header 结构 | 4h | 10+ |
-| T15 | P3 | 统一卡片与面板样式 | 4h | 10+ |
-| T16 | P3 | 统一表格样式与交互 | 4h | 8+ |
-| T17 | P3 | 统一间距与内边距系统 | 3h | 15+ |
-| T18 | P3 | AcademicAlgorithm.vue 组件拆分 | 8h | 1→6+ |
-| T19 | P4 | 消除 Toast 组件重复实现 | 2h | 4 |
-| T20 | P4 | 添加全局空状态组件 | 3h | 8+ |
-| T21 | P4 | 添加骨架屏 Loading 状态 | 4h | 6+ |
-| T22 | P4 | 修复 AiSearchBar 事件泄漏 | 1h | 1 |
-| T23 | P4 | 缓存大小限制（LRU） | 2h | 2 |
-| T24 | P5 | 路由级代码分割优化 | 2h | 1 |
-| T25 | P5 | 大型 SVG 图表懒加载 | 3h | 3 |
-| T26 | P5 | 虚拟列表阈值调优 | 1h | 2 |
-| T27 | P6 | 响应式断点补全 | 6h | 8+ |
+| T01 | P0 | 淇 HealthCheck.vue 缂栬瘧閿欒 | 2h | 1 |
+| T02 | P0 | 淇 AppLayout.vue 涔辩爜鏂囨湰 | 1h | 1 |
+| T03 | P0 | 缁熶竴 CSS 鍙橀噺瀹氫箟锛屾秷闄ゅ弻閲嶅啿绐?| 3h | 2 |
+| T04 | P1 | 璁捐绯荤粺閲嶆瀯锛氶粦鐧界伆閰嶈壊浣撶郴 | 6h | 2 |
+| T05 | P1 | 鍏ㄧ珯纭紪鐮侀鑹叉浛鎹负 CSS 鍙橀噺 | 12h | 15+ |
+| T06 | P1 | 闃村奖涓庢笎鍙樺幓鑹诧細鏀逛负绾伆鑹?| 3h | 5+ |
+| T07 | P2 | 鏋勫缓 i18n 鍥介檯鍖栧熀纭€鏋舵瀯 | 6h | 5 |
+| T08 | P2 | GeoMpiStudio.vue 鍏ㄦ枃涓枃鍖?| 3h | 1 |
+| T09 | P2 | ResearchPortal.vue 鍏ㄦ枃涓枃鍖?| 3h | 1 |
+| T10 | P2 | ResearchWorkbench.vue 涓枃鍖?| 4h | 1 |
+| T11 | P2 | AcademicAlgorithm.vue 涓枃鍖?| 4h | 1 |
+| T12 | P2 | 鍏朵粬椤甸潰闆舵暎鑻辨枃涓枃鍖?| 4h | 8+ |
+| T13 | P2 | 涓嫳鏂囧垏鎹㈠姛鑳藉疄鐜?| 4h | 5+ |
+| T14 | P3 | 缁熶竴椤甸潰鏍囬/Header 缁撴瀯 | 4h | 10+ |
+| T15 | P3 | 缁熶竴鍗＄墖涓庨潰鏉挎牱寮?| 4h | 10+ |
+| T16 | P3 | 缁熶竴琛ㄦ牸鏍峰紡涓庝氦浜?| 4h | 8+ |
+| T17 | P3 | 缁熶竴闂磋窛涓庡唴杈硅窛绯荤粺 | 3h | 15+ |
+| T18 | P3 | AcademicAlgorithm.vue 缁勪欢鎷嗗垎 | 8h | 1鈫?+ |
+| T19 | P4 | 娑堥櫎 Toast 缁勪欢閲嶅瀹炵幇 | 2h | 4 |
+| T20 | P4 | 娣诲姞鍏ㄥ眬绌虹姸鎬佺粍浠?| 3h | 8+ |
+| T21 | P4 | 娣诲姞楠ㄦ灦灞?Loading 鐘舵€?| 4h | 6+ |
+| T22 | P4 | 淇 AiSearchBar 浜嬩欢娉勬紡 | 1h | 1 |
+| T23 | P4 | 缂撳瓨澶у皬闄愬埗锛圠RU锛?| 2h | 2 |
+| T24 | P5 | 璺敱绾т唬鐮佸垎鍓蹭紭鍖?| 2h | 1 |
+| T25 | P5 | 澶у瀷 SVG 鍥捐〃鎳掑姞杞?| 3h | 3 |
+| T26 | P5 | 铏氭嫙鍒楄〃闃堝€艰皟浼?| 1h | 2 |
+| T27 | P6 | 鍝嶅簲寮忔柇鐐硅ˉ鍏?| 6h | 8+ |
 | T28 | P6 | 键盘导航与 ARIA 标签修复 | 4h | 10+ |
-| T29 | P6 | 触控手势支持 | 4h | 3 |
+| T29 | P6 | 瑙︽帶鎵嬪娍鏀寔 | 4h | 3 |
 
-**总计：约 110 工时（约 14 个工作日）**
-
----
-
-## 三、任务详细方案
-
-### P0 — 紧急修复
+**鎬昏锛氱害 110 宸ユ椂锛堢害 14 涓伐浣滄棩锛?*
 
 ---
 
-#### T01：修复 HealthCheck.vue 编译错误
+## 涓夈€佷换鍔¤缁嗘柟妗?
 
-**问题描述**  
-`HealthCheck.vue` 存在多个致命编译错误，页面无法正常渲染：
-- HTML 标签嵌套错误（多余的 `</div>` 闭合标签）
-- `useRouter()`、`useRoute()` 使用但未从 `vue-router` 导入
-- `onBeforeUnmount` 使用但未从 Vue 导入
-- `useHead` 从 `vue-router` 导入（该导出不存在）
-- SVG path 属性语法错误
-
-**修改方案**  
-1. 删除不存在的 `useHead` 导入及调用
-2. 补充缺失的 Vue/vue-router 导入：`import { useRouter, useRoute } from 'vue-router'`、`import { onBeforeUnmount } from 'vue'`
-3. 修复 HTML 标签嵌套，删除多余的闭合标签
-4. 修正 SVG path 的 `d` 属性值
-
-**验收标准**  
-- [ ] `HealthCheck.vue` 能通过 Vite 编译，无控制台报错
-- [ ] 页面可正常加载并展示健康检查信息
-- [ ] 导航栏可正常跳转到该页面
+### P0 鈥?绱ф€ヤ慨澶?
 
 ---
 
-#### T02：修复 AppLayout.vue 乱码文本
+#### T01锛氫慨澶?HealthCheck.vue 缂栬瘧閿欒
 
-**问题描述**  
-`AppLayout.vue` 中多处 `title`、`aria-label` 属性出现 UTF-8 编码损坏的乱码字符串，例如：
-- `娴佺▼杩涘害` → 应为"流程进度"
-- `褰撳墠鐓ゅ眰` → 应为"当前煤层"
-- `鍓嶅線` → 应为"前往"
-- `閲嶇疆娴佺▼` → 应为"重置流程"
-- `鍓嶅線鍓嶇疆姝ラ` → 应为"前往前置步骤"
+**闂鎻忚堪**  
+`HealthCheck.vue` 瀛樺湪澶氫釜鑷村懡缂栬瘧閿欒锛岄〉闈㈡棤娉曟甯告覆鏌擄細
+- HTML 鏍囩宓屽閿欒锛堝浣欑殑 `</div>` 闂悎鏍囩锛?
+- `useRouter()`銆乣useRoute()` 浣跨敤浣嗘湭浠?`vue-router` 瀵煎叆
+- `onBeforeUnmount` 浣跨敤浣嗘湭浠?Vue 瀵煎叆
+- `useHead` 浠?`vue-router` 瀵煎叆锛堣瀵煎嚭涓嶅瓨鍦級
+- SVG path 灞炴€ц娉曢敊璇?
 
-**修改方案**  
-逐一替换所有乱码字符串为正确的中文文本：
+**淇敼鏂规**  
+1. 鍒犻櫎涓嶅瓨鍦ㄧ殑 `useHead` 瀵煎叆鍙婅皟鐢?
+2. 琛ュ厖缂哄け鐨?Vue/vue-router 瀵煎叆锛歚import { useRouter, useRoute } from 'vue-router'`銆乣import { onBeforeUnmount } from 'vue'`
+3. 淇 HTML 鏍囩宓屽锛屽垹闄ゅ浣欑殑闂悎鏍囩
+4. 淇 SVG path 鐨?`d` 灞炴€у€?
 
-| 乱码 | 正确文本 |
+**楠屾敹鏍囧噯**  
+- [ ] `HealthCheck.vue` 鑳介€氳繃 Vite 缂栬瘧锛屾棤鎺у埗鍙版姤閿?
+- [ ] 椤甸潰鍙甯稿姞杞藉苟灞曠ず鍋ュ悍妫€鏌ヤ俊鎭?
+- [ ] 瀵艰埅鏍忓彲姝ｅ父璺宠浆鍒拌椤甸潰
+
+---
+
+#### T02锛氫慨澶?AppLayout.vue 涔辩爜鏂囨湰
+
+**闂鎻忚堪**  
+`AppLayout.vue` 涓澶?`title`銆乣aria-label` 灞炴€у嚭鐜?UTF-8 缂栫爜鎹熷潖鐨勪贡鐮佸瓧绗︿覆锛屼緥濡傦細
+- `濞翠胶鈻兼潻娑樺` 鈫?搴斾负"娴佺▼杩涘害"
+- `瑜版挸澧犻悡銈呯湴` 鈫?搴斾负"褰撳墠鐓ゅ眰"
+- `閸撳秴绶歚 鈫?搴斾负"鍓嶅線"
+- `闁插秶鐤嗗ù浣衡柤` 鈫?搴斾负"閲嶇疆娴佺▼"
+- `閸撳秴绶氶崜宥囩枂濮濄儵` 鈫?搴斾负"鍓嶅線鍓嶇疆姝ラ"
+
+**淇敼鏂规**  
+閫愪竴鏇挎崲鎵€鏈変贡鐮佸瓧绗︿覆涓烘纭殑涓枃鏂囨湰锛?
+
+| 涔辩爜 | 姝ｇ‘鏂囨湰 |
 |------|---------|
-| `娴佺▼杩涘害` | 流程进度 |
-| `褰撳墠鐓ゅ眰` | 当前煤层 |
-| `鍓嶅線` | 前往 |
-| `閲嶇疆娴佺▼` | 重置流程 |
-| `鍓嶅線鎺ㄨ崘姝ラ` | 前往推荐步骤 |
-| `鍓嶅線鍓嶇疆姝ラ` | 前往前置步骤 |
-| `姝ラ` | 步骤 |
+| `濞翠胶鈻兼潻娑樺` | 娴佺▼杩涘害 |
+| `瑜版挸澧犻悡銈呯湴` | 褰撳墠鐓ゅ眰 |
+| `閸撳秴绶歚 | 鍓嶅線 |
+| `闁插秶鐤嗗ù浣衡柤` | 閲嶇疆娴佺▼ |
+| `閸撳秴绶氶幒銊ㄥ礃濮濄儵` | 鍓嶅線鎺ㄨ崘姝ラ |
+| `閸撳秴绶氶崜宥囩枂濮濄儵` | 鍓嶅線鍓嶇疆姝ラ |
+| `濮濄儵` | 姝ラ |
 
-**验收标准**  
-- [ ] 所有 tooltip、aria-label 显示正确的中文文本
-- [ ] 鼠标悬停在导航项和工作流步骤上时显示正确中文提示
-- [ ] 无任何乱码残留
+**楠屾敹鏍囧噯**  
+- [ ] 鎵€鏈?tooltip銆乤ria-label 鏄剧ず姝ｇ‘鐨勪腑鏂囨枃鏈?
+- [ ] 榧犳爣鎮仠鍦ㄥ鑸」鍜屽伐浣滄祦姝ラ涓婃椂鏄剧ず姝ｇ‘涓枃鎻愮ず
+- [ ] 鏃犱换浣曚贡鐮佹畫鐣?
 
 ---
 
-#### T03：统一 CSS 变量定义，消除双重冲突
+#### T03锛氱粺涓€ CSS 鍙橀噺瀹氫箟锛屾秷闄ゅ弻閲嶅啿绐?
 
-**问题描述**  
-`style.css` 和 `design-tokens.css` 对同名 CSS 变量定义了不同值：
+**闂鎻忚堪**  
+`style.css` 鍜?`design-tokens.css` 瀵瑰悓鍚?CSS 鍙橀噺瀹氫箟浜嗕笉鍚屽€硷細
 
-| 变量名 | `style.css` 值 | `design-tokens.css` 值 |
+| 鍙橀噺鍚?| `style.css` 鍊?| `design-tokens.css` 鍊?|
 |--------|---------------|----------------------|
 | `--color-primary-hover` | `#0d5f59` | `#0e6f68` |
 | `--color-primary-light` | `#ccfbf1` | `rgba(15, 118, 110, 0.1)` |
@@ -201,41 +201,41 @@
 | `--bg-secondary` | `#f3f6f5` | `#f8fafc` |
 | `--text-primary` | `#2c3545` | `#0f172a` |
 
-**修改方案**  
-1. 将 `design-tokens.css` 作为**唯一的变量定义源**（Single Source of Truth）
-2. 删除 `style.css` 中所有 `:root` 变量定义（约 60 行）
-3. 在 `style.css` 顶部添加 `@import './styles/design-tokens.css';`
-4. 验证 `main.js` 的导入顺序确保 `design-tokens.css` 先加载
+**淇敼鏂规**  
+1. 灏?`design-tokens.css` 浣滀负**鍞竴鐨勫彉閲忓畾涔夋簮**锛圫ingle Source of Truth锛?
+2. 鍒犻櫎 `style.css` 涓墍鏈?`:root` 鍙橀噺瀹氫箟锛堢害 60 琛岋級
+3. 鍦?`style.css` 椤堕儴娣诲姞 `@import './styles/design-tokens.css';`
+4. 楠岃瘉 `main.js` 鐨勫鍏ラ『搴忕‘淇?`design-tokens.css` 鍏堝姞杞?
 
-**验收标准**  
-- [ ] 全站 CSS 变量只在 `design-tokens.css` 中定义
-- [ ] `style.css` 不再包含任何 `:root` 中的颜色/间距变量定义
-- [ ] 所有页面视觉表现一致，无样式闪烁或错位
-
----
-
-### P1 — 配色体系重构（黑白灰）
+**楠屾敹鏍囧噯**  
+- [ ] 鍏ㄧ珯 CSS 鍙橀噺鍙湪 `design-tokens.css` 涓畾涔?
+- [ ] `style.css` 涓嶅啀鍖呭惈浠讳綍 `:root` 涓殑棰滆壊/闂磋窛鍙橀噺瀹氫箟
+- [ ] 鎵€鏈夐〉闈㈣瑙夎〃鐜颁竴鑷达紝鏃犳牱寮忛棯鐑佹垨閿欎綅
 
 ---
 
-#### T04：设计系统重构 — 黑白灰配色体系
+### P1 鈥?閰嶈壊浣撶郴閲嶆瀯锛堥粦鐧界伆锛?
 
-**问题描述**  
-当前系统采用 Teal/Cyan 为主色调的彩色设计，不符合科研学术网站的定位。需要全面重构为黑白灰三色体系。
+---
 
-**修改方案**  
-重新定义 `design-tokens.css` 中的所有颜色变量，建立如下体系：
+#### T04锛氳璁＄郴缁熼噸鏋?鈥?榛戠櫧鐏伴厤鑹蹭綋绯?
+
+**闂鎻忚堪**  
+褰撳墠绯荤粺閲囩敤 Teal/Cyan 涓轰富鑹茶皟鐨勫僵鑹茶璁★紝涓嶇鍚堢鐮斿鏈綉绔欑殑瀹氫綅銆傞渶瑕佸叏闈㈤噸鏋勪负榛戠櫧鐏颁笁鑹蹭綋绯汇€?
+
+**淇敼鏂规**  
+閲嶆柊瀹氫箟 `design-tokens.css` 涓殑鎵€鏈夐鑹插彉閲忥紝寤虹珛濡備笅浣撶郴锛?
 
 ```css
 :root {
-  /* ===== 主色：纯黑 ===== */
+  /* ===== 涓昏壊锛氱函榛?===== */
   --color-primary: #1a1a1a;
   --color-primary-hover: #333333;
   --color-primary-light: rgba(26, 26, 26, 0.08);
   --color-primary-lighter: rgba(26, 26, 26, 0.04);
   --color-primary-dark: #000000;
 
-  /* ===== 中性灰阶（10 级） ===== */
+  /* ===== 涓€х伆闃讹紙10 绾э級 ===== */
   --color-gray-50:  #fafafa;
   --color-gray-100: #f5f5f5;
   --color-gray-200: #e5e5e5;
@@ -247,39 +247,39 @@
   --color-gray-800: #262626;
   --color-gray-900: #171717;
 
-  /* ===== 文字颜色 ===== */
+  /* ===== 鏂囧瓧棰滆壊 ===== */
   --text-primary:   #171717;
   --text-secondary:  #525252;
   --text-tertiary:   #737373;
   --text-muted:      #a3a3a3;
   --text-inverted:   #ffffff;
 
-  /* ===== 背景颜色 ===== */
+  /* ===== 鑳屾櫙棰滆壊 ===== */
   --bg-primary:   #ffffff;
   --bg-secondary: #fafafa;
   --bg-tertiary:  #f5f5f5;
 
-  /* ===== 边框颜色 ===== */
+  /* ===== 杈规棰滆壊 ===== */
   --border-color:       #e5e5e5;
   --border-color-light: #f0f0f0;
   --border-color-dark:  #d4d4d4;
 
-  /* ===== 语义色（保留但降低饱和度） ===== */
+  /* ===== 璇箟鑹诧紙淇濈暀浣嗛檷浣庨ケ鍜屽害锛?===== */
   --color-success:    #16a34a;
   --color-success-bg: #f0fdf4;
   --color-warning:    #ca8a04;
   --color-warning-bg: #fefce8;
   --color-error:      #dc2626;
   --color-error-bg:   #fef2f2;
-  --color-info:       #525252;   /* 用灰色代替蓝色 */
+  --color-info:       #525252;   /* 鐢ㄧ伆鑹蹭唬鏇胯摑鑹?*/
   --color-info-bg:    #f5f5f5;
 
-  /* ===== 渐变：改为灰度 ===== */
+  /* ===== 娓愬彉锛氭敼涓虹伆搴?===== */
   --gradient-primary: linear-gradient(135deg, #1a1a1a 0%, #404040 100%);
-  --gradient-card:    none;   /* 去掉卡片渐变，用纯白 */
+  --gradient-card:    none;   /* 鍘绘帀鍗＄墖娓愬彉锛岀敤绾櫧 */
   --gradient-header:  linear-gradient(135deg, #1a1a1a 0%, #262626 45%, #333333 100%);
 
-  /* ===== 阴影：纯灰色 ===== */
+  /* ===== 闃村奖锛氱函鐏拌壊 ===== */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.1);
@@ -287,63 +287,63 @@
 }
 ```
 
-**设计规范**  
-| 元素 | 颜色规则 |
+**璁捐瑙勮寖**  
+| 鍏冪礌 | 棰滆壊瑙勫垯 |
 |------|---------|
-| 页面背景 | `#ffffff` 或 `#fafafa` |
-| 卡片/面板 | 纯白 `#ffffff`，1px `#e5e5e5` 边框 |
-| 页面标题 | `#171717`，700 字重 |
-| 正文文字 | `#525252`，400 字重 |
-| 辅助文字 | `#737373` 或 `#a3a3a3` |
-| 主按钮 | 黑底白字 `#1a1a1a` / `#ffffff` |
-| 次要按钮 | 灰色边框 `#e5e5e5`，灰色文字 `#525252` |
-| 链接/强调 | `#1a1a1a` 加下划线 |
-| 分隔线 | `#e5e5e5` |
-| 图片/图表内的颜色 | 保持原有色彩不变（热力图色阶、3D 模型颜色、ECharts 数据配色等） |
+| 椤甸潰鑳屾櫙 | `#ffffff` 鎴?`#fafafa` |
+| 鍗＄墖/闈㈡澘 | 绾櫧 `#ffffff`锛?px `#e5e5e5` 杈规 |
+| 椤甸潰鏍囬 | `#171717`锛?00 瀛楅噸 |
+| 姝ｆ枃鏂囧瓧 | `#525252`锛?00 瀛楅噸 |
+| 杈呭姪鏂囧瓧 | `#737373` 鎴?`#a3a3a3` |
+| 涓绘寜閽?| 榛戝簳鐧藉瓧 `#1a1a1a` / `#ffffff` |
+| 娆¤鎸夐挳 | 鐏拌壊杈规 `#e5e5e5`锛岀伆鑹叉枃瀛?`#525252` |
+| 閾炬帴/寮鸿皟 | `#1a1a1a` 鍔犱笅鍒掔嚎 |
+| 鍒嗛殧绾?| `#e5e5e5` |
+| 鍥剧墖/鍥捐〃鍐呯殑棰滆壊 | 淇濇寔鍘熸湁鑹插僵涓嶅彉锛堢儹鍔涘浘鑹查樁銆?D 妯″瀷棰滆壊銆丒Charts 鏁版嵁閰嶈壊绛夛級 |
 
-**验收标准**  
-- [ ] `design-tokens.css` 中所有非语义色变量均为黑/白/灰色值
-- [ ] 页面整体视觉只呈现黑白灰三色，除图表/热力图/3D模型外无彩色元素
-- [ ] 语义色（成功绿、警告黄、错误红）保留但仅用于状态反馈
+**楠屾敹鏍囧噯**  
+- [ ] `design-tokens.css` 涓墍鏈夐潪璇箟鑹插彉閲忓潎涓洪粦/鐧?鐏拌壊鍊?
+- [ ] 椤甸潰鏁翠綋瑙嗚鍙憟鐜伴粦鐧界伆涓夎壊锛岄櫎鍥捐〃/鐑姏鍥?3D妯″瀷澶栨棤褰╄壊鍏冪礌
+- [ ] 璇箟鑹诧紙鎴愬姛缁裤€佽鍛婇粍銆侀敊璇孩锛変繚鐣欎絾浠呯敤浜庣姸鎬佸弽棣?
 
 ---
 
-#### T05：全站硬编码颜色替换为 CSS 变量
+#### T05锛氬叏绔欑‖缂栫爜棰滆壊鏇挎崲涓?CSS 鍙橀噺
 
-**问题描述**  
-全站超过 150 处硬编码颜色值散布在 scoped style 和内联样式中，必须统一使用 CSS 变量。
+**闂鎻忚堪**  
+鍏ㄧ珯瓒呰繃 150 澶勭‖缂栫爜棰滆壊鍊兼暎甯冨湪 scoped style 鍜屽唴鑱旀牱寮忎腑锛屽繀椤荤粺涓€浣跨敤 CSS 鍙橀噺銆?
 
-**涉及文件清单**  
+**娑夊強鏂囦欢娓呭崟**  
 
-| 文件 | 硬编码颜色数量 | 改动量 |
+| 鏂囦欢 | 纭紪鐮侀鑹叉暟閲?| 鏀瑰姩閲?|
 |------|-------------|-------|
-| `views/AlgorithmValidation.vue` | 60+ | 大 |
-| `views/AcademicAlgorithm.vue` | 50+ | 大 |
-| `views/MpiAlgorithm.vue` | 40+ | 大 |
-| `views/ResearchPortal.vue` | 31 | 中 |
-| `views/MpiHeatmapPro.vue` | 20+ | 中 |
-| `views/GeoMpiStudio.vue` | 15+ | 中 |
-| `components/Scene3DViewer.vue` | 20+ | 中 |
-| `components/InteractiveHeatmap.vue` | 15+ | 中 |
-| `components/MpiHeatmapViewer.vue` | 15+ | 中 |
-| `components/LithologyColumnChart.vue` | 9 | 小 |
-| `style.css` | 30+ | 中 |
-| `layouts/AppLayout.vue` | 15+ | 中 |
-| 其他组件 | ~20 | 小 |
+| `views/AlgorithmValidation.vue` | 60+ | 澶?|
+| `views/AcademicAlgorithm.vue` | 50+ | 澶?|
+| `views/MpiAlgorithm.vue` | 40+ | 澶?|
+| `views/ResearchPortal.vue` | 31 | 涓?|
+| `views/MpiHeatmapPro.vue` | 20+ | 涓?|
+| `views/GeoMpiStudio.vue` | 15+ | 涓?|
+| `components/Scene3DViewer.vue` | 20+ | 涓?|
+| `components/InteractiveHeatmap.vue` | 15+ | 涓?|
+| `components/MpiHeatmapViewer.vue` | 15+ | 涓?|
+| `components/LithologyColumnChart.vue` | 9 | 灏?|
+| `style.css` | 30+ | 涓?|
+| `layouts/AppLayout.vue` | 15+ | 涓?|
+| 鍏朵粬缁勪欢 | ~20 | 灏?|
 
-**修改方案**  
-1. 建立颜色值 → CSS 变量的**映射对照表**
-2. 使用全局搜索替换，按文件逐一处理
-3. **例外规则**：以下颜色允许保留硬编码值：
-   - 热力图色阶数组（`odiPalette`、`viridis` 等函数式颜色，在 JS 运行时使用）
-   - ECharts 配置中的数据颜色
-   - Canvas 绑定的颜色（如 `ctx.fillStyle`）
-   - 岩性图例固定色（`LithologyColumnChart.vue` 的岩性识别色）
-4. CSS 中的颜色**全部替换**为变量引用
+**淇敼鏂规**  
+1. 寤虹珛棰滆壊鍊?鈫?CSS 鍙橀噺鐨?*鏄犲皠瀵圭収琛?*
+2. 浣跨敤鍏ㄥ眬鎼滅储鏇挎崲锛屾寜鏂囦欢閫愪竴澶勭悊
+3. **渚嬪瑙勫垯**锛氫互涓嬮鑹插厑璁镐繚鐣欑‖缂栫爜鍊硷細
+   - 鐑姏鍥捐壊闃舵暟缁勶紙`odiPalette`銆乣viridis` 绛夊嚱鏁板紡棰滆壊锛屽湪 JS 杩愯鏃朵娇鐢級
+   - ECharts 閰嶇疆涓殑鏁版嵁棰滆壊
+   - Canvas 缁戝畾鐨勯鑹诧紙濡?`ctx.fillStyle`锛?
+   - 宀╂€у浘渚嬪浐瀹氳壊锛坄LithologyColumnChart.vue` 鐨勫博鎬ц瘑鍒壊锛?
+4. CSS 涓殑棰滆壊**鍏ㄩ儴鏇挎崲**涓哄彉閲忓紩鐢?
 
-**映射规则示例**  
+**鏄犲皠瑙勫垯绀轰緥**  
 
-| 硬编码值 | 替换为 |
+| 纭紪鐮佸€?| 鏇挎崲涓?|
 |---------|--------|
 | `#ffffff` / `#fff` | `var(--bg-primary)` |
 | `#f8fafc` / `#fafafa` | `var(--bg-secondary)` |
@@ -353,23 +353,23 @@
 | `#64748b` / `#737373` | `var(--text-tertiary)` |
 | `#e2e8f0` / `#e5e5e5` | `var(--border-color)` |
 | `#cbd5e1` / `#d4d4d4` | `var(--border-color-dark)` |
-| `#0f766e` (旧主色) | `var(--color-primary)` |
+| `#0f766e` (鏃т富鑹? | `var(--color-primary)` |
 
-**验收标准**  
-- [ ] 全站 CSS/scoped style 中不再出现非白名单的硬编码颜色值
-- [ ] `grep -rn "#[0-9a-fA-F]" --include="*.vue" --include="*.css"` 输出中，除白名单文件/行外无匹配
-- [ ] 修改 `design-tokens.css` 中的主色变量后，全站颜色同步变化
+**楠屾敹鏍囧噯**  
+- [ ] 鍏ㄧ珯 CSS/scoped style 涓笉鍐嶅嚭鐜伴潪鐧藉悕鍗曠殑纭紪鐮侀鑹插€?
+- [ ] `grep -rn "#[0-9a-fA-F]" --include="*.vue" --include="*.css"` 杈撳嚭涓紝闄ょ櫧鍚嶅崟鏂囦欢/琛屽鏃犲尮閰?
+- [ ] 淇敼 `design-tokens.css` 涓殑涓昏壊鍙橀噺鍚庯紝鍏ㄧ珯棰滆壊鍚屾鍙樺寲
 
 ---
 
-#### T06：阴影与渐变去色
+#### T06锛氶槾褰变笌娓愬彉鍘昏壊
 
-**问题描述**  
-当前阴影带有绿色色偏 `rgba(15, 118, 110, ...)`，渐变使用 Teal-Cyan 彩色，与黑白灰主题不符。
+**闂鎻忚堪**  
+褰撳墠闃村奖甯︽湁缁胯壊鑹插亸 `rgba(15, 118, 110, ...)`锛屾笎鍙樹娇鐢?Teal-Cyan 褰╄壊锛屼笌榛戠櫧鐏颁富棰樹笉绗︺€?
 
-**修改方案**  
+**淇敼鏂规**  
 
-1. **阴影**：`style.css` 中所有阴影改为纯灰色
+1. **闃村奖**锛歚style.css` 涓墍鏈夐槾褰辨敼涓虹函鐏拌壊
    ```css
    /* Before */
    --shadow-sm: 0 1px 3px rgba(15, 118, 110, 0.08);
@@ -377,17 +377,17 @@
    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
    ```
 
-2. **渐变**：去除所有彩色渐变
+2. **娓愬彉**锛氬幓闄ゆ墍鏈夊僵鑹叉笎鍙?
    ```css
    /* Before */
    --gradient-card: linear-gradient(145deg, #ffffff 0%, #f3f7f6 100%);
-   /* After - 去除渐变或改为纯灰 */
+   /* After - 鍘婚櫎娓愬彉鎴栨敼涓虹函鐏?*/
    --gradient-card: none;
    ```
 
-3. **Hover 光晕**：`--shadow-glow`、`--shadow-glow-sm` 改为无色或删除
+3. **Hover 鍏夋檿**锛歚--shadow-glow`銆乣--shadow-glow-sm` 鏀逛负鏃犺壊鎴栧垹闄?
 
-4. **AppLayout 背景渐变**：
+4. **AppLayout 鑳屾櫙娓愬彉**锛?
    ```css
    /* Before */
    background: radial-gradient(circle at 18% 12%, rgba(15, 118, 110, 0.12) ...);
@@ -395,7 +395,7 @@
    background: #fafafa;
    ```
 
-5. **滚动条 hover 色**：
+5. **婊氬姩鏉?hover 鑹?*锛?
    ```css
    /* Before */
    *::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #0f766e ...); }
@@ -403,38 +403,38 @@
    *::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
    ```
 
-**验收标准**  
-- [ ] 所有阴影为纯灰色（`rgba(0,0,0,...)` 或 `rgba(23,23,23,...)`）
-- [ ] 页面背景、卡片背景无彩色渐变
-- [ ] 滚动条 hover 时为灰色
+**楠屾敹鏍囧噯**  
+- [ ] 鎵€鏈夐槾褰变负绾伆鑹诧紙`rgba(0,0,0,...)` 鎴?`rgba(23,23,23,...)`锛?
+- [ ] 椤甸潰鑳屾櫙銆佸崱鐗囪儗鏅棤褰╄壊娓愬彉
+- [ ] 婊氬姩鏉?hover 鏃朵负鐏拌壊
 
 ---
 
-### P2 — 全站中文化 + 中英文切换
+### P2 鈥?鍏ㄧ珯涓枃鍖?+ 涓嫳鏂囧垏鎹?
 
 ---
 
-#### T07：构建 i18n 国际化基础架构
+#### T07锛氭瀯寤?i18n 鍥介檯鍖栧熀纭€鏋舵瀯
 
-**问题描述**  
-当前无国际化机制，中英文文本直接硬编码在模板中。需要建立轻量化 i18n 架构以支持中英文切换。
+**闂鎻忚堪**  
+褰撳墠鏃犲浗闄呭寲鏈哄埗锛屼腑鑻辨枃鏂囨湰鐩存帴纭紪鐮佸湪妯℃澘涓€傞渶瑕佸缓绔嬭交閲忓寲 i18n 鏋舵瀯浠ユ敮鎸佷腑鑻辨枃鍒囨崲銆?
 
-**修改方案**  
+**淇敼鏂规**  
 
-**方案选型**：不引入 `vue-i18n` 重型库，自研基于 Pinia 的轻量方案（项目只需中英双语，避免引入额外依赖）。
+**鏂规閫夊瀷**锛氫笉寮曞叆 `vue-i18n` 閲嶅瀷搴擄紝鑷爺鍩轰簬 Pinia 鐨勮交閲忔柟妗堬紙椤圭洰鍙渶涓嫳鍙岃锛岄伩鍏嶅紩鍏ラ澶栦緷璧栵級銆?
 
-1. **创建语言包目录**：
+1. **鍒涘缓璇█鍖呯洰褰?*锛?
    ```
    src/
      locales/
-       zh-CN.js    ← 中文语言包（默认）
-       en-US.js    ← 英文语言包
-       index.js    ← 导出与工具函数
+       zh-CN.js    鈫?涓枃璇█鍖咃紙榛樿锛?
+       en-US.js    鈫?鑻辨枃璇█鍖?
+       index.js    鈫?瀵煎嚭涓庡伐鍏峰嚱鏁?
    ```
 
-2. **创建语言 Store**：`src/stores/useLocaleStore.js`
+2. **鍒涘缓璇█ Store**锛歚src/stores/useLocaleStore.js`
    ```javascript
-   // 存储当前语言偏好，持久化到 localStorage
+   // 瀛樺偍褰撳墠璇█鍋忓ソ锛屾寔涔呭寲鍒?localStorage
    export const useLocaleStore = defineStore('locale', {
      state: () => ({
        locale: localStorage.getItem('locale') || 'zh-CN'
@@ -448,7 +448,7 @@
    })
    ```
 
-3. **创建 `useI18n` composable**：
+3. **鍒涘缓 `useI18n` composable**锛?
    ```javascript
    export function useI18n() {
      const localeStore = useLocaleStore()
@@ -460,254 +460,254 @@
    }
    ```
 
-4. **语言包结构示例**：
+4. **璇█鍖呯粨鏋勭ず渚?*锛?
    ```javascript
    // zh-CN.js
    export default {
      common: {
-       loading: '加载中...',
-       save: '保存',
-       cancel: '取消',
-       confirm: '确认',
-       export: '导出',
-       reset: '重置',
-       search: '搜索',
-       noData: '暂无数据',
+       loading: '鍔犺浇涓?..',
+       save: '淇濆瓨',
+       cancel: '鍙栨秷',
+       confirm: '纭',
+       export: '瀵煎嚭',
+       reset: '閲嶇疆',
+       search: '鎼滅储',
+       noData: '鏆傛棤鏁版嵁',
      },
      nav: {
-       dataImport: '数据导入',
-       interpolation: '插值分析',
-       mpiHeatmap: 'MPI 数值模拟',
-       academicAlgorithm: '新算法原理',
-       algorithmValidation: '新算法实证',
-       researchWorkbench: '科研工作台',
-       geoMpiStudio: '空间实验室',
-       steps: '来压步距',
-       report: '结果报告',
+       dataImport: '鏁版嵁瀵煎叆',
+       interpolation: '鎻掑€煎垎鏋?,
+       mpiHeatmap: 'MPI 鏁板€兼ā鎷?,
+       academicAlgorithm: '鏂扮畻娉曞師鐞?,
+       algorithmValidation: '鏂扮畻娉曞疄璇?,
+       researchWorkbench: '绉戠爺宸ヤ綔鍙?,
+       geoMpiStudio: '绌洪棿瀹為獙瀹?,
+       steps: '鏉ュ帇姝ヨ窛',
+       report: '缁撴灉鎶ュ憡',
      },
      geoMpiStudio: {
-       title: '地质-MPI 空间实验室',
-       subtitle: '地质模型与 MPI 空间联动分析',
-       description: '一屏联动地质模型、MPI 及三大子指标（RSI/BRI/ASI），支持基线、地质感知、差异对比三种模式。',
-       controlPanel: '控制面板',
-       seam: '煤层',
-       geomodelJobId: '地质建模任务 ID',
-       resolution: '分辨率',
-       method: '插值方法',
-       mode: '分析模式',
-       baseline: '基线模式',
-       geoAware: '地质感知',
-       delta: '差异对比',
-       runAnalysis: '运行空间分析',
-       refreshing: '分析中...',
-       exportSnapshot: '导出快照',
-       metricMatrix: '2×2 指标矩阵',
-       linkage3d: '三维联动与可解释性',
+       title: '鍦拌川-MPI 绌洪棿瀹為獙瀹?,
+       subtitle: '鍦拌川妯″瀷涓?MPI 绌洪棿鑱斿姩鍒嗘瀽',
+       description: '涓€灞忚仈鍔ㄥ湴璐ㄦā鍨嬨€丮PI 鍙婁笁澶у瓙鎸囨爣锛圧SI/BRI/ASI锛夛紝鏀寔鍩虹嚎銆佸湴璐ㄦ劅鐭ャ€佸樊寮傚姣斾笁绉嶆ā寮忋€?,
+       controlPanel: '鎺у埗闈㈡澘',
+       seam: '鐓ゅ眰',
+       geomodelJobId: '鍦拌川寤烘ā浠诲姟 ID',
+       resolution: '鍒嗚鲸鐜?,
+       method: '鎻掑€兼柟娉?,
+       mode: '鍒嗘瀽妯″紡',
+       baseline: '鍩虹嚎妯″紡',
+       geoAware: '鍦拌川鎰熺煡',
+       delta: '宸紓瀵规瘮',
+       runAnalysis: '杩愯绌洪棿鍒嗘瀽',
+       refreshing: '鍒嗘瀽涓?..',
+       exportSnapshot: '瀵煎嚭蹇収',
+       metricMatrix: '2脳2 鎸囨爣鐭╅樀',
+       linkage3d: '涓夌淮鑱斿姩涓庡彲瑙ｉ噴鎬?,
      },
-     // ... 其余页面
+     // ... 鍏朵綑椤甸潰
    }
    ```
 
-5. **在 AppLayout 添加语言切换按钮**：侧边栏底部放置中/EN 切换按钮
+5. **鍦?AppLayout 娣诲姞璇█鍒囨崲鎸夐挳**锛氫晶杈规爮搴曢儴鏀剧疆涓?EN 鍒囨崲鎸夐挳
 
-**验收标准**  
-- [ ] `src/locales/` 下有完整的 `zh-CN.js` 和 `en-US.js` 语言包
-- [ ] `useI18n()` composable 可在任意组件中使用
-- [ ] 语言偏好持久化到 `localStorage`
-- [ ] 语言切换按钮在侧边栏底部可见并可操作
+**楠屾敹鏍囧噯**  
+- [ ] `src/locales/` 涓嬫湁瀹屾暣鐨?`zh-CN.js` 鍜?`en-US.js` 璇█鍖?
+- [ ] `useI18n()` composable 鍙湪浠绘剰缁勪欢涓娇鐢?
+- [ ] 璇█鍋忓ソ鎸佷箙鍖栧埌 `localStorage`
+- [ ] 璇█鍒囨崲鎸夐挳鍦ㄤ晶杈规爮搴曢儴鍙骞跺彲鎿嶄綔
 
 ---
 
-#### T08：GeoMpiStudio.vue 全文中文化
+#### T08锛欸eoMpiStudio.vue 鍏ㄦ枃涓枃鍖?
 
-**问题描述**  
-`GeoMpiStudio.vue` 是全英文页面，包括标题（"Geo-MPI Studio"）、描述文本、控制面板标签（Seam、Method、Mode、Resolution 等）、按钮（Run Spatial Analysis、Export Snapshot）、标签页（Baseline、Geo-aware、Delta）等。
+**闂鎻忚堪**  
+`GeoMpiStudio.vue` 鏄叏鑻辨枃椤甸潰锛屽寘鎷爣棰橈紙"Geo-MPI Studio"锛夈€佹弿杩版枃鏈€佹帶鍒堕潰鏉挎爣绛撅紙Seam銆丮ethod銆丮ode銆丷esolution 绛夛級銆佹寜閽紙Run Spatial Analysis銆丒xport Snapshot锛夈€佹爣绛鹃〉锛圔aseline銆丟eo-aware銆丏elta锛夌瓑銆?
 
-**修改方案**  
-1. 将所有模板中的英文字面量替换为 `{{ t('geoMpiStudio.xxx') }}`
-2. 在 `zh-CN.js` 和 `en-US.js` 中添加对应翻译键值
-3. 技术专有名词保留英文缩写但附加中文解释：如 `IDW（反距离加权）`
+**淇敼鏂规**  
+1. 灏嗘墍鏈夋ā鏉夸腑鐨勮嫳鏂囧瓧闈㈤噺鏇挎崲涓?`{{ t('geoMpiStudio.xxx') }}`
+2. 鍦?`zh-CN.js` 鍜?`en-US.js` 涓坊鍔犲搴旂炕璇戦敭鍊?
+3. 鎶€鏈笓鏈夊悕璇嶄繚鐣欒嫳鏂囩缉鍐欎絾闄勫姞涓枃瑙ｉ噴锛氬 `IDW锛堝弽璺濈鍔犳潈锛塦
 
-**完整翻译对照表**  
+**瀹屾暣缈昏瘧瀵圭収琛?*  
 
-| 英文原文 | 中文翻译 |
+| 鑻辨枃鍘熸枃 | 涓枃缈昏瘧 |
 |---------|---------|
-| Geo-MPI Studio | 地质-MPI 空间实验室 |
-| Geology and MPI Spatial Studio | 地质模型与 MPI 空间联动分析平台 |
-| One-screen linkage for Geomodel, MPI... | 一屏联动地质模型、MPI 及三大子指标... |
-| Run Spatial Analysis | 运行空间分析 |
-| Refreshing... | 分析中... |
-| Export Snapshot | 导出快照 |
-| Control Panel | 控制面板 |
-| Seam | 煤层 |
-| Geomodel Job ID | 地质建模任务 ID |
-| e.g. gm_20260212_xxx | 如：gm_20260212_xxx |
-| Resolution | 分辨率 |
-| Method | 插值方法 |
-| IDW / Linear / Nearest | 反距离加权 / 线性 / 最近邻 |
-| Mode | 分析模式 |
-| Baseline | 基线模式 |
-| Geo-aware | 地质感知 |
-| Delta | 差异对比 |
-| 2 x 2 Metric Matrix | 2×2 指标矩阵 |
-| MPI / RSI / BRI / ASI | MPI / RSI / BRI / ASI（保留缩写） |
-| 3D Linkage and Explainability | 三维联动与可解释性分析 |
+| Geo-MPI Studio | 鍦拌川-MPI 绌洪棿瀹為獙瀹?|
+| Geology and MPI Spatial Studio | 鍦拌川妯″瀷涓?MPI 绌洪棿鑱斿姩鍒嗘瀽骞冲彴 |
+| One-screen linkage for Geomodel, MPI... | 涓€灞忚仈鍔ㄥ湴璐ㄦā鍨嬨€丮PI 鍙婁笁澶у瓙鎸囨爣... |
+| Run Spatial Analysis | 杩愯绌洪棿鍒嗘瀽 |
+| Refreshing... | 鍒嗘瀽涓?.. |
+| Export Snapshot | 瀵煎嚭蹇収 |
+| Control Panel | 鎺у埗闈㈡澘 |
+| Seam | 鐓ゅ眰 |
+| Geomodel Job ID | 鍦拌川寤烘ā浠诲姟 ID |
+| e.g. gm_20260212_xxx | 濡傦細gm_20260212_xxx |
+| Resolution | 鍒嗚鲸鐜?|
+| Method | 鎻掑€兼柟娉?|
+| IDW / Linear / Nearest | 鍙嶈窛绂诲姞鏉?/ 绾挎€?/ 鏈€杩戦偦 |
+| Mode | 鍒嗘瀽妯″紡 |
+| Baseline | 鍩虹嚎妯″紡 |
+| Geo-aware | 鍦拌川鎰熺煡 |
+| Delta | 宸紓瀵规瘮 |
+| 2 x 2 Metric Matrix | 2脳2 鎸囨爣鐭╅樀 |
+| MPI / RSI / BRI / ASI | MPI / RSI / BRI / ASI锛堜繚鐣欑缉鍐欙級 |
+| 3D Linkage and Explainability | 涓夌淮鑱斿姩涓庡彲瑙ｉ噴鎬у垎鏋?|
 
-**验收标准**  
-- [ ] 默认语言（中文）下，页面无英文 UI 文本（专业缩写除外）
-- [ ] 切换英文后，页面正确显示英文
-- [ ] 所有 placeholder、tooltip、按钮文字均已国际化
+**楠屾敹鏍囧噯**  
+- [ ] 榛樿璇█锛堜腑鏂囷級涓嬶紝椤甸潰鏃犺嫳鏂?UI 鏂囨湰锛堜笓涓氱缉鍐欓櫎澶栵級
+- [ ] 鍒囨崲鑻辨枃鍚庯紝椤甸潰姝ｇ‘鏄剧ず鑻辨枃
+- [ ] 鎵€鏈?placeholder銆乼ooltip銆佹寜閽枃瀛楀潎宸插浗闄呭寲
 
 ---
 
-#### T09：ResearchPortal.vue 全文中文化
+#### T09锛歊esearchPortal.vue 鍏ㄦ枃涓枃鍖?
 
-**问题描述**  
-`ResearchPortal.vue` 页面标题、统计卡片、表头、状态标签等大量英文。
+**闂鎻忚堪**  
+`ResearchPortal.vue` 椤甸潰鏍囬銆佺粺璁″崱鐗囥€佽〃澶淬€佺姸鎬佹爣绛剧瓑澶ч噺鑻辨枃銆?
 
-**完整翻译对照表**  
+**瀹屾暣缈昏瘧瀵圭収琛?*  
 
-| 英文原文 | 中文翻译 |
+| 鑻辨枃鍘熸枃 | 涓枃缈昏瘧 |
 |---------|---------|
-| RESEARCH FRONTEND | 科研前端 |
-| MPI Research Portal | MPI 科研门户 |
-| Paper Drafts | 论文草稿 |
-| Gate Pass | 质量关卡 |
-| Last Sync | 最后同步 |
-| Quick Actions | 快捷操作 |
-| 12-Month Track | 12 个月追踪 |
-| Experiment Leaderboard | 实验排行榜 |
-| Top Runs | 最佳运行 |
-| exp_id / model / value / action | 实验 ID / 模型 / 数值 / 操作 |
-| Model Summary | 模型汇总 |
-| count / datasets / mean / best | 次数 / 数据集 / 均值 / 最优 |
-| Manuscripts & Gate Reports | 论文与质量关卡报告 |
-| Gates PASS / Gates BLOCKED | 已通过 / 未通过 |
-| Asset / Status / Updated / Action | 资源 / 状态 / 更新时间 / 操作 |
-| ready / missing | 就绪 / 缺失 |
+| RESEARCH FRONTEND | 绉戠爺鍓嶇 |
+| MPI Research Portal | MPI 绉戠爺闂ㄦ埛 |
+| Paper Drafts | 璁烘枃鑽夌 |
+| Gate Pass | 璐ㄩ噺鍏冲崱 |
+| Last Sync | 鏈€鍚庡悓姝?|
+| Quick Actions | 蹇嵎鎿嶄綔 |
+| 12-Month Track | 12 涓湀杩借釜 |
+| Experiment Leaderboard | 瀹為獙鎺掕姒?|
+| Top Runs | 鏈€浣宠繍琛?|
+| exp_id / model / value / action | 瀹為獙 ID / 妯″瀷 / 鏁板€?/ 鎿嶄綔 |
+| Model Summary | 妯″瀷姹囨€?|
+| count / datasets / mean / best | 娆℃暟 / 鏁版嵁闆?/ 鍧囧€?/ 鏈€浼?|
+| Manuscripts & Gate Reports | 璁烘枃涓庤川閲忓叧鍗℃姤鍛?|
+| Gates PASS / Gates BLOCKED | 宸查€氳繃 / 鏈€氳繃 |
+| Asset / Status / Updated / Action | 璧勬簮 / 鐘舵€?/ 鏇存柊鏃堕棿 / 鎿嶄綔 |
+| ready / missing | 灏辩华 / 缂哄け |
 
-**验收标准**  
-- [ ] 默认语言下页面无英文 UI  
-- [ ] 表头、状态标签、统计卡片全部中文化
-- [ ] i18n 键值完整，英文包对应正确
-
----
-
-#### T10：ResearchWorkbench.vue 中文化
-
-**问题描述**  
-`ResearchWorkbench.vue` 的表单标签（dataset_id、split_id 等）、表头、区块标题使用英文下划线命名。
-
-**修改方案**  
-1. 表单标签（`dataset_id` → `数据集 ID`、`label_column` → `标签列`、`train_ratio` → `训练集比例` 等）
-2. 表头（`experiment_name` → `实验名称`、`model_type` → `模型类型` 等）
-3. 区块标题（`Traceability` → `可追溯性`、`Artifacts` → `产物文件` 等）
-4. 保留 API 字段名不变（仅 UI 显示文本做翻译）
-
-**验收标准**  
-- [ ] 所有表单 label 显示中文
-- [ ] 所有表头显示中文
-- [ ] API 请求参数名不受影响
+**楠屾敹鏍囧噯**  
+- [ ] 榛樿璇█涓嬮〉闈㈡棤鑻辨枃 UI  
+- [ ] 琛ㄥご銆佺姸鎬佹爣绛俱€佺粺璁″崱鐗囧叏閮ㄤ腑鏂囧寲
+- [ ] i18n 閿€煎畬鏁达紝鑻辨枃鍖呭搴旀纭?
 
 ---
 
-#### T11：AcademicAlgorithm.vue 中文化
+#### T10锛歊esearchWorkbench.vue 涓枃鍖?
 
-**问题描述**  
-科学图 Figure 标题、坐标轴标签、图例为英文。部分学术术语需中英对照处理。
+**闂鎻忚堪**  
+`ResearchWorkbench.vue` 鐨勮〃鍗曟爣绛撅紙dataset_id銆乻plit_id 绛夛級銆佽〃澶淬€佸尯鍧楁爣棰樹娇鐢ㄨ嫳鏂囦笅鍒掔嚎鍛藉悕銆?
 
-**修改方案**  
-1. Figure 标题改为中文：`Fig. 1 | Phase-field fracture evolution` → `图 1 | 相场断裂演化过程`
-2. 坐标轴标签：`Burial Depth H (m)` → `埋深 H (m)`、`BRI` 保留缩写
-3. 图例文字：`Low Risk` → `低风险`、`High Risk` → `高风险`
-4. 机制名称中英对照：`Isotropic（各向同性）`、`Double-Couple（双力偶）`
-5. 主标题：`Academic Algorithm Demonstration Platform` → `学术算法演示平台`
+**淇敼鏂规**  
+1. 琛ㄥ崟鏍囩锛坄dataset_id` 鈫?`鏁版嵁闆?ID`銆乣label_column` 鈫?`鏍囩鍒梎銆乣train_ratio` 鈫?`璁粌闆嗘瘮渚媊 绛夛級
+2. 琛ㄥご锛坄experiment_name` 鈫?`瀹為獙鍚嶇О`銆乣model_type` 鈫?`妯″瀷绫诲瀷` 绛夛級
+3. 鍖哄潡鏍囬锛坄Traceability` 鈫?`鍙拷婧€銆乣Artifacts` 鈫?`浜х墿鏂囦欢` 绛夛級
+4. 淇濈暀 API 瀛楁鍚嶄笉鍙橈紙浠?UI 鏄剧ず鏂囨湰鍋氱炕璇戯級
 
-**验收标准**  
-- [ ] 所有 Figure 标题使用中文（学术缩写保留英文附加中文）
-- [ ] 坐标轴标签中文化（单位保留英文如 m、MPa）
-- [ ] 图例可切换中英文
+**楠屾敹鏍囧噯**  
+- [ ] 鎵€鏈夎〃鍗?label 鏄剧ず涓枃
+- [ ] 鎵€鏈夎〃澶存樉绀轰腑鏂?
+- [ ] API 璇锋眰鍙傛暟鍚嶄笉鍙楀奖鍝?
 
 ---
 
-#### T12：其他页面零散英文中文化
+#### T11锛欰cademicAlgorithm.vue 涓枃鍖?
 
-**涉及文件与修改项**  
+**闂鎻忚堪**  
+绉戝鍥?Figure 鏍囬銆佸潗鏍囪酱鏍囩銆佸浘渚嬩负鑻辨枃銆傞儴鍒嗗鏈湳璇渶涓嫳瀵圭収澶勭悊銆?
 
-| 文件 | 英文内容 | 中文替换 |
+**淇敼鏂规**  
+1. Figure 鏍囬鏀逛负涓枃锛歚Fig. 1 | Phase-field fracture evolution` 鈫?`鍥?1 | 鐩稿満鏂婕斿寲杩囩▼`
+2. 鍧愭爣杞存爣绛撅細`Burial Depth H (m)` 鈫?`鍩嬫繁 H (m)`銆乣BRI` 淇濈暀缂╁啓
+3. 鍥句緥鏂囧瓧锛歚Low Risk` 鈫?`浣庨闄ー銆乣High Risk` 鈫?`楂橀闄ー
+4. 鏈哄埗鍚嶇О涓嫳瀵圭収锛歚Isotropic锛堝悇鍚戝悓鎬э級`銆乣Double-Couple锛堝弻鍔涘伓锛塦
+5. 涓绘爣棰橈細`Academic Algorithm Demonstration Platform` 鈫?`瀛︽湳绠楁硶婕旂ず骞冲彴`
+
+**楠屾敹鏍囧噯**  
+- [ ] 鎵€鏈?Figure 鏍囬浣跨敤涓枃锛堝鏈缉鍐欎繚鐣欒嫳鏂囬檮鍔犱腑鏂囷級
+- [ ] 鍧愭爣杞存爣绛句腑鏂囧寲锛堝崟浣嶄繚鐣欒嫳鏂囧 m銆丮Pa锛?
+- [ ] 鍥句緥鍙垏鎹腑鑻辨枃
+
+---
+
+#### T12锛氬叾浠栭〉闈㈤浂鏁ｈ嫳鏂囦腑鏂囧寲
+
+**娑夊強鏂囦欢涓庝慨鏀归」**  
+
+| 鏂囦欢 | 鑻辨枃鍐呭 | 涓枃鏇挎崲 |
 |------|---------|---------|
-| `AlgorithmValidation.vue` | "Geology-aware 对照" | "地质感知对照" |
-| `AlgorithmValidation.vue` | SVG 内 `基线 MPI`（已中文，保留） | — |
-| `Report.vue` | Min / Max / Std / P50 | 最小值 / 最大值 / 标准差 / 中位数 |
-| `Report.vue` | Best AUC / Best Brier | 最佳 AUC / 最佳 Brier |
-| `Scene3DPage.vue` | "3D Workspace" | "三维工作空间" |
-| `GeomodelVisualization.vue` | "Geological Modeling & Visualization" | "地质建模与可视化" |
-| `Steps.vue` | IDW / Linear / Nearest | 反距离加权 / 线性 / 最近邻 |
-| `PressureIndex.vue` | Kriging / IDW / Linear / Nearest | 克里金 / 反距离加权 / 线性 / 最近邻 |
-| `MpiHeatmap.vue` | IDW / Linear / Nearest / "Canvas" | 反距离加权 / 线性 / 最近邻 / 画布模式 |
-| `DataImport.vue` | 检查是否有英文残留 | 全部中文化 |
+| `AlgorithmValidation.vue` | "Geology-aware 瀵圭収" | "鍦拌川鎰熺煡瀵圭収" |
+| `AlgorithmValidation.vue` | SVG 鍐?`鍩虹嚎 MPI`锛堝凡涓枃锛屼繚鐣欙級 | 鈥?|
+| `Report.vue` | Min / Max / Std / P50 | 鏈€灏忓€?/ 鏈€澶у€?/ 鏍囧噯宸?/ 涓綅鏁?|
+| `Report.vue` | Best AUC / Best Brier | 鏈€浣?AUC / 鏈€浣?Brier |
+| `Scene3DPage.vue` | "3D Workspace" | "涓夌淮宸ヤ綔绌洪棿" |
+| `GeomodelVisualization.vue` | "Geological Modeling & Visualization" | "鍦拌川寤烘ā涓庡彲瑙嗗寲" |
+| `Steps.vue` | IDW / Linear / Nearest | 鍙嶈窛绂诲姞鏉?/ 绾挎€?/ 鏈€杩戦偦 |
+| `PressureIndex.vue` | Kriging / IDW / Linear / Nearest | 鍏嬮噷閲?/ 鍙嶈窛绂诲姞鏉?/ 绾挎€?/ 鏈€杩戦偦 |
+| `MpiHeatmap.vue` | IDW / Linear / Nearest / "Canvas" | 鍙嶈窛绂诲姞鏉?/ 绾挎€?/ 鏈€杩戦偦 / 鐢诲竷妯″紡 |
+| `DataImport.vue` | 妫€鏌ユ槸鍚︽湁鑻辨枃娈嬬暀 | 鍏ㄩ儴涓枃鍖?|
 
-**验收标准**  
-- [ ] 以上所有文件的 UI 文本默认为中文
-- [ ] 专业术语统一格式：`克里金（Kriging）`
-- [ ] `grep -rn "TODO\|FIXME" --include="*.vue"` 无遗留翻译标记
+**楠屾敹鏍囧噯**  
+- [ ] 浠ヤ笂鎵€鏈夋枃浠剁殑 UI 鏂囨湰榛樿涓轰腑鏂?
+- [ ] 涓撲笟鏈缁熶竴鏍煎紡锛歚鍏嬮噷閲戯紙Kriging锛塦
+- [ ] `grep -rn "TODO\|FIXME" --include="*.vue"` 鏃犻仐鐣欑炕璇戞爣璁?
 
 ---
 
-#### T13：中英文切换功能实现
+#### T13锛氫腑鑻辨枃鍒囨崲鍔熻兘瀹炵幇
 
-**问题描述**  
-用户需要一个全局中英文切换选项，默认中文，可切换为英文。
+**闂鎻忚堪**  
+鐢ㄦ埛闇€瑕佷竴涓叏灞€涓嫳鏂囧垏鎹㈤€夐」锛岄粯璁や腑鏂囷紝鍙垏鎹负鑻辨枃銆?
 
-**修改方案**  
+**淇敼鏂规**  
 
-1. **切换入口 UI**：在 `AppLayout.vue` 侧边栏底部添加语言切换按钮
+1. **鍒囨崲鍏ュ彛 UI**锛氬湪 `AppLayout.vue` 渚ц竟鏍忓簳閮ㄦ坊鍔犺瑷€鍒囨崲鎸夐挳
    ```html
    <button class="lang-switch" @click="toggleLocale">
-     {{ locale === 'zh-CN' ? 'EN' : '中' }}
+     {{ locale === 'zh-CN' ? 'EN' : '涓? }}
    </button>
    ```
 
-2. **实现逻辑**：
-   - 使用 `useLocaleStore` 管理语言状态
-   - 切换时自动更新 `document.documentElement.lang` 属性
-   - 路由 `meta.title` 支持对象格式 `{ 'zh-CN': '数据导入', 'en-US': 'Data Import' }`
+2. **瀹炵幇閫昏緫**锛?
+   - 浣跨敤 `useLocaleStore` 绠＄悊璇█鐘舵€?
+   - 鍒囨崲鏃惰嚜鍔ㄦ洿鏂?`document.documentElement.lang` 灞炴€?
+   - 璺敱 `meta.title` 鏀寔瀵硅薄鏍煎紡 `{ 'zh-CN': '鏁版嵁瀵煎叆', 'en-US': 'Data Import' }`
 
-3. **切换范围**：
-   - 导航标题 ✅
-   - 页面标题与描述 ✅
-   - 表单标签/placeholder ✅
-   - 按钮文字 ✅
-   - 状态消息/Toast ✅
-   - 表头 ✅
-   - 错误提示 ✅
-   - 科学图中的 Figure 标题 ✅（坐标轴单位保持英文无需切换）
+3. **鍒囨崲鑼冨洿**锛?
+   - 瀵艰埅鏍囬 鉁?
+   - 椤甸潰鏍囬涓庢弿杩?鉁?
+   - 琛ㄥ崟鏍囩/placeholder 鉁?
+   - 鎸夐挳鏂囧瓧 鉁?
+   - 鐘舵€佹秷鎭?Toast 鉁?
+   - 琛ㄥご 鉁?
+   - 閿欒鎻愮ず 鉁?
+   - 绉戝鍥句腑鐨?Figure 鏍囬 鉁咃紙鍧愭爣杞村崟浣嶄繚鎸佽嫳鏂囨棤闇€鍒囨崲锛?
 
-4. **不切换的内容**：
-   - API 字段名
-   - URL 路径
-   - 专业缩写（MPI、RSI、BRI、ASI、AUC 等）
-   - 图表数据标签中的数值
+4. **涓嶅垏鎹㈢殑鍐呭**锛?
+   - API 瀛楁鍚?
+   - URL 璺緞
+   - 涓撲笟缂╁啓锛圡PI銆丷SI銆丅RI銆丄SI銆丄UC 绛夛級
+   - 鍥捐〃鏁版嵁鏍囩涓殑鏁板€?
 
-**验收标准**  
-- [ ] 侧边栏底部有清晰的 中/EN 切换按钮
-- [ ] 点击后全站文本在 200ms 内切换，无页面刷新
-- [ ] 刷新页面后语言偏好保持不变（localStorage 持久化）
-- [ ] 中文和英文下页面排版均无溢出或错位
-
----
-
-### P3 — 布局与排版优化
+**楠屾敹鏍囧噯**  
+- [ ] 渚ц竟鏍忓簳閮ㄦ湁娓呮櫚鐨?涓?EN 鍒囨崲鎸夐挳
+- [ ] 鐐瑰嚮鍚庡叏绔欐枃鏈湪 200ms 鍐呭垏鎹紝鏃犻〉闈㈠埛鏂?
+- [ ] 鍒锋柊椤甸潰鍚庤瑷€鍋忓ソ淇濇寔涓嶅彉锛坙ocalStorage 鎸佷箙鍖栵級
+- [ ] 涓枃鍜岃嫳鏂囦笅椤甸潰鎺掔増鍧囨棤婧㈠嚭鎴栭敊浣?
 
 ---
 
-#### T14：统一页面标题/Header 结构
+### P3 鈥?甯冨眬涓庢帓鐗堜紭鍖?
 
-**问题描述**  
-各页面 header 区域至少有 5 种不同的实现方式，导致视觉不统一。
+---
 
-**修改方案**  
-1. **定义标准 Header 组件**：`components/library/layout/PageHeader.vue`
+#### T14锛氱粺涓€椤甸潰鏍囬/Header 缁撴瀯
+
+**闂鎻忚堪**  
+鍚勯〉闈?header 鍖哄煙鑷冲皯鏈?5 绉嶄笉鍚岀殑瀹炵幇鏂瑰紡锛屽鑷磋瑙変笉缁熶竴銆?
+
+**淇敼鏂规**  
+1. **瀹氫箟鏍囧噯 Header 缁勪欢**锛歚components/library/layout/PageHeader.vue`
    ```vue
    <template>
      <header class="page-header">
@@ -722,29 +722,29 @@
    </template>
    ```
 
-2. **统一 Header 样式规则**：
-   - 标题：24px、700 字重、`--text-primary`
-   - 描述：14px、400 字重、`--text-tertiary`
-   - 背景：去除渐变，使用 `--bg-primary` + 底部 1px 分隔线
-   - 右侧操作区：flex 布局，gap 12px
-   - 内边距：`24px 0`，无侧边 padding（由外层容器控制）
+2. **缁熶竴 Header 鏍峰紡瑙勫垯**锛?
+   - 鏍囬锛?4px銆?00 瀛楅噸銆乣--text-primary`
+   - 鎻忚堪锛?4px銆?00 瀛楅噸銆乣--text-tertiary`
+   - 鑳屾櫙锛氬幓闄ゆ笎鍙橈紝浣跨敤 `--bg-primary` + 搴曢儴 1px 鍒嗛殧绾?
+   - 鍙充晶鎿嶄綔鍖猴細flex 甯冨眬锛実ap 12px
+   - 鍐呰竟璺濓細`24px 0`锛屾棤渚ц竟 padding锛堢敱澶栧眰瀹瑰櫒鎺у埗锛?
 
-3. **逐页替换**：将所有页面的自定义 header 替换为 `<PageHeader>` 组件
+3. **閫愰〉鏇挎崲**锛氬皢鎵€鏈夐〉闈㈢殑鑷畾涔?header 鏇挎崲涓?`<PageHeader>` 缁勪欢
 
-**验收标准**  
-- [ ] 所有页面使用统一的 `<PageHeader>` 组件
-- [ ] Header 视觉风格一致：无渐变、无彩色装饰
-- [ ] 标题/描述颜色使用 CSS 变量
+**楠屾敹鏍囧噯**  
+- [ ] 鎵€鏈夐〉闈娇鐢ㄧ粺涓€鐨?`<PageHeader>` 缁勪欢
+- [ ] Header 瑙嗚椋庢牸涓€鑷达細鏃犳笎鍙樸€佹棤褰╄壊瑁呴グ
+- [ ] 鏍囬/鎻忚堪棰滆壊浣跨敤 CSS 鍙橀噺
 
 ---
 
-#### T15：统一卡片与面板样式
+#### T15锛氱粺涓€鍗＄墖涓庨潰鏉挎牱寮?
 
-**问题描述**  
-部分页面使用全局 `.card` 类，部分自定义 scoped 样式，部分直接写内联样式，导致卡片圆角、阴影、内边距不统一。
+**闂鎻忚堪**  
+閮ㄥ垎椤甸潰浣跨敤鍏ㄥ眬 `.card` 绫伙紝閮ㄥ垎鑷畾涔?scoped 鏍峰紡锛岄儴鍒嗙洿鎺ュ啓鍐呰仈鏍峰紡锛屽鑷村崱鐗囧渾瑙掋€侀槾褰便€佸唴杈硅窛涓嶇粺涓€銆?
 
-**修改方案**  
-1. **定义标准卡片组件**：`components/library/layout/Card.vue`
+**淇敼鏂规**  
+1. **瀹氫箟鏍囧噯鍗＄墖缁勪欢**锛歚components/library/layout/Card.vue`
    ```vue
    <template>
      <div class="card" :class="{ 'card--bordered': bordered, 'card--flat': flat }">
@@ -762,38 +762,38 @@
    </template>
    ```
 
-2. **统一规则**：
-   - 圆角：8px（`--radius-md`）
-   - 边框：1px solid `var(--border-color)`
-   - 阴影：`var(--shadow-sm)`，hover 时 `var(--shadow-md)`
-   - 内边距：`20px 24px`
-   - 背景：纯白 `var(--bg-primary)`，去除渐变和 `::before`/`::after` 伪元素装饰
-   - 去掉 hover 上浮动画（科研系统不需要卡片悬浮效果）
+2. **缁熶竴瑙勫垯**锛?
+   - 鍦嗚锛?px锛坄--radius-md`锛?
+   - 杈规锛?px solid `var(--border-color)`
+   - 闃村奖锛歚var(--shadow-sm)`锛宧over 鏃?`var(--shadow-md)`
+   - 鍐呰竟璺濓細`20px 24px`
+   - 鑳屾櫙锛氱函鐧?`var(--bg-primary)`锛屽幓闄ゆ笎鍙樺拰 `::before`/`::after` 浼厓绱犺楗?
+   - 鍘绘帀 hover 涓婃诞鍔ㄧ敾锛堢鐮旂郴缁熶笉闇€瑕佸崱鐗囨偓娴晥鏋滐級
 
-3. **修改 `style.css` 中 `.card` 全局类**：去除渐变、伪元素、hover 上浮动效果
+3. **淇敼 `style.css` 涓?`.card` 鍏ㄥ眬绫?*锛氬幓闄ゆ笎鍙樸€佷吉鍏冪礌銆乭over 涓婃诞鍔ㄦ晥鏋?
 
-**验收标准**  
-- [ ] 所有卡片视觉一致：纯白背景、灰色边框、灰色阴影
-- [ ] 无 hover 上浮/颜色变化效果
-- [ ] 卡片内边距统一
+**楠屾敹鏍囧噯**  
+- [ ] 鎵€鏈夊崱鐗囪瑙変竴鑷达細绾櫧鑳屾櫙銆佺伆鑹茶竟妗嗐€佺伆鑹查槾褰?
+- [ ] 鏃?hover 涓婃诞/棰滆壊鍙樺寲鏁堟灉
+- [ ] 鍗＄墖鍐呰竟璺濈粺涓€
 
 ---
 
-#### T16：统一表格样式与交互
+#### T16锛氱粺涓€琛ㄦ牸鏍峰紡涓庝氦浜?
 
-**问题描述**  
-全站至少有 3 种不同表格实现：全局 `.table` 类、组件 scoped 表格、DataTable 组件，样式不统一。
+**闂鎻忚堪**  
+鍏ㄧ珯鑷冲皯鏈?3 绉嶄笉鍚岃〃鏍煎疄鐜帮細鍏ㄥ眬 `.table` 绫汇€佺粍浠?scoped 琛ㄦ牸銆丏ataTable 缁勪欢锛屾牱寮忎笉缁熶竴銆?
 
-**修改方案**  
-1. **统一表格规范**：
-   - 表头：`--bg-tertiary`（#f5f5f5）背景，`--text-secondary` 文字，12px 字号，大写去掉
-   - 单元格：14px 字号，`--text-primary` 文字
-   - 行高亮：hover 时 `--bg-secondary`（不使用彩色渐变）
-   - 表格边框：仅水平分隔线 `1px solid var(--border-color)`
-   - 去除表头 `text-transform: uppercase`（中文不应大写）
-   - 去除 hover 时的 `transform: scale(1.01)` 效果
+**淇敼鏂规**  
+1. **缁熶竴琛ㄦ牸瑙勮寖**锛?
+   - 琛ㄥご锛歚--bg-tertiary`锛?f5f5f5锛夎儗鏅紝`--text-secondary` 鏂囧瓧锛?2px 瀛楀彿锛屽ぇ鍐欏幓鎺?
+   - 鍗曞厓鏍硷細14px 瀛楀彿锛宍--text-primary` 鏂囧瓧
+   - 琛岄珮浜細hover 鏃?`--bg-secondary`锛堜笉浣跨敤褰╄壊娓愬彉锛?
+   - 琛ㄦ牸杈规锛氫粎姘村钩鍒嗛殧绾?`1px solid var(--border-color)`
+   - 鍘婚櫎琛ㄥご `text-transform: uppercase`锛堜腑鏂囦笉搴斿ぇ鍐欙級
+   - 鍘婚櫎 hover 鏃剁殑 `transform: scale(1.01)` 鏁堟灉
 
-2. **修改全局 `.table` 样式**：
+2. **淇敼鍏ㄥ眬 `.table` 鏍峰紡**锛?
    ```css
    .table th {
      background: var(--bg-tertiary);
@@ -811,106 +811,106 @@
    }
    ```
 
-3. **推广 `DataTable.vue` 组件**，逐步替换各页面自定义表格
+3. **鎺ㄥ箍 `DataTable.vue` 缁勪欢**锛岄€愭鏇挎崲鍚勯〉闈㈣嚜瀹氫箟琛ㄦ牸
 
-**验收标准**  
-- [ ] 全局表格没有 `text-transform: uppercase`
-- [ ] 表格 hover 无缩放效果
-- [ ] 表头背景为纯灰色
-
----
-
-#### T17：统一间距与内边距系统
-
-**问题描述**  
-部分文件使用 `--spacing-*` CSS 变量，部分直接写 `16px`、`24px` 等硬编码值，间距不统一。
-
-**修改方案**  
-1. **统一使用 `design-tokens.css` 中定义的间距变量**
-2. **建立间距使用规范**：
-   - 页面容器内边距：`--spacing-6`（24px）
-   - 卡片间距：`--spacing-4`（16px）
-   - 卡片内边距：`--spacing-5`（20px）`--spacing-6`（24px）
-   - 表单项间距：`--spacing-4`（16px）
-   - 标题与内容间距：`--spacing-3`（12px）
-   - 紧凑间距（按钮组等）：`--spacing-2`（8px）
-3. **全局搜索并替换硬编码间距值**
-
-**验收标准**  
-- [ ] 独立检查：所有 scoped style 中的 padding/margin 使用 `var(--spacing-*)` 变量
-- [ ] 页面间视觉间距一致
+**楠屾敹鏍囧噯**  
+- [ ] 鍏ㄥ眬琛ㄦ牸娌℃湁 `text-transform: uppercase`
+- [ ] 琛ㄦ牸 hover 鏃犵缉鏀炬晥鏋?
+- [ ] 琛ㄥご鑳屾櫙涓虹函鐏拌壊
 
 ---
 
-#### T18：AcademicAlgorithm.vue 组件拆分
+#### T17锛氱粺涓€闂磋窛涓庡唴杈硅窛绯荤粺
 
-**问题描述**  
-`AcademicAlgorithm.vue` 达 3715 行，包含多个 SVG 科学图、公式渲染、交互控件，严重影响可维护性和编译性能。
+**闂鎻忚堪**  
+閮ㄥ垎鏂囦欢浣跨敤 `--spacing-*` CSS 鍙橀噺锛岄儴鍒嗙洿鎺ュ啓 `16px`銆乣24px` 绛夌‖缂栫爜鍊硷紝闂磋窛涓嶇粺涓€銆?
 
-**修改方案**  
-将其拆分为以下子组件：
+**淇敼鏂规**  
+1. **缁熶竴浣跨敤 `design-tokens.css` 涓畾涔夌殑闂磋窛鍙橀噺**
+2. **寤虹珛闂磋窛浣跨敤瑙勮寖**锛?
+   - 椤甸潰瀹瑰櫒鍐呰竟璺濓細`--spacing-6`锛?4px锛?
+   - 鍗＄墖闂磋窛锛歚--spacing-4`锛?6px锛?
+   - 鍗＄墖鍐呰竟璺濓細`--spacing-5`锛?0px锛塦--spacing-6`锛?4px锛?
+   - 琛ㄥ崟椤归棿璺濓細`--spacing-4`锛?6px锛?
+   - 鏍囬涓庡唴瀹归棿璺濓細`--spacing-3`锛?2px锛?
+   - 绱у噾闂磋窛锛堟寜閽粍绛夛級锛歚--spacing-2`锛?px锛?
+3. **鍏ㄥ眬鎼滅储骞舵浛鎹㈢‖缂栫爜闂磋窛鍊?*
 
-| 新组件 | 职责 | 预估行数 |
+**楠屾敹鏍囧噯**  
+- [ ] 鐙珛妫€鏌ワ細鎵€鏈?scoped style 涓殑 padding/margin 浣跨敤 `var(--spacing-*)` 鍙橀噺
+- [ ] 椤甸潰闂磋瑙夐棿璺濅竴鑷?
+
+---
+
+#### T18锛欰cademicAlgorithm.vue 缁勪欢鎷嗗垎
+
+**闂鎻忚堪**  
+`AcademicAlgorithm.vue` 杈?3715 琛岋紝鍖呭惈澶氫釜 SVG 绉戝鍥俱€佸叕寮忔覆鏌撱€佷氦浜掓帶浠讹紝涓ラ噸褰卞搷鍙淮鎶ゆ€у拰缂栬瘧鎬ц兘銆?
+
+**淇敼鏂规**  
+灏嗗叾鎷嗗垎涓轰互涓嬪瓙缁勪欢锛?
+
+| 鏂扮粍浠?| 鑱岃矗 | 棰勪及琛屾暟 |
 |--------|------|---------|
-| `AcademicAlgorithm.vue`（主页面） | 布局编排、Tab 切换 | ~200 |
-| `PhaseFieldFracture.vue` | 相场断裂演化 SVG 图 | ~400 |
-| `MomentTensorInversion.vue` | 矩张量反演震球 SVG | ~400 |
-| `UnifiedStrengthTheory.vue` | 统一强度理论包络线 SVG | ~400 |
-| `DepthRiskCurve.vue` | 埋深-风险关系曲线 | ~300 |
-| `AlgorithmFormula.vue` | 公式渲染区域（KaTeX） | ~300 |
-| `AlgorithmInteraction.vue` | 参数滑块与交互控件 | ~200 |
+| `AcademicAlgorithm.vue`锛堜富椤甸潰锛?| 甯冨眬缂栨帓銆乀ab 鍒囨崲 | ~200 |
+| `PhaseFieldFracture.vue` | 鐩稿満鏂婕斿寲 SVG 鍥?| ~400 |
+| `MomentTensorInversion.vue` | 鐭╁紶閲忓弽婕旈渿鐞?SVG | ~400 |
+| `UnifiedStrengthTheory.vue` | 缁熶竴寮哄害鐞嗚鍖呯粶绾?SVG | ~400 |
+| `DepthRiskCurve.vue` | 鍩嬫繁-椋庨櫓鍏崇郴鏇茬嚎 | ~300 |
+| `AlgorithmFormula.vue` | 鍏紡娓叉煋鍖哄煙锛圞aTeX锛?| ~300 |
+| `AlgorithmInteraction.vue` | 鍙傛暟婊戝潡涓庝氦浜掓帶浠?| ~200 |
 
-**拆分原则**  
-- 每个 SVG 科学图独立为一个组件，通过 props 传入数据
-- 交互逻辑（滑块、参数调节）集中到交互组件
-- 主页面仅负责 Tab 切换和整体布局
+**鎷嗗垎鍘熷垯**  
+- 姣忎釜 SVG 绉戝鍥剧嫭绔嬩负涓€涓粍浠讹紝閫氳繃 props 浼犲叆鏁版嵁
+- 浜や簰閫昏緫锛堟粦鍧椼€佸弬鏁拌皟鑺傦級闆嗕腑鍒颁氦浜掔粍浠?
+- 涓婚〉闈粎璐熻矗 Tab 鍒囨崲鍜屾暣浣撳竷灞€
 
-**验收标准**  
-- [ ] 主文件行数 ≤ 300 行
-- [ ] 每个子组件行数 ≤ 500 行
-- [ ] 页面功能与拆分前完全一致
-- [ ] 子组件通过 props/emits 通信，无直接 DOM 操作
-
----
-
-### P4 — 组件质量提升
+**楠屾敹鏍囧噯**  
+- [ ] 涓绘枃浠惰鏁?鈮?300 琛?
+- [ ] 姣忎釜瀛愮粍浠惰鏁?鈮?500 琛?
+- [ ] 椤甸潰鍔熻兘涓庢媶鍒嗗墠瀹屽叏涓€鑷?
+- [ ] 瀛愮粍浠堕€氳繃 props/emits 閫氫俊锛屾棤鐩存帴 DOM 鎿嶄綔
 
 ---
 
-#### T19：消除 Toast 组件重复实现
-
-**问题描述**  
-`components/Toast.vue` 和 `components/library/feedback/Toast.vue` 两套 Toast 实现共存。
-
-**修改方案**  
-1. 保留 `library/feedback/Toast.vue`（更标准化的实现）
-2. 将 `components/Toast.vue` 的被引用处全部替换为 library 版本
-3. 删除 `components/Toast.vue`
-4. 统一 Toast API：`toast.add(message, type, duration)`
-
-**验收标准**  
-- [ ] 全站只有一个 Toast 实现：`components/library/feedback/Toast.vue`
-- [ ] 所有引用处（AppLayout.vue 等）已更新
-- [ ] Toast 功能正常，支持 success/error/warning/info 四种类型
+### P4 鈥?缁勪欢璐ㄩ噺鎻愬崌
 
 ---
 
-#### T20：添加全局空状态组件
+#### T19锛氭秷闄?Toast 缁勪欢閲嶅瀹炵幇
 
-**问题描述**  
-多个页面在无数据时直接显示空白或完全隐藏区域，缺少引导性空状态。
+**闂鎻忚堪**  
+`components/Toast.vue` 鍜?`components/library/feedback/Toast.vue` 涓ゅ Toast 瀹炵幇鍏卞瓨銆?
 
-**修改方案**  
-1. **创建 `EmptyState.vue` 组件**：
+**淇敼鏂规**  
+1. 淇濈暀 `library/feedback/Toast.vue`锛堟洿鏍囧噯鍖栫殑瀹炵幇锛?
+2. 灏?`components/Toast.vue` 鐨勮寮曠敤澶勫叏閮ㄦ浛鎹负 library 鐗堟湰
+3. 鍒犻櫎 `components/Toast.vue`
+4. 缁熶竴 Toast API锛歚toast.add(message, type, duration)`
+
+**楠屾敹鏍囧噯**  
+- [ ] 鍏ㄧ珯鍙湁涓€涓?Toast 瀹炵幇锛歚components/library/feedback/Toast.vue`
+- [ ] 鎵€鏈夊紩鐢ㄥ锛圓ppLayout.vue 绛夛級宸叉洿鏂?
+- [ ] Toast 鍔熻兘姝ｅ父锛屾敮鎸?success/error/warning/info 鍥涚绫诲瀷
+
+---
+
+#### T20锛氭坊鍔犲叏灞€绌虹姸鎬佺粍浠?
+
+**闂鎻忚堪**  
+澶氫釜椤甸潰鍦ㄦ棤鏁版嵁鏃剁洿鎺ユ樉绀虹┖鐧芥垨瀹屽叏闅愯棌鍖哄煙锛岀己灏戝紩瀵兼€х┖鐘舵€併€?
+
+**淇敼鏂规**  
+1. **鍒涘缓 `EmptyState.vue` 缁勪欢**锛?
    ```vue
    <template>
      <div class="empty-state">
        <div class="empty-state-icon">
          <slot name="icon">
-           <svg><!-- 默认空数据图标 --></svg>
+           <svg><!-- 榛樿绌烘暟鎹浘鏍?--></svg>
          </slot>
        </div>
-       <h3 class="empty-state-title">{{ title || '暂无数据' }}</h3>
+       <h3 class="empty-state-title">{{ title || '鏆傛棤鏁版嵁' }}</h3>
        <p v-if="description" class="empty-state-desc">{{ description }}</p>
        <div v-if="$slots.action" class="empty-state-action">
          <slot name="action" />
@@ -919,56 +919,56 @@
    </template>
    ```
 
-2. **覆盖页面**：
-   - GeoMpiStudio：无煤层数据时 → 引导用户先导入数据
-   - Scene3DPage：右侧统计无数据时 → 显示空状态而非隐藏
-   - ResearchWorkbench：实验列表为空时 → 引导创建新实验
-   - Report：无报告时 → 引导完成前置步骤
+2. **瑕嗙洊椤甸潰**锛?
+   - GeoMpiStudio锛氭棤鐓ゅ眰鏁版嵁鏃?鈫?寮曞鐢ㄦ埛鍏堝鍏ユ暟鎹?
+   - Scene3DPage锛氬彸渚х粺璁℃棤鏁版嵁鏃?鈫?鏄剧ず绌虹姸鎬佽€岄潪闅愯棌
+   - ResearchWorkbench锛氬疄楠屽垪琛ㄤ负绌烘椂 鈫?寮曞鍒涘缓鏂板疄楠?
+   - Report锛氭棤鎶ュ憡鏃?鈫?寮曞瀹屾垚鍓嶇疆姝ラ
 
-**验收标准**  
-- [ ] 所有列表/表格/面板在数据为空时显示 `EmptyState` 组件
-- [ ] 空状态包含标题、描述、操作按钮（可选）
-- [ ] 空状态风格符合黑白灰主题
+**楠屾敹鏍囧噯**  
+- [ ] 鎵€鏈夊垪琛?琛ㄦ牸/闈㈡澘鍦ㄦ暟鎹负绌烘椂鏄剧ず `EmptyState` 缁勪欢
+- [ ] 绌虹姸鎬佸寘鍚爣棰樸€佹弿杩般€佹搷浣滄寜閽紙鍙€夛級
+- [ ] 绌虹姸鎬侀鏍肩鍚堥粦鐧界伆涓婚
 
-**当前进度（2026-02-28）**  
-- 已完成组件创建与导出（`EmptyState.vue`、`components/library/index.js`）。
-- 已在 `ResearchPortal.vue` 接入。
-- 其余页面接入待继续推进。
-
----
-
-#### T21：添加骨架屏 Loading 状态
-
-**问题描述**  
-数据加载期间仅显示简单 spinner，用户无法感知页面即将呈现的布局。
-
-**修改方案**  
-1. **创建 `SkeletonLoader.vue` 组件**：支持 text/card/table/chart 四种骨架类型
-2. **应用到所有异步数据加载场景**：
-   - ResearchPortal：leaderboard 和 papers 加载时显示表格骨架
-   - GeomodelVisualization：3D 模型加载时显示全屏骨架
-   - AlgorithmValidation：计算结果加载时显示卡片骨架
-   - Report：报告数据加载时显示多段骨架
-3. **骨架颜色**：使用 `--bg-tertiary` 到 `--bg-secondary` 的脉冲动画
-
-**验收标准**  
-- [ ] 使用浏览器 Network 限速（Slow 3G）下，所有页面加载期间显示骨架屏
-- [ ] 骨架屏布局与实际内容布局基本匹配
-- [ ] 骨架屏颜色为灰色系，无彩色
-
-**当前进度（2026-02-28）**  
-- 已完成组件创建与导出（`SkeletonPanel.vue`、`components/library/index.js`）。
-- 已在 `ResearchPortal.vue` 与 `AcademicAlgorithm.vue` 接入。
-- 全页面覆盖与慢网人工验收待补。
+**褰撳墠杩涘害锛?026-02-28锛?*  
+- 宸插畬鎴愮粍浠跺垱寤轰笌瀵煎嚭锛坄EmptyState.vue`銆乣components/library/index.js`锛夈€?
+- 宸插湪 `ResearchPortal.vue` 鎺ュ叆銆?
+- 鍏朵綑椤甸潰鎺ュ叆寰呯户缁帹杩涖€?
 
 ---
 
-#### T22：修复 AiSearchBar 事件泄漏
+#### T21锛氭坊鍔犻鏋跺睆 Loading 鐘舵€?
 
-**问题描述**  
-`AiSearchBar.vue` 在 `onMounted` 中注册了 `window.addEventListener`（如键盘快捷键监听），但未在 `onBeforeUnmount` 中移除，导致组件卸载后事件仍然触发。
+**闂鎻忚堪**  
+鏁版嵁鍔犺浇鏈熼棿浠呮樉绀虹畝鍗?spinner锛岀敤鎴锋棤娉曟劅鐭ラ〉闈㈠嵆灏嗗憟鐜扮殑甯冨眬銆?
 
-**修改方案**  
+**淇敼鏂规**  
+1. **鍒涘缓 `SkeletonLoader.vue` 缁勪欢**锛氭敮鎸?text/card/table/chart 鍥涚楠ㄦ灦绫诲瀷
+2. **搴旂敤鍒版墍鏈夊紓姝ユ暟鎹姞杞藉満鏅?*锛?
+   - ResearchPortal锛歭eaderboard 鍜?papers 鍔犺浇鏃舵樉绀鸿〃鏍奸鏋?
+   - GeomodelVisualization锛?D 妯″瀷鍔犺浇鏃舵樉绀哄叏灞忛鏋?
+   - AlgorithmValidation锛氳绠楃粨鏋滃姞杞芥椂鏄剧ず鍗＄墖楠ㄦ灦
+   - Report锛氭姤鍛婃暟鎹姞杞芥椂鏄剧ず澶氭楠ㄦ灦
+3. **楠ㄦ灦棰滆壊**锛氫娇鐢?`--bg-tertiary` 鍒?`--bg-secondary` 鐨勮剦鍐插姩鐢?
+
+**楠屾敹鏍囧噯**  
+- [ ] 浣跨敤娴忚鍣?Network 闄愰€燂紙Slow 3G锛変笅锛屾墍鏈夐〉闈㈠姞杞芥湡闂存樉绀洪鏋跺睆
+- [ ] 楠ㄦ灦灞忓竷灞€涓庡疄闄呭唴瀹瑰竷灞€鍩烘湰鍖归厤
+- [ ] 楠ㄦ灦灞忛鑹蹭负鐏拌壊绯伙紝鏃犲僵鑹?
+
+**褰撳墠杩涘害锛?026-02-28锛?*  
+- 宸插畬鎴愮粍浠跺垱寤轰笌瀵煎嚭锛坄SkeletonPanel.vue`銆乣components/library/index.js`锛夈€?
+- 宸插湪 `ResearchPortal.vue` 涓?`AcademicAlgorithm.vue` 鎺ュ叆銆?
+- 鍏ㄩ〉闈㈣鐩栦笌鎱㈢綉浜哄伐楠屾敹寰呰ˉ銆?
+
+---
+
+#### T22锛氫慨澶?AiSearchBar 浜嬩欢娉勬紡
+
+**闂鎻忚堪**  
+`AiSearchBar.vue` 鍦?`onMounted` 涓敞鍐屼簡 `window.addEventListener`锛堝閿洏蹇嵎閿洃鍚級锛屼絾鏈湪 `onBeforeUnmount` 涓Щ闄わ紝瀵艰嚧缁勪欢鍗歌浇鍚庝簨浠朵粛鐒惰Е鍙戙€?
+
+**淇敼鏂规**  
 ```javascript
 // Before
 onMounted(() => {
@@ -984,19 +984,19 @@ onBeforeUnmount(() => {
 })
 ```
 
-**验收标准**  
-- [x] `onMounted` 中的每个 `addEventListener` 都有对应的 `removeEventListener`
-- [x] 多次切换页面后无内存泄漏（Chrome DevTools Memory panel 无增长趋势）
+**楠屾敹鏍囧噯**  
+- [x] `onMounted` 涓殑姣忎釜 `addEventListener` 閮芥湁瀵瑰簲鐨?`removeEventListener`
+- [x] 澶氭鍒囨崲椤甸潰鍚庢棤鍐呭瓨娉勬紡锛圕hrome DevTools Memory panel 鏃犲闀胯秼鍔匡級
 
 ---
 
-#### T23：缓存大小限制
+#### T23锛氱紦瀛樺ぇ灏忛檺鍒?
 
-**问题描述**  
-`AlgorithmValidation.vue` 的 `spatialCache`（Map）和 `MpiHeatmapPro.vue` 的 `colorCache`（Map）无大小上限，长时间运行会持续增长。
+**闂鎻忚堪**  
+`AlgorithmValidation.vue` 鐨?`spatialCache`锛圡ap锛夊拰 `MpiHeatmapPro.vue` 鐨?`colorCache`锛圡ap锛夋棤澶у皬涓婇檺锛岄暱鏃堕棿杩愯浼氭寔缁闀裤€?
 
-**修改方案**  
-实现 LRU 缓存替代普通 Map：
+**淇敼鏂规**  
+瀹炵幇 LRU 缂撳瓨鏇夸唬鏅€?Map锛?
 ```javascript
 class LRUCache {
   constructor(maxSize = 100) {
@@ -1020,216 +1020,215 @@ class LRUCache {
 }
 ```
 
-**验收标准**  
-- [x] `spatialCache` 和 `colorCache` 使用 LRU 缓存，最大容量 200 条
-- [x] 缓存溢出时自动淘汰最旧条目
+**楠屾敹鏍囧噯**  
+- [x] `spatialCache` 鍜?`colorCache` 浣跨敤 LRU 缂撳瓨锛屾渶澶у閲?200 鏉?
+- [x] 缂撳瓨婧㈠嚭鏃惰嚜鍔ㄦ窐姹版渶鏃ф潯鐩?
 
 ---
 
-### P5 — 性能优化
+### P5 鈥?鎬ц兘浼樺寲
 
 ---
 
-#### T24：路由级代码分割优化
+#### T24锛氳矾鐢辩骇浠ｇ爜鍒嗗壊浼樺寲
 
-**问题描述**  
-当前路由已使用 `() => import(...)` 懒加载，但缺少预加载提示和 chunk 命名。
+**闂鎻忚堪**  
+褰撳墠璺敱宸蹭娇鐢?`() => import(...)` 鎳掑姞杞斤紝浣嗙己灏戦鍔犺浇鎻愮ず鍜?chunk 鍛藉悕銆?
 
-**修改方案**  
-1. **添加 webpack magic comment**（Vite 也支持）用于 chunk 命名：
+**淇敼鏂规**  
+1. **娣诲姞 webpack magic comment**锛圴ite 涔熸敮鎸侊級鐢ㄤ簬 chunk 鍛藉悕锛?
    ```javascript
    component: () => import(/* webpackChunkName: "data-import" */ '../views/DataImport.vue')
    ```
-2. **添加路由预加载**：鼠标悬浮导航项时预加载目标路由组件
-3. **在 `vite.config.js` 中配置 `build.rollupOptions.output.manualChunks`**：将 echarts、three.js、d3 等大型库分离为独立 chunk
+2. **娣诲姞璺敱棰勫姞杞?*锛氶紶鏍囨偓娴鑸」鏃堕鍔犺浇鐩爣璺敱缁勪欢
+3. **鍦?`vite.config.js` 涓厤缃?`build.rollupOptions.output.manualChunks`**锛氬皢 echarts銆乼hree.js銆乨3 绛夊ぇ鍨嬪簱鍒嗙涓虹嫭绔?chunk
 
-**验收标准**  
-- [x] `npm run build` 输出中每个路由对应独立 chunk，命名清晰
-- [x] echarts、three.js、d3 各自为独立 chunk
-- [x] 首次加载只请求当前路由的 chunk
-
----
-
-#### T25：大型 SVG 图表懒加载
-
-**问题描述**  
-`AcademicAlgorithm.vue`（拆分后的子组件）包含多个复杂 SVG 科学图，一次性加载影响首屏性能。
-
-**修改方案**  
-1. 使用 `defineAsyncComponent` + `Suspense` 懒加载拆分后的 SVG 图组件
-2. 不在视窗内的 Tab 内容延迟渲染（使用 `v-if` 替代 `v-show`）
-3. SVG 静态部分提取为独立 `.svg` 文件，通过 `<img>` 或 Vite svg 插件加载
-
-**验收标准**  
-- [x] 非当前 Tab 的 SVG 组件不渲染
-- [x] 切换 Tab 时组件加载延迟 < 200ms
+**楠屾敹鏍囧噯**  
+- [x] `npm run build` 杈撳嚭涓瘡涓矾鐢卞搴旂嫭绔?chunk锛屽懡鍚嶆竻鏅?
+- [x] echarts銆乼hree.js銆乨3 鍚勮嚜涓虹嫭绔?chunk
+- [x] 棣栨鍔犺浇鍙姹傚綋鍓嶈矾鐢辩殑 chunk
 
 ---
 
-#### T26：虚拟列表阈值调优
+#### T25锛氬ぇ鍨?SVG 鍥捐〃鎳掑姞杞?
 
-**问题描述**  
-`DataImport.vue` 中虚拟列表阈值 >100 行才启用，50-100 行的长列表仍使用普通 DOM 渲染。
+**闂鎻忚堪**  
+`AcademicAlgorithm.vue`锛堟媶鍒嗗悗鐨勫瓙缁勪欢锛夊寘鍚涓鏉?SVG 绉戝鍥撅紝涓€娆℃€у姞杞藉奖鍝嶉灞忔€ц兘銆?
 
-**修改方案**  
-将虚拟列表启用阈值从 100 降低到 50。
+**淇敼鏂规**  
+1. 浣跨敤 `defineAsyncComponent` + `Suspense` 鎳掑姞杞芥媶鍒嗗悗鐨?SVG 鍥剧粍浠?
+2. 涓嶅湪瑙嗙獥鍐呯殑 Tab 鍐呭寤惰繜娓叉煋锛堜娇鐢?`v-if` 鏇夸唬 `v-show`锛?
+3. SVG 闈欐€侀儴鍒嗘彁鍙栦负鐙珛 `.svg` 鏂囦欢锛岄€氳繃 `<img>` 鎴?Vite svg 鎻掍欢鍔犺浇
 
-**验收标准**  
-- [x] ≥ 50 行数据时自动启用虚拟列表
-- [x] 滚动流畅度不低于 60fps
-
----
-
-### P6 — 可访问性与响应式
+**楠屾敹鏍囧噯**  
+- [x] 闈炲綋鍓?Tab 鐨?SVG 缁勪欢涓嶆覆鏌?
+- [x] 鍒囨崲 Tab 鏃剁粍浠跺姞杞藉欢杩?< 200ms
 
 ---
 
-#### T27：响应式断点补全
+#### T26锛氳櫄鎷熷垪琛ㄩ槇鍊艰皟浼?
 
-**问题描述**  
-多个页面缺少中间断点或完全没有响应式处理。
+**闂鎻忚堪**  
+`DataImport.vue` 涓櫄鎷熷垪琛ㄩ槇鍊?>100 琛屾墠鍚敤锛?0-100 琛岀殑闀垮垪琛ㄤ粛浣跨敤鏅€?DOM 娓叉煋銆?
 
-**修改方案**  
+**淇敼鏂规**  
+灏嗚櫄鎷熷垪琛ㄥ惎鐢ㄩ槇鍊间粠 100 闄嶄綆鍒?50銆?
 
-| 页面 | 现状 | 目标断点 |
+**楠屾敹鏍囧噯**  
+- [x] 鈮?50 琛屾暟鎹椂鑷姩鍚敤铏氭嫙鍒楄〃
+- [x] 婊氬姩娴佺晠搴︿笉浣庝簬 60fps
+
+---
+
+### P6 鈥?鍙闂€т笌鍝嶅簲寮?
+
+---
+
+#### T27锛氬搷搴斿紡鏂偣琛ュ叏
+
+**闂鎻忚堪**  
+澶氫釜椤甸潰缂哄皯涓棿鏂偣鎴栧畬鍏ㄦ病鏈夊搷搴斿紡澶勭悊銆?
+
+**淇敼鏂规**  
+
+| 椤甸潰 | 鐜扮姸 | 鐩爣鏂偣 |
 |------|------|---------|
-| GeoMpiStudio | 1280px, 768px | 增加 1024px（双列布局） |
-| ResearchPortal | 仅 1080px | 增加 768px, 1280px |
-| Scene3DPage | 无响应式 | 增加 1024px（面板折叠）, 768px |
-| GeomodelVisualization | 侧边面板 320px 固定 | 768px 下面板收起为抽屉 |
-| MpiHeatmapPro | 无响应式 | 底部控制条自适应，768px 下简化交互 |
-| AcademicAlgorithm | 无响应式 | SVG 使用 viewBox 自适应，文字大小调整 |
-| AlgorithmValidation | 缩略图面板固定定位 | 768px 下改为底部抽屉 |
+| GeoMpiStudio | 1280px, 768px | 澧炲姞 1024px锛堝弻鍒楀竷灞€锛?|
+| ResearchPortal | 浠?1080px | 澧炲姞 768px, 1280px |
+| Scene3DPage | 鏃犲搷搴斿紡 | 澧炲姞 1024px锛堥潰鏉挎姌鍙狅級, 768px |
+| GeomodelVisualization | 渚ц竟闈㈡澘 320px 鍥哄畾 | 768px 涓嬮潰鏉挎敹璧蜂负鎶藉眽 |
+| MpiHeatmapPro | 鏃犲搷搴斿紡 | 搴曢儴鎺у埗鏉¤嚜閫傚簲锛?68px 涓嬬畝鍖栦氦浜?|
+| AcademicAlgorithm | 鏃犲搷搴斿紡 | SVG 浣跨敤 viewBox 鑷€傚簲锛屾枃瀛楀ぇ灏忚皟鏁?|
+| AlgorithmValidation | 缂╃暐鍥鹃潰鏉垮浐瀹氬畾浣?| 768px 涓嬫敼涓哄簳閮ㄦ娊灞?|
 
-**验收标准**  
-- [ ] 所有页面在 1920px / 1440px / 1024px / 768px / 375px 五个宽度下布局合理
-- [x] 无水平溢出
-- [x] 文字大小可读（最小 12px）
+**楠屾敹鏍囧噯**  
+- [x] 鎵€鏈夐〉闈㈠湪 1920px / 1440px / 1024px / 768px / 375px 浜斾釜瀹藉害涓嬪竷灞€鍚堢悊
+- [x] 鏃犳按骞虫孩鍑?
+- [x] 鏂囧瓧澶у皬鍙锛堟渶灏?12px锛?
 
-**当前进度（2026-02-28）**  
-- 已补齐 `AppLayout.vue`、`Scene3DPage.vue`、`GeoMpiStudio.vue`、`ResearchPortal.vue` 关键断点。
-- 全页面五断点走查尚未全部完成。
+**褰撳墠杩涘害锛?026-02-28锛?*  
+- 宸插畬鎴愬叏璺敱鑷姩鍖栬蛋鏌ワ細12 涓矾鐢?脳 5 涓柇鐐癸紙1920/1440/1024/768/375锛夈€?- 鏈彂鐜版按骞虫孩鍑猴紱瀹¤鎶ュ憡宸插綊妗ｏ細`data/research/stage_e/ui_accessibility/20260228T153205/report.{json,md}`銆?
+---
+
+#### T28锛氶敭鐩樺鑸笌 ARIA 鏍囩淇
+
+**闂鎻忚堪**  
+- AppLayout.vue 涓?ARIA 鏍囩涓轰贡鐮?
+- 澶氫釜浜や簰鍏冪礌缂哄皯 `role`銆乣aria-label`
+- Tab 閿鑸『搴忎笉鍚堢悊
+
+**淇敼鏂规**  
+1. 淇鎵€鏈?ARIA 鏍囩涔辩爜锛堝凡鍦?T02 涓鐩栵級
+2. 鎵€鏈夊彲浜や簰鍏冪礌娣诲姞 `role` 灞炴€?
+3. 渚ц竟鏍忔坊鍔?`role="navigation"` 鍜?`aria-label="涓诲鑸?`
+4. 涓诲唴瀹瑰尯娣诲姞 `role="main"`
+5. 妯℃€佹/瀵硅瘽妗嗘坊鍔?`role="dialog"` 鍜岀劍鐐规崟鑾?
+6. 鎵€鏈夊浘鏍囨寜閽坊鍔?`aria-label`
+7. `tabindex` 浼樺寲锛氱‘淇?Tab 椤哄簭绗﹀悎瑙嗚娴?
+
+**楠屾敹鏍囧噯**  
+- [x] 浣跨敤 Tab 閿彲閬嶅巻鎵€鏈変氦浜掑厓绱?
+- [x] 灞忓箷闃呰鍣ㄥ彲姝ｇ‘鏈楄鎵€鏈夋寜閽?閾炬帴/瀵艰埅椤?
+- [x] `axe-core` 自动化检测 0 个 critical/serious 级别问题
+
+**褰撳墠杩涘害锛?026-02-28锛?*  
+- 已完成 `AppLayout.vue`、`AiChatSidebar.vue`、`MpiHeatmapPro.vue`、`ResearchWorkbench.vue`、`Report.vue`、`Steps.vue` 等关键页面/组件的 ARIA 与可访问性收敛。
+- 已执行 `axe-core` 自动扫描并归档：`data/research/stage_e/ui_accessibility/20260228T153205/report.{json,md}`。
+- 当前统计：`axeCriticalTotal=0`、`axeSeriousTotal=0`，已达到验收门槛。
+---
+
+#### T29锛氳Е鎺ф墜鍔挎敮鎸?
+
+**闂鎻忚堪**  
+Canvas 浜や簰锛堟嫋鎷?缂╂斁锛夋湭閫傞厤瑙︽帶璁惧銆?
+
+**淇敼鏂规**  
+1. `AlgorithmValidation.vue`锛欳anvas 娣诲姞 `touch-action: none`锛屼娇鐢?pointer events 鏇夸唬 mouse events
+2. `MpiHeatmapPro.vue`锛氱儹鍔涘浘鏀寔鍙屾寚缂╂斁銆佸崟鎸囨嫋鎷?
+3. `Interpolation.vue`锛氬墫闈㈢嚎缁樺埗娣诲姞 touch 鏀寔
+
+**楠屾敹鏍囧噯**  
+- [x] iPad/骞虫澘涓婂彲鎷栨嫿鍜岀缉鏀?Canvas 鍐呭
+- [x] 鍙屾寚缂╂斁鎵嬪娍娴佺晠
+- [x] 涓嶄笌椤甸潰婊氬姩鍐茬獊
 
 ---
 
-#### T28：键盘导航与 ARIA 标签修复
+## 鍥涖€佸疄鏂借矾绾垮浘
 
-**问题描述**  
-- AppLayout.vue 中 ARIA 标签为乱码
-- 多个交互元素缺少 `role`、`aria-label`
-- Tab 键导航顺序不合理
+### 绗竴闃舵锛氬熀纭€淇锛堢 1-2 澶╋級
 
-**修改方案**  
-1. 修复所有 ARIA 标签乱码（已在 T02 中覆盖）
-2. 所有可交互元素添加 `role` 属性
-3. 侧边栏添加 `role="navigation"` 和 `aria-label="主导航"`
-4. 主内容区添加 `role="main"`
-5. 模态框/对话框添加 `role="dialog"` 和焦点捕获
-6. 所有图标按钮添加 `aria-label`
-7. `tabindex` 优化：确保 Tab 顺序符合视觉流
+| 浠诲姟 | 浼樺厛绾?| 宸ユ椂 |
+|------|-------|------|
+| T01 淇 HealthCheck 缂栬瘧 | P0 | 2h |
+| T02 淇 AppLayout 涔辩爜 | P0 | 1h |
+| T03 缁熶竴 CSS 鍙橀噺瀹氫箟 | P0 | 3h |
+| T22 淇浜嬩欢娉勬紡 | P4 | 1h |
 
-**验收标准**  
-- [x] 使用 Tab 键可遍历所有交互元素
-- [x] 屏幕阅读器可正确朗读所有按钮/链接/导航项
-- [ ] `axe-core` 自动化检测 0 个 critical/serious 级别问题
+### 绗簩闃舵锛氶厤鑹查噸鏋勶紙绗?3-5 澶╋級
 
-**当前进度（2026-02-28）**  
-- 已完成 `AppLayout.vue`、`DataTable.vue` 与主要画布组件的键盘/ARIA增强。
-- `axe-core` 自动化扫描待执行并归档结果。
+| 浠诲姟 | 浼樺厛绾?| 宸ユ椂 |
+|------|-------|------|
+| T04 榛戠櫧鐏拌璁＄郴缁?| P1 | 6h |
+| T05 纭紪鐮侀鑹叉浛鎹?| P1 | 12h |
+| T06 闃村奖涓庢笎鍙樺幓鑹?| P1 | 3h |
+
+### 绗笁闃舵锛氬浗闄呭寲锛堢 6-9 澶╋級
+
+| 浠诲姟 | 浼樺厛绾?| 宸ユ椂 |
+|------|-------|------|
+| T07 i18n 鏋舵瀯鎼缓 | P2 | 6h |
+| T08-T12 鍚勯〉闈腑鏂囧寲 | P2 | 18h |
+| T13 涓嫳鏂囧垏鎹㈠疄鐜?| P2 | 4h |
+
+### 绗洓闃舵锛氬竷灞€浼樺寲锛堢 10-12 澶╋級
+
+| 浠诲姟 | 浼樺厛绾?| 宸ユ椂 |
+|------|-------|------|
+| T14-T17 缁熶竴椤甸潰鍏冪礌 | P3 | 15h |
+| T18 AcademicAlgorithm 鎷嗗垎 | P3 | 8h |
+
+### 绗簲闃舵锛氳川閲忎笌鎬ц兘锛堢 13-14 澶╋級
+
+| 浠诲姟 | 浼樺厛绾?| 宸ユ椂 |
+|------|-------|------|
+| T19-T23 缁勪欢璐ㄩ噺淇 | P4 | 12h |
+| T24-T26 鎬ц兘浼樺寲 | P5 | 6h |
+| T27-T29 鍝嶅簲寮忎笌鍙闂€?| P6 | 14h |
 
 ---
 
-#### T29：触控手势支持
+## 浜斻€侀闄╀笌渚濊禆
 
-**问题描述**  
-Canvas 交互（拖拽/缩放）未适配触控设备。
+### 5.1 椋庨櫓
 
-**修改方案**  
-1. `AlgorithmValidation.vue`：Canvas 添加 `touch-action: none`，使用 pointer events 替代 mouse events
-2. `MpiHeatmapPro.vue`：热力图支持双指缩放、单指拖拽
-3. `Interpolation.vue`：剖面线绘制添加 touch 支持
-
-**验收标准**  
-- [x] iPad/平板上可拖拽和缩放 Canvas 内容
-- [x] 双指缩放手势流畅
-- [x] 不与页面滚动冲突
-
----
-
-## 四、实施路线图
-
-### 第一阶段：基础修复（第 1-2 天）
-
-| 任务 | 优先级 | 工时 |
-|------|-------|------|
-| T01 修复 HealthCheck 编译 | P0 | 2h |
-| T02 修复 AppLayout 乱码 | P0 | 1h |
-| T03 统一 CSS 变量定义 | P0 | 3h |
-| T22 修复事件泄漏 | P4 | 1h |
-
-### 第二阶段：配色重构（第 3-5 天）
-
-| 任务 | 优先级 | 工时 |
-|------|-------|------|
-| T04 黑白灰设计系统 | P1 | 6h |
-| T05 硬编码颜色替换 | P1 | 12h |
-| T06 阴影与渐变去色 | P1 | 3h |
-
-### 第三阶段：国际化（第 6-9 天）
-
-| 任务 | 优先级 | 工时 |
-|------|-------|------|
-| T07 i18n 架构搭建 | P2 | 6h |
-| T08-T12 各页面中文化 | P2 | 18h |
-| T13 中英文切换实现 | P2 | 4h |
-
-### 第四阶段：布局优化（第 10-12 天）
-
-| 任务 | 优先级 | 工时 |
-|------|-------|------|
-| T14-T17 统一页面元素 | P3 | 15h |
-| T18 AcademicAlgorithm 拆分 | P3 | 8h |
-
-### 第五阶段：质量与性能（第 13-14 天）
-
-| 任务 | 优先级 | 工时 |
-|------|-------|------|
-| T19-T23 组件质量修复 | P4 | 12h |
-| T24-T26 性能优化 | P5 | 6h |
-| T27-T29 响应式与可访问性 | P6 | 14h |
-
----
-
-## 五、风险与依赖
-
-### 5.1 风险
-
-| 风险 | 影响 | 缓解措施 |
+| 椋庨櫓 | 褰卞搷 | 缂撹В鎺柦 |
 |------|------|---------|
-| 颜色替换遗漏 | 部分元素保持旧设计 | 用 `grep` 全文搜索验证，建立白名单清单 |
-| SVG 图中文化影响布局 | 中文字符宽度不同 | 预留足够文字空间，使用 `text-anchor` 居中 |
-| i18n 键名拼写错误 | 页面显示原始 key | 开发环境添加缺失翻译键警告 |
-| 组件拆分引入新 Bug | 渲染或交互异常 | 拆分前后截图对比验证 |
-| 响应式改动影响桌面端 | 桌面端布局变化 | 使用 min-width media query，桌面端优先 |
+| 棰滆壊鏇挎崲閬楁紡 | 閮ㄥ垎鍏冪礌淇濇寔鏃ц璁?| 鐢?`grep` 鍏ㄦ枃鎼滅储楠岃瘉锛屽缓绔嬬櫧鍚嶅崟娓呭崟 |
+| SVG 鍥句腑鏂囧寲褰卞搷甯冨眬 | 涓枃瀛楃瀹藉害涓嶅悓 | 棰勭暀瓒冲鏂囧瓧绌洪棿锛屼娇鐢?`text-anchor` 灞呬腑 |
+| i18n 閿悕鎷煎啓閿欒 | 椤甸潰鏄剧ず鍘熷 key | 寮€鍙戠幆澧冩坊鍔犵己澶辩炕璇戦敭璀﹀憡 |
+| 缁勪欢鎷嗗垎寮曞叆鏂?Bug | 娓叉煋鎴栦氦浜掑紓甯?| 鎷嗗垎鍓嶅悗鎴浘瀵规瘮楠岃瘉 |
+| 鍝嶅簲寮忔敼鍔ㄥ奖鍝嶆闈㈢ | 妗岄潰绔竷灞€鍙樺寲 | 浣跨敤 min-width media query锛屾闈㈢浼樺厛 |
 
-### 5.2 依赖项
+### 5.2 渚濊禆椤?
 
-| 依赖 | 说明 |
+| 渚濊禆 | 璇存槑 |
 |------|------|
-| 不新增外部依赖 | i18n 方案自研，不引入 vue-i18n |
-| 现有 API 不变 | 所有优化仅涉及前端 UI，不修改 API 接口 |
-| 浏览器兼容性 | 最低支持 Chrome 90+、Edge 90+、Firefox 90+ |
+| 涓嶆柊澧炲閮ㄤ緷璧?| i18n 鏂规鑷爺锛屼笉寮曞叆 vue-i18n |
+| 鐜版湁 API 涓嶅彉 | 鎵€鏈変紭鍖栦粎娑夊強鍓嶇 UI锛屼笉淇敼 API 鎺ュ彛 |
+| 娴忚鍣ㄥ吋瀹规€?| 鏈€浣庢敮鎸?Chrome 90+銆丒dge 90+銆丗irefox 90+ |
 
-### 5.3 验收总标准
+### 5.3 楠屾敹鎬绘爣鍑?
 
-- [ ] 全站所有页面默认显示中文，可一键切换英文
-- [ ] 配色仅含黑白灰三种颜色（语义色及图表/图片除外）
-- [ ] 页面间视觉风格统一（标题、卡片、表格、间距）
-- [x] 无编译错误、无控制台报错
-- [ ] 所有页面在 1920px 和 768px 宽度下布局合理
-- [ ] Lighthouse Performance 分数 ≥ 80
-- [x] 现有测试用例全部通过
+- [ ] 鍏ㄧ珯鎵€鏈夐〉闈㈤粯璁ゆ樉绀轰腑鏂囷紝鍙竴閿垏鎹㈣嫳鏂?
+- [ ] 閰嶈壊浠呭惈榛戠櫧鐏颁笁绉嶉鑹诧紙璇箟鑹插強鍥捐〃/鍥剧墖闄ゅ锛?
+- [ ] 椤甸潰闂磋瑙夐鏍肩粺涓€锛堟爣棰樸€佸崱鐗囥€佽〃鏍笺€侀棿璺濓級
+- [x] 鏃犵紪璇戦敊璇€佹棤鎺у埗鍙版姤閿?
+- [ ] 鎵€鏈夐〉闈㈠湪 1920px 鍜?768px 瀹藉害涓嬪竷灞€鍚堢悊
+- [ ] Lighthouse Performance 鍒嗘暟 鈮?80
+- [x] 鐜版湁娴嬭瘯鐢ㄤ緥鍏ㄩ儴閫氳繃
 
 ---
 
-> **文档维护**：随着开发推进，各任务完成后在对应验收标准前打勾 `[x]`，并在提交信息中关联任务编号（如 `fix: T02 修复 AppLayout 乱码文本`）。
+> **鏂囨。缁存姢**锛氶殢鐫€寮€鍙戞帹杩涳紝鍚勪换鍔″畬鎴愬悗鍦ㄥ搴旈獙鏀舵爣鍑嗗墠鎵撳嬀 `[x]`锛屽苟鍦ㄦ彁浜や俊鎭腑鍏宠仈浠诲姟缂栧彿锛堝 `fix: T02 淇 AppLayout 涔辩爜鏂囨湰`锛夈€?
+
