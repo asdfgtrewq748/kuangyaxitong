@@ -163,6 +163,12 @@ const run = async () => {
                 impact: v.impact || 'unknown',
                 help: v.help,
                 nodeCount: Array.isArray(v.nodes) ? v.nodes.length : 0,
+                targets: Array.isArray(v.nodes)
+                  ? v.nodes.slice(0, 3).map((node) => {
+                    if (Array.isArray(node.target)) return node.target.join(' | ')
+                    return ''
+                  }).filter(Boolean)
+                  : [],
               })),
             }
           })

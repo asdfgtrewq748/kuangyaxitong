@@ -706,7 +706,7 @@ onBeforeUnmount(() => {
 
 .workflow-guard-label {
   font-size: 11px;
-  color: var(--color-warning);
+  color: #854d0e;
   font-weight: 600;
 }
 

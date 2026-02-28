@@ -1280,7 +1280,16 @@ onBeforeUnmount(() => {
 .icon-btn { border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.1); color: #f8fafc; border-radius: 8px; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; }
 .icon-btn:hover { border-color: rgba(45,212,191,.5); background: rgba(45,212,191,.2); }
 .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
-.icon-btn.mini { width: auto; height: 28px; padding: 0 8px; font-size: 12px; }
+.icon-btn.mini {
+  width: auto;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f8fafc;
+  border-color: #475569;
+  color: #0f172a;
+}
 .seam-select { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
 .seam-select select { min-width: 120px; border-radius: 8px; border: 1px solid rgba(255,255,255,.24); background: rgba(255,255,255,.12); color: #f8fafc; padding: 5px 8px; }
 .seam-select select:focus { outline: none; border-color: rgba(45,212,191,.7); box-shadow: 0 0 0 3px rgba(45,212,191,.2); }

@@ -206,7 +206,7 @@
           <span class="tip">{{ rw('section4Tip') }}</span>
         </div>
         <div class="lookup-row">
-          <select v-model="selectedTemplate">
+          <select v-model="selectedTemplate" :aria-label="rw('section4Title')">
             <option v-for="name in templateNames" :key="name" :value="name">{{ name }}</option>
           </select>
           <button class="btn secondary" :disabled="busy.loadTemplates" @click="loadTemplates">

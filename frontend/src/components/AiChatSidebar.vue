@@ -112,6 +112,9 @@
         ></textarea>
         <button
           class="send-btn"
+          type="button"
+          title="发送消息"
+          aria-label="发送消息"
           @click="sendMessage"
           :disabled="isLoading || !inputMessage.trim()"
           :class="{ 'active': inputMessage.trim() && !isLoading }"
@@ -500,9 +503,9 @@ onMounted(() => {
 
 .quick-action-btn {
   padding: 8px 12px;
-  border: 1px solid #667eea;
+  border: 1px solid #3f5abf;
   background: white;
-  color: #667eea;
+  color: #2f469e;
   border-radius: 16px;
   font-size: 13px;
   cursor: pointer;
@@ -510,7 +513,7 @@ onMounted(() => {
 }
 
 .quick-action-btn:hover {
-  background: #667eea;
+  background: #3f5abf;
   color: white;
 }
 

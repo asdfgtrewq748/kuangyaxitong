@@ -124,10 +124,11 @@ const widthOf = (value) => {
 
 .mini {
   margin-top: 8px;
-  border: 1px solid #9ca3af;
+  border: 1px solid #6b7280;
   border-radius: 8px;
-  background: #f8fafc;
-  color: #1f2937;
+  background: #ffffff;
+  color: #111827;
+  font-weight: 600;
   font-size: 12px;
   padding: 6px 10px;
   cursor: pointer;

@@ -10,7 +10,7 @@
         </button>
         <span class="nav-title">MPI 数值模拟</span>
         <div class="nav-separator"></div>
-        <select v-model="seam" @change="handleSeamChange" class="nav-select">
+        <select v-model="seam" @change="handleSeamChange" class="nav-select" aria-label="选择煤层">
           <option v-for="s in seams" :key="s.name" :value="s.name">{{ s.name }}</option>
         </select>
         <div class="mini-stats" v-if="hasData">
@@ -208,6 +208,7 @@
             max="100"
             step="0.1"
             class="progress-slider"
+            aria-label="模拟进度"
           >
           <div class="progress-info">
             <span>{{ Math.round(simulation.progress.value) }}%</span>

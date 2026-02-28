@@ -20,7 +20,7 @@
     <section class="card controls">
       <div class="control-item">
         <label>{{ rp('seam') }}</label>
-        <select v-model="selectedSeam" :disabled="!seamOptions.length">
+        <select v-model="selectedSeam" :disabled="!seamOptions.length" :aria-label="rp('seam')">
           <option v-for="item in seamOptions" :key="item.name" :value="item.name">{{ item.name }}</option>
         </select>
       </div>

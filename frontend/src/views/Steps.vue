@@ -875,8 +875,8 @@ onMounted(async () => {
   font-size: 11px;
   border-radius: 999px;
   padding: var(--spacing-1) var(--spacing-3);
-  background: rgba(14, 116, 144, 0.14);
-  color: #0e7490;
+  background: #dbeafe;
+  color: #1e3a8a;
 }
 
 .panel-body {
@@ -893,8 +893,8 @@ onMounted(async () => {
   border: 1px dashed #bfd3d9;
   border-radius: 12px;
   font-size: 13px;
-  color: #64748b;
-  background: #f4f9f8;
+  color: #334155;
+  background: #eef6f5;
 }
 
 .stats-row {
