@@ -78,7 +78,8 @@
       <div class="card">
         <h3 class="section-title">{{ pi('traditional.indexDistribution') }}</h3>
 
-        <div v-if="indexGrid" class="result-content">
+        <SkeletonPanel v-if="loading && !indexGrid" :rows="6" />
+        <div v-else-if="indexGrid" class="result-content">
           <HeatmapCanvas :grid="indexGrid.values" :size="420" />
           <div class="legend">
             <div class="legend-label">{{ pi('traditional.pressureIndexLabel') }}</div>
@@ -103,10 +104,11 @@
           </div>
         </div>
 
-        <div v-else class="empty-state">
-          <div class="empty-icon">馃搱</div>
-          <p>{{ pi('traditional.emptyState') }}</p>
-        </div>
+        <EmptyState
+          v-else
+          :title="pi('traditional.emptyState')"
+          :description="pi('traditional.indexDistribution')"
+        />
       </div>
     </div>
 
@@ -156,9 +158,15 @@
         </button>
       </div>
 
-      <div v-if="workfaceGrid" class="result-section">
+      <SkeletonPanel v-if="loading && !workfaceGrid" :rows="5" compact />
+      <div v-else-if="workfaceGrid" class="result-section">
         <HeatmapCanvas :grid="workfaceGrid" :size="500" />
       </div>
+      <EmptyState
+        v-else
+        :title="pi('workface.title')"
+        :description="pi('workface.description')"
+      />
     </div>
     </div>
 
@@ -223,7 +231,8 @@
         <div class="card">
           <h3 class="section-title">{{ pi('mpi.compositeDistribution') }}</h3>
 
-          <div v-if="mpiGrid" class="result-content">
+          <SkeletonPanel v-if="loading && !mpiGrid" :rows="6" />
+          <div v-else-if="mpiGrid" class="result-content">
             <div class="mpi-legend-tabs">
               <button
                 v-for="mode in mpiDisplayModes"
@@ -266,11 +275,11 @@
             </div>
           </div>
 
-          <div v-else class="empty-state">
-            <div class="empty-icon">馃搳</div>
-            <p>{{ pi('mpi.emptyState') }}</p>
-            <p class="empty-hint">{{ pi('mpi.emptyHint') }}</p>
-          </div>
+          <EmptyState
+            v-else
+            :title="pi('mpi.emptyState')"
+            :description="pi('mpi.emptyHint')"
+          />
         </div>
       </div>
 
@@ -354,7 +363,7 @@ import { useI18n } from '../composables/useI18n'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
-import { PageHeader } from '../components/library'
+import { EmptyState, PageHeader, SkeletonPanel } from '../components/library'
 import {
   pressureIndexGrid,
   pressureIndexWorkfaces,

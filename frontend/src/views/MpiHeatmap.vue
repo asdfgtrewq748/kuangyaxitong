@@ -142,48 +142,46 @@
             :show-boundary="showBoundary"
             :show-mask="showMask"
             :palette="odiPalette"
+            :loading="loading"
             @hover="hoverInfo = $event"
             @imageError="handleImageError"
           />
 
-          <div v-if="hasGrid" class="legend">
-            <div class="legend-label">MPI椋庨櫓娓愬彉锛圤DI鑹茬洏锛?/div>
-            <div class="legend-bar" :style="{ background: legendGradient }"></div>
-            <div class="legend-scale">
-              <span>楂橀闄╋紙浣嶮PI锛?/span>
-              <span>浣庨闄╋紙楂楳PI锛?/span>
+          <SkeletonPanel v-if="loading && !hasGrid" :rows="4" compact />
+          <template v-else-if="hasGrid">
+            <div class="legend">
+              <div class="legend-label">MPI椋庨櫓娓愬彉锛圤DI鑹茬洏锛?/div>
+              <div class="legend-bar" :style="{ background: legendGradient }"></div>
+              <div class="legend-scale">
+                <span>楂橀闄╋紙浣嶮PI锛?/span>
+                <span>浣庨闄╋紙楂楳PI锛?/span>
+              </div>
             </div>
-          </div>
 
-          <div v-if="hasGrid" class="stats-grid">
-            <div class="stat-item">
-              <span class="stat-label">鏈€灏忓€?/span>
-              <span class="stat-value">{{ stats.min?.toFixed(2) || '-' }}</span>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-label">鏈€灏忓€?/span>
+                <span class="stat-value">{{ stats.min?.toFixed(2) || '-' }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">鏈€澶у€?/span>
+                <span class="stat-value">{{ stats.max?.toFixed(2) || '-' }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">骞冲潎鍊?/span>
+                <span class="stat-value">{{ stats.mean?.toFixed(2) || '-' }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">鎮仠鍊?/span>
+                <span class="stat-value">{{ hoverInfo?.value?.toFixed(2) || '-' }}</span>
+              </div>
             </div>
-            <div class="stat-item">
-              <span class="stat-label">鏈€澶у€?/span>
-              <span class="stat-value">{{ stats.max?.toFixed(2) || '-' }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">骞冲潎鍊?/span>
-              <span class="stat-value">{{ stats.mean?.toFixed(2) || '-' }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">鎮仠鍊?/span>
-              <span class="stat-value">{{ hoverInfo?.value?.toFixed(2) || '-' }}</span>
-            </div>
-          </div>
-
-          <div v-else class="empty-state">
-            <div class="empty-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="3" y1="9" x2="21" y2="9"></line>
-                <line x1="9" y1="21" x2="9" y2="9"></line>
-              </svg>
-            </div>
-            <p>璇烽€夋嫨鐓ゅ眰骞惰绠桵PI鐑姏鍥?/p>
-          </div>
+          </template>
+          <EmptyState
+            v-else
+            title="暂无 MPI 数据"
+            description="请选择煤层并执行 MPI 计算。"
+          />
         </Card>
       </div>
     </div>
@@ -194,7 +192,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from '../composables/useToast'
 import MpiHeatmapViewer from '../components/MpiHeatmapViewer.vue'
-import { Card, PageHeader } from '../components/library'
+import { Card, EmptyState, PageHeader, SkeletonPanel } from '../components/library'
 import {
   getCoalSeams,
   getSeamOverburden,
