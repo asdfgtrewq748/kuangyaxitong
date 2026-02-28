@@ -22,64 +22,76 @@
           <h2>{{ t('geoMpiStudio.controlPanel') }}</h2>
           <span class="tag">P3</span>
         </div>
+        <SkeletonPanel v-if="loadingSeams" :rows="5" compact />
 
-        <div class="form-grid">
-          <label>
-            {{ t('geoMpiStudio.seam') }}
-            <select v-model="seamName">
-              <option v-for="item in seamOptions" :key="item" :value="item">{{ item }}</option>
-            </select>
-          </label>
+        <EmptyState
+          v-else-if="!seamOptions.length"
+          :title="t('geoMpiStudio.emptySeamTitle')"
+          :description="t('geoMpiStudio.emptySeamDescription')"
+          :action-label="t('geoMpiStudio.retryLoadSeams')"
+          @action="loadSeams"
+        />
 
-          <label>
-            {{ t('geoMpiStudio.geomodelJobId') }}
-            <input
-              v-model.trim="geomodelJobId"
-              type="text"
-              :placeholder="t('geoMpiStudio.geomodelJobPlaceholder')"
-            />
-          </label>
-
-          <label>
-            {{ t('geoMpiStudio.resolution') }}
-            <input v-model.number="resolution" type="number" min="20" max="150" step="5" />
-          </label>
-
-          <label>
-            {{ t('geoMpiStudio.method') }}
-            <select v-model="method">
-              <option value="idw">{{ t('geoMpiStudio.methodIdw') }}</option>
-              <option value="linear">{{ t('geoMpiStudio.methodLinear') }}</option>
-              <option value="nearest">{{ t('geoMpiStudio.methodNearest') }}</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="mode-block">
-          <p class="mode-title">{{ t('geoMpiStudio.mode') }}</p>
-          <div class="mode-row">
-            <label class="mode-item">
-              <input v-model="mode" type="radio" value="baseline" />
-              <span>{{ t('geoMpiStudio.modeBaseline') }}</span>
+        <template v-else>
+          <div class="form-grid">
+            <label>
+              {{ t('geoMpiStudio.seam') }}
+              <select v-model="seamName" :disabled="loadingSeams || !seamOptions.length">
+                <option v-if="!seamOptions.length" value="" disabled>{{ t('geoMpiStudio.noSeamOptions') }}</option>
+                <option v-for="item in seamOptions" :key="item" :value="item">{{ item }}</option>
+              </select>
             </label>
-            <label class="mode-item">
-              <input v-model="mode" type="radio" value="geo-aware" />
-              <span>{{ t('geoMpiStudio.modeGeoAware') }}</span>
+
+            <label>
+              {{ t('geoMpiStudio.geomodelJobId') }}
+              <input
+                v-model.trim="geomodelJobId"
+                type="text"
+                :placeholder="t('geoMpiStudio.geomodelJobPlaceholder')"
+              />
             </label>
-            <label class="mode-item">
-              <input v-model="mode" type="radio" value="delta" />
-              <span>{{ t('geoMpiStudio.modeDelta') }}</span>
+
+            <label>
+              {{ t('geoMpiStudio.resolution') }}
+              <input v-model.number="resolution" type="number" min="20" max="150" step="5" />
+            </label>
+
+            <label>
+              {{ t('geoMpiStudio.method') }}
+              <select v-model="method">
+                <option value="idw">{{ t('geoMpiStudio.methodIdw') }}</option>
+                <option value="linear">{{ t('geoMpiStudio.methodLinear') }}</option>
+                <option value="nearest">{{ t('geoMpiStudio.methodNearest') }}</option>
+              </select>
             </label>
           </div>
-        </div>
 
-        <div class="hint">
-          <span><b>{{ t('geoMpiStudio.hintMode') }}:</b> {{ modeLabel(mode) }}</span>
-          <span><b>{{ t('geoMpiStudio.hintAlgorithm') }}:</b> {{ algorithmMode || '-' }}</span>
-          <span><b>{{ t('geoMpiStudio.hintFallback') }}:</b> {{ fallbackUsed ? t('common.yes') : t('common.no') }}</span>
-          <span><b>{{ t('geoMpiStudio.hintFeatureSource') }}:</b> {{ featureSourceMode || '-' }}</span>
-          <span><b>{{ t('geoMpiStudio.hintUpdated') }}:</b> {{ formatTime(lastUpdated) }}</span>
-        </div>
+          <div class="mode-block">
+            <p class="mode-title">{{ t('geoMpiStudio.mode') }}</p>
+            <div class="mode-row">
+              <label class="mode-item">
+                <input v-model="mode" type="radio" value="baseline" />
+                <span>{{ t('geoMpiStudio.modeBaseline') }}</span>
+              </label>
+              <label class="mode-item">
+                <input v-model="mode" type="radio" value="geo-aware" />
+                <span>{{ t('geoMpiStudio.modeGeoAware') }}</span>
+              </label>
+              <label class="mode-item">
+                <input v-model="mode" type="radio" value="delta" />
+                <span>{{ t('geoMpiStudio.modeDelta') }}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="hint">
+            <span><b>{{ t('geoMpiStudio.hintMode') }}:</b> {{ modeLabel(mode) }}</span>
+            <span><b>{{ t('geoMpiStudio.hintAlgorithm') }}:</b> {{ algorithmMode || '-' }}</span>
+            <span><b>{{ t('geoMpiStudio.hintFallback') }}:</b> {{ fallbackUsed ? t('common.yes') : t('common.no') }}</span>
+            <span><b>{{ t('geoMpiStudio.hintFeatureSource') }}:</b> {{ featureSourceMode || '-' }}</span>
+            <span><b>{{ t('geoMpiStudio.hintUpdated') }}:</b> {{ formatTime(lastUpdated) }}</span>
+          </div>
+        </template>
         <p v-if="error" class="error">{{ error }}</p>
       </article>
 
@@ -88,11 +100,20 @@
           <h2>{{ t('geoMpiStudio.matrixTitle') }}</h2>
           <span class="tag">MPI / RSI / BRI / ASI</span>
         </div>
+        <SkeletonPanel v-if="loadingMatrix" :rows="6" />
         <GeoMpiMapMatrix
+          v-else-if="hasMatrixData"
           :tiles="metricTiles"
           :loading="loadingMatrix"
           :selected-cell="selectedCell"
           @select-cell="handleCellSelect"
+        />
+        <EmptyState
+          v-else
+          :title="t('geoMpiStudio.emptyMatrixTitle')"
+          :description="t('geoMpiStudio.emptyMatrixDescription')"
+          :action-label="t('geoMpiStudio.runSpatialAnalysis')"
+          @action="refreshMatrix"
         />
       </article>
 
@@ -128,7 +149,7 @@ import { computed, ref } from 'vue'
 import GeoMpi3DLinkage from '../components/GeoMpi3DLinkage.vue'
 import GeoMpiExplainPanel from '../components/GeoMpiExplainPanel.vue'
 import GeoMpiMapMatrix from '../components/GeoMpiMapMatrix.vue'
-import { PageHeader } from '../components/library'
+import { EmptyState, PageHeader, SkeletonPanel } from '../components/library'
 import { useGeoMpiData } from '../composables/useGeoMpiData'
 import { useGeoMpiStudioState } from '../composables/useGeoMpiStudioState'
 import { useI18n } from '../composables/useI18n'
@@ -150,6 +171,7 @@ const {
   geomodelQuality,
   geomodelArtifacts,
   geomodelError,
+  loadSeams,
   refreshMatrix,
 } = useGeoMpiData(state, { t })
 
@@ -173,6 +195,10 @@ const selectedValues = computed(() => {
   }
   return values
 })
+
+const hasMatrixData = computed(() =>
+  (metricTiles.value || []).some((tile) => Array.isArray(tile?.grid) && tile.grid.length > 0),
+)
 
 const formatTime = (value) => {
   if (!value) return '-'
@@ -313,6 +339,12 @@ const modeLabel = (value) => {
   gap: 10px;
 }
 
+@media (max-width: 1440px) {
+  .grid-main {
+    grid-template-columns: 320px minmax(0, 1fr) 300px;
+  }
+}
+
 @media (max-width: 1280px) {
   .grid-main {
     grid-template-columns: 1fr;
@@ -341,6 +373,16 @@ const modeLabel = (value) => {
   .tag {
     font-size: 10px;
     padding: 2px 8px;
+  }
+}
+
+@media (max-width: 375px) {
+  .card {
+    padding: var(--spacing-md);
+  }
+
+  .panel-head h2 {
+    font-size: 16px;
   }
 }
 </style>

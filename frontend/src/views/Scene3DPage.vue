@@ -21,7 +21,7 @@
     </div>
 
     <div class="main-layout">
-      <aside class="side-panel">
+      <aside class="side-panel" role="complementary" :aria-label="s3('controlsPanelAria')">
         <section class="card">
           <h3>{{ s3('dataSource') }}</h3>
           <label class="field">
@@ -38,9 +38,10 @@
           <p v-if="loadError" class="error-tip">{{ loadError }}</p>
         </section>
 
-        <section v-if="hasData" class="card">
+        <section class="card">
           <h3>{{ s3('displayIndicators') }}</h3>
-          <div class="indicator-list">
+          <SkeletonPanel v-if="loading" :rows="4" compact />
+          <div v-else-if="hasData" class="indicator-list">
             <label
               v-for="indicator in indicators"
               :key="indicator.id"
@@ -52,21 +53,34 @@
               <span class="desc">{{ indicatorDescription(indicator) }}</span>
             </label>
           </div>
+          <EmptyState
+            v-else
+            :title="s3('emptyIndicatorsTitle')"
+            :description="s3('emptyIndicatorsDesc')"
+          />
         </section>
 
-        <section v-if="sceneStats" class="card">
+        <section class="card">
           <h3>{{ s3('sceneInfo') }}</h3>
-          <div class="kv"><span>{{ s3('layers') }}</span><strong>{{ sceneStats.layerCount ?? 0 }}</strong></div>
-          <div class="kv"><span>{{ s3('boreholes') }}</span><strong>{{ sceneStats.boreholeCount ?? 0 }}</strong></div>
-          <div class="kv stack">
-            <span>{{ s3('range') }}</span>
-            <small>
-              X: {{ sceneStats.bounds?.min_x ?? '-' }} - {{ sceneStats.bounds?.max_x ?? '-' }}
-            </small>
-            <small>
-              Y: {{ sceneStats.bounds?.min_y ?? '-' }} - {{ sceneStats.bounds?.max_y ?? '-' }}
-            </small>
-          </div>
+          <SkeletonPanel v-if="loading" :rows="5" compact />
+          <template v-else-if="sceneStats">
+            <div class="kv"><span>{{ s3('layers') }}</span><strong>{{ sceneStats.layerCount ?? 0 }}</strong></div>
+            <div class="kv"><span>{{ s3('boreholes') }}</span><strong>{{ sceneStats.boreholeCount ?? 0 }}</strong></div>
+            <div class="kv stack">
+              <span>{{ s3('range') }}</span>
+              <small>
+                X: {{ sceneStats.bounds?.min_x ?? '-' }} - {{ sceneStats.bounds?.max_x ?? '-' }}
+              </small>
+              <small>
+                Y: {{ sceneStats.bounds?.min_y ?? '-' }} - {{ sceneStats.bounds?.max_y ?? '-' }}
+              </small>
+            </div>
+          </template>
+          <EmptyState
+            v-else
+            :title="s3('emptySceneInfoTitle')"
+            :description="s3('emptySceneInfoDesc')"
+          />
         </section>
       </aside>
 
@@ -96,8 +110,13 @@
         />
       </main>
 
-      <aside v-if="hasData" class="stats-panel">
-        <section class="card">
+      <aside class="stats-panel" role="complementary" :aria-label="s3('statsPanelAria')">
+        <section v-if="loading" class="card">
+          <h3>{{ s3('currentIndicator') }}</h3>
+          <SkeletonPanel :rows="5" compact />
+        </section>
+
+        <section v-else-if="hasData" class="card">
           <h3>{{ s3('currentIndicator') }}</h3>
           <div class="indicator-head" :style="{ borderLeftColor: activeIndicatorConfig?.color }">
             <strong>{{ activeIndicatorConfig ? indicatorName(activeIndicatorConfig) : '' }}</strong>
@@ -112,6 +131,16 @@
             <canvas ref="histogramCanvas"></canvas>
           </div>
         </section>
+
+        <section v-else class="card">
+          <h3>{{ s3('currentIndicator') }}</h3>
+          <EmptyState
+            :title="s3('emptyStatsTitle')"
+            :description="s3('emptyStatsDesc')"
+            :action-label="s3('retryLoad')"
+            @action="loadData"
+          />
+        </section>
       </aside>
     </div>
   </div>
@@ -121,7 +150,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Scene3DViewer from '../components/Scene3DViewer.vue'
-import { PageHeader } from '../components/library'
+import { EmptyState, PageHeader, SkeletonPanel } from '../components/library'
 import { getCoalSeams, getScene3DData, getApiErrorMessage } from '../api'
 import { useI18n } from '../composables/useI18n'
 
@@ -401,6 +430,12 @@ onBeforeUnmount(() => {
 .hist { margin-top: 10px; height: 150px; background: #fff; border: 1px dashed var(--border-color); border-radius: 8px; overflow: hidden; }
 .hist canvas { width: 100%; height: 100%; display: block; }
 
+@media (max-width: 1440px) {
+  .main-layout {
+    grid-template-columns: 260px minmax(0, 1fr) 280px;
+  }
+}
+
 @media (max-width: 1280px) {
   .main-layout { grid-template-columns: 1fr; }
 }
@@ -441,6 +476,20 @@ onBeforeUnmount(() => {
   .field select,
   .field input {
     font-size: 12px;
+  }
+}
+
+@media (max-width: 375px) {
+  .main-header {
+    padding: 0 var(--spacing-2);
+  }
+
+  .summary-strip {
+    padding: var(--spacing-1);
+  }
+
+  .card h3 {
+    font-size: 13px;
   }
 }
 </style>

@@ -1,0 +1,1814 @@
+{
+  "generatedAt": "2026-02-28T14:50:47.988Z",
+  "baseUrl": "http://127.0.0.1:5173",
+  "axeSource": "local:E:\\xiangmu\\kuangyaxitong\\node_modules\\axe-core\\axe.min.js",
+  "summary": {
+    "totalChecks": 60,
+    "failedLoad": 0,
+    "horizontalOverflowChecks": 0,
+    "axeCriticalTotal": 80,
+    "axeSeriousTotal": 60
+  },
+  "entries": [
+    {
+      "route": "/",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 5
+        }
+      ],
+      "screenshot": "home_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 5
+        }
+      ],
+      "screenshot": "home_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "home_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "home_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "home_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/data-import",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "data-import_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/data-import",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "data-import_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/data-import",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "data-import_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/data-import",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "data-import_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/data-import",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "data-import_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/interpolation",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "interpolation_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/interpolation",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "interpolation_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/interpolation",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "interpolation_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/interpolation",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "interpolation_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/interpolation",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "interpolation_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/mpi-heatmap-pro",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 3,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodeCount": 1
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "mpi-heatmap-pro_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/mpi-heatmap-pro",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 3,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodeCount": 1
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "mpi-heatmap-pro_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/mpi-heatmap-pro",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 3,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodeCount": 1
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "mpi-heatmap-pro_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/mpi-heatmap-pro",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 3,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodeCount": 1
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "mpi-heatmap-pro_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/mpi-heatmap-pro",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 3,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodeCount": 1
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "mpi-heatmap-pro_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/algorithm-validation",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 5
+        }
+      ],
+      "screenshot": "algorithm-validation_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/algorithm-validation",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 5
+        }
+      ],
+      "screenshot": "algorithm-validation_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/algorithm-validation",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "algorithm-validation_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/algorithm-validation",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "algorithm-validation_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/algorithm-validation",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "algorithm-validation_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/research-workbench",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "research-workbench_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/research-workbench",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "research-workbench_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/research-workbench",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "research-workbench_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/research-workbench",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "research-workbench_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/research-workbench",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "research-workbench_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/geo-mpi-studio",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geo-mpi-studio_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/geo-mpi-studio",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geo-mpi-studio_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/geo-mpi-studio",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geo-mpi-studio_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/geo-mpi-studio",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geo-mpi-studio_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/geo-mpi-studio",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geo-mpi-studio_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/scene3d",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "scene3d_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/scene3d",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "scene3d_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/scene3d",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "scene3d_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/scene3d",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "scene3d_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/scene3d",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "scene3d_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/steps",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 9
+        }
+      ],
+      "screenshot": "steps_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/steps",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 9
+        }
+      ],
+      "screenshot": "steps_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/steps",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 9
+        }
+      ],
+      "screenshot": "steps_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/steps",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 9
+        }
+      ],
+      "screenshot": "steps_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/steps",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 9
+        }
+      ],
+      "screenshot": "steps_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/report",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "report_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/report",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "report_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/report",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "report_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/report",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "report_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/report",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 2,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodeCount": 1
+        }
+      ],
+      "screenshot": "report_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/geomodel-visualization",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geomodel-visualization_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/geomodel-visualization",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geomodel-visualization_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/geomodel-visualization",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geomodel-visualization_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/geomodel-visualization",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geomodel-visualization_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/geomodel-visualization",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 3
+        }
+      ],
+      "screenshot": "geomodel-visualization_mobile_375.png",
+      "error": ""
+    },
+    {
+      "route": "/academic-algorithm",
+      "viewport": "desktop_1920",
+      "width": 1920,
+      "height": 1080,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "academic-algorithm_desktop_1920.png",
+      "error": ""
+    },
+    {
+      "route": "/academic-algorithm",
+      "viewport": "desktop_1440",
+      "width": 1440,
+      "height": 900,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "academic-algorithm_desktop_1440.png",
+      "error": ""
+    },
+    {
+      "route": "/academic-algorithm",
+      "viewport": "tablet_1024",
+      "width": 1024,
+      "height": 768,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "academic-algorithm_tablet_1024.png",
+      "error": ""
+    },
+    {
+      "route": "/academic-algorithm",
+      "viewport": "mobile_768",
+      "width": 768,
+      "height": 1024,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "academic-algorithm_mobile_768.png",
+      "error": ""
+    },
+    {
+      "route": "/academic-algorithm",
+      "viewport": "mobile_375",
+      "width": 375,
+      "height": 812,
+      "loadStatus": "PASS",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "axeCritical": 1,
+      "axeSerious": 1,
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "help": "Buttons must have discernible text",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodeCount": 4
+        }
+      ],
+      "screenshot": "academic-algorithm_mobile_375.png",
+      "error": ""
+    }
+  ]
+}

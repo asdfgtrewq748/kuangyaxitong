@@ -213,7 +213,8 @@
             {{ busy.loadTemplates ? rw('refreshing') : rw('refreshTemplate') }}
           </button>
         </div>
-        <div class="template-preview" v-if="templateSteps.length">
+        <SkeletonPanel v-if="busy.loadTemplates" :rows="4" compact />
+        <div class="template-preview" v-else-if="templateSteps.length">
           <table class="table">
             <thead>
               <tr>
@@ -229,6 +230,13 @@
             </tbody>
           </table>
         </div>
+        <EmptyState
+          v-else
+          :title="rw('emptyTemplatesTitle')"
+          :description="rw('emptyTemplatesDesc')"
+          :action-label="rw('refreshTemplate')"
+          @action="loadTemplates"
+        />
         <div class="actions">
           <button
             class="btn"
@@ -263,86 +271,98 @@
         </button>
       </div>
 
-      <div v-if="displayResult" class="result-grid">
-        <article class="result-card">
-          <h3>{{ rw('keyMetrics') }}</h3>
-          <div class="metric-grid">
-            <div v-for="[name, value] in metricEntries" :key="name" class="metric-item">
-              <span>{{ name }}</span>
-              <b>{{ formatNumber(value, 6) }}</b>
+      <SkeletonPanel v-if="busy.loadResult" :rows="7" />
+
+      <template v-else-if="displayResult">
+        <div class="result-grid">
+          <article class="result-card">
+            <h3>{{ rw('keyMetrics') }}</h3>
+            <div class="metric-grid">
+              <div v-for="[name, value] in metricEntries" :key="name" class="metric-item">
+                <span>{{ name }}</span>
+                <b>{{ formatNumber(value, 6) }}</b>
+              </div>
             </div>
-          </div>
-        </article>
+          </article>
 
-        <article class="result-card">
-          <h3>{{ rw('ci95') }}</h3>
-          <table class="table compact">
-            <thead>
-              <tr>
-                <th>{{ rw('metric') }}</th>
-                <th>{{ rw('low') }}</th>
-                <th>{{ rw('high') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="[name, range] in ciEntries" :key="name">
-                <td>{{ name }}</td>
-                <td>{{ formatNumber(range?.[0], 6) }}</td>
-                <td>{{ formatNumber(range?.[1], 6) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </article>
-      </div>
+          <article class="result-card">
+            <h3>{{ rw('ci95') }}</h3>
+            <table class="table compact">
+              <thead>
+                <tr>
+                  <th>{{ rw('metric') }}</th>
+                  <th>{{ rw('low') }}</th>
+                  <th>{{ rw('high') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="[name, range] in ciEntries" :key="name">
+                  <td>{{ name }}</td>
+                  <td>{{ formatNumber(range?.[0], 6) }}</td>
+                  <td>{{ formatNumber(range?.[1], 6) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+        </div>
 
-      <div class="result-grid" v-if="displayResult">
-        <article class="result-card">
-          <h3>{{ rw('calibrationReport') }}</h3>
-          <div class="meta-row">
-            <span>ECE: <b>{{ formatNumber(displayResult.calibration?.ece, 6) }}</b></span>
-            <span>MCE: <b>{{ formatNumber(displayResult.calibration?.mce, 6) }}</b></span>
-            <span>{{ rw('bins') }}: <b>{{ displayResult.calibration?.bin_count ?? 0 }}</b></span>
-          </div>
-          <table class="table compact">
-            <thead>
-              <tr>
-                <th>{{ rw('bin') }}</th>
-                <th>{{ rw('count') }}</th>
-                <th>{{ rw('acc') }}</th>
-                <th>{{ rw('conf') }}</th>
-                <th>{{ rw('gap') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in (displayResult.calibration?.bins || []).slice(0, 10)" :key="item.bin">
-                <td>{{ item.bin }}</td>
-                <td>{{ item.count }}</td>
-                <td>{{ formatNumber(item.acc, 4) }}</td>
-                <td>{{ formatNumber(item.conf, 4) }}</td>
-                <td>{{ formatNumber(item.gap, 4) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </article>
+        <div class="result-grid">
+          <article class="result-card">
+            <h3>{{ rw('calibrationReport') }}</h3>
+            <div class="meta-row">
+              <span>ECE: <b>{{ formatNumber(displayResult.calibration?.ece, 6) }}</b></span>
+              <span>MCE: <b>{{ formatNumber(displayResult.calibration?.mce, 6) }}</b></span>
+              <span>{{ rw('bins') }}: <b>{{ displayResult.calibration?.bin_count ?? 0 }}</b></span>
+            </div>
+            <table class="table compact">
+              <thead>
+                <tr>
+                  <th>{{ rw('bin') }}</th>
+                  <th>{{ rw('count') }}</th>
+                  <th>{{ rw('acc') }}</th>
+                  <th>{{ rw('conf') }}</th>
+                  <th>{{ rw('gap') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in (displayResult.calibration?.bins || []).slice(0, 10)" :key="item.bin">
+                  <td>{{ item.bin }}</td>
+                  <td>{{ item.count }}</td>
+                  <td>{{ formatNumber(item.acc, 4) }}</td>
+                  <td>{{ formatNumber(item.conf, 4) }}</td>
+                  <td>{{ formatNumber(item.gap, 4) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
 
-        <article class="result-card">
-          <h3>{{ rw('traceability') }}</h3>
-          <div class="trace-row">
-            <span>{{ rw('datasetManifest') }}</span>
-            <code>{{ displayResult.traceability?.dataset_manifest || '-' }}</code>
-          </div>
-          <div class="trace-row">
-            <span>{{ rw('splitManifest') }}</span>
-            <code>{{ displayResult.traceability?.split_manifest || '-' }}</code>
-          </div>
-          <div class="trace-row">
-            <span>{{ rw('createdAt') }}</span>
-            <code>{{ displayResult.created_at || '-' }}</code>
-          </div>
-        </article>
-      </div>
+          <article class="result-card">
+            <h3>{{ rw('traceability') }}</h3>
+            <div class="trace-row">
+              <span>{{ rw('datasetManifest') }}</span>
+              <code>{{ displayResult.traceability?.dataset_manifest || '-' }}</code>
+            </div>
+            <div class="trace-row">
+              <span>{{ rw('splitManifest') }}</span>
+              <code>{{ displayResult.traceability?.split_manifest || '-' }}</code>
+            </div>
+            <div class="trace-row">
+              <span>{{ rw('createdAt') }}</span>
+              <code>{{ displayResult.created_at || '-' }}</code>
+            </div>
+          </article>
+        </div>
+      </template>
 
-      <article v-if="artifacts.length" class="result-card">
+      <EmptyState
+        v-else
+        :title="rw('emptyResultTitle')"
+        :description="rw('emptyResultDesc')"
+      />
+
+      <SkeletonPanel v-if="busy.loadArtifacts" :rows="5" compact />
+
+      <article v-else-if="artifacts.length" class="result-card">
         <h3>{{ rw('artifacts') }}</h3>
         <table class="table">
           <thead>
@@ -371,6 +391,14 @@
           </tbody>
         </table>
       </article>
+
+      <EmptyState
+        v-else-if="resultQueryExpId"
+        :title="rw('emptyArtifactsTitle')"
+        :description="rw('emptyArtifactsDesc')"
+        :action-label="rw('queryArtifacts')"
+        @action="loadArtifacts"
+      />
     </section>
 
     <section class="card panel">
@@ -398,6 +426,8 @@
           {{ rw('exportJson') }}
         </button>
       </div>
+
+      <SkeletonPanel v-if="busy.compare" :rows="6" />
 
       <div v-if="comparisonRows.length" class="viz-controls">
         <label>
@@ -564,6 +594,12 @@
           </tbody>
         </table>
       </div>
+
+      <EmptyState
+        v-if="!busy.compare && !comparisonRows.length"
+        :title="rw('emptyComparisonTitle')"
+        :description="rw('emptyComparisonDesc')"
+      />
     </section>
   </div>
 </template>
@@ -584,7 +620,7 @@ import {
 } from '../api'
 import { useI18n } from '../composables/useI18n'
 import { useToast } from '../composables/useToast'
-import { PageHeader, StatCard, DataTable, LoadingState } from '../components/library'
+import { EmptyState, PageHeader, SkeletonPanel, StatCard } from '../components/library'
 import { useUIStore } from '../stores'
 
 const toast = useToast()
@@ -593,21 +629,6 @@ const uiStore = useUIStore()
 const route = useRoute()
 const router = useRouter()
 const rw = (key, params) => t(`researchWorkbench.${key}`, params)
-
-// DataTable columns for artifacts
-const artifactColumns = [
-  { key: 'name', title: rw('name'), sortable: true },
-  { key: 'size', title: rw('size'), align: 'right' },
-  { key: 'path', title: rw('path') },
-  { key: 'action', title: rw('action') }
-]
-
-const artifactRows = computed(() => artifacts.value.map(item => ({
-  name: item.name,
-  size: formatBytes(item.size_bytes),
-  path: item.path,
-  action: 'download'
-})))
 
 const comparisonMetricOrder = ['auc', 'pr_auc', 'f1', 'brier', 'mae', 'rmse', 'paired_significance_p']
 const higherBetterMetrics = new Set(['auc', 'pr_auc', 'f1'])
@@ -1818,6 +1839,16 @@ onMounted(async () => {
   word-break: break-all;
 }
 
+@media (max-width: 1440px) {
+  .status-pills {
+    flex-wrap: wrap;
+  }
+
+  .lookup-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
 @media (max-width: 1200px) {
   .result-grid {
     grid-template-columns: 1fr;
@@ -1850,6 +1881,36 @@ onMounted(async () => {
 
   .manifest-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .card {
+    padding: var(--spacing-3);
+  }
+
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .compare-svg {
+    height: 240px;
+  }
+}
+
+@media (max-width: 375px) {
+  .card {
+    padding: var(--spacing-2);
+  }
+
+  .status-pill {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .compare-svg {
+    height: 210px;
   }
 }
 </style>

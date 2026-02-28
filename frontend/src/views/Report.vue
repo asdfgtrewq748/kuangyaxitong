@@ -51,7 +51,8 @@
 
     <section class="card">
       <h2>{{ rp('overviewStats') }}</h2>
-      <div class="cards-grid" v-if="summary.length">
+      <SkeletonPanel v-if="loading && !summary.length" :rows="7" />
+      <div v-else-if="summary.length" class="cards-grid">
         <article class="metric-card" v-for="row in summary" :key="row.nameKey || row.name">
           <h3>{{ summaryDisplayName(row) }}</h3>
           <div class="metric-main">{{ formatNumber(row.stats.mean, 3) }}</div>
@@ -65,12 +66,16 @@
           </div>
         </article>
       </div>
-      <div v-else class="empty-block">{{ loading ? rp('generatingOverviewStats') : rp('noOverviewStats') }}</div>
+      <EmptyState
+        v-else
+        :title="rp('noOverviewStats')"
+      />
     </section>
 
     <section class="card">
       <h2>{{ rp('mpiAnalysis') }}</h2>
-      <div v-if="mpiSummary" class="mpi-layout">
+      <SkeletonPanel v-if="loading && !mpiSummary" :rows="6" />
+      <div v-else-if="mpiSummary" class="mpi-layout">
         <div class="mpi-stats">
           <div class="stat-item"><span>{{ rp('seam') }}</span><strong>{{ mpiSummary.seamName }}</strong></div>
           <div class="stat-item"><span>{{ rp('mpiMean') }}</span><strong>{{ formatNumber(mpiSummary.stats.mean, 2) }}</strong></div>
@@ -96,12 +101,16 @@
           </article>
         </div>
       </div>
-      <div v-else class="empty-block">{{ loading ? rp('generatingMpiAnalysis') : rp('noMpiAnalysis') }}</div>
+      <EmptyState
+        v-else
+        :title="rp('noMpiAnalysis')"
+      />
     </section>
 
     <section class="card">
       <h2>{{ rp('geomodelQualitySection') }}</h2>
       <div v-if="geomodelError" class="error">{{ geomodelError }}</div>
+      <SkeletonPanel v-else-if="geomodelLoading && !geomodelQuality" :rows="5" />
       <div v-else-if="geomodelQuality" class="geomodel-quality-grid">
         <article class="metric-card">
           <h3>{{ rp('jobStatus') }}</h3>
@@ -128,7 +137,7 @@
           </div>
         </article>
       </div>
-      <div v-else class="empty-block">{{ rp('geomodelPrompt') }}</div>
+      <EmptyState v-else :title="rp('geomodelPrompt')" />
     </section>
 
     <section class="card">
@@ -205,12 +214,17 @@
           </table>
         </div>
       </div>
-      <div v-if="!(week3Research && week3Research.status !== 'missing')" class="empty-block">{{ rp('noWeek3Summary') }}</div>
+      <SkeletonPanel v-if="loading && !(week3Research && week3Research.status !== 'missing')" :rows="5" />
+      <EmptyState
+        v-else-if="!(week3Research && week3Research.status !== 'missing')"
+        :title="rp('noWeek3Summary')"
+      />
     </section>
 
     <section class="card">
       <h2>{{ rp('detailStatsTable') }}</h2>
-      <div class="table-wrap" v-if="summary.length">
+      <SkeletonPanel v-if="loading && !summary.length" :rows="8" />
+      <div v-else-if="summary.length" class="table-wrap">
         <table class="table">
           <thead>
             <tr>
@@ -238,7 +252,10 @@
           </tbody>
         </table>
       </div>
-      <div v-else class="empty-block">{{ loading ? rp('generatingDetailStats') : rp('noDetailStats') }}</div>
+      <EmptyState
+        v-else
+        :title="rp('noDetailStats')"
+      />
     </section>
   </div>
 </template>
@@ -249,7 +266,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import { useI18n } from '../composables/useI18n'
-import { PageHeader } from '../components/library'
+import { EmptyState, PageHeader, SkeletonPanel } from '../components/library'
 import {
   downloadGeomodelArtifact,
   getCoalSeams,
@@ -1103,6 +1120,16 @@ h2 {
   overflow-x: auto;
 }
 
+@media (max-width: 1440px) {
+  .cards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .geomodel-quality-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1200px) {
   .cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1129,7 +1156,17 @@ h2 {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1024px) {
+  .card {
+    padding: var(--spacing-4);
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
   .hero-actions {
     width: 100%;
     justify-content: flex-start;
@@ -1142,6 +1179,20 @@ h2 {
   .geomodel-quality-grid,
   .week3-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 375px) {
+  .card {
+    padding: var(--spacing-3);
+  }
+
+  h2 {
+    font-size: 15px;
+  }
+
+  .metric-main {
+    font-size: 20px;
   }
 }
 </style>
