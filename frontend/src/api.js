@@ -199,11 +199,11 @@ export const exportPressureStepsWorkfaces = (params) =>
 
 // Coal Seam Interpolation APIs
 // Use cached GET for static data (client-swr-dedup pattern)
-export const getCoalSeams = () => apiCache.cachedGet('/api/seams/list')
+export const getCoalSeams = () => apiCache.cachedGet('/seams/list')
 export const getSeamStats = (seamName) =>
-  api.get('/api/seams/stats', { params: { seam_name: seamName } })
+  api.get('/seams/stats', { params: { seam_name: seamName } })
 export const interpolateSeam = (seamName, property, method = 'idw', gridSize = 100, contourLevels = 10, includeContours = true) =>
-  api.get('/api/seams/interpolate', {
+  api.get('/seams/interpolate', {
     params: {
       seam_name: seamName,
       property,
@@ -214,9 +214,9 @@ export const interpolateSeam = (seamName, property, method = 'idw', gridSize = 1
     }
   })
 export const getSeamOverburden = (seamName, borehole = null) =>
-  api.get('/api/seams/overburden', { params: { seam_name: seamName, borehole } })
+  api.get('/seams/overburden', { params: { seam_name: seamName, borehole } })
 export const compareSeamMethods = (seamName, property = 'thickness', gridSize = 100) =>
-  api.get('/api/seams/compare', { params: { seam_name: seamName, property, grid_size: gridSize } })
+  api.get('/seams/compare', { params: { seam_name: seamName, property, grid_size: gridSize } })
 export const exportSeamInterpolation = (seamName, property, method, gridSize) =>
   api.get('/export/seam-interpolation', {
     params: { seam_name: seamName, property, method, grid_size: gridSize },
@@ -243,10 +243,10 @@ export const getSeamContourImages = (
   }
 
   if (options?.forceRefresh) {
-    return api.get('/api/seams/contour-images', config)
+    return api.get('/seams/contour-images', config)
   }
 
-  return apiCache.cachedGet('/api/seams/contour-images', config)
+  return apiCache.cachedGet('/seams/contour-images', config)
 }
 
 // Scene3D APIs

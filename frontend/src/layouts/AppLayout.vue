@@ -159,12 +159,22 @@ const appToastRef = getCurrentInstance()?.appContext?.config?.globalProperties?.
 const showAiSearch = ref(true) // 控制 AI 搜索栏显示
 const preloadedRoutes = new Set()
 
-const routes = computed(() => (
+const routes = computed(() => {
+  const unique = new Map()
+
   router
     .getRoutes()
+    .filter((r) => !r.aliasOf) // avoid duplicate sidebar entries from route aliases
+    .filter((r) => !r.redirect)
     .filter((r) => (r.meta?.title || r.meta?.titleKey) && r.meta?.nav !== false)
     .sort((a, b) => Number(a.meta?.navOrder || 999) - Number(b.meta?.navOrder || 999))
-))
+    .forEach((routeItem) => {
+      const key = String(routeItem.name || routeItem.path)
+      if (!unique.has(key)) unique.set(key, routeItem)
+    })
+
+  return [...unique.values()]
+})
 
 const flowRoutes = computed(() => {
   const routeMap = new Map(router.getRoutes().map((item) => [item.name, item]))

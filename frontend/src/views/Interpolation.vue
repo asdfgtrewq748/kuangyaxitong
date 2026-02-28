@@ -1,15 +1,18 @@
 <template>
-  <div class="page">
+  <div class="page interp-page">
     <!-- Header -->
-    <div class="header">
-      <div>
-        <h2>插值分析</h2>
+    <div class="header interp-header">
+      <div class="header-content">
+        <div class="header-title-group">
+          <h2>插值分析</h2>
+          <span class="header-subtitle">Spatial Interpolation Analysis</span>
+        </div>
         <div class="muted">{{ selectedSeam?.name || '请选择煤层并执行空间插值分析' }}</div>
       </div>
       <div v-if="selectedSeam && seamStats" class="header-stats">
         <div class="stat-badge">
           <span class="stat-label">厚度范围</span>
-          <strong>{{ seamStats?.thickness?.min?.toFixed(2) || '-' }} - {{ seamStats?.thickness?.max?.toFixed(2) || '-' }} m</strong>
+          <strong>{{ seamStats?.thickness?.min?.toFixed(2) || '-' }} – {{ seamStats?.thickness?.max?.toFixed(2) || '-' }} m</strong>
         </div>
         <div class="stat-badge primary">
           <span class="stat-label">平均厚度</span>
@@ -23,7 +26,7 @@
     </div>
 
     <!-- Seam Selection View -->
-    <div v-if="!selectedSeam" class="card">
+    <div v-if="!selectedSeam" class="card seam-select-card">
       <h3 class="section-title">
         <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -32,27 +35,35 @@
         </svg>
         选择分析煤层
       </h3>
-      <p class="section-desc">从以下可用煤层中选择一个进行插值分析</p>
+      <p class="section-desc">从以下可用煤层中选择一个进行空间插值分析，系统将自动计算厚度与埋深分布</p>
 
       <div class="seam-selection-grid">
         <div
-          v-for="seam in availableSeams"
+          v-for="(seam, idx) in availableSeams"
           :key="seam.name"
           class="seam-selection-card"
+          :style="{ animationDelay: `${idx * 0.05}s` }"
           @click="selectSeam(seam)"
         >
-          <div class="seam-card-header">
-            <span class="seam-name">{{ seam.name }}</span>
-            <span class="seam-count">{{ seam.borehole_count }} 个钻孔</span>
-          </div>
-          <div class="seam-card-stats">
-            <div class="mini-stat">
-              <span class="mini-stat-label">平均厚度</span>
-              <span class="mini-stat-value">{{ seam.avg_thickness?.toFixed(2) }} m</span>
+          <div class="seam-card-indicator"></div>
+          <div class="seam-card-body">
+            <div class="seam-card-header">
+              <span class="seam-name">{{ seam.name }}</span>
+              <span class="seam-count">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+                {{ seam.borehole_count }} 个钻孔
+              </span>
             </div>
-            <div class="mini-stat">
-              <span class="mini-stat-label">厚度范围</span>
-              <span class="mini-stat-value">{{ seam.thickness_range?.min?.toFixed(1) }}-{{ seam.thickness_range?.max?.toFixed(1) }} m</span>
+            <div class="seam-card-stats">
+              <div class="mini-stat">
+                <span class="mini-stat-label">均厚</span>
+                <span class="mini-stat-value">{{ seam.avg_thickness?.toFixed(2) }} m</span>
+              </div>
+              <div class="mini-stat-divider"></div>
+              <div class="mini-stat">
+                <span class="mini-stat-label">范围</span>
+                <span class="mini-stat-value">{{ seam.thickness_range?.min?.toFixed(1) }}–{{ seam.thickness_range?.max?.toFixed(1) }} m</span>
+              </div>
             </div>
           </div>
         </div>
@@ -60,7 +71,7 @@
     </div>
 
     <!-- Main Dashboard -->
-    <div v-else class="grid">
+    <div v-else class="grid interp-grid">
       <!-- Card 1: Interpolation Parameters -->
       <div class="card params-card compact-card">
         <h3 class="section-title">
@@ -73,62 +84,64 @@
           插值参数
         </h3>
 
-        <div class="param-row">
+        <div class="param-section">
           <label class="param-label">插值方法</label>
-          <div class="tab-buttons">
+          <div class="method-buttons">
             <button
               v-for="opt in methodOptions"
               :key="opt.key"
-              :class="['tab-btn', { active: method === opt.key }]"
+              :class="['method-btn', { active: method === opt.key }]"
               @click="method = opt.key"
             >
-              {{ opt.label }}
+              <span class="method-btn-label">{{ opt.label }}</span>
             </button>
           </div>
         </div>
 
-        <div class="param-row">
+        <div class="param-section">
           <div class="param-header">
             <label class="param-label">网格密度</label>
-            <span class="param-value">{{ gridSize }}</span>
+            <span class="param-value-badge">{{ gridSize }}</span>
           </div>
-          <input v-model.number="gridSize" type="range" min="30" max="150" step="10" class="slider">
+          <div class="slider-track">
+            <input v-model.number="gridSize" type="range" min="30" max="150" step="10" class="slider">
+          </div>
           <div class="slider-labels">
             <span>粗</span>
             <span>细</span>
           </div>
         </div>
 
-        <div class="param-row">
+        <div class="param-section">
           <div class="param-header">
             <label class="param-label">等值线级别</label>
-            <span class="param-value">{{ contourLevels }}</span>
+            <span class="param-value-badge">{{ contourLevels }}</span>
           </div>
-          <input v-model.number="contourLevels" type="range" min="5" max="20" step="1" class="slider">
+          <div class="slider-track">
+            <input v-model.number="contourLevels" type="range" min="5" max="20" step="1" class="slider">
+          </div>
           <div class="slider-labels">
             <span>少</span>
             <span>多</span>
           </div>
         </div>
 
-        <div class="param-row">
+        <div class="param-section">
           <label class="param-label">渲染质量</label>
-          <div class="tab-buttons quality-tabs">
+          <div class="quality-buttons">
             <button
               v-for="opt in renderQualityOptions"
               :key="opt.key"
-              :class="['tab-btn', { active: renderQuality === opt.key }]"
+              :class="['quality-btn', { active: renderQuality === opt.key }]"
               @click="renderQuality = opt.key"
             >
               {{ opt.label }}
             </button>
           </div>
-          <div class="slider-labels quality-hint">
-            <span>默认先快速预览，需要时再切换更高质量重算。</span>
-          </div>
+          <p class="param-hint">默认先快速预览，需要时再切换更高质量重算。</p>
         </div>
 
-        <div class="param-row" v-if="thicknessResult">
+        <div class="param-section" v-if="thicknessResult">
           <label class="toggle-btn" style="width: 100%">
             <input type="checkbox" v-model="crossSectionMode">
             <span>绘制剖面线</span>
@@ -138,6 +151,7 @@
 
         <div class="action-buttons">
           <button class="btn primary" @click="handleInterpolate({ forceRefresh: true, silent: false })" :disabled="loading">
+            <svg v-if="!loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             <span v-if="loading" class="spinner sm"></span>
             {{ loading ? '计算中...' : '生成等值线图' }}
           </button>
@@ -149,7 +163,8 @@
             class="btn outline"
             @click="goPressureAnalysis"
           >
-            下一步：新算法原理
+            下一步
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
         </div>
         <p v-if="interpolationStatus" class="status-text">{{ interpolationStatus }}</p>
@@ -215,7 +230,7 @@
       </div>
 
       <!-- Card 2: Data Distribution -->
-      <div class="card compact-card">
+      <div class="card compact-card data-dist-card">
         <h3 class="section-title">
           <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -224,10 +239,13 @@
           </svg>
           数据分布
         </h3>
-        <div v-if="seamPoints.length > 0" class="histogram-wrapper">
-          <canvas ref="histogramCanvas" class="histogram-canvas"></canvas>
+        <div v-if="seamPoints.length > 0" class="figure-wrapper">
+          <canvas ref="histogramCanvas" class="figure-canvas histogram-canvas"></canvas>
         </div>
-        <div v-else class="empty-state">
+        <div v-else class="empty-state-panel">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+            <line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
           <p>暂无数据分布</p>
         </div>
         <!-- 统计信息 -->
@@ -259,8 +277,8 @@
         </div>
       </div>
 
-      <!-- Card 4: Lithology Column -->
-      <div class="card compact-card">
+      <!-- Card 3: Lithology Column -->
+      <div class="card compact-card strat-card">
         <h3 class="section-title">
           <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
@@ -269,29 +287,32 @@
           </svg>
           地层柱状图
         </h3>
-        <div class="stratigraphic-wrapper">
-          <canvas ref="stratigraphicCanvas" class="stratigraphic-canvas"></canvas>
+        <div class="figure-wrapper strat-figure">
+          <canvas ref="stratigraphicCanvas" class="figure-canvas stratigraphic-canvas"></canvas>
         </div>
-        <div class="lithology-legend-compact">
-          <div v-for="(color, name) in lithologyColors" :key="name" class="legend-item-compact">
-            <div class="legend-color" :style="{ background: color }"></div>
-            <span class="legend-name">{{ name }}</span>
+        <div class="lithology-legend">
+          <div v-for="(color, name) in lithologyColors" :key="name" class="legend-chip">
+            <span class="legend-dot" :style="{ background: color }"></span>
+            <span class="legend-text">{{ name }}</span>
           </div>
         </div>
       </div>
 
-      <!-- Card 5-6: Contour Maps -->
+      <!-- Card 4-5: Contour Maps -->
       <div class="map-row" v-if="selectedSeam">
         <div class="card map-card-large">
           <div class="map-header">
             <div>
-              <h3 class="section-title">
+              <h3 class="section-title map-section-title">
                 <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
                 </svg>
                 煤层厚度分布
               </h3>
-              <p class="section-desc" v-if="thicknessResult">{{ methodName(method) }} · {{ thicknessResult?.valueRange?.min?.toFixed(1) }} - {{ thicknessResult?.valueRange?.max?.toFixed(1) }} m</p>
+              <p class="section-desc map-method-desc" v-if="thicknessResult">
+                <span class="method-tag">{{ methodName(method) }}</span>
+                {{ thicknessResult?.valueRange?.min?.toFixed(1) }} – {{ thicknessResult?.valueRange?.max?.toFixed(1) }} m
+              </p>
               <p class="section-desc" v-else>正在准备厚度分布图...</p>
             </div>
           </div>
@@ -318,14 +339,17 @@
         <div class="card map-card-large">
           <div class="map-header">
             <div>
-              <h3 class="section-title">
+              <h3 class="section-title map-section-title">
                 <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
                   <path d="m2 17 10 5 10-5"></path>
                 </svg>
                 煤层埋深分布
               </h3>
-              <p class="section-desc" v-if="depthResult">{{ methodName(method) }} · {{ depthResult?.valueRange?.min?.toFixed(1) }} - {{ depthResult?.valueRange?.max?.toFixed(1) }} m</p>
+              <p class="section-desc map-method-desc" v-if="depthResult">
+                <span class="method-tag">{{ methodName(method) }}</span>
+                {{ depthResult?.valueRange?.min?.toFixed(1) }} – {{ depthResult?.valueRange?.max?.toFixed(1) }} m
+              </p>
               <p class="section-desc" v-else>正在准备埋深分布图...</p>
             </div>
           </div>
@@ -354,7 +378,7 @@
       <div class="card map-card-full" v-if="selectedSeam">
         <div class="map-header">
           <div>
-            <h3 class="section-title">
+            <h3 class="section-title map-section-title">
               <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -362,7 +386,10 @@
               </svg>
               插值不确定性分布
             </h3>
-            <p class="section-desc">红色区域表示高不确定性，蓝色区域更可靠</p>
+            <p class="section-desc">
+              <span class="uncertainty-high">■</span> 高不确定性区域 &nbsp;
+              <span class="uncertainty-low">■</span> 可靠区域
+            </p>
           </div>
         </div>
         <div class="map-wrapper uncertainty-wrapper">
@@ -375,19 +402,22 @@
       </div>
 
       <!-- Cross Section Profile -->
-      <div class="card map-card-full" v-if="crossSectionData.hasData">
+      <div class="card map-card-full cross-section-card" v-if="crossSectionData.hasData">
         <div class="map-header">
           <div>
-            <h3 class="section-title">
+            <h3 class="section-title map-section-title">
               <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 3v18h18"></path>
                 <path d="m19 9-5 5-4-4-3 3"></path>
               </svg>
-              剖面切片 (A-A')
+              剖面切片 (A–A')
               <span class="section-badge">{{ crossSectionData.distance?.toFixed(0) }} m</span>
             </h3>
           </div>
-          <button class="btn outline small" @click="resetCrossSection">重置</button>
+          <button class="btn outline small" @click="resetCrossSection">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            重置
+          </button>
         </div>
         <div class="cross-section-wrapper">
           <canvas ref="crossSectionCanvas" class="cross-section-canvas"></canvas>
@@ -408,7 +438,6 @@ import ContourMap from '../components/ContourMap.vue'
 import {
   downloadGeomodelArtifact,
   getCoalSeams,
-  getSeamStats,
   getSeamOverburden,
   getSeamContourImages
 } from '../api'
@@ -684,6 +713,43 @@ const normalizeLayers = (layers = []) => {
   })
 }
 
+const extractSeamPointsFromBoreholes = (boreholes = [], seamName = '') => {
+  return (boreholes || [])
+    .map((borehole) => {
+      const layers = Array.isArray(borehole?.layers) ? borehole.layers : []
+      const seamLayer = layers.find((layer) => String(layer?.name || '') === String(seamName))
+      const thickness = Number(seamLayer?.thickness ?? borehole?.thickness ?? 0)
+      const burialDepth = Number(borehole?.seam_top_depth ?? borehole?.total_overburden_thickness ?? 0)
+      const x = Number(borehole?.x)
+      const y = Number(borehole?.y)
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+      return {
+        ...borehole,
+        x,
+        y,
+        thickness: Number.isFinite(thickness) ? thickness : 0,
+        burial_depth: Number.isFinite(burialDepth) ? burialDepth : 0
+      }
+    })
+    .filter(Boolean)
+}
+
+const buildSeamStatsFromPoints = (points = []) => {
+  const values = points
+    .map((point) => Number(point?.thickness))
+    .filter((value) => Number.isFinite(value))
+
+  const min = values.length ? Math.min(...values) : 0
+  const max = values.length ? Math.max(...values) : 0
+  const mean = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0
+
+  return {
+    borehole_count: points.length,
+    thickness: { min, max, mean },
+    points
+  }
+}
+
 const selectSeam = async (seam) => {
   const currentSelectionToken = ++seamSelectionToken
   selectedSeam.value = seam
@@ -702,12 +768,17 @@ const selectSeam = async (seam) => {
       scheduleUncertaintyCalculation()
     }
 
-    const seamStatsRequest = getSeamStats(seam.name)
-    const overburdenRequest = getSeamOverburden(seam.name).catch(() => null)
-    const { data } = await seamStatsRequest
+    const overburdenResult = await getSeamOverburden(seam.name)
     if (currentSelectionToken !== seamSelectionToken) return
-    seamStats.value = data
-    seamPoints.value = data.points || []
+    const overburdenBoreholes = overburdenResult?.data?.boreholes || []
+
+    const fallbackPoints = extractSeamPointsFromBoreholes(overburdenBoreholes, seam.name)
+    seamPoints.value = fallbackPoints
+    seamStats.value = buildSeamStatsFromPoints(seamPoints.value)
+
+    if (!seamPoints.value.length) {
+      throw new Error('当前煤层没有可用钻孔点，无法生成插值图。')
+    }
 
     // Draw histogram first and start fast interpolation immediately.
     await nextTick()
@@ -719,9 +790,8 @@ const selectSeam = async (seam) => {
 
     // Load stratigraphic data in background to avoid blocking first paint.
     void (async () => {
-      const overburden = await overburdenRequest
       if (currentSelectionToken !== seamSelectionToken) return
-      const boreholes = overburden?.data?.boreholes || []
+      const boreholes = overburdenBoreholes
       const best = boreholes.reduce((acc, cur) => {
         const accLen = acc?.layers?.length || 0
         const curLen = cur?.layers?.length || 0
@@ -1221,54 +1291,97 @@ const drawHistogram = () => {
 
   const maxCount = Math.max(...bins)
 
-  // Publication-style colors
-  const histColor = '#5f8fb0'
-  const curveColor = '#c5523a'
-  const histAlpha = 0.85
+  // Academic color palette - inspired by Nature/Science journals
+  const barColorBase = '#3B6FA0'       // Steel blue (academic standard)
+  const barColorHighlight = '#4A82B8'   // Lighter highlight
+  const curveColor = '#C44E52'          // Academic red for density curve
+  const meanLineColor = '#E8963E'       // Amber for mean line
 
-  // Clear canvas - white background (Nature style)
+  // Clear canvas - crisp white background
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, w, h)
 
-  const padding = { left: 50, right: 25, top: 45, bottom: 45 }
+  const padding = { left: 56, right: 28, top: 48, bottom: 50 }
   const drawW = w - padding.left - padding.right
   const drawH = h - padding.top - padding.bottom
 
-  // Calculate bar width
+  // Calculate bar width with subtle gaps
   const barWidth = drawW / numBins
-  const scaleY = drawH / (maxCount * 1.1)
+  const barGap = Math.max(1, barWidth * 0.08)
+  const scaleY = drawH / (maxCount * 1.15)
 
-  // Draw histogram bars - Nature style
-  ctx.fillStyle = histColor
-  ctx.globalAlpha = histAlpha
+  // Draw subtle grid lines (academic style - horizontal only)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)'
+  ctx.lineWidth = 0.5
+  for (let i = 1; i <= 5; i++) {
+    const y = h - padding.bottom - (i / 5) * drawH
+    ctx.beginPath()
+    ctx.moveTo(padding.left, y)
+    ctx.lineTo(w - padding.right, y)
+    ctx.stroke()
+  }
 
+  // Draw histogram bars with gradient fill
   for (let i = 0; i < numBins; i++) {
-    const height = bins[i] * scaleY
-    const x = padding.left + i * barWidth
-    const y = h - padding.bottom - height
+    const barH = bins[i] * scaleY
+    const x = padding.left + i * barWidth + barGap / 2
+    const y = h - padding.bottom - barH
+    const bw = barWidth - barGap
 
-    if (height > 0) {
-      // Draw bar
-      ctx.fillRect(x, y, barWidth - 1, height)
+    if (barH > 0) {
+      // Create subtle vertical gradient for each bar
+      const grad = ctx.createLinearGradient(x, y, x, h - padding.bottom)
+      grad.addColorStop(0, barColorHighlight)
+      grad.addColorStop(1, barColorBase)
+      ctx.fillStyle = grad
+      ctx.globalAlpha = 0.88
 
-      // White edge between bars (Nature style)
-      ctx.strokeStyle = 'white'
-      ctx.lineWidth = 0.8
-      ctx.strokeRect(x, y, barWidth - 1, height)
+      // Draw bar with slight rounded top
+      const radius = Math.min(3, bw / 4)
+      ctx.beginPath()
+      ctx.moveTo(x, h - padding.bottom)
+      ctx.lineTo(x, y + radius)
+      ctx.quadraticCurveTo(x, y, x + radius, y)
+      ctx.lineTo(x + bw - radius, y)
+      ctx.quadraticCurveTo(x + bw, y, x + bw, y + radius)
+      ctx.lineTo(x + bw, h - padding.bottom)
+      ctx.closePath()
+      ctx.fill()
+
+      // Subtle edge
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+      ctx.lineWidth = 0.5
+      ctx.stroke()
     }
   }
   ctx.globalAlpha = 1.0
 
-  // Draw density fit curve (Normal distribution) - Nature style
+  // Draw mean vertical dashed line
+  if (valueSpan > 0) {
+    const meanX = padding.left + ((mean - minVal) / valueSpan) * drawW
+    ctx.save()
+    ctx.strokeStyle = meanLineColor
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([5, 3])
+    ctx.beginPath()
+    ctx.moveTo(meanX, padding.top)
+    ctx.lineTo(meanX, h - padding.bottom)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
+  }
+
+  // Draw density fit curve (Normal distribution) - smooth and polished
   const canDrawDensityCurve = stdDev > Number.EPSILON && valueSpan > 0
   if (canDrawDensityCurve) {
     ctx.strokeStyle = curveColor
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2.2
     ctx.beginPath()
 
-    for (let i = 0; i <= 100; i++) {
-      const x = padding.left + (i / 100) * drawW
-      const val = minVal + (i / 100) * valueSpan
+    const segments = 150
+    for (let i = 0; i <= segments; i++) {
+      const x = padding.left + (i / segments) * drawW
+      const val = minVal + (i / segments) * valueSpan
 
       // Normal distribution PDF
       const pdf = (1 / (stdDev * Math.sqrt(2 * Math.PI))) *
@@ -1287,27 +1400,27 @@ const drawHistogram = () => {
     ctx.stroke()
   }
 
-  // Draw axes - Nature style (only left and bottom, no top/right spines)
-  ctx.strokeStyle = FIGURE_STYLE.axisColor
-  ctx.lineWidth = 1.0
+  // Draw frame axes - clean spines (left + bottom only)
+  ctx.strokeStyle = '#333333'
+  ctx.lineWidth = 1.2
 
   // Left spine (Y-axis)
   ctx.beginPath()
-  ctx.moveTo(padding.left, padding.top)
+  ctx.moveTo(padding.left, padding.top - 4)
   ctx.lineTo(padding.left, h - padding.bottom)
   ctx.stroke()
 
   // Bottom spine (X-axis)
   ctx.beginPath()
   ctx.moveTo(padding.left, h - padding.bottom)
-  ctx.lineTo(w - padding.right, h - padding.bottom)
+  ctx.lineTo(w - padding.right + 4, h - padding.bottom)
   ctx.stroke()
 
-  // Draw ticks - Nature style (outward facing)
-  const tickLength = 4
+  // Draw ticks - outward facing, academic style
+  const tickLength = 5
 
   // X-axis ticks
-  ctx.strokeStyle = FIGURE_STYLE.axisColor
+  ctx.strokeStyle = '#333333'
   ctx.lineWidth = 1.0
   for (let i = 0; i <= 6; i++) {
     const x = padding.left + (i / 6) * drawW
@@ -1326,84 +1439,103 @@ const drawHistogram = () => {
     ctx.stroke()
   }
 
-  // X-axis labels - Nature style
-  ctx.fillStyle = FIGURE_STYLE.subTextColor
-  ctx.font = figureFont(10)
+  // X-axis labels
+  ctx.fillStyle = '#555555'
+  ctx.font = figureFont(10.5)
   ctx.textAlign = 'center'
   for (let i = 0; i <= 6; i++) {
     const val = minVal + (i / 6) * (maxVal - minVal)
     const x = padding.left + (i / 6) * drawW
-    ctx.fillText(val.toFixed(1), x, h - padding.bottom + 15)
+    ctx.fillText(val.toFixed(1), x, h - padding.bottom + 18)
   }
 
-  // Y-axis labels - Nature style
+  // Y-axis labels
   ctx.textAlign = 'right'
   for (let i = 0; i <= 5; i++) {
-    const count = Math.round((i / 5) * (maxCount * 1.1))
+    const count = Math.round((i / 5) * (maxCount * 1.15))
     const y = h - padding.bottom - (i / 5) * drawH
-    ctx.fillText(count.toString(), padding.left - 6, y + 3)
+    ctx.fillText(count.toString(), padding.left - 8, y + 4)
   }
 
-  // Axis labels - Nature style (normal weight, not bold)
-  ctx.fillStyle = FIGURE_STYLE.subTextColor
-  ctx.font = figureFont(11)
+  // Axis labels - academic italic style
+  ctx.fillStyle = '#333333'
+  ctx.font = figureFont(11.5)
 
   // X-axis label
   ctx.textAlign = 'center'
-  ctx.fillText('厚度 (m)', padding.left + drawW / 2, h - 8)
+  ctx.fillText('厚度 (m)', padding.left + drawW / 2, h - 6)
 
   // Y-axis label
   ctx.save()
-  ctx.translate(12, padding.top + drawH / 2)
+  ctx.translate(14, padding.top + drawH / 2)
   ctx.rotate(-Math.PI / 2)
   ctx.fillText('频数', 0, 0)
   ctx.restore()
 
-  // Title - Nature style (left aligned, bold "Figure" format)
-  ctx.fillStyle = FIGURE_STYLE.textColor
+  // Title - academic format: "Fig. X |" bold, rest normal
+  ctx.textAlign = 'left'
+  ctx.fillStyle = '#1a1a1a'
   ctx.font = figureFont(12, 700)
-  ctx.textAlign = 'left'
-  ctx.fillText('Fig. 1 | 煤层厚度频率分布 (n=' + values.length + ')', padding.left, 18)
+  const titlePrefix = 'Fig. 1'
+  ctx.fillText(titlePrefix, padding.left, 22)
+  const prefixWidth = ctx.measureText(titlePrefix).width
+  ctx.fillStyle = '#333'
+  ctx.font = figureFont(12, 400)
+  ctx.fillText(` | 煤层厚度频率分布 (n=${values.length})`, padding.left + prefixWidth, 22)
 
-  // Legend - Nature style (no frame)
-  ctx.fillStyle = FIGURE_STYLE.textColor
-  ctx.font = figureFont(10)
-  ctx.textAlign = 'left'
+  // Legend - elegant inline style
+  const legendX = w - padding.right - 140
+  const legendY = padding.top + 4
 
-  // Histogram legend
-  const legendX = w - padding.right - 120
-  const legendY = padding.top + 10
+  // Legend background
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'
+  roundRect(ctx, legendX - 8, legendY - 10, 148, canDrawDensityCurve ? 62 : 36, 4)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)'
+  ctx.lineWidth = 0.5
+  ctx.stroke()
 
   // Histogram bar in legend
-  ctx.fillStyle = histColor
-  ctx.globalAlpha = histAlpha
-  ctx.fillRect(legendX, legendY - 4, 12, 10)
+  ctx.fillStyle = barColorBase
+  ctx.globalAlpha = 0.88
+  roundRect(ctx, legendX, legendY, 14, 10, 2)
+  ctx.fill()
   ctx.globalAlpha = 1.0
-  ctx.strokeStyle = 'white'
-  ctx.lineWidth = 0.8
-  ctx.strokeRect(legendX, legendY - 4, 12, 10)
 
-  ctx.fillText('观测值', legendX + 16, legendY + 4)
+  ctx.fillStyle = '#333'
+  ctx.font = figureFont(10.5)
+  ctx.textAlign = 'left'
+  ctx.fillText('观测频率', legendX + 20, legendY + 9)
 
   if (canDrawDensityCurve) {
     // Density fit legend
     ctx.strokeStyle = curveColor
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2.2
     ctx.beginPath()
-    ctx.moveTo(legendX, legendY + 20)
-    ctx.lineTo(legendX + 12, legendY + 20)
+    ctx.moveTo(legendX, legendY + 24)
+    ctx.lineTo(legendX + 14, legendY + 24)
     ctx.stroke()
 
-    ctx.fillStyle = '#000000'
-    ctx.fillText('密度拟合', legendX + 16, legendY + 24)
+    ctx.fillStyle = '#333'
+    ctx.fillText('正态拟合', legendX + 20, legendY + 28)
   }
 
-  // Statistics annotation (small text below legend)
-  ctx.fillStyle = FIGURE_STYLE.subTextColor
-  ctx.font = figureFont(9, 400, true)
-  ctx.textAlign = 'left'
-  const statsText = `μ=${mean.toFixed(2)}  σ=${stdDev.toFixed(2)}`
-  ctx.fillText(statsText, legendX, legendY + 42)
+  // Mean line legend
+  if (valueSpan > 0) {
+    ctx.save()
+    ctx.strokeStyle = meanLineColor
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([4, 2])
+    ctx.beginPath()
+    ctx.moveTo(legendX, legendY + (canDrawDensityCurve ? 42 : 24))
+    ctx.lineTo(legendX + 14, legendY + (canDrawDensityCurve ? 42 : 24))
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
+
+    ctx.fillStyle = '#333'
+    ctx.fillText(`μ = ${mean.toFixed(2)} m`, legendX + 20, legendY + (canDrawDensityCurve ? 46 : 28))
+  }
 
 }
 
@@ -1423,6 +1555,7 @@ const roundRect = (ctx, x, y, w, h, r) => {
 }
 
 // Draw stratigraphic column - Nature style (Light theme)
+// Draw stratigraphic column - Publication quality (Nature/Science style)
 const drawStratigraphicColumn = () => {
   const canvas = stratigraphicCanvas.value
   if (!canvas || sortedLayers.value.length === 0) return
@@ -1441,7 +1574,7 @@ const drawStratigraphicColumn = () => {
   const w = cssW
   const h = cssH
 
-  // Background - Light theme
+  // Background
   ctx.fillStyle = '#FFFFFF'
   ctx.fillRect(0, 0, w, h)
 
@@ -1452,70 +1585,78 @@ const drawStratigraphicColumn = () => {
   }
   if (!Number.isFinite(totalDepth) || totalDepth <= 0) return
 
-  const padding = { top: 24, bottom: 22 }
+  const padding = { top: 32, bottom: 24 }
   const scale = (h - padding.top - padding.bottom) / totalDepth
   const topMargin = padding.top
-  const axisGap = 14
-  const labelArea = Math.max(110, Math.min(160, w * 0.3))
-  const columnWidth = Math.max(80, Math.min(140, w * 0.22))
-  const groupWidth = axisGap + columnWidth + 16 + labelArea
-  const startX = Math.max(16, (w - groupWidth) / 2)
+  const axisGap = 16
+  const labelArea = Math.max(120, Math.min(170, w * 0.32))
+  const columnWidth = Math.max(85, Math.min(150, w * 0.24))
+  const groupWidth = axisGap + columnWidth + 20 + labelArea
+  const startX = Math.max(18, (w - groupWidth) / 2)
   const axisX = startX
   const columnX = axisX + axisGap
-  const labelX = columnX + columnWidth + 16
+  const labelX = columnX + columnWidth + 20
 
-  // Draw title (Nature style - Light theme)
-  ctx.fillStyle = FIGURE_STYLE.textColor
-  ctx.font = figureFont(12, 700)
+  // Title - academic format
   ctx.textAlign = 'left'
-  ctx.fillText('Fig. 2 | 代表性钻孔地层柱状图', columnX, 18)
+  ctx.fillStyle = '#1a1a1a'
+  ctx.font = figureFont(12, 700)
+  const titlePrefix2 = 'Fig. 2'
+  ctx.fillText(titlePrefix2, columnX, 20)
+  const prefixW2 = ctx.measureText(titlePrefix2).width
+  ctx.fillStyle = '#333'
+  ctx.font = figureFont(12, 400)
+  ctx.fillText(' | 代表性钻孔地层柱状图', columnX + prefixW2, 20)
 
-  // Draw depth scale (Nature style: ticks pointing inward)
-  const tickSize = 4
+  // Draw depth scale
+  const tickSize = 5
   const depthStep = Math.max(5, Math.ceil(totalDepth / 6 / 5) * 5) || 10
 
-  ctx.strokeStyle = FIGURE_STYLE.gridColor
-  ctx.lineWidth = 1.0
-  ctx.fillStyle = FIGURE_STYLE.subTextColor
-  ctx.font = figureFont(10)
-  ctx.textAlign = 'right'
-
   // Y-axis line
+  ctx.strokeStyle = '#333333'
+  ctx.lineWidth = 1.2
   ctx.beginPath()
   ctx.moveTo(axisX, topMargin)
   ctx.lineTo(axisX, h - padding.bottom)
   ctx.stroke()
 
+  ctx.fillStyle = '#555555'
+  ctx.font = figureFont(10)
+  ctx.textAlign = 'right'
+
   for (let depth = 0; depth <= totalDepth; depth += depthStep) {
     const y = topMargin + depth * scale
 
-    // Tick pointing right (inward)
+    // Tick
+    ctx.strokeStyle = '#333333'
+    ctx.lineWidth = 1.0
     ctx.beginPath()
     ctx.moveTo(axisX, y)
     ctx.lineTo(axisX + tickSize, y)
     ctx.stroke()
 
     // Depth label
+    ctx.fillStyle = '#555555'
     ctx.fillText(`${Math.round(depth)} m`, axisX - 6, y + 3)
   }
 
   // Axis label
   ctx.save()
-  ctx.translate(axisX - 28, topMargin + (h - padding.bottom - topMargin) / 2)
+  ctx.translate(axisX - 30, topMargin + (h - padding.bottom - topMargin) / 2)
   ctx.rotate(-Math.PI / 2)
   ctx.textAlign = 'center'
-  ctx.fillStyle = FIGURE_STYLE.subTextColor
+  ctx.fillStyle = '#333333'
   ctx.font = figureFont(11)
   ctx.fillText('深度 (m)', 0, 0)
   ctx.restore()
 
-  // Draw layers with Nature-style patterns
+  // Draw layers with refined patterns
   layers.forEach((layer, i) => {
     const yTop = topMargin + (layer.z_top || 0) * scale
     const thickness = layer.thickness || 0
     const layerHeight = Math.max(thickness * scale, 3)
 
-    // Get lithology style (fallback to gray)
+    // Get lithology style
     const style = lithologyStyles[layer.name] || {
       facecolor: '#D3D3D3',
       hatch: '---',
@@ -1531,29 +1672,39 @@ const drawStratigraphicColumn = () => {
       drawNatureHatchPattern(ctx, style.hatch, columnX, yTop, columnWidth, layerHeight, style.edgecolor)
     }
 
-    // Black edge (linewidth 0.5 like Python script)
-    ctx.strokeStyle = '#1a1a1a'
-    ctx.lineWidth = 0.5
+    // Clean edge
+    ctx.strokeStyle = '#2a2a2a'
+    ctx.lineWidth = 0.6
     ctx.strokeRect(columnX, yTop, columnWidth, layerHeight)
 
-    // Layer info on the right (compact Nature style - Light theme)
-    if (layerHeight > 10) {
-      // Lithology name
-      ctx.fillStyle = FIGURE_STYLE.subTextColor
-      ctx.font = figureFont(10)
-      ctx.textAlign = 'left'
-      ctx.fillText(layer.name, labelX, yTop + layerHeight / 2 + 3)
+    // Layer info on the right - refined typography
+    if (layerHeight > 12) {
+      const midY = yTop + layerHeight / 2
 
-      // Thickness value (smaller, monospace)
-      ctx.fillStyle = '#2563EB'
-      ctx.font = figureFont(9, 500, true)
-      ctx.fillText(`${thickness.toFixed(1)}米`, labelX, yTop + layerHeight / 2 + 14)
+      // Connector line from column to label
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)'
+      ctx.lineWidth = 0.5
+      ctx.beginPath()
+      ctx.moveTo(columnX + columnWidth + 2, midY)
+      ctx.lineTo(labelX - 6, midY)
+      ctx.stroke()
+
+      // Lithology name
+      ctx.fillStyle = '#333333'
+      ctx.font = figureFont(10.5, 500)
+      ctx.textAlign = 'left'
+      ctx.fillText(layer.name, labelX, midY + 3)
+
+      // Thickness value
+      ctx.fillStyle = '#3B6FA0'
+      ctx.font = figureFont(9.5, 500, true)
+      ctx.fillText(`${thickness.toFixed(1)} m`, labelX, midY + 16)
     }
   })
 
-  // Column border (Nature style)
-  ctx.strokeStyle = '#94A3B8'
-  ctx.lineWidth = 1.0
+  // Column border
+  ctx.strokeStyle = '#555555'
+  ctx.lineWidth = 1.2
   ctx.strokeRect(columnX, topMargin, columnWidth, h - topMargin - padding.bottom)
 }
 
@@ -2060,134 +2211,702 @@ defineExpose({ resetView })
 </script>
 
 <style scoped>
-/* Interpolation Analysis Page - Unified with Global Design System */
+/* Interpolation Analysis - scientific dashboard refinement */
 
-/* Grid Layout */
-.grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--spacing-lg); }
-.params-card { grid-column: span 4; }
-.param-row { margin-bottom: var(--spacing-lg); }
-.param-row:last-child { margin-bottom: 0; }
-.param-label { display: block; font-size: 13px; font-weight: 600; color: var(--color-secondary); margin-bottom: var(--spacing-sm); }
-.param-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm); }
-.param-value { font-family: monospace; font-size: 13px; color: var(--color-primary); background: var(--color-primary-light); padding: 4px 10px; border-radius: var(--border-radius-sm); font-weight: 700; }
+.interp-page {
+  --panel-gap: var(--spacing-lg);
+}
 
-/* Tab Buttons */
-.tab-buttons { display: flex; background: var(--color-primary-light); border-radius: var(--border-radius-sm); padding: 4px; gap: 4px; }
-.tab-btn { flex: 1; padding: 10px 14px; border: none; border-radius: 6px; background: transparent; color: var(--color-secondary); font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); }
-.tab-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.6); }
-.tab-btn.active { background: var(--gradient-primary); color: white; box-shadow: var(--shadow-sm); }
-.quality-tabs .tab-btn { padding: 8px 12px; font-size: 12px; }
-.quality-hint { margin-top: 6px; justify-content: flex-start; color: var(--text-tertiary); }
+.interp-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--panel-gap);
+}
 
-/* Slider */
-.slider { width: 100%; height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--color-primary-light), #ddd6fe); outline: none; -webkit-appearance: none; margin: var(--spacing-sm) 0; cursor: pointer; }
-.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: white; border: 3px solid var(--color-primary); cursor: grab; box-shadow: var(--shadow-md); transition: all var(--transition-normal); }
-.slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
-.slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--color-secondary); font-weight: 500; }
+.compact-card {
+  padding: var(--spacing-lg);
+}
 
-/* Buttons */
-.action-buttons { display: flex; gap: var(--spacing-md); margin-top: var(--spacing-xl); }
-.btn { padding: 12px 18px; border: none; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); display: inline-flex; align-items: center; justify-content: center; gap: var(--spacing-sm); }
-.btn.primary { background: var(--gradient-primary); color: white; box-shadow: var(--shadow-md); }
-.btn.primary:hover:not(:disabled) { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn.outline { background: transparent; border: 2px solid var(--border-color); color: var(--color-secondary); }
-.btn.outline:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-light); }
-.btn.small { padding: 8px 14px; font-size: 13px; }
-.status-text { margin: var(--spacing-md) 0 0; font-size: 12px; color: var(--text-secondary); }
+.params-card,
+.data-dist-card,
+.strat-card {
+  grid-column: span 4;
+}
 
-.geomodel-panel { margin-top: var(--spacing-lg); padding: 12px; border-radius: var(--border-radius-md); border: 1px solid var(--border-color); background: #ffffff; }
-.geomodel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.geomodel-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
-.geomodel-jobid { font-size: 11px; color: var(--text-secondary); font-family: monospace; }
-.geomodel-controls { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: 8px; align-items: center; }
-.geomodel-select { height: 34px; border-radius: 8px; border: 1px solid var(--border-color); padding: 0 10px; background: #fff; font-size: 12px; }
-.geomodel-range { display: flex; align-items: center; gap: 6px; }
-.geomodel-range label { font-size: 11px; color: var(--text-secondary); }
-.geomodel-range input { width: 74px; height: 32px; border-radius: 8px; border: 1px solid var(--border-color); padding: 0 8px; font-size: 12px; }
-.geomodel-btn { height: 34px; padding: 0 12px; font-size: 12px; }
-.geomodel-status { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--text-secondary); }
-.geomodel-error { margin-top: 8px; margin-bottom: 0; font-size: 11px; color: #b91c1c; }
-.geomodel-summary { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.summary-item { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
-.summary-item span { font-size: 10px; color: var(--text-secondary); }
-.summary-item strong { font-size: 13px; color: var(--text-primary); font-family: monospace; }
-.geomodel-files { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-.file-chip { border: 1px solid var(--border-color); background: #f8fafc; color: var(--text-primary); border-radius: 999px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
-.file-chip:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-light); }
+.interp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+}
 
-/* Cards */
-.grid > .card:nth-child(2) { grid-column: span 4; }
-.grid > .card:nth-child(3) { grid-column: span 4; }
-.grid > .card:nth-child(4) { grid-column: span 4; }
-.compact-card { padding: 16px; }
-.histogram-wrapper, .stratigraphic-wrapper { background: #ffffff; border-radius: var(--border-radius-md); padding: var(--spacing-md); display: flex; align-items: center; justify-content: center; min-height: 260px; }
-.histogram-canvas { max-width: 100%; max-height: 100%; width: 100%; }
-.stratigraphic-canvas { width: 100%; height: 300px; max-height: none; }
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
 
-/* Statistics Grid - Nature style */
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-sm); padding: var(--spacing-sm) var(--spacing-md); background: white; border-top: 1px solid #e5e7eb; }
-.stat-item { display: flex; flex-direction: column; align-items: center; padding: var(--spacing-xs); }
-.stat-item .stat-label { font-size: 10px; color: #666666; font-weight: 400; }
-.stat-item .stat-value { font-size: 13px; color: #000000; font-weight: 500; font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace; }
+.header-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
 
-/* Toggle */
-.toggle-group { display: flex; flex-direction: column; gap: var(--spacing-sm); }
-.toggle-btn { display: flex; align-items: center; gap: var(--spacing-md); padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); cursor: pointer; transition: all var(--transition-fast); background: white; }
-.toggle-btn:hover { border-color: var(--color-primary); background: var(--color-primary-light); }
-.toggle-btn input { width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer; }
-.toggle-btn span { font-size: 14px; color: var(--color-secondary); font-weight: 500; }
-.hint-text { margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-warning-light); border-radius: var(--border-radius-sm); font-size: 12px; color: #B45309; line-height: 1.5; }
+.header-subtitle {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: var(--font-weight-medium);
+}
 
-/* Legend */
-.lithology-legend-compact { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 10px; margin-top: var(--spacing-md); }
-.legend-item-compact { display: flex; align-items: center; gap: 6px; font-size: 10px; }
-.legend-item-compact .legend-color { width: 10px; height: 10px; border-radius: 3px; border: 1px solid var(--border-color); flex-shrink: 0; }
-.legend-item-compact .legend-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.legend-item-compact .legend-name { color: var(--color-secondary); font-weight: 500; }
+.header-stats {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 
-/* Map Cards */
-.map-row { grid-column: span 12; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-lg); }
-.map-row .map-card-large { grid-column: auto; }
-.map-card-large { grid-column: span 6; display: flex; flex-direction: column; }
-.map-card-full { grid-column: span 12; }
-.map-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-lg); border-bottom: 1px solid var(--border-color); }
-.section-badge { display: inline-block; padding: 4px 10px; background: var(--color-warning-light); color: var(--color-warning); font-size: 11px; font-weight: 700; font-family: monospace; border-radius: var(--border-radius-sm); margin-left: var(--spacing-sm); }
+.stat-badge {
+  min-width: 150px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.stat-badge .stat-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.06em;
+}
+
+.stat-badge strong {
+  font-size: 13px;
+  color: var(--text-inverted);
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
+}
+
+.stat-badge.primary {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.seam-select-card {
+  padding: var(--spacing-xl);
+}
+
+.seam-selection-grid {
+  margin-top: var(--spacing-xl);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+  max-height: 620px;
+  overflow-y: auto;
+  padding-right: var(--spacing-xs);
+}
+
+.seam-selection-card {
+  position: relative;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.seam-selection-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+}
+
+.seam-card-indicator {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--gradient-primary);
+}
+
+.seam-card-body {
+  padding: var(--spacing-lg);
+  padding-left: calc(var(--spacing-lg) + var(--spacing-sm));
+}
+
+.seam-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.seam-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.seam-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  background: var(--color-primary-lighter);
+  border: 1px solid var(--border-color);
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+}
+
+.seam-card-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.mini-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.mini-stat-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.mini-stat-value {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
+}
+
+.mini-stat-divider {
+  height: 1px;
+  background: var(--border-color-light);
+}
+
+.param-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.param-section:last-of-type {
+  margin-bottom: var(--spacing-md);
+}
+
+.param-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--spacing-sm);
+}
+
+.param-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.param-value-badge {
+  font-family: var(--font-family-mono);
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+}
+
+.method-buttons,
+.quality-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-secondary);
+}
+
+.method-btn,
+.quality-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 8px 10px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.method-btn:hover,
+.quality-btn:hover {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.method-btn.active,
+.quality-btn.active {
+  background: var(--color-primary);
+  color: var(--text-inverted);
+  border-color: var(--color-primary);
+}
+
+.method-btn-label {
+  display: inline-block;
+  letter-spacing: 0.01em;
+}
+
+.slider-track {
+  padding: 4px 0;
+}
+
+.slider {
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-full);
+  outline: none;
+  -webkit-appearance: none;
+  background: var(--color-primary-light);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.slider-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.param-hint {
+  margin: var(--spacing-sm) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-secondary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+}
+
+.toggle-btn input {
+  accent-color: var(--color-primary);
+}
+
+.toggle-btn span {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.hint-text {
+  margin-top: var(--spacing-sm);
+  margin-bottom: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-size: var(--font-size-xs);
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xl);
+}
+
+.btn {
+  padding: 10px 14px;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.btn.primary {
+  background: var(--gradient-primary);
+  color: var(--text-inverted);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn.primary:hover:not(:disabled) {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn.outline {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.btn.outline:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--text-primary);
+}
+
+.btn.small {
+  padding: 8px 12px;
+  font-size: var(--font-size-xs);
+}
+
+.status-text {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.geomodel-panel {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.geomodel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.geomodel-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.geomodel-jobid {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.geomodel-controls {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr auto;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.geomodel-select,
+.geomodel-range input {
+  height: 34px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  padding: 0 10px;
+}
+
+.geomodel-range {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.geomodel-range label {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.geomodel-btn {
+  height: 34px;
+  padding: 0 12px;
+}
+
+.geomodel-status {
+  margin-top: var(--spacing-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.geomodel-error {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--color-error-text);
+  font-size: 11px;
+}
+
+.geomodel-summary {
+  margin-top: var(--spacing-sm);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.summary-item {
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-item span {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.summary-item strong {
+  color: var(--text-primary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+}
+
+.geomodel-files {
+  margin-top: var(--spacing-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.file-chip {
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.file-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--text-primary);
+}
+
+.figure-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-primary);
+  min-height: 290px;
+  padding: var(--spacing-sm);
+}
+
+.figure-canvas {
+  width: 100%;
+  max-width: 100%;
+  display: block;
+}
+
+.histogram-canvas {
+  min-height: 300px;
+}
+
+.strat-figure {
+  min-height: 320px;
+}
+
+.stratigraphic-canvas {
+  height: 320px;
+}
+
+.empty-state-panel {
+  min-height: 290px;
+  border: 1px dashed var(--border-color-dark);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  color: var(--text-tertiary);
+}
+
+.empty-state-panel p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.stats-grid {
+  margin-top: var(--spacing-sm);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-xs);
+}
+
+.stat-item {
+  border: 1px solid var(--border-color-light);
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-item .stat-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.stat-item .stat-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-family: var(--font-family-mono);
+}
+
+.lithology-legend {
+  margin-top: var(--spacing-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  padding: 4px 10px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color-dark);
+}
+
+.legend-text {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.map-row {
+  grid-column: span 12;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.map-card-large {
+  grid-column: span 6;
+}
+
+.map-card-full {
+  grid-column: span 12;
+}
+
+.cross-section-card {
+  border: 1px solid var(--border-color-dark);
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.map-section-title {
+  margin-bottom: var(--spacing-xs);
+}
+
+.map-method-desc {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.method-tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-family-mono);
+}
+
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--spacing-sm);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  padding: 2px 10px;
+  font-size: 11px;
+  font-family: var(--font-family-mono);
+}
+
 .map-wrapper {
   width: 100%;
   aspect-ratio: 16 / 10;
   border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color-light);
   overflow: hidden;
-  background: #ffffff;
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
 }
 
-.cross-section-wrapper {
-  border-radius: var(--border-radius-md);
-  overflow: hidden;
-  background: #f8fafc;
-  min-height: 320px;
-  height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.map-wrapper :deep(.contour-map-wrapper) {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+.map-wrapper :deep(.contour-map-wrapper),
 .map-wrapper :deep(.contour-image) {
   width: 100%;
   height: 100%;
+}
+
+.map-wrapper :deep(.contour-image) {
   object-fit: contain;
   display: block;
 }
@@ -2197,13 +2916,18 @@ defineExpose({ resetView })
   height: 500px;
 }
 
-.uncertainty-canvas {
+.uncertainty-canvas,
+.cross-section-canvas {
   max-width: 100%;
   max-height: 100%;
   width: auto;
   height: auto;
-  border-radius: var(--border-radius-md);
   display: block;
+}
+
+.cross-section-wrapper {
+  min-height: 340px;
+  height: 340px;
 }
 
 .map-placeholder {
@@ -2214,62 +2938,117 @@ defineExpose({ resetView })
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--spacing-sm);
   color: var(--text-secondary);
-  background:
-    radial-gradient(circle at 22% 18%, rgba(15, 118, 110, 0.08), transparent 42%),
-    linear-gradient(145deg, #f9fbfb 0%, #f2f7f5 100%);
+  background: var(--bg-secondary);
 }
 
 .map-placeholder p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
-.map-placeholder .spinner {
-  border-color: rgba(15, 118, 110, 0.2);
+.uncertainty-high {
+  color: var(--color-error);
+}
+
+.uncertainty-low {
+  color: var(--color-success);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-primary-light);
   border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
-.cross-section-wrapper {
-  min-height: 320px;
-  height: 320px;
+.spinner.sm {
+  width: 14px;
+  height: 14px;
 }
 
-.cross-section-canvas {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  display: block;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Seam Selection */
-.seam-selection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--spacing-lg); margin-top: var(--spacing-xl); max-height: 600px; overflow-y: auto; padding: 4px; }
-.seam-selection-card { background: white; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: var(--spacing-lg); cursor: pointer; transition: all var(--transition-normal); box-shadow: var(--shadow-sm); }
-.seam-selection-card:hover { box-shadow: var(--shadow-lg); border-color: var(--color-primary); transform: translateY(-4px); }
-.seam-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); }
-.seam-name { font-size: 16px; font-weight: 700; color: var(--text-primary); }
-.seam-count { font-size: 11px; color: var(--color-primary); background: var(--color-primary-light); padding: 4px 10px; border-radius: var(--border-radius-sm); font-weight: 700; }
-.seam-card-stats { display: flex; flex-direction: column; gap: var(--spacing-sm); }
-.mini-stat { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
-.mini-stat-label { color: var(--color-secondary); font-weight: 500; }
-.mini-stat-value { color: var(--text-primary); font-weight: 700; font-family: monospace; }
+@media (max-width: 1400px) {
+  .params-card,
+  .data-dist-card,
+  .strat-card {
+    grid-column: span 6;
+  }
 
-/* Header Stats */
-.header-stats { display: flex; gap: var(--spacing-md); position: relative; z-index: 1; }
-.stat-badge { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: var(--spacing-sm) var(--spacing-md); background: rgba(255, 255, 255, 0.2); border-radius: var(--border-radius-sm); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); }
-.stat-badge.primary { background: rgba(251, 191, 36, 0.2); border-color: rgba(251, 191, 36, 0.3); }
-.stat-badge .stat-label { font-size: 10px; color: rgba(255, 255, 255, 0.85); font-weight: 600; text-transform: uppercase; }
-.stat-badge strong { font-size: 14px; color: white; font-weight: 700; font-family: monospace; }
+  .map-row {
+    grid-template-columns: 1fr;
+  }
 
-/* Spinner */
-.spinner { width: 16px; height: 16px; border: 2px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
-.spinner.sm { width: 14px; height: 14px; }
-@keyframes spin { to { transform: rotate(360deg); } }
+  .map-card-large {
+    grid-column: span 12;
+  }
+}
 
-/* Responsive */
-@media (max-width: 1400px) { .params-card, .grid > .card:nth-child(2), .grid > .card:nth-child(3), .grid > .card:nth-child(4) { grid-column: span 6; } .map-row { grid-template-columns: 1fr; } .map-card-large { grid-column: span 12; } }
-@media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } .params-card, .grid > .card, .map-card-large, .map-card-full { grid-column: span 1; } .header-stats { flex-wrap: wrap; } .seam-selection-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .stats-grid { grid-template-columns: repeat(2, 1fr); } .geomodel-controls { grid-template-columns: 1fr; } .geomodel-summary { grid-template-columns: 1fr; } }
-@media (max-width: 768px) { .action-buttons { flex-direction: column; } .btn { width: 100%; } .map-wrapper, .uncertainty-wrapper, .cross-section-wrapper { min-height: 300px; } .map-wrapper :deep(.contour-map), .uncertainty-canvas, .cross-section-canvas { height: 300px; } .seam-selection-grid { grid-template-columns: 1fr; max-height: 400px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1024px) {
+  .interp-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .params-card,
+  .data-dist-card,
+  .strat-card,
+  .map-card-large,
+  .map-card-full {
+    grid-column: span 1;
+  }
+
+  .interp-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-stats {
+    justify-content: flex-start;
+  }
+
+  .stat-badge {
+    text-align: left;
+  }
+
+  .method-buttons,
+  .quality-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .geomodel-controls,
+  .geomodel-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .seam-selection-grid {
+    grid-template-columns: 1fr;
+    max-height: 420px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .map-wrapper,
+  .uncertainty-wrapper,
+  .cross-section-wrapper {
+    min-height: 300px;
+    height: 300px;
+  }
+}
 </style>

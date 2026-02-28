@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from typing import List, Optional
 from collections import OrderedDict
 import threading
+import re
 
 from app.core.config import get_data_dir
 from app.services.csv_loader import analyze_csv_file, read_csv_robust
@@ -53,6 +54,45 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Backward-compatible path rewrite:
+# Older frontend calls many legacy endpoints under "/api/*" while this app
+# exposes most core endpoints without that prefix.
+_LEGACY_API_REWRITE_PREFIXES = (
+    "/api/boreholes/",
+    "/api/lithology/",
+    "/api/pressure/",
+    "/api/interpolate/",
+    "/api/pipeline/",
+    "/api/export/",
+    "/api/summary/",
+    "/api/seams/",
+)
+_LEGACY_API_EXCLUDE_PREFIXES = (
+    "/api/mpi/",
+    "/api/rock-params/",
+    "/api/algorithm-validation/",
+    "/api/research/",
+    "/api/geomodel/",
+    "/api/geomodel-integration/",
+    "/api/ai-chat/",
+    "/api/scene3d/",
+    "/api/health",
+    "/api/status",
+)
+
+
+@app.middleware("http")
+async def legacy_api_prefix_rewrite(request: Request, call_next):
+    path = request.scope.get("path", "")
+    if (
+        any(path.startswith(prefix) for prefix in _LEGACY_API_REWRITE_PREFIXES)
+        and not any(path.startswith(prefix) for prefix in _LEGACY_API_EXCLUDE_PREFIXES)
+    ):
+        # Mutate the ASGI scope path in-place before route matching proceeds.
+        request.scope["path"] = path[4:]  # strip leading "/api"
+    return await call_next(request)
 
 # Lightweight in-memory cache for expensive seam contour image generation.
 _CONTOUR_CACHE_MAXSIZE = 24
@@ -699,6 +739,9 @@ def summary_index_workfaces(
     direction: str = "ascending",
     mode: str = "decrease",
     decay: float = 0.08,
+    elastic_modulus: float | None = None,
+    density: float | None = None,
+    tensile_strength: float | None = None,
 ) -> dict:
     data = pressure_index_workfaces(
         method=method,
@@ -708,6 +751,9 @@ def summary_index_workfaces(
         direction=direction,
         mode=mode,
         decay=decay,
+        elastic_modulus=elastic_modulus,
+        density=density,
+        tensile_strength=tensile_strength,
     )
     if "error" in data:
         return data
@@ -748,6 +794,77 @@ def summary_steps_workfaces(
     return {"grid": summarize_grid(data["workfaces"]["adjusted"])}
 
 
+@app.get("/summary/report")
+@app.get("/api/summary/report")
+def summary_report(
+    method: str = "idw",
+    grid_size: int = 60,
+    axis: str = "x",
+    count: int = 3,
+    direction: str = "ascending",
+    mode: str = "decrease",
+    decay: float = 0.08,
+    step_model: str = "fixed",
+    step_target: str = "initial",
+    workface_elastic_modulus: float | None = None,
+    workface_density: float | None = None,
+    workface_tensile_strength: float | None = None,
+    elastic_modulus: float | None = None,
+    density: float | None = None,
+    tensile_strength: float | None = None,
+) -> dict:
+    def _empty_summary() -> dict:
+        return {"min": 0.0, "max": 0.0, "mean": 0.0, "std": 0.0, "p10": 0.0, "p50": 0.0, "p90": 0.0}
+
+    def _extract_or_empty(payload: dict) -> dict:
+        if isinstance(payload, dict):
+            grid = payload.get("grid")
+            if isinstance(grid, dict):
+                return grid
+        return _empty_summary()
+
+    w_elastic = workface_elastic_modulus if workface_elastic_modulus is not None else elastic_modulus
+    w_density = workface_density if workface_density is not None else density
+    w_tensile = workface_tensile_strength if workface_tensile_strength is not None else tensile_strength
+
+    index_summary = summary_index(method=method, grid_size=grid_size)
+    index_workfaces_summary = summary_index_workfaces(
+        method=method,
+        grid_size=grid_size,
+        axis=axis,
+        count=count,
+        direction=direction,
+        mode=mode,
+        decay=decay,
+        elastic_modulus=w_elastic,
+        density=w_density,
+        tensile_strength=w_tensile,
+    )
+    steps_summary = summary_steps(model=step_model, target=step_target, grid_size=grid_size)
+    steps_workfaces_summary = summary_steps_workfaces(
+        model=step_model,
+        target=step_target,
+        grid_size=grid_size,
+        axis=axis,
+        count=count,
+        direction=direction,
+        mode=mode,
+        decay=decay,
+    )
+
+    return {
+        "summary": {
+            "index": _extract_or_empty(index_summary),
+            "index_workfaces": _extract_or_empty(index_workfaces_summary),
+            "steps": _extract_or_empty(steps_summary),
+            "steps_workfaces": _extract_or_empty(steps_workfaces_summary),
+        },
+        "research": {"status": "missing"},
+        "performance": None,
+        "cache": {"hit": False},
+    }
+
+
 @app.get("/export/interpolation")
 def export_interpolation(field: str, method: str = "idw", grid_size: int = 60) -> Response:
     data_dir = get_data_dir()
@@ -782,6 +899,43 @@ def export_index(method: str = "idw", grid_size: int = 60) -> Response:
 
     content = grid_to_csv_bytes(grid["values"], grid["bounds"])
     filename = f"pressure_index_{method}_{grid_size}.csv"
+    return Response(content=content, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+@app.get("/export/seam-interpolation")
+@app.get("/api/export/seam-interpolation")
+def export_seam_interpolation(
+    seam_name: str,
+    property: str = "thickness",
+    method: str = "idw",
+    grid_size: int = 80,
+) -> Response:
+    data_dir = get_data_dir()
+    if not data_dir.exists():
+        raise HTTPException(status_code=404, detail="data dir not found")
+
+    coord_path = data_dir / "zuobiao.csv"
+    if not coord_path.exists():
+        raise HTTPException(status_code=404, detail="zuobiao.csv not found")
+
+    coords = load_borehole_coords(coord_path)
+    files = sorted([p for p in data_dir.glob("*.csv") if p.is_file() and p.name != "zuobiao.csv"])
+
+    result = interpolate_seam_property(
+        files=files,
+        coords=coords,
+        seam_name=seam_name,
+        property=property,
+        method=method,
+        grid_size=grid_size,
+        include_contours=False,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    content = grid_to_csv_bytes(result["values"], result["bounds"])
+    safe_seam_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(seam_name)).strip("._") or "seam"
+    filename = f"seam_interpolation_{safe_seam_name}_{property}_{method}_{grid_size}.csv"
     return Response(content=content, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
