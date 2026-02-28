@@ -104,9 +104,8 @@
           <canvas ref="heatmapCanvas" class="layer"></canvas>
           <canvas ref="overlayCanvas" class="layer"></canvas>
           <div v-if="loading" class="loading-mask">
-            <div class="skeleton"></div>
-            <div class="skeleton"></div>
-            <p>{{ av('loadingSpatial', { seam: seamName || av('targetSeam') }) }}</p>
+            <SkeletonPanel :rows="4" compact />
+            <p class="loading-tip">{{ av('loadingSpatial', { seam: seamName || av('targetSeam') }) }}</p>
           </div>
         </div>
 
@@ -276,6 +275,7 @@ import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import { useI18n } from '../composables/useI18n'
 import { LRUCache } from '../lib/lruCache'
 import ValidationScienceFigures from '../components/validation/ValidationScienceFigures.vue'
+import { SkeletonPanel } from '../components/library'
 
 const route = useRoute()
 const router = useRouter()
@@ -1335,8 +1335,7 @@ onBeforeUnmount(() => {
 .stage { position: relative; flex: 1; min-height: 360px; overflow: hidden; background: #f4f9f8; touch-action: none; }
 .layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .loading-mask { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; background: rgba(248,250,252,.92); z-index: 5; }
-.skeleton { width: 72%; height: 14px; border-radius: 999px; background: linear-gradient(90deg, #e2e8f0 10%, #cbd5e1 35%, #e2e8f0 60%); background-size: 200% 100%; animation: skeleton 1.1s linear infinite; }
-@keyframes skeleton { to { background-position: -200% 0; } }
+.loading-tip { margin: 0; font-size: 12px; color: #475569; }
 .legend-wrap { border-top: 1px solid var(--border-color-light); padding: 10px 12px; }
 .legend-track { height: 11px; border-radius: 999px; }
 .legend-labels { display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: #475569; }
