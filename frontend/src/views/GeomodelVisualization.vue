@@ -178,11 +178,11 @@
                   direction="horizontal"
                   class="heatmap-legend"
                 />
-                <LoadingState
+                <SkeletonPanel v-else-if="loading" :rows="5" />
+                <EmptyState
                   v-else
-                  type="empty"
                   :title="gv('emptyMpiTitle')"
-                  :message="gv('emptyMpiMessage')"
+                  :description="gv('emptyMpiMessage')"
                 />
               </div>
             </div>
@@ -208,9 +208,12 @@
                     :size="300"
                     :color-scale="'viridis'"
                   />
-                  <div v-else class="mpi-placeholder">
-                    <p>{{ gv('showAfterAnalysis') }}</p>
-                  </div>
+                  <SkeletonPanel v-else-if="loading" :rows="4" compact />
+                  <EmptyState
+                    v-else
+                    :title="gv('emptyMpiTitle')"
+                    :description="gv('showAfterAnalysis')"
+                  />
                 </div>
               </div>
             </div>
@@ -298,7 +301,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from '../composables/useI18n'
-import { PageHeader, StatCard, SidePanel, ColorLegend, DataTable } from '../components/library'
+import { EmptyState, PageHeader, SkeletonPanel, StatCard, SidePanel, ColorLegend, DataTable } from '../components/library'
 import { useDataStore, useUIStore } from '../stores'
 import GeomodelViewer from '../components/GeomodelViewer.vue'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'

@@ -1,15 +1,15 @@
-<template>
+﻿<template>
   <div class="page">
     <div class="grid grid-2">
-      <!-- 左侧：文件上传 -->
+      <!-- 宸︿晶锛氭枃浠朵笂浼?-->
       <div class="card upload-card">
         <h3 class="section-title">
           <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
           </svg>
-          上传钻孔数据文件
+          涓婁紶閽诲瓟鏁版嵁鏂囦欢
         </h3>
-        <p class="section-desc">上传包含岩性参数（弹性模量、容重、抗拉强度、厚度）的 CSV 文件</p>
+        <p class="section-desc">涓婁紶鍖呭惈宀╂€у弬鏁帮紙寮规€фā閲忋€佸閲嶃€佹姉鎷夊己搴︺€佸帤搴︼級鐨?CSV 鏂囦欢</p>
 
         <div class="upload-area" :class="{ 'drag-over': isDragOver }"
              @drop.prevent="handleDrop"
@@ -25,14 +25,14 @@
               <line x1="9" y1="15" x2="15" y2="15"></line>
             </svg>
           </div>
-          <p class="upload-text">点击选择或拖拽文件到此处</p>
-          <p class="upload-hint">支持 .csv 格式，可多选</p>
+          <p class="upload-text">鐐瑰嚮閫夋嫨鎴栨嫋鎷芥枃浠跺埌姝ゅ</p>
+          <p class="upload-hint">鏀寔 .csv 鏍煎紡锛屽彲澶氶€?</p>
         </div>
 
         <div v-if="files.length > 0" class="file-list">
           <div class="file-list-header">
-            <span>已选择 {{ files.length }} 个文件</span>
-            <button class="text-btn" @click="clearFiles">清空</button>
+            <span>宸查€夋嫨 {{ files.length }} 涓枃浠?</span>
+            <button class="text-btn" @click="clearFiles">娓呯┖</button>
           </div>
           <div class="file-items">
             <div v-for="(file, i) in files" :key="i" class="file-item">
@@ -56,14 +56,14 @@
         <div class="action-buttons">
           <button class="btn primary" @click="handleUpload" :disabled="loading || files.length === 0">
             <span v-if="loading" class="spinner sm"></span>
-            {{ loading ? '上传中...' : '上传数据' }}
+            {{ loading ? '涓婁紶涓?..' : '涓婁紶鏁版嵁' }}
           </button>
           <button class="btn secondary" @click="handleScan" :disabled="loading">
-            扫描文件
+            鎵弿鏂囦欢
           </button>
         </div>
 
-        <!-- 扫描结果 -->
+        <!-- 鎵弿缁撴灉 -->
         <div v-if="scanResult" class="result-box success">
           <div class="result-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -71,46 +71,46 @@
             </svg>
           </div>
           <div class="result-content">
-            <div class="result-title">扫描完成</div>
-            <div class="result-desc">检测到 {{ scanResult.files?.length || 0 }} 个 CSV 文件</div>
+            <div class="result-title">鎵弿瀹屾垚</div>
+            <div class="result-desc">妫€娴嬪埌 {{ scanResult.files?.length || 0 }} 涓?CSV 鏂囦欢</div>
           </div>
         </div>
 
-        <!-- 上传后提取的坐标预览 -->
+        <!-- 涓婁紶鍚庢彁鍙栫殑鍧愭爣棰勮 -->
         <div v-if="extractedCoords.length > 0" class="extracted-coords">
-          <h4 class="subsection-title">从文件中提取的坐标</h4>
-          <p class="subsection-desc">发现 {{ extractedCoords.length }} 个钻孔包含坐标信息</p>
+          <h4 class="subsection-title">浠庢枃浠朵腑鎻愬彇鐨勫潗鏍?</h4>
+          <p class="subsection-desc">鍙戠幇 {{ extractedCoords.length }} 涓捇瀛斿寘鍚潗鏍囦俊鎭?</p>
           <button class="btn outline small" @click="useExtractedCoords">
-            使用这些坐标
+            浣跨敤杩欎簺鍧愭爣
           </button>
         </div>
       </div>
 
-      <!-- 右侧：钻孔坐标 -->
+      <!-- 鍙充晶锛氶捇瀛斿潗鏍?-->
       <div class="card upload-card">
         <h3 class="section-title">
           <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
             <circle cx="12" cy="10" r="3"></circle>
           </svg>
-          钻孔坐标
+          閽诲瓟鍧愭爣
         </h3>
-        <p class="section-desc">设置钻孔的平面位置坐标（X, Y）</p>
+        <p class="section-desc">璁剧疆閽诲瓟鐨勫钩闈綅缃潗鏍囷紙X, Y锛?</p>
 
-        <!-- 坐标输入方式切换 -->
+        <!-- 鍧愭爣杈撳叆鏂瑰紡鍒囨崲 -->
         <div class="tab-buttons">
           <button :class="['tab-btn', { active: coordMode === 'manual' }]" @click="coordMode = 'manual'">
-            手动输入
+            鎵嬪姩杈撳叆
           </button>
           <button :class="['tab-btn', { active: coordMode === 'file' }]" @click="coordMode = 'file'">
-            文件上传
+            鏂囦欢涓婁紶
           </button>
         </div>
 
-        <!-- 手动输入坐标 -->
+        <!-- 鎵嬪姩杈撳叆鍧愭爣 -->
         <FormPanel
           v-if="coordMode === 'manual'"
-          title="手动坐标录入"
+          title="鎵嬪姩鍧愭爣褰曞叆"
           description="支持增删钻孔并批量保存坐标"
           :auto-grid="false"
           :show-actions="true"
@@ -121,10 +121,10 @@
             <div class="coord-list">
               <div v-for="(b, i) in boreholes" :key="i" class="coord-item">
                 <span class="coord-num">#{{ i + 1 }}</span>
-                <input type="text" v-model="b.name" placeholder="名称" class="coord-name-input">
+                <input type="text" v-model="b.name" placeholder="鍚嶇О" class="coord-name-input">
                 <input type="number" v-model.number="b.x" placeholder="X (m)" class="coord-value-input">
                 <input type="number" v-model.number="b.y" placeholder="Y (m)" class="coord-value-input">
-                <button class="coord-remove" @click="removeBorehole(i)" title="删除">
+                <button class="coord-remove" @click="removeBorehole(i)" title="鍒犻櫎">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -136,16 +136,16 @@
           <template #actions>
             <div class="coord-actions">
               <button class="btn outline small" type="button" @click="addBorehole">
-                + 添加
+                + 娣诲姞
               </button>
               <button class="btn primary small" type="submit" :disabled="loading || boreholes.length === 0">
-                保存坐标
+                淇濆瓨鍧愭爣
               </button>
             </div>
           </template>
         </FormPanel>
 
-        <!-- 文件上传坐标 -->
+        <!-- 鏂囦欢涓婁紶鍧愭爣 -->
         <div v-else class="coord-file">
           <div class="upload-area compact" @click="triggerCoordInput">
             <input ref="coordInput" type="file" accept=".csv,.json,.txt" @change="onCoordFile" style="display: none">
@@ -155,30 +155,30 @@
                 <circle cx="12" cy="10" r="3"></circle>
               </svg>
             </div>
-            <p class="upload-text">上传坐标文件</p>
-            <p class="upload-hint">支持 CSV/JSON/TXT 格式</p>
+            <p class="upload-text">涓婁紶鍧愭爣鏂囦欢</p>
+            <p class="upload-hint">鏀寔 CSV/JSON/TXT 鏍煎紡</p>
           </div>
           <div class="coord-format-hint">
-            <strong>CSV 格式示例：</strong><br>
+            <strong>CSV 鏍煎紡绀轰緥锛?</strong><br>
             <code>name,x,y</code><br>
             <code>ZK01,100,200</code>
           </div>
         </div>
 
-        <!-- 坐标统计 -->
+        <!-- 鍧愭爣缁熻 -->
         <div v-if="boreholes.length > 0" class="coord-stats">
           <div class="stat-badge">
-            已设置 <strong>{{ boreholes.length }}</strong> 个钻孔坐标
+            宸茶缃?<strong>{{ boreholes.length }}</strong> 涓捇瀛斿潗鏍?
           </div>
           <div class="stat-range">
-            范围: X {{ minX?.toFixed(0) }}~{{ maxX?.toFixed(0) }}m,
+            鑼冨洿: X {{ minX?.toFixed(0) }}~{{ maxX?.toFixed(0) }}m,
             Y {{ minY?.toFixed(0) }}~{{ maxY?.toFixed(0) }}m
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 位置预览地图 - 紧凑布局 -->
+    <!-- 浣嶇疆棰勮鍦板浘 - 绱у噾甯冨眬 -->
     <div class="card preview-card" v-if="boreholes.length > 0">
       <div class="preview-header">
         <div>
@@ -188,19 +188,19 @@
               <line x1="8" y1="2" x2="8" y2="18"></line>
               <line x1="16" y1="6" x2="16" y2="22"></line>
             </svg>
-            钻孔位置预览
+            閽诲瓟浣嶇疆棰勮
           </h3>
-          <p class="section-desc">{{ boreholes.length }} 个钻孔 · 可拖拽平移 · 滚轮缩放 · 点击选择</p>
+          <p class="section-desc">{{ boreholes.length }} 涓捇瀛?路 鍙嫋鎷藉钩绉?路 婊氳疆缂╂斁 路 鐐瑰嚮閫夋嫨</p>
         </div>
         <div class="preview-actions">
-          <button class="icon-btn" @click="exportCoords" title="导出坐标">
+          <button class="icon-btn" @click="exportCoords" title="瀵煎嚭鍧愭爣">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
           </button>
-          <button class="icon-btn danger" @click="clearCoords" title="清空坐标">
+          <button class="icon-btn danger" @click="clearCoords" title="娓呯┖鍧愭爣">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -212,18 +212,18 @@
       </div>
 
       <div class="preview-grid">
-        <!-- 左侧地图 -->
+        <!-- 宸︿晶鍦板浘 -->
         <div class="map-section">
           <BoreholeMap :boreholes="boreholes" :size="320" @select="onSelectBorehole" />
         </div>
 
-        <!-- 右侧坐标列表 -->
+        <!-- 鍙充晶鍧愭爣鍒楄〃 -->
         <div class="table-section">
           <div class="table-header">
-            <h4>坐标列表 ({{ filteredBoreholes.length }})</h4>
+            <h4>鍧愭爣鍒楄〃 ({{ filteredBoreholes.length }})</h4>
             <input
               v-model="searchQuery"
-              placeholder="搜索..."
+              placeholder="鎼滅储..."
               class="search-input"
             >
           </div>
@@ -232,11 +232,11 @@
             <template v-if="useVirtualList">
               <div class="virtual-table-header">
                 <div class="virtual-row virtual-header">
-                  <div class="virtual-cell" style="width: 50px;">序号</div>
-                  <div class="virtual-cell">名称</div>
+                  <div class="virtual-cell" style="width: 50px;">搴忓彿</div>
+                  <div class="virtual-cell">鍚嶇О</div>
                   <div class="virtual-cell" style="width: 80px;">X (m)</div>
                   <div class="virtual-cell" style="width: 80px;">Y (m)</div>
-                  <div class="virtual-cell" style="width: 120px;">操作</div>
+                  <div class="virtual-cell" style="width: 120px;">鎿嶄綔</div>
                 </div>
               </div>
               <VirtualList
@@ -258,8 +258,8 @@
                     <div class="virtual-cell" style="width: 80px;">{{ item.x?.toFixed(1) || '-' }}</div>
                     <div class="virtual-cell" style="width: 80px;">{{ item.y?.toFixed(1) || '-' }}</div>
                     <div class="virtual-cell" style="width: 120px;">
-                      <button class="table-btn" @click.stop="editBoreholeByItem(item)">编辑</button>
-                      <button class="table-btn danger" @click.stop="removeBoreholeByItem(item)">删除</button>
+                      <button class="table-btn" @click.stop="editBoreholeByItem(item)">缂栬緫</button>
+                      <button class="table-btn danger" @click.stop="removeBoreholeByItem(item)">鍒犻櫎</button>
                     </div>
                   </div>
                 </template>
@@ -270,11 +270,11 @@
             <table v-else class="table compact">
               <thead>
                 <tr>
-                  <th>序号</th>
-                  <th>名称</th>
+                  <th>搴忓彿</th>
+                  <th>鍚嶇О</th>
                   <th>X (m)</th>
                   <th>Y (m)</th>
-                  <th>操作</th>
+                  <th>鎿嶄綔</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,42 +289,35 @@
                   <td>{{ b.x?.toFixed(1) || '-' }}</td>
                   <td>{{ b.y?.toFixed(1) || '-' }}</td>
                   <td>
-                    <button class="table-btn" @click.stop="editBoreholeByItem(b)">编辑</button>
-                    <button class="table-btn danger" @click.stop="removeBoreholeByItem(b)">删除</button>
+                    <button class="table-btn" @click.stop="editBoreholeByItem(b)">缂栬緫</button>
+                    <button class="table-btn danger" @click.stop="removeBoreholeByItem(b)">鍒犻櫎</button>
                   </td>
                 </tr>
               </tbody>
             </table>
 
             <div v-if="filteredBoreholes.length === 0" class="table-empty">
-              没有找到匹配的钻孔
+              娌℃湁鎵惧埌鍖归厤鐨勯捇瀛?
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 空状态 -->
+    <!-- 绌虹姸鎬?-->
     <div class="card" v-else>
-      <div class="empty-state">
-        <div class="empty-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
-            <line x1="8" y1="2" x2="8" y2="18"></line>
-            <line x1="16" y1="6" x2="16" y2="22"></line>
-          </svg>
-        </div>
-        <p>暂无钻孔位置数据</p>
-        <p class="empty-hint">请先上传数据文件或手动输入坐标</p>
-      </div>
+      <EmptyState
+        title="暂无钻孔位置数据"
+        description="请先上传数据文件或手动录入坐标。"
+      />
     </div>
 
     <ConfirmDialog
       v-model="clearDialogVisible"
-      title="确认清空坐标"
-      message="清空后会删除当前全部钻孔坐标，并移除本地缓存，是否继续？"
-      confirm-text="确认清空"
-      cancel-text="取消"
+      title="纭娓呯┖鍧愭爣"
+      message="娓呯┖鍚庝細鍒犻櫎褰撳墠鍏ㄩ儴閽诲瓟鍧愭爣锛屽苟绉婚櫎鏈湴缂撳瓨锛屾槸鍚︾户缁紵"
+      confirm-text="纭娓呯┖"
+      cancel-text="鍙栨秷"
       variant="danger"
       @confirm="confirmClearCoords"
     />
@@ -333,7 +326,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { ConfirmDialog, FormPanel } from '../components/library'
+import { ConfirmDialog, EmptyState, FormPanel } from '../components/library'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import BoreholeMap from '../components/BoreholeMap.vue'
@@ -359,11 +352,11 @@ const selectedBorehole = ref(null)
 const searchQuery = ref('')
 const clearDialogVisible = ref(false)
 
-// 钻孔坐标数据
+// 閽诲瓟鍧愭爣鏁版嵁
 const boreholes = ref([])
 const extractedCoords = ref([])
 
-// 计算属性
+// 璁＄畻灞炴€?
 const minX = computed(() => boreholes.value.length ? Math.min(...boreholes.value.map(b => b.x)) : null)
 const maxX = computed(() => boreholes.value.length ? Math.max(...boreholes.value.map(b => b.x)) : null)
 const minY = computed(() => boreholes.value.length ? Math.min(...boreholes.value.map(b => b.y)) : null)
@@ -388,12 +381,12 @@ const virtualListBuffer = computed(() => {
   return VIRTUAL_LIST_DEFAULT_BUFFER
 })
 
-// 监听选中状态，同步到地图组件
+// 鐩戝惉閫変腑鐘舵€侊紝鍚屾鍒板湴鍥剧粍浠?
 watch(selectedBorehole, (val) => {
-  // 可以在这里添加额外的逻辑
+  // 鍙互鍦ㄨ繖閲屾坊鍔犻澶栫殑閫昏緫
 })
 
-// 从 localStorage 加载坐标
+// 浠?localStorage 鍔犺浇鍧愭爣
 const loadCoordinates = () => {
   try {
     const data = localStorage.getItem('borehole_coordinates')
@@ -438,34 +431,34 @@ const formatSize = (bytes) => {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
-// 从上传的文件中提取坐标
+// 浠庝笂浼犵殑鏂囦欢涓彁鍙栧潗鏍?
 const extractCoordinatesFromFiles = async () => {
   extractedCoords.value = []
   const coords = []
 
   for (const file of files.value) {
     try {
-      // 使用预览 API 获取文件内容（兼容 rows/data 两种返回字段）
+      // 浣跨敤棰勮 API 鑾峰彇鏂囦欢鍐呭锛堝吋瀹?rows/data 涓ょ杩斿洖瀛楁锛?
       const { data } = await previewBorehole(file.name, 100)
       const previewRows = data?.rows || data?.data || []
 
-      // 检查数据中是否包含坐标列
+      // 妫€鏌ユ暟鎹腑鏄惁鍖呭惈鍧愭爣鍒?
       if (previewRows.length > 0) {
 
-        // 查找可能的坐标列
+        // 鏌ユ壘鍙兘鐨勫潗鏍囧垪
         const xCol = Object.keys(previewRows[0]).find(k =>
-          k.toLowerCase().includes('x') || k === '坐标x' || k === 'x坐标'
+          k.toLowerCase().includes('x') || k === '鍧愭爣x' || k === 'x鍧愭爣'
         )
         const yCol = Object.keys(previewRows[0]).find(k =>
-          k.toLowerCase().includes('y') || k === '坐标y' || k === 'y坐标'
+          k.toLowerCase().includes('y') || k === '鍧愭爣y' || k === 'y鍧愭爣'
         )
         const nameCol = Object.keys(previewRows[0]).find(k =>
-          k.toLowerCase().includes('name') || k.toLowerCase().includes('钻孔') ||
-          k === '钻孔号' || k === '孔号'
+          k.toLowerCase().includes('name') || k.toLowerCase().includes('閽诲瓟') ||
+          k === '閽诲瓟鍙?' || k === '瀛斿彿'
         )
 
         if (xCol && yCol) {
-          // 提取第一个包含坐标的行（通常每个文件代表一个钻孔）
+          // 鎻愬彇绗竴涓寘鍚潗鏍囩殑琛岋紙閫氬父姣忎釜鏂囦欢浠ｈ〃涓€涓捇瀛旓級
           const firstRow = previewRows[0]
           const x = parseFloat(firstRow[xCol])
           const y = parseFloat(firstRow[yCol])
@@ -482,7 +475,7 @@ const extractCoordinatesFromFiles = async () => {
       }
     } catch (e) {
       if (import.meta.env.DEV) {
-        console.warn('无法从', file.name, '提取坐标:', e.message)
+        console.warn('鏃犳硶浠庢枃浠舵彁鍙栧潗鏍?', file.name, '鎻愬彇鍧愭爣:', e.message)
       }
     }
   }
@@ -499,10 +492,10 @@ const handleUpload = async () => {
     markStepDone('DataImport')
     toast.add(`已上传 ${files.value.length} 个文件`, 'success')
 
-    // 尝试从文件中提取坐标
+    // 灏濊瘯浠庢枃浠朵腑鎻愬彇鍧愭爣
     await extractCoordinatesFromFiles()
   } catch (err) {
-    toast.add(err.response?.data?.detail || '上传失败', 'error')
+    toast.add(err.response?.data?.detail || '涓婁紶澶辫触', 'error')
   } finally {
     loading.value = false
   }
@@ -513,23 +506,23 @@ const handleScan = async () => {
   try {
     const { data } = await scanBoreholes()
     scanResult.value = data
-    toast.add('扫描完成', 'success')
+    toast.add('鎵弿瀹屾垚', 'success')
 
-    // 尝试提取坐标
+    // 灏濊瘯鎻愬彇鍧愭爣
     await extractCoordinatesFromFiles()
   } catch (err) {
-    toast.add(err.response?.data?.detail || '扫描失败', 'error')
+    toast.add(err.response?.data?.detail || '鎵弿澶辫触', 'error')
   } finally {
     loading.value = false
   }
 }
 
-// 使用提取的坐标
+// 浣跨敤鎻愬彇鐨勫潗鏍?
 const useExtractedCoords = () => {
   if (extractedCoords.value.length > 0) {
     boreholes.value = [...extractedCoords.value]
     saveCoordinates()
-    toast.add(`已导入 ${extractedCoords.value.length} 个钻孔坐标`, 'success')
+    toast.add('已导入 ' + extractedCoords.value.length + ' 个钻孔坐标', 'success')
     extractedCoords.value = []
   }
 }
@@ -553,10 +546,10 @@ const parseCoordFile = (content, filename) => {
     if (filename.endsWith('.json')) {
       data = JSON.parse(content)
     } else {
-      // CSV or TXT: name,x,y 格式
+      // CSV or TXT: name,x,y 鏍煎紡
       const lines = content.split('\n')
       const startIndex = lines[0].toLowerCase().includes('name') ||
-                        lines[0].toLowerCase().includes('名称') ? 1 : 0
+                        lines[0].toLowerCase().includes('鍚嶇О') ? 1 : 0
 
       for (let i = startIndex; i < lines.length; i++) {
         const line = lines[i].trim()
@@ -576,7 +569,7 @@ const parseCoordFile = (content, filename) => {
       }
     }
 
-    // 过滤有效数据
+    // 杩囨护鏈夋晥鏁版嵁
     data = data.filter(b => !isNaN(b.x) && !isNaN(b.y))
 
     if (data.length > 0) {
@@ -587,7 +580,7 @@ const parseCoordFile = (content, filename) => {
       toast.add('文件格式不正确', 'error')
     }
   } catch (e) {
-    toast.add('文件解析失败', 'error')
+    toast.add('鏂囦欢瑙ｆ瀽澶辫触', 'error')
   }
 }
 
@@ -611,9 +604,9 @@ const removeBorehole = (index) => {
 
 const editBorehole = (index) => {
   const b = boreholes.value[index]
-  const newName = prompt('钻孔名称:', b.name || '')
-  const newX = prompt('X 坐标:', b.x)
-  const newY = prompt('Y 坐标:', b.y)
+  const newName = prompt('閽诲瓟鍚嶇О:', b.name || '')
+  const newX = prompt('X 鍧愭爣:', b.x)
+  const newY = prompt('Y 鍧愭爣:', b.y)
   if (newName !== null) b.name = newName
   if (newX !== null && !isNaN(parseFloat(newX))) b.x = parseFloat(newX)
   if (newY !== null && !isNaN(parseFloat(newY))) b.y = parseFloat(newY)
@@ -762,7 +755,7 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-/* 美化滚动条 */
+/* 缇庡寲婊氬姩鏉?*/
 .upload-card::-webkit-scrollbar {
   width: 8px;
 }
@@ -1528,3 +1521,6 @@ onMounted(() => {
   border-top: none;
 }
 </style>
+
+
+

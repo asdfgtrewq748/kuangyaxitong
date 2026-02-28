@@ -155,9 +155,13 @@
           <span class="tag">{{ stepModelLabel(stepModel) }} / {{ stepTargetLabel(stepTarget) }}</span>
         </div>
         <div class="panel-body">
-          <div v-if="loadingStepGrid" class="loading-block">{{ sp('loadingStepGrid') }}</div>
+          <SkeletonPanel v-if="loadingStepGrid" :rows="5" compact />
           <HeatmapCanvas v-else-if="stepGrid?.values?.length" :grid="stepGrid.values" :size="480" />
-          <div v-else class="empty-block">{{ sp('noStepGrid') }}</div>
+          <EmptyState
+            v-else
+            :title="sp('noStepGrid')"
+            :description="sp('stepGridTitle')"
+          />
         </div>
       </article>
 
@@ -167,9 +171,13 @@
           <span class="tag">{{ mpiSeam || sp('unselectedSeam') }}</span>
         </div>
         <div class="panel-body">
-          <div v-if="loadingMpi" class="loading-block">{{ sp('loadingMpi') }}</div>
+          <SkeletonPanel v-if="loadingMpi" :rows="5" compact />
           <HeatmapCanvas v-else-if="mpiGrid?.length" :grid="mpiGrid" :size="420" />
-          <div v-else class="empty-block">{{ sp('noMpi') }}</div>
+          <EmptyState
+            v-else
+            :title="sp('noMpi')"
+            :description="sp('mpiPanelTitle')"
+          />
 
           <div class="stats-row">
             <div class="stat-item"><span>{{ sp('min') }}</span><strong>{{ formatNumber(mpiStats?.min, 2) }}</strong></div>
@@ -223,7 +231,7 @@
         <span class="tag">{{ sp('batchPreviewLimit') }}</span>
       </div>
       <div class="panel-body">
-        <div v-if="loadingStepBatch" class="loading-block">{{ sp('loadingBatch') }}</div>
+        <SkeletonPanel v-if="loadingStepBatch" :rows="6" />
         <div v-else-if="stepBatch?.items?.length" class="table-wrap">
           <table class="table">
             <thead>
@@ -243,7 +251,11 @@
           </table>
           <div class="table-foot" v-if="stepBatch.items.length > 20">{{ sp('batchMore', { count: stepBatch.items.length - 20 }) }}</div>
         </div>
-        <div v-else class="empty-block">{{ sp('noBatch') }}</div>
+        <EmptyState
+          v-else
+          :title="sp('noBatch')"
+          :description="sp('batchResultTitle')"
+        />
       </div>
     </section>
   </div>
@@ -254,7 +266,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useToast } from '../composables/useToast'
 import { useI18n } from '../composables/useI18n'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
-import { PageHeader } from '../components/library'
+import { EmptyState, PageHeader, SkeletonPanel } from '../components/library'
 import {
   exportPressureSteps,
   exportPressureStepsGrid,
