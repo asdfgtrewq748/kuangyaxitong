@@ -674,26 +674,26 @@ onMounted(() => {
 
 <style scoped>
 .page-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 26px;
   font-weight: 700;
   color: #0f172a;
 }
 
 .page-subtitle {
-  margin: 0 0 24px 0;
+  margin: 0 0 var(--spacing-6) 0;
   font-size: 14px;
   color: #64748b;
 }
 
 .section-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 17px;
   font-weight: 700;
   color: #0f172a;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .section-icon {
@@ -704,20 +704,20 @@ onMounted(() => {
 }
 
 .section-desc {
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: 13px;
   color: #64748b;
 }
 
 .subsection-title {
-  margin: 12px 0 4px 0;
+  margin: var(--spacing-3) 0 var(--spacing-1) 0;
   font-size: 13px;
   font-weight: 600;
   color: #475569;
 }
 
 .subsection-desc {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 12px;
   color: #64748b;
 }
@@ -725,7 +725,7 @@ onMounted(() => {
 /* Grid */
 .grid {
   display: grid;
-  gap: 20px;
+  gap: var(--spacing-5);
 }
 
 .grid-2 {
@@ -736,12 +736,12 @@ onMounted(() => {
 .card {
   background: white;
   border-radius: 16px;
-  padding: 20px;
+  padding: var(--spacing-5);
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
 .preview-card {
-  padding: 16px;
+  padding: var(--spacing-4);
 }
 
 /* Upload Card - with scroll */
@@ -773,7 +773,7 @@ onMounted(() => {
 .upload-area {
   border: 3px dashed #cbd5e1;
   border-radius: 16px;
-  padding: 32px 24px;
+  padding: var(--spacing-8) var(--spacing-6);
   text-align: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -817,13 +817,13 @@ onMounted(() => {
 }
 
 .upload-area.compact {
-  padding: 16px;
+  padding: var(--spacing-4);
 }
 
 .upload-icon {
   width: 56px;
   height: 56px;
-  margin: 0 auto 12px;
+  margin: 0 auto var(--spacing-3);
   color: #7cb7ae;
   display: flex;
   align-items: center;
@@ -844,7 +844,7 @@ onMounted(() => {
 }
 
 .upload-text {
-  margin: 0 0 6px 0;
+  margin: 0 0 var(--spacing-1) 0;
   font-size: 15px;
   font-weight: 600;
   color: #1f2937;
@@ -860,8 +860,8 @@ onMounted(() => {
 
 /* File List */
 .file-list {
-  margin-top: 20px;
-  padding: 16px;
+  margin-top: var(--spacing-5);
+  padding: var(--spacing-4);
   background: linear-gradient(135deg, #f4faf8 0%, #edf8f5 100%);
   border-radius: 14px;
   border: 1px solid rgba(14, 116, 144, 0.14);
@@ -872,7 +872,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-3);
   font-size: 13px;
   font-weight: 600;
   color: #475569;
@@ -881,14 +881,14 @@ onMounted(() => {
 .file-items {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
   background: white;
   border-radius: 10px;
   font-size: 13px;
@@ -959,19 +959,19 @@ onMounted(() => {
 /* Actions */
 .action-buttons {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
   flex-wrap: wrap;
 }
 
 .coord-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
 }
 
 .btn {
-  padding: 8px 16px;
+  padding: var(--spacing-2) var(--spacing-4);
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -981,7 +981,7 @@ onMounted(() => {
 }
 
 .btn.small {
-  padding: 6px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 12px;
 }
 
@@ -1057,9 +1057,9 @@ onMounted(() => {
 .result-box {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 16px;
-  padding: 10px 14px;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
   border-radius: 10px;
 }
 
@@ -1098,8 +1098,8 @@ onMounted(() => {
 
 /* Extracted Coords */
 .extracted-coords {
-  margin-top: 16px;
-  padding: 12px;
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3);
   background: #e8f7f3;
   border-radius: 10px;
   border-left: 4px solid var(--color-primary);
@@ -1108,16 +1108,16 @@ onMounted(() => {
 /* Tab Buttons */
 .tab-buttons {
   display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-  padding: 4px;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-1);
   background: #edf5f3;
   border-radius: 12px;
 }
 
 .tab-btn {
   flex: 1;
-  padding: 10px 16px;
+  padding: var(--spacing-3) var(--spacing-4);
   border: none;
   background: transparent;
   border-radius: 10px;
@@ -1151,15 +1151,15 @@ onMounted(() => {
 .coord-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-3);
 }
 
 .coord-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
   background: #f8fafc;
   border-radius: 8px;
   transition: background 0.15s;
@@ -1177,7 +1177,7 @@ onMounted(() => {
 
 .coord-name-input {
   flex: 1;
-  padding: 5px 8px;
+  padding: var(--spacing-1) var(--spacing-2);
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 12px;
@@ -1185,7 +1185,7 @@ onMounted(() => {
 
 .coord-value-input {
   width: 60px;
-  padding: 5px 6px;
+  padding: var(--spacing-1);
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 12px;
@@ -1216,15 +1216,15 @@ onMounted(() => {
 }
 
 .coord-stats {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-1);
 }
 
 .stat-badge {
   display: inline-block;
-  padding: 6px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   background: #e8f7f3;
   border-radius: 8px;
   color: var(--color-info);
@@ -1234,7 +1234,7 @@ onMounted(() => {
 .stat-range {
   font-size: 11px;
   color: #64748b;
-  padding: 0 4px;
+  padding: 0 var(--spacing-1);
 }
 
 .coord-file {
@@ -1242,8 +1242,8 @@ onMounted(() => {
 }
 
 .coord-format-hint {
-  margin-top: 12px;
-  padding: 8px 10px;
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
   background: #f4faf8;
   border-radius: 8px;
   font-size: 11px;
@@ -1253,7 +1253,7 @@ onMounted(() => {
 
 .coord-format-hint code {
   background: #e2e8f0;
-  padding: 2px 4px;
+  padding: var(--spacing-1);
   border-radius: 4px;
   font-size: 10px;
 }
@@ -1263,12 +1263,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-4);
 }
 
 .preview-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--spacing-1);
 }
 
 .icon-btn {
@@ -1306,7 +1306,7 @@ onMounted(() => {
 .preview-grid {
   display: grid;
   grid-template-columns: 340px 1fr;
-  gap: 20px;
+  gap: var(--spacing-5);
 }
 
 .map-section {
@@ -1324,7 +1324,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: var(--spacing-3);
 }
 
 .table-header h4 {
@@ -1335,7 +1335,7 @@ onMounted(() => {
 }
 
 .search-input {
-  padding: 6px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 12px;
@@ -1352,8 +1352,8 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   max-height: 320px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
 }
 
 .table {
@@ -1364,50 +1364,50 @@ onMounted(() => {
 
 .table.compact th,
 .table.compact td {
-  padding: 8px 10px;
+  padding: var(--spacing-2) var(--spacing-3);
 }
 
 .table th {
   text-align: left;
-  background: #edf5f3;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
   font-weight: 600;
-  color: #475569;
+  color: var(--text-secondary);
   position: sticky;
   top: 0;
 }
 
 .table td {
-  border-bottom: 1px solid #f1f5f9;
-  color: #0f172a;
+  border-bottom: 1px solid var(--border-color-light);
+  color: var(--text-primary);
 }
 
 .table tbody tr {
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background-color var(--transition-fast);
 }
 
 .table tbody tr:hover {
-  background: #f4faf8;
+  background: var(--bg-secondary);
 }
 
 .table tbody tr.selected {
-  background: #e8f7f3;
+  background: var(--bg-tertiary);
 }
 
 .table tbody tr.selected td {
-  color: var(--color-info);
-  font-weight: 500;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .table-btn {
   background: none;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: var(--spacing-1);
   font-size: 10px;
   cursor: pointer;
-  margin-right: 4px;
+  margin-right: var(--spacing-1);
 }
 
 .table-btn:hover {
@@ -1416,28 +1416,28 @@ onMounted(() => {
 }
 
 .table-btn.danger:hover {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 .table-empty {
-  padding: 24px;
+  padding: var(--spacing-6);
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   font-size: 13px;
 }
 
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: var(--spacing-10) var(--spacing-5);
   color: #94a3b8;
 }
 
 .empty-icon {
   width: 56px;
   height: 56px;
-  margin: 0 auto 10px;
+  margin: 0 auto var(--spacing-3);
   color: #94a3b8;
   opacity: 0.6;
   display: flex;
@@ -1480,7 +1480,7 @@ onMounted(() => {
 .virtual-row {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
+  padding: var(--spacing-3);
   border-bottom: 1px solid #edf5f3;
   transition: all 0.15s ease;
   cursor: pointer;
@@ -1497,7 +1497,7 @@ onMounted(() => {
 
 .virtual-cell {
   flex: 1;
-  padding: 0 8px;
+  padding: 0 var(--spacing-2);
   font-size: 13px;
   color: #334155;
   overflow: hidden;
@@ -1512,7 +1512,7 @@ onMounted(() => {
 /* Ensure virtual list container has proper height */
 .table-wrapper :deep(.virtual-list-container) {
   border-radius: 0 0 8px 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   border-top: none;
 }
 </style>

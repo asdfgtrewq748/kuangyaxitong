@@ -360,30 +360,30 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .scene3d-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg-page); }
-.main-header { padding: 0 24px; }
-.header-actions { display: flex; gap: 8px; }
-.btn { padding: 8px 14px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
+.main-header { padding: 0 var(--spacing-6); }
+.header-actions { display: flex; gap: var(--spacing-2); }
+.btn { padding: var(--spacing-2) var(--spacing-4); border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
 .btn.secondary { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-color); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.summary-strip { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border-color); background: rgba(15, 118, 110, 0.04); }
-.chip { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border-color); background: var(--bg-card); }
+.summary-strip { display: flex; flex-wrap: wrap; gap: var(--spacing-2); padding: var(--spacing-3) var(--spacing-4); border-bottom: 1px solid var(--border-color); background: rgba(15, 118, 110, 0.04); }
+.chip { font-size: 12px; padding: var(--spacing-1) var(--spacing-2); border-radius: 999px; border: 1px solid var(--border-color); background: var(--bg-card); }
 .chip.loading { color: #0f766e; border-color: #99f6e4; }
 .chip.error { color: #b91c1c; border-color: #fecaca; }
 
-.main-layout { flex: 1; display: grid; grid-template-columns: 280px minmax(0, 1fr) 300px; gap: 14px; padding: 14px; }
+.main-layout { flex: 1; display: grid; grid-template-columns: 280px minmax(0, 1fr) 300px; gap: var(--spacing-4); padding: var(--spacing-4); }
 .side-panel, .stats-panel { display: flex; flex-direction: column; gap: 12px; }
 .viewer-panel { min-width: 0; }
-.card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; }
-.card h3 { margin: 0 0 10px; font-size: 14px; }
+.card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: var(--spacing-3); }
+.card h3 { margin: 0 0 var(--spacing-3); font-size: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .field span { font-size: 12px; color: var(--text-secondary); }
-.field select, .field input { padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: #fff; }
+.field select, .field input { padding: var(--spacing-2) var(--spacing-3); border: 1px solid var(--border-color); border-radius: 6px; background: #fff; }
 
-.error-tip { margin: 6px 0 0; font-size: 12px; color: #b91c1c; }
+.error-tip { margin: var(--spacing-1) 0 0; font-size: 12px; color: #b91c1c; }
 
 .indicator-list { display: flex; flex-direction: column; gap: 6px; }
-.indicator-item { display: flex; align-items: center; gap: 8px; border-radius: 8px; padding: 8px; cursor: pointer; }
+.indicator-item { display: flex; align-items: center; gap: var(--spacing-2); border-radius: 8px; padding: var(--spacing-2); cursor: pointer; }
 .indicator-item.active, .indicator-item:hover { background: var(--bg-hover); }
 .indicator-item input { display: none; }
 .indicator-item .dot { width: 10px; height: 10px; border-radius: 999px; }
@@ -393,9 +393,9 @@ onBeforeUnmount(() => {
 .kv { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
 .kv.stack { align-items: flex-start; flex-direction: column; gap: 3px; }
 
-.indicator-head { border-left: 4px solid; padding: 10px; border-radius: 8px; background: var(--bg-hover); display: flex; flex-direction: column; gap: 2px; }
-.metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-.metric-row div { text-align: center; background: var(--bg-secondary); border-radius: 8px; padding: 8px 4px; }
+.indicator-head { border-left: 4px solid; padding: var(--spacing-3); border-radius: 8px; background: var(--bg-hover); display: flex; flex-direction: column; gap: var(--spacing-1); }
+.metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-2); margin-top: 10px; }
+.metric-row div { text-align: center; background: var(--bg-secondary); border-radius: 8px; padding: var(--spacing-2) var(--spacing-1); }
 .metric-row small { color: var(--text-secondary); display: block; margin-bottom: 4px; }
 .metric-row strong { font-size: 16px; }
 .hist { margin-top: 10px; height: 150px; background: #fff; border: 1px dashed var(--border-color); border-radius: 8px; overflow: hidden; }
@@ -405,3 +405,4 @@ onBeforeUnmount(() => {
   .main-layout { grid-template-columns: 1fr; }
 }
 </style>
+

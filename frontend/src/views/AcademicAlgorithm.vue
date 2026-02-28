@@ -1,29 +1,22 @@
-<template>
+﻿<template>
   <div class="page academic-algorithm-page">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="page-header-content">
-        <div class="page-header-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
-          </svg>
+    <!-- 椤甸潰澶撮儴 -->
+    <PageHeader
+      class="main-header"
+      :title="aa('pageTitle')"
+      :description="aa('pageSubtitle')"
+    >
+      <template #actions>
+        <div class="header-actions">
+          <div class="mode-tabs">
+            <button :class="['mode-tab', { active: activeTab === 'principle' }]" @click="activeTab = 'principle'">{{ aa('tabPrinciple') }}</button>
+            <button :class="['mode-tab', { active: activeTab === 'calculation' }]" @click="activeTab = 'calculation'">{{ aa('tabCalculation') }}</button>
+          </div>
         </div>
-        <div>
-          <h1 class="page-title">{{ aa('pageTitle') }}</h1>
-          <p class="page-subtitle">{{ aa('pageSubtitle') }}</p>
-        </div>
-      </div>
-      <div class="header-actions">
-        <div class="mode-tabs">
-          <button :class="['mode-tab', { active: activeTab === 'principle' }]" @click="activeTab = 'principle'">{{ aa('tabPrinciple') }}</button>
-          <button :class="['mode-tab', { active: activeTab === 'calculation' }]" @click="activeTab = 'calculation'">{{ aa('tabCalculation') }}</button>
-        </div>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <!-- 一句话总览 -->
+    <!-- 涓€鍙ヨ瘽鎬昏 -->
     <section class="card overview-card">
       <div class="overview-text">
         <h2>{{ aa('overviewTitle') }}</h2>
@@ -40,7 +33,7 @@
       </div>
     </section>
 
-    <!-- 算法原理 Tab -->
+    <!-- 绠楁硶鍘熺悊 Tab -->
     <template v-if="activeTab === 'principle'">
       <section class="card onboarding-card">
         <div class="section-header">
@@ -153,7 +146,7 @@
         </div>
       </section>
 
-      <!-- 总体流程 -->
+      <!-- 鎬讳綋娴佺▼ -->
       <section class="card flow-card">
         <div class="section-header">
           <h2>{{ aa('flowTitle') }}</h2>
@@ -183,7 +176,7 @@
         </div>
       </section>
 
-      <!-- 子指标模块 -->
+      <!-- 瀛愭寚鏍囨ā鍧?-->
       <section class="card indicators-card">
         <div class="section-header">
           <h2>{{ aa('coreTitle') }}</h2>
@@ -202,7 +195,7 @@
           </button>
         </div>
 
-        <!-- RSI 相场断裂模型 -->
+        <!-- RSI 鐩稿満鏂妯″瀷 -->
         <div v-if="activeAlgo === 'rsi'" class="algorithm-detail">
           <div class="algo-header">
             <h3>{{ aa('rsiTitle') }}</h3>
@@ -215,66 +208,7 @@
               <p>{{ aa('rsiPhysicalDesc') }}</p>
 
               <div class="principle-visual">
-                <div class="sci-figure">
-                  <div class="figure-caption-top">
-                    <strong>Fig. 1</strong> | {{ aa('fig1Caption1') }}
-                    {{ aa('fig1Caption2') }}
-                  </div>
-                  <div class="phase-field-container">
-                    <!-- 相场变量图 -->
-                    <div class="pf-subfigure">
-                      <div class="pf-label">{{ aa('fig1OrderParameter') }}</div>
-                      <svg viewBox="0 0 280 120" class="sci-svg">
-                        <defs>
-                          <linearGradient id="phiGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" style="stop-color:#1a5276"/>
-                            <stop offset="50%" style="stop-color:#7fb3d5"/>
-                            <stop offset="100%" style="stop-color:#c0392b"/>
-                          </linearGradient>
-                        </defs>
-                        <!-- 背景框 -->
-                        <rect x="40" y="30" width="200" height="40" fill="url(#phiGradient)" stroke="#2c3e50" stroke-width="1"/>
-                        <!-- 刻度线 -->
-                        <line x1="40" y1="75" x2="40" y2="80" stroke="#2c3e50" stroke-width="1.5"/>
-                        <line x1="140" y1="75" x2="140" y2="80" stroke="#2c3e50" stroke-width="1.5"/>
-                        <line x1="240" y1="75" x2="240" y2="80" stroke="#2c3e50" stroke-width="1.5"/>
-                        <!-- 标签 -->
-                        <text x="40" y="95" text-anchor="middle" font-size="11" fill="#2c3e50" font-family="Arial">0.0</text>
-                        <text x="140" y="95" text-anchor="middle" font-size="11" fill="#2c3e50" font-family="Arial">0.5</text>
-                        <text x="240" y="95" text-anchor="middle" font-size="11" fill="#2c3e50" font-family="Arial">1.0</text>
-                        <text x="140" y="15" text-anchor="middle" font-size="12" fill="#2c3e50" font-family="Arial" font-weight="bold">{{ aa('fig1IntactToFractured') }}</text>
-                      </svg>
-                    </div>
-                    <!-- 裂纹扩展序列 -->
-                    <div class="pf-subfigure">
-                      <div class="pf-label">{{ aa('fig1CrackSequence') }}</div>
-                      <div class="crack-sequence">
-                        <div class="sequence-frame" v-for="t in 4" :key="t">
-                          <svg viewBox="0 0 80 80" class="sci-svg-small">
-                            <!-- 网格背景 -->
-                            <defs>
-                              <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#ecf0f1" stroke-width="0.5"/>
-                              </pattern>
-                            </defs>
-                            <rect width="80" height="80" fill="url(#grid)" stroke="#bdc3c7" stroke-width="1"/>
-                            <!-- 裂纹路径 -->
-                            <path v-if="t >= 1" d="M 10 40 Q 25 38 30 40" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
-                            <path v-if="t >= 2" d="M 30 40 Q 45 42 50 38" fill="none" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round"/>
-                            <path v-if="t >= 3" d="M 50 38 Q 60 35 65 40" fill="none" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
-                            <path v-if="t >= 4" d="M 65 40 Q 72 45 75 40" fill="none" stroke="#c0392b" stroke-width="3.5" stroke-linecap="round"/>
-                            <!-- 相场扩散区 -->
-                            <ellipse v-if="t >= 1" cx="30" cy="40" rx="6" ry="4" fill="#e74c3c" opacity="0.3"/>
-                            <ellipse v-if="t >= 2" cx="50" cy="38" rx="8" ry="5" fill="#e74c3c" opacity="0.3"/>
-                            <ellipse v-if="t >= 3" cx="65" cy="40" rx="7" ry="4" fill="#e74c3c" opacity="0.3"/>
-                            <ellipse v-if="t >= 4" cx="75" cy="40" rx="5" ry="3" fill="#e74c3c" opacity="0.3"/>
-                          </svg>
-                          <span class="time-label">t<sub>{{ t-1 }}</sub></span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <PhaseFieldFracture :aa="aa" />
               </div>
             </div>
 
@@ -314,7 +248,7 @@
           </div>
         </div>
 
-        <!-- BRI 微震矩张量反演 -->
+        <!-- BRI 寰渿鐭╁紶閲忓弽婕?-->
         <div v-if="activeAlgo === 'bri'" class="algorithm-detail">
           <div class="algo-header">
             <h3>{{ aa('briTitle') }}</h3>
@@ -331,63 +265,7 @@
                 <li>{{ aa('briClvd') }}</li>
               </ul>
 
-              <div class="sci-figure">
-                <div class="figure-caption-top">
-                  <strong>Fig. 2</strong> | {{ aa('fig2Caption1') }}
-                  {{ aa('fig2Caption2') }}
-                </div>
-                <div class="beachball-container">
-                  <div class="beachball-item" v-for="(item, idx) in [
-                    { type: 'ISO', name: aa('beachballIsotropicName'), desc: aa('beachballIsotropicDesc'), color: '#1a5276' },
-                    { type: 'DC', name: aa('beachballDoubleCoupleName'), desc: aa('beachballDoubleCoupleDesc'), color: '#7b241c' },
-                    { type: 'CLVD', name: aa('beachballClvdName'), desc: aa('beachballClvdDesc'), color: '#145a32' }
-                  ]" :key="idx">
-                    <svg viewBox="0 0 140 140" class="sci-svg-beachball">
-                      <defs>
-                        <radialGradient id="sphereGrad" cx="30%" cy="30%">
-                          <stop offset="0%" style="stop-color:#f8f9fa"/>
-                          <stop offset="100%" style="stop-color:#dee2e6"/>
-                        </radialGradient>
-                      </defs>
-                      <!-- 球体背景 -->
-                      <circle cx="70" cy="70" r="65" fill="url(#sphereGrad)" stroke="#2c3e50" stroke-width="1.5"/>
-                      <!-- 纬度线 -->
-                      <ellipse cx="70" cy="70" rx="65" ry="22" fill="none" stroke="#bdc3c7" stroke-width="0.8" opacity="0.5"/>
-                      <ellipse cx="70" cy="70" rx="33" ry="65" fill="none" stroke="#bdc3c7" stroke-width="0.8" opacity="0.5"/>
-
-                      <!-- ISO: 各向同性 -->
-                      <template v-if="item.type === 'ISO'">
-                        <circle cx="70" cy="70" r="45" fill="#1a5276" opacity="0.85"/>
-                        <text x="70" y="110" text-anchor="middle" font-size="9" fill="#2c3e50" font-family="Arial">+</text>
-                      </template>
-
-                      <!-- DC: 双力偶 -->
-                      <template v-if="item.type === 'DC'">
-                        <path d="M 70 5 A 65 65 0 0 1 70 135 A 32.5 65 0 0 0 70 70 A 32.5 65 0 0 1 70 5" fill="#7b241c" opacity="0.9"/>
-                        <path d="M 70 5 A 65 65 0 0 0 70 135 A 32.5 65 0 0 1 70 70 A 32.5 65 0 0 0 70 5" fill="#f8f9fa" opacity="0.9"/>
-                        <line x1="70" y1="5" x2="70" y2="135" stroke="#2c3e50" stroke-width="1"/>
-                        <line x1="5" y1="70" x2="135" y2="70" stroke="#2c3e50" stroke-width="1"/>
-                        <text x="85" y="35" font-size="9" fill="#2c3e50" font-family="Arial">T</text>
-                        <text x="55" y="115" font-size="9" fill="#2c3e50" font-family="Arial">P</text>
-                      </template>
-
-                      <!-- CLVD -->
-                      <template v-if="item.type === 'CLVD'">
-                        <ellipse cx="70" cy="70" rx="25" ry="55" fill="#145a32" opacity="0.85"/>
-                        <ellipse cx="70" cy="70" rx="55" ry="15" fill="#f8f9fa" opacity="0.9"/>
-                      </template>
-
-                      <!-- 外边框 -->
-                      <circle cx="70" cy="70" r="65" fill="none" stroke="#2c3e50" stroke-width="2"/>
-                    </svg>
-                    <div class="beachball-info">
-                      <div class="bb-type">{{ item.type }}</div>
-                      <div class="bb-name">{{ item.name }}</div>
-                      <div class="bb-desc">{{ item.desc }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <MomentTensorInversion :aa="aa" />
             </div>
 
             <div class="principle-section">
@@ -410,102 +288,7 @@
           <div class="principle-section full-width">
             <h4>{{ aa('briDepthTitle') }}</h4>
             <div class="depth-model">
-              <div class="sci-figure">
-                <div class="figure-caption-top">
-                  <strong>Fig. 5</strong> | {{ aa('fig5Caption1') }}
-                  {{ aa('fig5Caption2') }}
-                </div>
-                <svg viewBox="0 0 420 260" class="sci-svg-depth">
-                  <defs>
-                    <linearGradient id="riskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" style="stop-color:#27ae60;stop-opacity:0.2"/>
-                      <stop offset="33%" style="stop-color:#27ae60;stop-opacity:0.2"/>
-                      <stop offset="33%" style="stop-color:#f39c12;stop-opacity:0.2"/>
-                      <stop offset="66%" style="stop-color:#f39c12;stop-opacity:0.2"/>
-                      <stop offset="66%" style="stop-color:#e74c3c;stop-opacity:0.2"/>
-                      <stop offset="100%" style="stop-color:#e74c3c;stop-opacity:0.2"/>
-                    </linearGradient>
-                    <clipPath id="chartArea">
-                      <rect x="60" y="40" width="320" height="160"/>
-                    </clipPath>
-                  </defs>
-
-                  <!-- 背景区域填充 -->
-                  <rect x="60" y="40" width="107" height="160" fill="#27ae60" opacity="0.1"/>
-                  <rect x="167" y="40" width="106" height="160" fill="#f39c12" opacity="0.1"/>
-                  <rect x="273" y="40" width="107" height="160" fill="#e74c3c" opacity="0.1"/>
-
-                  <!-- 坐标轴 -->
-                  <line x1="60" y1="200" x2="380" y2="200" stroke="#2c3e50" stroke-width="2"/>
-                  <line x1="60" y1="200" x2="60" y2="40" stroke="#2c3e50" stroke-width="2"/>
-
-                  <!-- 箭头 -->
-                  <polygon points="385,200 375,195 375,205" fill="#2c3e50"/>
-                  <polygon points="60,35 55,45 65,45" fill="#2c3e50"/>
-
-                  <!-- 轴标签 -->
-                  <text x="320" y="230" font-size="13" fill="#2c3e50" font-family="Arial" font-weight="bold">
-                    {{ aa('fig5BurialDepthAxis') }}
-                  </text>
-                  <text x="25" y="50" font-size="13" fill="#2c3e50" font-family="Arial" font-weight="bold">
-                    BRI
-                  </text>
-
-                  <!-- Y轴刻度 -->
-                  <line x1="55" y1="40" x2="65" y2="40" stroke="#2c3e50" stroke-width="1"/>
-                  <line x1="55" y1="80" x2="65" y2="80" stroke="#2c3e50" stroke-width="1"/>
-                  <line x1="55" y1="120" x2="65" y2="120" stroke="#2c3e50" stroke-width="1"/>
-                  <line x1="55" y1="160" x2="65" y2="160" stroke="#2c3e50" stroke-width="1"/>
-
-                  <text x="50" y="45" text-anchor="end" font-size="10" fill="#5d6d7e" font-family="Arial">100</text>
-                  <text x="50" y="85" text-anchor="end" font-size="10" fill="#5d6d7e" font-family="Arial">75</text>
-                  <text x="50" y="125" text-anchor="end" font-size="10" fill="#5d6d7e" font-family="Arial">50</text>
-                  <text x="50" y="165" text-anchor="end" font-size="10" fill="#5d6d7e" font-family="Arial">25</text>
-
-                  <!-- X轴刻度 -->
-                  <line x1="60" y1="200" x2="60" y2="205" stroke="#2c3e50" stroke-width="1"/>
-                  <line x1="167" y1="200" x2="167" y2="205" stroke="#2c3e50" stroke-width="1.5"/>
-                  <line x1="273" y1="200" x2="273" y2="205" stroke="#2c3e50" stroke-width="1"/>
-                  <line x1="380" y1="200" x2="380" y2="205" stroke="#2c3e50" stroke-width="1"/>
-
-                  <text x="60" y="220" text-anchor="middle" font-size="10" fill="#5d6d7e" font-family="Arial">0</text>
-                  <text x="167" y="220" text-anchor="middle" font-size="11" fill="#c0392b" font-family="Arial" font-weight="bold">400</text>
-                  <text x="273" y="220" text-anchor="middle" font-size="10" fill="#5d6d7e" font-family="Arial">800</text>
-                  <text x="380" y="220" text-anchor="middle" font-size="10" fill="#5d6d7e" font-family="Arial">1200</text>
-
-                  <!-- 临界线 -->
-                  <line x1="167" y1="40" x2="167" y2="200" stroke="#c0392b" stroke-width="2" stroke-dasharray="6,3"/>
-                  <text x="162" y="35" font-size="10" fill="#c0392b" font-family="Arial" font-weight="bold">Hcrit</text>
-
-                  <!-- 风险区域标注 -->
-                  <text x="110" y="55" text-anchor="middle" font-size="11" fill="#27ae60" font-family="Arial" font-weight="bold">{{ aa('risk.low') }}</text>
-                  <text x="220" y="55" text-anchor="middle" font-size="11" fill="#d68910" font-family="Arial" font-weight="bold">{{ aa('risk.medium') }}</text>
-                  <text x="325" y="55" text-anchor="middle" font-size="11" fill="#c0392b" font-family="Arial" font-weight="bold">{{ aa('risk.high') }}</text>
-
-                  <!-- 曲线 -->
-                  <path d="M 60 40 Q 120 42 167 60 Q 220 100 273 150 Q 330 190 380 195" fill="none" stroke="#1a5276" stroke-width="3"/>
-
-                  <!-- 数据点 -->
-                  <circle cx="167" cy="60" r="5" fill="#c0392b" stroke="white" stroke-width="2"/>
-                  <circle cx="273" cy="150" r="4" fill="#1a5276" stroke="white" stroke-width="1.5"/>
-
-                  <!-- 公式标注 -->
-                  <g transform="translate(240, 80)">
-                    <rect x="0" y="0" width="130" height="45" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1" rx="3"/>
-                    <text x="65" y="18" text-anchor="middle" font-size="10" fill="#5d6d7e" font-family="Arial" font-style="italic">BRI(H) = max(100 -</text>
-                    <text x="65" y="35" text-anchor="middle" font-size="10" fill="#5d6d7e" font-family="Arial" font-style="italic">Pdepth, 0)</text>
-                  </g>
-
-                  <!-- 图例 -->
-                  <g transform="translate(60, 240)">
-                    <line x1="0" y1="5" x2="25" y2="5" stroke="#1a5276" stroke-width="3"/>
-                    <text x="32" y="10" font-size="10" fill="#2c3e50" font-family="Arial">{{ aa('fig5LegendCurve') }}</text>
-
-                    <line x1="100" y1="5" x2="120" y2="5" stroke="#c0392b" stroke-width="2" stroke-dasharray="4,2"/>
-                    <text x="127" y="10" font-size="10" fill="#2c3e50" font-family="Arial">{{ aa('fig5LegendCriticalDepth') }}</text>
-                  </g>
-                </svg>
-              </div>
+              <DepthRiskCurve :aa="aa" />
               <div class="depth-formulas">
                 <div class="formula-block">
                   <div class="formula-title">{{ aa('briDepthPenalty') }}</div>
@@ -524,7 +307,7 @@
           </div>
         </div>
 
-        <!-- ASI 统一强度理论 -->
+        <!-- ASI 缁熶竴寮哄害鐞嗚 -->
         <div v-if="activeAlgo === 'asi'" class="algorithm-detail">
           <div class="algo-header">
             <h3>{{ aa('asiTitle') }}</h3>
@@ -540,99 +323,7 @@
                 <li>{{ aa('asiTheoryCase1') }}</li>
                 <li>{{ aa('asiTheoryCaseBetween') }}</li>
               </ul>
-
-              <div class="sci-figure">
-                <div class="figure-caption-top">
-                  <strong>Fig. 3</strong> | {{ aa('fig3Caption1') }}
-                  {{ aa('fig3Caption2') }}
-                </div>
-                <div class="ust-container">
-                  <svg viewBox="0 0 400 320" class="sci-svg-ust">
-                    <defs>
-                      <!-- 渐变填充 -->
-                      <linearGradient id="mcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#1a5276;stop-opacity:0.3" />
-                        <stop offset="100%" style="stop-color:#1a5276;stop-opacity:0.05" />
-                      </linearGradient>
-                      <linearGradient id="ustGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#7b241c;stop-opacity:0.3" />
-                        <stop offset="100%" style="stop-color:#7b241c;stop-opacity:0.05" />
-                      </linearGradient>
-                      <linearGradient id="tsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#145a32;stop-opacity:0.3" />
-                        <stop offset="100%" style="stop-color:#145a32;stop-opacity:0.05" />
-                      </linearGradient>
-                    </defs>
-
-                    <!-- 坐标轴 -->
-                    <line x1="60" y1="280" x2="360" y2="280" stroke="#2c3e50" stroke-width="2"/>
-                    <line x1="60" y1="280" x2="60" y2="40" stroke="#2c3e50" stroke-width="2"/>
-
-                    <!-- 箭头 -->
-                    <polygon points="365,280 355,275 355,285" fill="#2c3e50"/>
-                    <polygon points="60,35 55,45 65,45" fill="#2c3e50"/>
-
-                    <!-- 轴标签 -->
-                    <text x="320" y="305" font-size="14" fill="#2c3e50" font-family="Arial" font-weight="bold">σ₃ / σₜ</text>
-                    <text x="30" y="50" font-size="14" fill="#2c3e50" font-family="Arial" font-weight="bold">σ₁ / σₜ</text>
-
-                    <!-- 刻度 -->
-                    <line x1="110" y1="275" x2="110" y2="285" stroke="#2c3e50" stroke-width="1"/>
-                    <line x1="160" y1="275" x2="160" y2="285" stroke="#2c3e50" stroke-width="1"/>
-                    <line x1="210" y1="275" x2="210" y2="285" stroke="#2c3e50" stroke-width="1"/>
-                    <line x1="260" y1="275" x2="260" y2="285" stroke="#2c3e50" stroke-width="1"/>
-                    <line x1="310" y1="275" x2="310" y2="285" stroke="#2c3e50" stroke-width="1"/>
-
-                    <text x="110" y="300" text-anchor="middle" font-size="10" fill="#5d6d7e" font-family="Arial">1</text>
-                    <text x="210" y="300" text-anchor="middle" font-size="10" fill="#5d6d7e" font-family="Arial">2</text>
-                    <text x="310" y="300" text-anchor="middle" font-size="10" fill="#5d6d7e" font-family="Arial">3</text>
-
-                    <line x1="55" y1="230" x2="65" y2="230" stroke="#2c3e50" stroke-width="1"/>
-                    <line x1="55" y1="180" x2="65" y2="180" stroke="#2c3e50" stroke-width="1"/>
-                    <line x1="55" y1="130" x2="65" y2="130" stroke="#2c3e50" stroke-width="1"/>
-                    <line x1="55" y1="80" x2="65" y2="80" stroke="#2c3e50" stroke-width="1"/>
-
-                    <text x="50" y="235" text-anchor="end" font-size="10" fill="#5d6d7e" font-family="Arial">2</text>
-                    <text x="50" y="135" text-anchor="end" font-size="10" fill="#5d6d7e" font-family="Arial">4</text>
-
-                    <!-- Mohr-Coulomb (b=0) -->
-                    <path d="M 60 130 L 210 280" fill="url(#mcGrad)" opacity="0.3"/>
-                    <line x1="60" y1="130" x2="210" y2="280" stroke="#1a5276" stroke-width="2.5" stroke-dasharray="8,4"/>
-
-                    <!-- UST (b=0.5) -->
-                    <path d="M 60 180 Q 135 205 210 280" fill="none" stroke="#7b241c" stroke-width="3"/>
-                    <circle cx="60" cy="180" r="4" fill="#7b241c"/>
-                    <circle cx="210" cy="280" r="4" fill="#7b241c"/>
-
-                    <!-- Twin-Shear (b=1) -->
-                    <path d="M 60 230 Q 100 235 135 200 Q 170 165 210 280" fill="none" stroke="#145a32" stroke-width="2.5" stroke-dasharray="4,4"/>
-
-                    <!-- 图例 -->
-                    <g transform="translate(220, 60)">
-                      <rect x="0" y="0" width="130" height="90" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1" rx="4"/>
-
-                      <line x1="15" y1="20" x2="45" y2="20" stroke="#1a5276" stroke-width="2.5" stroke-dasharray="8,4"/>
-                      <text x="55" y="25" font-size="11" fill="#2c3e50" font-family="Arial">b=0 (M-C)</text>
-
-                      <line x1="15" y1="45" x2="45" y2="45" stroke="#7b241c" stroke-width="3"/>
-                      <circle cx="15" cy="45" r="3" fill="#7b241c"/>
-                      <circle cx="45" cy="45" r="3" fill="#7b241c"/>
-                      <text x="55" y="50" font-size="11" fill="#2c3e50" font-family="Arial">b=0.5 (UST)</text>
-
-                      <line x1="15" y1="70" x2="45" y2="70" stroke="#145a32" stroke-width="2.5" stroke-dasharray="4,4"/>
-                      <text x="55" y="75" font-size="11" fill="#2c3e50" font-family="Arial">b=1 (Twin-Shear)</text>
-                    </g>
-
-                    <!-- b参数标注 -->
-                    <text x="150" y="120" font-size="12" fill="#7b241c" font-family="Arial" font-weight="bold">
-                      {{ aa('fig3UnifiedLabel') }}
-                    </text>
-                    <text x="150" y="135" font-size="10" fill="#5d6d7e" font-family="Arial">
-                      0 ≤ b ≤ 1
-                    </text>
-                  </svg>
-                </div>
-              </div>
+              <UnifiedStrengthTheory :aa="aa" />
             </div>
 
             <div class="principle-section">
@@ -665,7 +356,7 @@
               </div>
             </div>
 
-            <!-- ASI 应力分布可视化 - 图文并茂解释算法 -->
+            <!-- ASI 搴斿姏鍒嗗竷鍙鍖?- 鍥炬枃骞惰寕瑙ｉ噴绠楁硶 -->
             <div class="sci-figure asi-stress-figure">
               <div class="figure-caption-top">
                 <strong>Fig. 6</strong> | {{ aa('fig6Caption1') }}
@@ -675,12 +366,12 @@
               </div>
 
               <div class="asi-viz-wrapper">
-                <!-- 左图: 隧道开挖应力轨迹图 -->
+                <!-- 宸﹀浘: 闅ч亾寮€鎸栧簲鍔涜建杩瑰浘 -->
                 <div class="asi-viz-panel">
                   <div class="panel-title">{{ aa('fig6PanelA') }}</div>
                   <svg viewBox="0 0 300 320" class="sci-svg-asi">
                     <defs>
-                      <!-- 应力轨迹渐变 -->
+                      <!-- 搴斿姏杞ㄨ抗娓愬彉 -->
                       <linearGradient id="stressLine" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" style="stop-color:#3498db;stop-opacity:0.8"/>
                         <stop offset="100%" style="stop-color:#3498db;stop-opacity:0.2"/>
@@ -689,7 +380,7 @@
                         <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:0.6"/>
                         <stop offset="100%" style="stop-color:#e74c3c;stop-opacity:0"/>
                       </radialGradient>
-                      <!-- 箭头 -->
+                      <!-- 绠ご -->
                       <marker id="arrGray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
                         <polygon points="0 0, 8 3, 0 6" fill="#7f8c8d"/>
                       </marker>
@@ -704,7 +395,7 @@
                       </marker>
                     </defs>
 
-                    <!-- 原始应力场 (背景) -->
+                    <!-- 鍘熷搴斿姏鍦?(鑳屾櫙) -->
                     <g opacity="0.3">
                       <line x1="0" y1="30" x2="300" y2="30" stroke="#95a5a6" stroke-width="1" stroke-dasharray="5,5"/>
                       <line x1="0" y1="60" x2="300" y2="60" stroke="#95a5a6" stroke-width="1" stroke-dasharray="5,5"/>
@@ -712,14 +403,14 @@
                       <line x1="0" y1="290" x2="300" y2="290" stroke="#95a5a6" stroke-width="1" stroke-dasharray="5,5"/>
                     </g>
 
-                    <!-- 应力集中区域 (红色渐变) -->
+                    <!-- 搴斿姏闆嗕腑鍖哄煙 (绾㈣壊娓愬彉) -->
                     <ellipse cx="150" cy="160" rx="80" ry="70" fill="url(#stressConc)" opacity="0.4"/>
 
-                    <!-- 塑性区边界 -->
+                    <!-- 濉戞€у尯杈圭晫 -->
                     <ellipse cx="150" cy="160" rx="55" ry="50" fill="none" stroke="#27ae60" stroke-width="2" stroke-dasharray="6,3"/>
                     <text x="195" y="130" font-size="10" fill="#27ae60" font-family="Arial" font-weight="bold">Rp</text>
 
-                    <!-- 开挖前应力方向 (灰色箭头) -->
+                    <!-- 寮€鎸栧墠搴斿姏鏂瑰悜 (鐏拌壊绠ご) -->
                     <g opacity="0.4">
                       <line x1="40" y1="30" x2="40" y2="50" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrGray)"/>
                       <line x1="260" y1="30" x2="260" y2="50" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrGray)"/>
@@ -727,27 +418,27 @@
                       <line x1="260" y1="290" x2="260" y2="270" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrGray)"/>
                     </g>
 
-                    <!-- 开挖后应力轨迹 (蓝色曲线) -->
+                    <!-- 寮€鎸栧悗搴斿姏杞ㄨ抗 (钃濊壊鏇茬嚎) -->
                     <path d="M 80 30 Q 120 80 140 140" fill="none" stroke="#2980b9" stroke-width="1.5" opacity="0.7"/>
                     <path d="M 220 30 Q 180 80 160 140" fill="none" stroke="#2980b9" stroke-width="1.5" opacity="0.7"/>
                     <path d="M 80 290 Q 120 240 140 180" fill="none" stroke="#2980b9" stroke-width="1.5" opacity="0.7"/>
                     <path d="M 220 290 Q 180 240 160 180" fill="none" stroke="#2980b9" stroke-width="1.5" opacity="0.7"/>
 
-                    <!-- 隧道开挖轮廓 -->
+                    <!-- 闅ч亾寮€鎸栬疆寤?-->
                     <ellipse cx="150" cy="160" rx="35" ry="32" fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
                     <text x="150" y="165" text-anchor="middle" font-size="9" fill="#ecf0f1" font-family="Arial">{{ aa('fig6Tunnel') }}</text>
 
-                    <!-- 应力重分布箭头 (红色 - 切向) -->
+                    <!-- 搴斿姏閲嶅垎甯冪澶?(绾㈣壊 - 鍒囧悜) -->
                     <path d="M 110 100 Q 130 120 145 135" fill="none" stroke="#c0392b" stroke-width="2" marker-end="url(#arrRed)"/>
                     <path d="M 190 100 Q 170 120 155 135" fill="none" stroke="#c0392b" stroke-width="2" marker-end="url(#arrRed)"/>
                     <path d="M 110 220 Q 130 200 145 185" fill="none" stroke="#c0392b" stroke-width="2" marker-end="url(#arrRed)"/>
                     <path d="M 190 220 Q 170 200 155 185" fill="none" stroke="#c0392b" stroke-width="2" marker-end="url(#arrRed)"/>
 
-                    <!-- 径向释放箭头 (绿色) -->
+                    <!-- 寰勫悜閲婃斁绠ご (缁胯壊) -->
                     <line x1="135" y1="145" x2="125" y2="135" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arrGreen)"/>
                     <line x1="165" y1="145" x2="175" y2="135" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arrGreen)"/>
 
-                    <!-- 标注框 -->
+                    <!-- 鏍囨敞妗?-->
                     <g transform="translate(10, 10)">
                       <rect x="0" y="0" width="100" height="45" fill="white" stroke="#bdc3c7" stroke-width="1" rx="3" opacity="0.9"/>
                       <line x1="8" y1="15" x2="25" y2="15" stroke="#c0392b" stroke-width="2"/>
@@ -756,34 +447,34 @@
                       <text x="30" y="36" font-size="9" fill="#2c3e50" font-family="Arial">{{ aa('fig6StressTrajectory') }}</text>
                     </g>
 
-                    <!-- 坐标轴 -->
+                    <!-- 鍧愭爣杞?-->
                     <line x1="20" y1="160" x2="50" y2="160" stroke="#2c3e50" stroke-width="1.5" marker-end="url(#arrBlack)"/>
-                    <text x="25" y="155" font-size="9" fill="#2c3e50" font-family="Arial">σᵥ</text>
+                    <text x="25" y="155" font-size="9" fill="#2c3e50" font-family="Arial">sigma_r</text>
                     <line x1="150" y1="300" x2="150" y2="270" stroke="#2c3e50" stroke-width="1.5" marker-end="url(#arrBlack)"/>
-                    <text x="160" y="285" font-size="9" fill="#2c3e50" font-family="Arial">σₕ</text>
+                    <text x="160" y="285" font-size="9" fill="#2c3e50" font-family="Arial">sigma_theta</text>
                   </svg>
 
-                  <!-- 原理说明文字 -->
+                  <!-- 鍘熺悊璇存槑鏂囧瓧 -->
                   <div class="principle-text">
                     <p><strong>{{ aa('asiExcavationEffectTitle') }}</strong>{{ aa('asiExcavationEffectDesc') }}</p>
                   </div>
                 </div>
 
-                <!-- 中图: Kirsch解曲线 -->
+                <!-- 涓浘: Kirsch瑙ｆ洸绾?-->
                 <div class="asi-viz-panel">
                   <div class="panel-title">{{ aa('fig6PanelB') }}</div>
                   <svg viewBox="0 0 280 280" class="sci-svg-asi">
-                    <!-- 坐标轴 -->
+                    <!-- 鍧愭爣杞?-->
                     <line x1="50" y1="240" x2="260" y2="240" stroke="#2c3e50" stroke-width="2"/>
                     <line x1="50" y1="240" x2="50" y2="30" stroke="#2c3e50" stroke-width="2"/>
                     <polygon points="265,240 255,235 255,245" fill="#2c3e50"/>
                     <polygon points="50,25 45,35 55,35" fill="#2c3e50"/>
 
-                    <!-- 轴标签 -->
+                    <!-- 杞存爣绛?-->
                     <text x="240" y="258" font-size="11" fill="#2c3e50" font-family="Arial" font-weight="bold">r/a</text>
-                    <text x="30" y="35" font-size="11" fill="#2c3e50" font-family="Arial" font-weight="bold">σ/σ₀</text>
+                    <text x="30" y="35" font-size="11" fill="#2c3e50" font-family="Arial" font-weight="bold">蟽/蟽鈧€</text>
 
-                    <!-- 刻度 -->
+                    <!-- 鍒诲害 -->
                     <line x1="100" y1="235" x2="100" y2="245" stroke="#2c3e50" stroke-width="1"/>
                     <line x1="150" y1="235" x2="150" y2="245" stroke="#2c3e50" stroke-width="1"/>
                     <line x1="200" y1="235" x2="200" y2="245" stroke="#2c3e50" stroke-width="1"/>
@@ -798,23 +489,23 @@
                     <text x="40" y="145" text-anchor="end" font-size="9" fill="#5d6d7e">2</text>
                     <text x="40" y="95" text-anchor="end" font-size="9" fill="#5d6d7e">3</text>
 
-                    <!-- σᵣ 曲线 (蓝色) -->
+                    <!-- 蟽岬?鏇茬嚎 (钃濊壊) -->
                     <path d="M 50 90 L 100 170 Q 150 220 200 232 Q 250 238 260 240" fill="none" stroke="#2980b9" stroke-width="2.5"/>
-                    <text x="210" y="225" font-size="10" fill="#2980b9" font-weight="bold">σᵣ</text>
+                    <text x="210" y="225" font-size="10" fill="#2980b9" font-weight="bold">sigma_r</text>
 
-                    <!-- σₜ 曲线 (红色) -->
+                    <!-- 蟽鈧?鏇茬嚎 (绾㈣壊) -->
                     <path d="M 50 240 L 100 60 Q 125 35 150 55 Q 200 100 250 160" fill="none" stroke="#c0392b" stroke-width="2.5"/>
-                    <text x="110" y="50" font-size="10" fill="#c0392b" font-weight="bold">σₜ</text>
+                    <text x="110" y="50" font-size="10" fill="#c0392b" font-weight="bold">sigma_theta</text>
 
-                    <!-- 2σ₀ 标注线 -->
+                    <!-- 2蟽鈧€ 鏍囨敞绾?-->
                     <line x1="50" y1="140" x2="260" y2="140" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,2" opacity="0.5"/>
-                    <text x="220" y="135" font-size="9" fill="#c0392b">2σ₀</text>
+                    <text x="220" y="135" font-size="9" fill="#c0392b">2蟽鈧€</text>
 
-                    <!-- 隧道壁位置 -->
+                    <!-- 闅ч亾澹佷綅缃?-->
                     <line x1="100" y1="30" x2="100" y2="240" stroke="#34495e" stroke-width="1.5" stroke-dasharray="5,3"/>
                     <text x="95" y="25" font-size="8" fill="#34495e">r=a</text>
 
-                    <!-- 图例 -->
+                    <!-- 鍥句緥 -->
                     <g transform="translate(150, 80)">
                       <rect x="0" y="0" width="105" height="50" fill="white" stroke="#bdc3c7" stroke-width="1" rx="3" opacity="0.95"/>
                       <line x1="8" y1="18" x2="28" y2="18" stroke="#2980b9" stroke-width="2.5"/>
@@ -829,28 +520,28 @@
                   </div>
                 </div>
 
-                <!-- 右图: 支承压力 -->
+                <!-- 鍙冲浘: 鏀壙鍘嬪姏 -->
                 <div class="asi-viz-panel">
                   <div class="panel-title">{{ aa('fig6PanelC') }}</div>
                   <svg viewBox="0 0 320 280" class="sci-svg-asi">
-                    <!-- 坐标轴 -->
+                    <!-- 鍧愭爣杞?-->
                     <line x1="50" y1="240" x2="300" y2="240" stroke="#2c3e50" stroke-width="2"/>
                     <line x1="50" y1="240" x2="50" y2="30" stroke="#2c3e50" stroke-width="2"/>
                     <polygon points="305,240 295,235 295,245" fill="#2c3e50"/>
 
-                    <!-- 轴标签 -->
+                    <!-- 杞存爣绛?-->
                     <text x="270" y="258" font-size="11" fill="#2c3e50" font-family="Arial" font-weight="bold">{{ aa('fig6DistanceAxis') }}</text>
                     <text x="25" y="35" font-size="11" fill="#2c3e50" font-family="Arial" font-weight="bold">K</text>
 
-                    <!-- 采空区 -->
+                    <!-- 閲囩┖鍖?-->
                     <rect x="50" y="40" width="60" height="200" fill="#95a5a6" opacity="0.2"/>
                     <text x="80" y="55" text-anchor="middle" font-size="9" fill="#7f8c8d">{{ aa('fig6Mined') }}</text>
 
-                    <!-- 工作面位置 -->
+                    <!-- 宸ヤ綔闈綅缃?-->
                     <line x1="110" y1="40" x2="110" y2="240" stroke="#2c3e50" stroke-width="2"/>
                     <text x="110" y="255" text-anchor="middle" font-size="10" fill="#2c3e50" font-weight="bold">{{ aa('fig6Face') }}</text>
 
-                    <!-- X轴刻度 -->
+                    <!-- X杞村埢搴?-->
                     <line x1="170" y1="235" x2="170" y2="245" stroke="#2c3e50" stroke-width="1"/>
                     <line x1="230" y1="235" x2="230" y2="245" stroke="#2c3e50" stroke-width="1"/>
                     <line x1="290" y1="235" x2="290" y2="245" stroke="#2c3e50" stroke-width="1"/>
@@ -858,7 +549,7 @@
                     <text x="230" y="256" text-anchor="middle" font-size="9" fill="#5d6d7e">10m</text>
                     <text x="290" y="256" text-anchor="middle" font-size="9" fill="#5d6d7e">15m</text>
 
-                    <!-- Y轴刻度 -->
+                    <!-- Y杞村埢搴?-->
                     <line x1="45" y1="190" x2="55" y2="190" stroke="#2c3e50" stroke-width="1"/>
                     <line x1="45" y1="140" x2="55" y2="140" stroke="#2c3e50" stroke-width="1"/>
                     <line x1="45" y1="90" x2="55" y2="90" stroke="#2c3e50" stroke-width="1"/>
@@ -866,26 +557,26 @@
                     <text x="40" y="145" text-anchor="end" font-size="9" fill="#5d6d7e">2</text>
                     <text x="40" y="95" text-anchor="end" font-size="9" fill="#5d6d7e">3</text>
 
-                    <!-- 原岩应力线 -->
+                    <!-- 鍘熷博搴斿姏绾?-->
                     <line x1="50" y1="190" x2="300" y2="190" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,3"/>
                     <text x="270" y="185" font-size="9" fill="#7f8c8d">K=1</text>
 
-                    <!-- 支承压力曲线 -->
+                    <!-- 鏀壙鍘嬪姏鏇茬嚎 -->
                     <path d="M 50 190 L 90 180 Q 110 120 130 60 Q 150 40 170 55 Q 230 130 300 185" fill="none" stroke="#c0392b" stroke-width="3"/>
 
-                    <!-- 峰值点 -->
+                    <!-- 宄板€肩偣 -->
                     <circle cx="140" cy="50" r="5" fill="#c0392b" stroke="white" stroke-width="2"/>
-                    <text x="155" y="45" font-size="10" fill="#c0392b" font-weight="bold">Kmax≈2.5</text>
+                    <text x="155" y="45" font-size="10" fill="#c0392b" font-weight="bold">Kmax鈮?.5</text>
 
-                    <!-- 峰值垂线 -->
+                    <!-- 宄板€煎瀭绾?-->
                     <line x1="140" y1="50" x2="140" y2="240" stroke="#c0392b" stroke-width="1" stroke-dasharray="4,2" opacity="0.5"/>
 
-                    <!-- 影响区 -->
+                    <!-- 褰卞搷鍖?-->
                     <rect x="110" y="40" width="120" height="200" fill="#f39c12" opacity="0.08"/>
                     <line x1="230" y1="40" x2="230" y2="240" stroke="#f39c12" stroke-width="1" stroke-dasharray="5,3"/>
                     <text x="235" y="55" font-size="9" fill="#d68910">{{ aa('fig6InfluenceZone') }}</text>
 
-                    <!-- 图例 -->
+                    <!-- 鍥句緥 -->
                     <g transform="translate(165, 95)">
                       <rect x="0" y="0" width="125" height="60" fill="white" stroke="#bdc3c7" stroke-width="1" rx="3" opacity="0.95"/>
                       <line x1="8" y1="20" x2="33" y2="20" stroke="#c0392b" stroke-width="3"/>
@@ -901,7 +592,7 @@
                 </div>
               </div>
 
-              <!-- ASI计算原理总结 -->
+              <!-- ASI璁＄畻鍘熺悊鎬荤粨 -->
               <div class="asi-calculation-principle">
                 <div class="calc-step">
                   <div class="step-num">1</div>
@@ -909,21 +600,21 @@
                     <strong>{{ aa('asiStep1Title') }}</strong>{{ aa('asiStep1Desc') }}
                   </div>
                 </div>
-                <div class="calc-arrow">→</div>
+                    <div class="calc-arrow">→</div>
                 <div class="calc-step">
                   <div class="step-num">2</div>
                   <div class="step-content">
                     <strong>{{ aa('asiStep2Title') }}</strong>{{ aa('asiStep2Desc') }}
                   </div>
                 </div>
-                <div class="calc-arrow">→</div>
+                    <div class="calc-arrow">→</div>
                 <div class="calc-step">
                   <div class="step-num">3</div>
                   <div class="step-content">
                     <strong>{{ aa('asiStep3Title') }}</strong>{{ aa('asiStep3Desc') }}
                   </div>
                 </div>
-                <div class="calc-arrow">→</div>
+                    <div class="calc-arrow">→</div>
                 <div class="calc-step">
                   <div class="step-num">4</div>
                   <div class="step-content">
@@ -935,7 +626,7 @@
           </div>
         </div>
 
-        <!-- DBN 动态贝叶斯网络 -->
+        <!-- DBN 鍔ㄦ€佽礉鍙舵柉缃戠粶 -->
         <div v-if="activeAlgo === 'dbn'" class="algorithm-detail">
           <div class="algo-header">
             <h3>{{ aa('dbnTitle') }}</h3>
@@ -963,12 +654,12 @@
                       </marker>
                     </defs>
 
-                    <!-- 时间片背景 -->
+                    <!-- 鏃堕棿鐗囪儗鏅?-->
                     <rect x="26" y="44" width="248" height="184" rx="8" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
                     <rect x="306" y="44" width="248" height="184" rx="8" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
                     <rect x="586" y="44" width="248" height="184" rx="8" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
 
-                    <!-- 时间片标签 -->
+                    <!-- 鏃堕棿鐗囨爣绛?-->
                     <text x="150" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">{{ aa('fig4SliceTMinus1') }}</text>
                     <text x="430" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">{{ aa('fig4SliceT') }}</text>
                     <text x="710" y="72" text-anchor="middle" font-size="14" fill="#111827" font-family="Times New Roman, serif" font-weight="700">{{ aa('fig4SliceTPlus1') }}</text>
@@ -1015,23 +706,23 @@
                     <text x="808" y="93" text-anchor="middle" font-size="16" fill="#111827" font-family="Times New Roman, serif" font-weight="700">R</text>
                     <text x="808" y="108" text-anchor="middle" font-size="10" fill="#374151" font-family="Times New Roman, serif">{{ aa('fig4Output') }}</text>
 
-                    <!-- 片内关系 O -> H -->
+                    <!-- 鐗囧唴鍏崇郴 O -> H -->
                     <path d="M130 156 Q142 140 154 140" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
                     <path d="M410 156 Q422 140 434 140" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
                     <path d="M690 156 Q702 140 714 140" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
 
-                    <!-- 片内关系 H -> R -->
+                    <!-- 鐗囧唴鍏崇郴 H -> R -->
                     <path d="M238 122 Q244 112 248 104" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
                     <path d="M518 122 Q524 112 528 104" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
                     <path d="M798 122 Q804 112 808 104" fill="none" stroke="#111827" stroke-width="1.8" marker-end="url(#dbnArrowSolid)"/>
 
-                    <!-- 时间转移 H_t-1 -> H_t -> H_t+1 -->
+                    <!-- 鏃堕棿杞Щ H_t-1 -> H_t -> H_t+1 -->
                     <line x1="258" y1="160" x2="434" y2="160" stroke="#111827" stroke-width="1.9" stroke-dasharray="6 5" marker-end="url(#dbnArrowDash)"/>
                     <line x1="538" y1="160" x2="714" y2="160" stroke="#111827" stroke-width="1.9" stroke-dasharray="6 5" marker-end="url(#dbnArrowDash)"/>
                     <text x="346" y="152" text-anchor="middle" font-size="11" fill="#111827" font-family="Times New Roman, serif">P(H<tspan baseline-shift="sub">t</tspan>|H<tspan baseline-shift="sub">t-1</tspan>)</text>
                     <text x="626" y="152" text-anchor="middle" font-size="11" fill="#111827" font-family="Times New Roman, serif">P(H<tspan baseline-shift="sub">t+1</tspan>|H<tspan baseline-shift="sub">t</tspan>)</text>
 
-                    <!-- 图例 -->
+                    <!-- 鍥句緥 -->
                     <g transform="translate(32, 246)">
                       <rect x="0" y="0" width="560" height="54" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1"/>
 
@@ -1121,9 +812,9 @@
       </section>
     </template>
 
-    <!-- 在线计算 Tab -->
+    <!-- 鍦ㄧ嚎璁＄畻 Tab -->
     <template v-if="activeTab === 'calculation'">
-      <!-- 指标概览 -->
+      <!-- 鎸囨爣姒傝 -->
       <section class="card dashboard-card">
         <div class="section-header">
           <h2>{{ aa('calcDashboardTitle') }}</h2>
@@ -1146,7 +837,7 @@
         </div>
       </section>
 
-      <!-- 算法模块 -->
+      <!-- 绠楁硶妯″潡 -->
       <section class="card calculation-card">
         <div class="section-header">
           <h2>{{ aa('calcModuleTitle') }}</h2>
@@ -1154,7 +845,7 @@
         </div>
 
         <div class="calc-grid">
-          <!-- RSI 模块 -->
+          <!-- RSI 妯″潡 -->
           <div class="calc-module">
             <div class="module-header">
               <span class="module-tag">RSI</span>
@@ -1181,7 +872,7 @@
             </div>
           </div>
 
-          <!-- BRI 模块 -->
+          <!-- BRI 妯″潡 -->
           <div class="calc-module">
             <div class="module-header">
               <span class="module-tag">BRI</span>
@@ -1207,7 +898,7 @@
             </div>
           </div>
 
-          <!-- ASI 模块 -->
+          <!-- ASI 妯″潡 -->
           <div class="calc-module">
             <div class="module-header">
               <span class="module-tag">ASI</span>
@@ -1244,7 +935,7 @@
             </div>
           </div>
 
-          <!-- DBN 融合模块 -->
+          <!-- DBN 铻嶅悎妯″潡 -->
           <div class="calc-module fusion-module">
             <div class="module-header">
               <span class="module-tag">DBN</span>
@@ -1286,6 +977,11 @@ import axios from 'axios'
 import { echarts } from '../lib/echarts'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import { useI18n } from '../composables/useI18n'
+import { PageHeader } from '../components/library'
+import PhaseFieldFracture from '../components/academic/PhaseFieldFracture.vue'
+import MomentTensorInversion from '../components/academic/MomentTensorInversion.vue'
+import UnifiedStrengthTheory from '../components/academic/UnifiedStrengthTheory.vue'
+import DepthRiskCurve from '../components/academic/DepthRiskCurve.vue'
 
 const API_BASE = (import.meta.env.VITE_ACADEMIC_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '')
 const apiClient = axios.create({
@@ -1296,12 +992,12 @@ const { markStepDone } = useWorkspaceFlow()
 const { t } = useI18n()
 const aa = (key, params) => t(`academicAlgorithm.${key}`, params)
 
-// 当前 Tab 和算法
+// 褰撳墠 Tab 鍜岀畻娉?
 const activeTab = ref('principle')
 const activeAlgo = ref('rsi')
 const activeFlowNode = ref(0)
 
-// 公式渲染
+// 鍏紡娓叉煋
 let katex = null
 const formulas = {
   rsi: {
@@ -1322,7 +1018,7 @@ const formulas = {
   },
   asi: {
     ust: 'F = \\sigma_1 - \\frac{1}{1+b}(b\\sigma_2 + \\sigma_3) = \\sigma_t',
-    case1: '\\text{当 } \\sigma_2 \\leq \\frac{\\sigma_1 + b\\sigma_3}{1+b}: F = \\sigma_1 - \\frac{1}{1+b}(b\\sigma_2 + \\sigma_3)',
+    case1: '\\text{褰?} \\sigma_2 \\leq \\frac{\\sigma_1 + b\\sigma_3}{1+b}: F = \\sigma_1 - \\frac{1}{1+b}(b\\sigma_2 + \\sigma_3)',
     kirsch: '\\sigma_r = \\sigma_0\\left(1 - \\frac{a^2}{r^2}\\right) + p_i\\frac{a^2}{r^2}',
     stiff: 'S_{\\text{stiff}} = \\min\\left(\\frac{\\bar{E}}{35} \\times 50, 50\\right)',
     fric: 'S_{\\text{fric}} = \\max\\left(\\frac{\\bar{\\varphi} - 20}{25} \\times 50, 0\\right)'
@@ -1353,7 +1049,7 @@ const renderFormula = (formula) => {
   }
 }
 
-// 流程节点
+// 娴佺▼鑺傜偣
 const flowNodes = [
   {
     key: 'rsi',
@@ -1389,7 +1085,7 @@ const flowNodes = [
   }
 ]
 
-// 算法列表
+// 绠楁硶鍒楄〃
 const algorithms = [
   { key: 'rsi', tag: 'RSI', nameKey: 'algorithms.rsi' },
   { key: 'bri', tag: 'BRI', nameKey: 'algorithms.bri' },
@@ -1487,9 +1183,7 @@ const algorithmStoryboards = [
   }
 ]
 
-// 证据和推理
-
-// 证据和推理
+// 璇佹嵁鍜屾帹鐞?
 const evidence = reactive({
   seismic: true,
   rsiLow: false,
@@ -1512,8 +1206,8 @@ const posteriorProbs = computed(() => {
 })
 
 const riskLabelKey = (label) => {
-  if (label === '低风险' || label === 'Low Risk') return 'low'
-  if (label === '中风险' || label === 'Medium Risk') return 'medium'
+  if (label === '浣庨闄?' || label === 'Low Risk' || label === '低风险') return 'low'
+  if (label === '涓闄?' || label === 'Medium Risk' || label === '中风险') return 'medium'
   return 'high'
 }
 
@@ -1523,7 +1217,7 @@ const probColor = (prob) => {
   return 'linear-gradient(90deg, #22c55e, #16a34a)'
 }
 
-// 指标和权重
+// 鎸囨爣鍜屾潈閲?
 const indicators = ref([
   { key: "rsi", tag: "RSI", nameKey: "indicators.rsi.name", value: 0, methodKey: "indicators.rsi.method" },
   { key: "bri", tag: "BRI", nameKey: "indicators.bri.name", value: 0, methodKey: "indicators.bri.method" },
@@ -1544,15 +1238,15 @@ const normalizedWeights = computed(() => {
   return { rsi: weights.rsi / sum, bri: weights.bri / sum, asi: weights.asi / sum }
 })
 
-// 计算状态
+// 璁＄畻鐘舵€?
 const calculating = reactive({ rsi: false, bri: false, asi: false, fusion: false })
 const results = reactive({ rsi: false, bri: false, asi: false, fusion: false })
 
-// 样本数据
+// 鏍锋湰鏁版嵁
 const strataData = [
-  { name: "顶板", nameKey: "strata.roof", thickness: 5.0, tensile_strength: 2.5, elastic_modulus: 15.0, compressive_strength: 35 },
-  { name: "煤层", nameKey: "strata.coal", thickness: 3.0, tensile_strength: 1.0, elastic_modulus: 5.0, compressive_strength: 15 },
-  { name: "底板", nameKey: "strata.floor", thickness: 4.0, tensile_strength: 3.0, elastic_modulus: 20.0, compressive_strength: 45 }
+  { name: "椤舵澘", nameKey: "strata.roof", thickness: 5.0, tensile_strength: 2.5, elastic_modulus: 15.0, compressive_strength: 35 },
+  { name: "鐓ゅ眰", nameKey: "strata.coal", thickness: 3.0, tensile_strength: 1.0, elastic_modulus: 5.0, compressive_strength: 15 },
+  { name: "搴曟澘", nameKey: "strata.floor", thickness: 4.0, tensile_strength: 3.0, elastic_modulus: 20.0, compressive_strength: 45 }
 ]
 
 const microseismicData = [
@@ -1568,7 +1262,7 @@ const tunnelParams = reactive({
   ust_b: 0.5
 })
 
-// 图表引用
+// 鍥捐〃寮曠敤
 const rsiChart = ref()
 const briChart = ref()
 const asiChart = ref()
@@ -1576,7 +1270,7 @@ let rsiChartInst = null
 let briChartInst = null
 let asiChartInst = null
 
-// 值样式
+// 鍊兼牱寮?
 const valueClass = (v) => {
   if (v >= 70) return 'low'
   if (v >= 50) return 'medium'
@@ -1589,7 +1283,7 @@ const progressColor = (v) => {
   return 'linear-gradient(90deg, #ef4444, #dc2626)'
 }
 
-// 计算方法
+// 璁＄畻鏂规硶
 const calculateRSI = async () => {
   calculating.rsi = true
   try {
@@ -1604,7 +1298,7 @@ const calculateRSI = async () => {
       nextTick(() => renderRSIChart(response.data))
     }
   } catch (error) {
-    // 模拟数据
+    // 妯℃嫙鏁版嵁
     indicators.value[0].value = 65.3
     results.rsi = true
     nextTick(() => renderRSIChart({ crack_locations: [[25, 25], [30, 28], [35, 32]] }))
@@ -1690,7 +1384,7 @@ const calculateComprehensive = async () => {
   calculating.fusion = false
 }
 
-// 图表渲染
+// 鍥捐〃娓叉煋
 const renderRSIChart = (data) => {
   if (!rsiChart.value) return
   if (!rsiChartInst) rsiChartInst = echarts.init(rsiChart.value, null, { renderer: 'canvas' })
@@ -1747,13 +1441,13 @@ const renderASIChart = (data) => {
 
 onMounted(async () => {
   markStepDone('AcademicAlgorithm')
-  // 加载 KaTeX
+  // 鍔犺浇 KaTeX
   try {
     const katexModule = await import('katex')
     katex = katexModule.default || katexModule
     await import('katex/dist/katex.min.css')
 
-    // 渲染公式
+    // 娓叉煋鍏紡
     Object.keys(formulas).forEach(algo => {
       Object.keys(formulas[algo]).forEach(key => {
         renderedFormulas[algo][key] = renderFormula(formulas[algo][key])
@@ -1766,7 +1460,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* 页面容器 - Academic Light Theme */
+/* 椤甸潰瀹瑰櫒 - Academic Light Theme */
 .academic-algorithm-page {
   display: flex;
   flex-direction: column;
@@ -1782,14 +1476,14 @@ onMounted(async () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 页面头部 */
+/* 椤甸潰澶撮儴 */
 .page-header {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: start;
   gap: 24px;
   background: var(--bg-primary);
-  padding: 28px 32px;
+  padding: var(--spacing-6) var(--spacing-8);
   border-radius: var(--border-radius-lg);
   color: var(--text-primary);
   box-shadow: var(--shadow-md);
@@ -1832,7 +1526,7 @@ onMounted(async () => {
 }
 
 .page-title {
-  margin: 0 0 6px 0;
+  margin: 0 0 var(--spacing-1) 0;
   font-size: 24px;
   font-weight: 600;
   line-height: 1.3;
@@ -1857,12 +1551,12 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   background: var(--bg-secondary);
-  padding: 4px;
+  padding: var(--spacing-1);
   border-radius: var(--border-radius-md);
 }
 
 .mode-tab {
-  padding: 10px 20px;
+  padding: var(--spacing-3) var(--spacing-5);
   border: none;
   border-radius: var(--border-radius-sm);
   background: transparent;
@@ -1883,14 +1577,14 @@ onMounted(async () => {
   box-shadow: var(--shadow-sm);
 }
 
-/* 卡片基础样式 */
+/* 鍗＄墖鍩虹鏍峰紡 */
 .card {
   background: var(--bg-primary);
-  border-radius: var(--border-radius-lg);
-  padding: 28px 32px;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-5) var(--spacing-6);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .card:hover {
@@ -1902,7 +1596,7 @@ onMounted(async () => {
 }
 
 .section-header h2 {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
@@ -1916,7 +1610,7 @@ onMounted(async () => {
   line-height: 1.6;
 }
 
-/* 概览卡片 */
+/* 姒傝鍗＄墖 */
 .overview-card {
   display: flex;
   align-items: center;
@@ -1925,7 +1619,7 @@ onMounted(async () => {
 }
 
 .overview-text h2 {
-  margin: 0 0 10px 0;
+  margin: 0 0 var(--spacing-3) 0;
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
@@ -1946,7 +1640,7 @@ onMounted(async () => {
 }
 
 .badge {
-  padding: 8px 16px;
+  padding: var(--spacing-2) var(--spacing-4);
   border-radius: 999px;
   background: var(--bg-secondary);
   color: var(--color-primary);
@@ -1955,7 +1649,7 @@ onMounted(async () => {
   border: 1px solid var(--border-color);
 }
 
-/* 新手导读 */
+/* 鏂版墜瀵艰 */
 .onboarding-card {
   background:
     radial-gradient(circle at top right, rgba(90, 99, 120, 0.08), transparent 55%),
@@ -1977,7 +1671,7 @@ onMounted(async () => {
 .reading-step {
   display: flex;
   gap: 14px;
-  padding: 14px;
+  padding: var(--spacing-4);
   border-radius: var(--border-radius-sm);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -1998,7 +1692,7 @@ onMounted(async () => {
 }
 
 .reading-body h3 {
-  margin: 0 0 4px 0;
+  margin: 0 0 var(--spacing-1) 0;
   font-size: 15px;
   color: var(--text-primary);
 }
@@ -2011,14 +1705,14 @@ onMounted(async () => {
 }
 
 .io-map {
-  padding: 16px;
+  padding: var(--spacing-4);
   border-radius: var(--border-radius-sm);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
 }
 
 .io-map h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 var(--spacing-3) 0;
   font-size: 16px;
   color: var(--text-primary);
 }
@@ -2030,12 +1724,12 @@ onMounted(async () => {
 }
 
 .io-map-tip {
-  margin: 12px 0 0;
+  margin: var(--spacing-3) 0 0;
   font-size: 12px;
   color: var(--text-tertiary);
 }
 
-/* 术语速查 */
+/* 鏈閫熸煡 */
 .glossary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2043,20 +1737,20 @@ onMounted(async () => {
 }
 
 .glossary-item {
-  padding: 16px;
+  padding: var(--spacing-4);
   border-radius: var(--border-radius-sm);
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
 }
 
 .glossary-item h3 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--spacing-2);
   font-size: 15px;
   color: var(--text-primary);
 }
 
 .glossary-plain {
-  margin: 0 0 8px;
+  margin: 0 0 var(--spacing-2);
   font-size: 13px;
   color: var(--color-primary);
   font-weight: 600;
@@ -2069,7 +1763,7 @@ onMounted(async () => {
   line-height: 1.65;
 }
 
-/* 分镜示意 */
+/* 鍒嗛暅绀烘剰 */
 .storyboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2080,7 +1774,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
+  padding: var(--spacing-4);
   border-radius: var(--border-radius-md);
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
@@ -2093,7 +1787,7 @@ onMounted(async () => {
 }
 
 .storyboard-tag {
-  padding: 5px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
@@ -2116,7 +1810,7 @@ onMounted(async () => {
 
 .story-node {
   min-height: 78px;
-  padding: 10px 8px;
+  padding: var(--spacing-3) var(--spacing-2);
   border-radius: 10px;
   border: 1px solid var(--border-color);
   display: flex;
@@ -2164,7 +1858,7 @@ onMounted(async () => {
 
 .storyboard-jump {
   align-self: flex-start;
-  padding: 8px 14px;
+  padding: var(--spacing-2) var(--spacing-4);
   border-radius: 999px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
@@ -2180,10 +1874,10 @@ onMounted(async () => {
   transform: translateY(-1px);
 }
 
-/* 流程图 */
+/* 娴佺▼鍥?*/
 .flow-diagram {
   position: relative;
-  padding: 24px 0;
+  padding: var(--spacing-6) 0;
 }
 
 .flow-row {
@@ -2200,7 +1894,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  padding: 24px 16px;
+  padding: var(--spacing-6) var(--spacing-4);
   border-radius: var(--border-radius-md);
   background: var(--bg-secondary);
   border: 2px solid var(--border-color);
@@ -2287,14 +1981,14 @@ onMounted(async () => {
 
 .flow-detail {
   margin-top: 20px;
-  padding: 20px;
+  padding: var(--spacing-5);
   background: var(--bg-secondary);
   border-radius: var(--border-radius-md);
   border-left: 4px solid var(--color-primary);
 }
 
 .flow-detail h4 {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
@@ -2307,7 +2001,7 @@ onMounted(async () => {
   line-height: 1.7;
 }
 
-/* 算法标签页 */
+/* 绠楁硶鏍囩椤?*/
 .algorithm-tabs {
   display: flex;
   gap: 12px;
@@ -2319,7 +2013,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px;
+  padding: var(--spacing-3) var(--spacing-5);
   border: 2px solid var(--border-color);
   border-radius: var(--border-radius-md);
   background: var(--bg-primary);
@@ -2342,7 +2036,7 @@ onMounted(async () => {
 }
 
 .tab-tag {
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   border-radius: 999px;
   background: var(--color-primary-light);
   color: var(--color-primary);
@@ -2356,7 +2050,7 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
-/* 算法详情 */
+/* 绠楁硶璇︽儏 */
 .algorithm-detail {
   animation: fadeIn 0.3s ease;
 }
@@ -2373,7 +2067,7 @@ onMounted(async () => {
 }
 
 .algo-header h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 var(--spacing-3) 0;
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
@@ -2395,7 +2089,7 @@ onMounted(async () => {
 .principle-section {
   background: var(--bg-secondary);
   border-radius: var(--border-radius-md);
-  padding: 24px;
+  padding: var(--spacing-6);
   border: 1px solid var(--border-color);
 }
 
@@ -2405,28 +2099,28 @@ onMounted(async () => {
 }
 
 .principle-section h4 {
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .principle-section h5 {
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--spacing-3) 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 .principle-section p {
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.8;
 }
 
 .principle-list {
-  margin: 0 0 20px 0;
+  margin: 0 0 var(--spacing-5) 0;
   padding-left: 20px;
 }
 
@@ -2437,11 +2131,11 @@ onMounted(async () => {
   line-height: 1.7;
 }
 
-/* 公式块 */
+/* 鍏紡鍧?*/
 .formula-block {
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
-  padding: 16px;
+  padding: var(--spacing-4);
   margin-bottom: 16px;
   border: 1px solid var(--border-color);
 }
@@ -2465,8 +2159,8 @@ onMounted(async () => {
 .formula-katex {
   font-size: 15px;
   line-height: 2;
-  padding: 16px 20px;
-  margin: 8px 0;
+  padding: var(--spacing-4) var(--spacing-5);
+  margin: var(--spacing-2) 0;
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
   border: 1px solid var(--border-color);
@@ -2478,13 +2172,13 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
-/* SCI论文级图表样式 */
+/* SCI璁烘枃绾у浘琛ㄦ牱寮?*/
 .sci-figure {
   background: #ffffff;
   border: 1.5px solid #e5e7eb;
   border-radius: 6px;
-  padding: 20px;
-  margin: 20px 0;
+  padding: var(--spacing-5);
+  margin: var(--spacing-5) 0;
 }
 
 .figure-caption-top {
@@ -2583,52 +2277,22 @@ onMounted(async () => {
   font-family: Arial, sans-serif;
 }
 
-/* UST */
-.ust-container {
-  display: flex;
-  justify-content: center;
-}
-
 /* DBN */
 .dbn-container {
   display: flex;
   justify-content: center;
   overflow-x: auto;
-  padding: 8px 0 4px;
+  padding: var(--spacing-2) 0 var(--spacing-1);
   border-radius: var(--border-radius-sm);
   background: #ffffff;
   border: 1px solid #d1d5db;
 }
 
-/* Depth Curve */
-.depth-curve-sci {
-  display: flex;
-  justify-content: center;
-}
-
-/* SVG 样式 */
-.sci-svg,
-.sci-svg-beachball,
-.sci-svg-ust,
-.sci-svg-dbn,
-.sci-svg-depth {
+/* SVG 鏍峰紡 */
+.sci-svg-dbn {
   display: block;
   max-width: 100%;
   height: auto;
-}
-
-.sci-svg-small {
-  width: 70px;
-  height: 70px;
-}
-
-.sci-svg-beachball {
-  width: 140px;
-  height: 140px;
-}
-
-.sci-svg-ust {
-  max-width: 450px;
 }
 
 .sci-svg-dbn {
@@ -2637,151 +2301,17 @@ onMounted(async () => {
   max-width: 860px;
 }
 
-.sci-svg-depth {
-  max-width: 420px;
-}
-
-/* 可视化组件 */
+/* 鍙鍖栫粍浠?*/
 .principle-visual {
   margin-top: 20px;
 }
 
-.phase-field-demo {
-  background: var(--bg-primary);
-  border-radius: var(--border-radius-sm);
-  padding: 20px;
-  border: 1px solid var(--border-color);
-}
-
-.phase-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.phase-gradient {
-  flex: 1;
-  height: 24px;
-  background: linear-gradient(90deg, #22c55e 0%, #f59e0b 50%, #ef4444 100%);
-  border-radius: 12px;
-}
-
-.phase-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.crack-evolution {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-}
-
-.evolution-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.step-visual {
-  width: 60px;
-  height: 60px;
-  background: var(--bg-secondary);
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  position: relative;
-  overflow: hidden;
-}
-
-.crack-line {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #ef4444, #dc2626);
-  transform: translateY(-50%);
-  border-radius: 2px;
-}
-
-.evolution-step span {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-/* 矩张量分解可视化 */
-.mt-decomposition {
-  margin-top: 20px;
-}
-
-.decomp-visual {
-  display: flex;
-  gap: 24px;
-  justify-content: center;
-}
-
-.beachball {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.beachball-svg {
-  width: 80px;
-  height: 80px;
-}
-
-.beachball-svg svg {
-  width: 100%;
-  height: 100%;
-}
-
-.beachball-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-/* 深度模型 */
+/* 娣卞害妯″瀷 */
 .depth-model {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 28px;
   align-items: start;
-}
-
-.depth-curve-visual {
-  background: var(--bg-primary);
-  border-radius: var(--border-radius-sm);
-  padding: 20px;
-  border: 1px solid var(--border-color);
-}
-
-.curve-axis {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.axis-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.axis-label.y {
-  align-self: flex-start;
-  transform: rotate(-90deg) translateX(-20px);
-}
-
-.curve-plot svg {
-  width: 100%;
-  max-width: 400px;
-  height: auto;
 }
 
 .depth-formulas {
@@ -2790,7 +2320,7 @@ onMounted(async () => {
   gap: 16px;
 }
 
-/* 统一强度理论可视化 */
+/* 缁熶竴寮哄害鐞嗚鍙鍖?*/
 .ust-visual {
   margin-top: 20px;
 }
@@ -2798,7 +2328,7 @@ onMounted(async () => {
 .strength-envelope {
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
-  padding: 20px;
+  padding: var(--spacing-5);
   border: 1px solid var(--border-color);
 }
 
@@ -2810,7 +2340,7 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-/* 指标分解 */
+/* 鎸囨爣鍒嗚В */
 .indicator-breakdown {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2820,7 +2350,7 @@ onMounted(async () => {
 .breakdown-item {
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
-  padding: 20px;
+  padding: var(--spacing-5);
   border: 1px solid var(--border-color);
   text-align: center;
 }
@@ -2835,7 +2365,7 @@ onMounted(async () => {
   color: var(--text-tertiary);
 }
 
-/* ASI 应力分布可视化 - 图文并茂 */
+/* ASI 搴斿姏鍒嗗竷鍙鍖?- 鍥炬枃骞惰寕 */
 .asi-stress-figure {
   margin-top: 20px;
 }
@@ -2844,13 +2374,13 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  margin: 16px 0;
+  margin: var(--spacing-4) 0;
 }
 
 .asi-viz-panel {
   background: #f8f9fa;
   border-radius: 8px;
-  padding: 12px;
+  padding: var(--spacing-3);
   border: 1px solid #e5e7eb;
 }
 
@@ -2872,7 +2402,7 @@ onMounted(async () => {
 
 .principle-text {
   margin-top: 10px;
-  padding: 10px;
+  padding: var(--spacing-3);
   background: white;
   border-radius: 6px;
   border-left: 3px solid #3b82f6;
@@ -2889,13 +2419,13 @@ onMounted(async () => {
   color: #1f2937;
 }
 
-/* ASI计算原理流程 */
+/* ASI璁＄畻鍘熺悊娴佺▼ */
 .asi-calculation-principle {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 16px;
-  padding: 16px;
+  padding: var(--spacing-4);
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   border-radius: 8px;
   border: 1px solid #bae6fd;
@@ -2944,10 +2474,10 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-/* 应力分布演示（旧版 - 保留兼容） */
+/* 搴斿姏鍒嗗竷婕旂ず锛堟棫鐗?- 淇濈暀鍏煎锛?*/
 .stress-distribution-demo {
   margin-top: 24px;
-  padding: 24px;
+  padding: var(--spacing-6);
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
   border: 1px solid var(--border-color);
@@ -2959,7 +2489,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 4px;
   height: 120px;
-  padding: 0 40px;
+  padding: 0 var(--spacing-10);
   position: relative;
 }
 
@@ -3016,16 +2546,16 @@ onMounted(async () => {
   color: var(--color-error);
   font-weight: 600;
   background: var(--color-error-light);
-  padding: 2px 8px;
+  padding: var(--spacing-1) var(--spacing-2);
   border-radius: 4px;
 }
 
-/* DBN 可视化 */
+/* DBN 鍙鍖?*/
 .dbn-visual {
   margin-top: 20px;
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
-  padding: 24px;
+  padding: var(--spacing-6);
   border: 1px solid var(--border-color);
 }
 
@@ -3122,7 +2652,7 @@ onMounted(async () => {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: var(--spacing-2) var(--spacing-3);
 }
 
 .dot {
@@ -3150,7 +2680,7 @@ onMounted(async () => {
 .dbn-node-types .dot.hidden { background: #9ca3af; }
 .dbn-node-types .dot.output { background: #4b5563; }
 
-/* 推理示例 */
+/* 鎺ㄧ悊绀轰緥 */
 .inference-example {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3162,13 +2692,13 @@ onMounted(async () => {
 .posterior-panel {
   background: var(--bg-primary);
   border-radius: var(--border-radius-sm);
-  padding: 24px;
+  padding: var(--spacing-6);
   border: 1px solid var(--border-color);
 }
 
 .evidence-panel h5,
 .posterior-panel h5 {
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
@@ -3184,7 +2714,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: var(--spacing-3) var(--spacing-4);
   background: var(--bg-secondary);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
@@ -3247,7 +2777,7 @@ onMounted(async () => {
   text-align: right;
 }
 
-/* 指标仪表板 */
+/* 鎸囨爣浠〃鏉?*/
 .indicator-dashboard {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3257,7 +2787,7 @@ onMounted(async () => {
 .indicator-card {
   background: var(--bg-secondary);
   border-radius: var(--border-radius-md);
-  padding: 20px;
+  padding: var(--spacing-5);
   border: 1px solid var(--border-color);
   transition: all 0.2s ease;
 }
@@ -3275,7 +2805,7 @@ onMounted(async () => {
 }
 
 .indicator-tag {
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   border-radius: 999px;
   background: var(--color-primary-light);
   color: var(--color-primary);
@@ -3330,7 +2860,7 @@ onMounted(async () => {
   color: var(--text-tertiary);
 }
 
-/* 计算模块 */
+/* 璁＄畻妯″潡 */
 .calc-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -3340,7 +2870,7 @@ onMounted(async () => {
 .calc-module {
   background: var(--bg-secondary);
   border-radius: var(--border-radius-md);
-  padding: 24px;
+  padding: var(--spacing-6);
   border: 1px solid var(--border-color);
 }
 
@@ -3357,7 +2887,7 @@ onMounted(async () => {
 }
 
 .module-tag {
-  padding: 6px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   border-radius: 999px;
   background: var(--color-primary);
   color: white;
@@ -3401,7 +2931,7 @@ onMounted(async () => {
 .event-item {
   display: flex;
   gap: 16px;
-  padding: 10px 12px;
+  padding: var(--spacing-3) var(--spacing-3);
   font-size: 13px;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color-light);
@@ -3428,7 +2958,7 @@ onMounted(async () => {
 
 .param-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   background: var(--bg-primary);
@@ -3468,7 +2998,7 @@ onMounted(async () => {
   border: 1px solid var(--border-color);
 }
 
-/* 融合模块 */
+/* 铻嶅悎妯″潡 */
 .fusion-weights {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -3525,7 +3055,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 24px 40px;
+  padding: var(--spacing-6) var(--spacing-10);
   background: var(--bg-primary);
   border-radius: var(--border-radius-lg);
   border: 2px solid var(--border-color);
@@ -3550,7 +3080,7 @@ onMounted(async () => {
 }
 
 .mpi-risk {
-  padding: 8px 20px;
+  padding: var(--spacing-2) var(--spacing-5);
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
@@ -3571,7 +3101,7 @@ onMounted(async () => {
   color: var(--color-error);
 }
 
-/* 响应式 */
+/* 鍝嶅簲寮?*/
 @media (max-width: 1100px) {
   .page-header {
     grid-template-columns: 1fr;
@@ -3635,7 +3165,7 @@ onMounted(async () => {
   }
 
   .page-header {
-    padding: 20px 24px;
+    padding: var(--spacing-5) var(--spacing-6);
   }
 
   .page-title {
@@ -3648,11 +3178,11 @@ onMounted(async () => {
   }
 
   .reading-step {
-    padding: 12px;
+    padding: var(--spacing-3);
   }
 
   .io-map {
-    padding: 12px;
+    padding: var(--spacing-3);
   }
 
   .flow-row {
@@ -3699,11 +3229,11 @@ onMounted(async () => {
 
   .node-type {
     font-size: 12px;
-    padding: 7px 10px;
+    padding: var(--spacing-2) var(--spacing-3);
   }
 }
 
-/* 打印样式 */
+/* 鎵撳嵃鏍峰紡 */
 @media print {
   .academic-algorithm-page {
     max-width: 100%;
@@ -3717,7 +3247,8 @@ onMounted(async () => {
   .card {
     break-inside: avoid;
     box-shadow: none;
-    border: 1px solid #d0d5dc;
+    border: 1px solid var(--border-color);
   }
 }
 </style>
+

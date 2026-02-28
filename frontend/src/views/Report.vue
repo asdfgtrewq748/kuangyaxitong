@@ -162,7 +162,7 @@
           <div class="metric-sub"><span>{{ rp('bestAuc') }}</span><span>{{ suite.best_auc_experiment || '-' }} / {{ formatNumber(suite.best_auc_value, 3) }}</span></div>
           <div class="metric-sub"><span>{{ rp('bestBrier') }}</span><span>{{ suite.best_brier_experiment || '-' }} / {{ formatNumber(suite.best_brier_value, 3) }}</span></div>
           <div class="mini-table-wrap" v-if="suite.runs?.length">
-            <table class="mini-table">
+            <table class="table mini-table compact">
               <thead>
                 <tr>
                   <th>{{ rp('experiment') }}</th>
@@ -185,7 +185,7 @@
         <h3>{{ rp('stabilityCompare') }}</h3>
         <div class="compare-table-wrap" v-for="item in week3Research.stability_compare" :key="`cmp-${item.template_name}`">
           <div class="compare-caption">{{ rp('compareCaption', { name: item.template_name, datasets: item.datasets?.join(' vs ') }) }}</div>
-          <table class="mini-table">
+          <table class="table mini-table compact">
             <thead>
               <tr>
                 <th>{{ rp('experiment') }}</th>
@@ -211,7 +211,7 @@
     <section class="card">
       <h2>{{ rp('detailStatsTable') }}</h2>
       <div class="table-wrap" v-if="summary.length">
-        <table>
+        <table class="table">
           <thead>
             <tr>
               <th>{{ rp('metric') }}</th>
@@ -715,17 +715,17 @@ onMounted(async () => {
 }
 
 .card {
-  background: var(--gradient-card);
-  border: 1px solid rgba(14, 116, 144, 0.16);
-  border-radius: var(--border-radius-lg);
-  padding: var(--spacing-xl);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-5) var(--spacing-6);
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-normal), border-color var(--transition-normal), transform var(--transition-normal);
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .card:hover {
   box-shadow: var(--shadow-md);
-  border-color: rgba(14, 116, 144, 0.24);
+  border-color: var(--border-color-dark);
 }
 
 .hero-actions {
@@ -744,7 +744,7 @@ onMounted(async () => {
 .control-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-1);
   font-size: 12px;
   color: var(--text-secondary);
 }
@@ -752,7 +752,7 @@ onMounted(async () => {
 .control-item select {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
-  padding: 9px 10px;
+  padding: var(--spacing-2) var(--spacing-3);
   font-size: 13px;
   color: var(--text-primary);
   background: var(--bg-primary);
@@ -761,14 +761,14 @@ onMounted(async () => {
 
 .geomodel-input-row {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .geomodel-input-row input {
   flex: 1;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
-  padding: 9px 10px;
+  padding: var(--spacing-2) var(--spacing-3);
   font-size: 12px;
   color: var(--text-primary);
   background: var(--bg-primary);
@@ -794,7 +794,7 @@ onMounted(async () => {
   display: inline-flex;
   width: fit-content;
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 11px;
   font-weight: 600;
 }
@@ -822,7 +822,7 @@ onMounted(async () => {
   border-radius: var(--border-radius-sm);
   font-size: 13px;
   font-weight: 600;
-  padding: 10px 14px;
+  padding: var(--spacing-3) var(--spacing-4);
   cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
@@ -850,7 +850,7 @@ onMounted(async () => {
 }
 
 .btn.small {
-  padding: 8px 10px;
+  padding: var(--spacing-2) var(--spacing-3);
   font-size: 12px;
 }
 
@@ -873,7 +873,7 @@ onMounted(async () => {
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  margin-right: 6px;
+  margin-right: var(--spacing-1);
 }
 
 @keyframes spin {
@@ -887,7 +887,7 @@ onMounted(async () => {
 }
 
 h2 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--spacing-3);
   font-size: 16px;
   color: var(--text-primary);
 }
@@ -895,13 +895,13 @@ h2 {
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .metric-card {
   border: 1px solid var(--border-color-light);
   border-radius: 12px;
-  padding: 12px;
+  padding: var(--spacing-3);
   background: linear-gradient(145deg, #ffffff 0%, #f7fbfa 100%);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
@@ -919,14 +919,14 @@ h2 {
 }
 
 .metric-main {
-  margin-top: 8px;
+  margin-top: var(--spacing-2);
   font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .metric-sub {
-  margin-top: 6px;
+  margin-top: var(--spacing-1);
   display: flex;
   justify-content: space-between;
   font-size: 11px;
@@ -936,19 +936,19 @@ h2 {
 .mpi-layout {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  gap: 14px;
+  gap: var(--spacing-4);
 }
 
 .mpi-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .stat-item {
   border: 1px solid var(--border-color-light);
   border-radius: 10px;
-  padding: 10px;
+  padding: var(--spacing-3);
   background: var(--bg-primary);
 }
 
@@ -960,7 +960,7 @@ h2 {
 
 .stat-item strong {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
   font-size: 15px;
   color: var(--text-primary);
 }
@@ -968,25 +968,25 @@ h2 {
 .mpi-extremes {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .mpi-extremes article {
   border: 1px solid var(--border-color-light);
   border-radius: 10px;
-  padding: 10px;
+  padding: var(--spacing-3);
   background: var(--bg-elevated);
 }
 
 .mpi-extremes h3 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--spacing-2);
   font-size: 12px;
   color: var(--text-primary);
 }
 
 .mpi-extremes ul {
   margin: 0;
-  padding-left: 16px;
+  padding-left: var(--spacing-4);
   font-size: 12px;
   color: var(--text-secondary);
 }
@@ -994,13 +994,13 @@ h2 {
 .geomodel-quality-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .week3-layout {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .week3-split-card {
@@ -1014,7 +1014,7 @@ h2 {
 .week3-suite-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-1);
 }
 
 .ok-text {
@@ -1026,7 +1026,7 @@ h2 {
 }
 
 .mini-table-wrap {
-  margin-top: 6px;
+  margin-top: var(--spacing-1);
   border: 1px solid var(--border-color-light);
   border-radius: 8px;
   overflow: hidden;
@@ -1040,7 +1040,7 @@ h2 {
 
 .mini-table th,
 .mini-table td {
-  padding: 6px 8px;
+  padding: var(--spacing-1) var(--spacing-2);
   border-bottom: 1px solid var(--border-color-light);
 }
 
@@ -1051,10 +1051,10 @@ h2 {
 }
 
 .week3-compare {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .week3-compare h3 {
@@ -1071,7 +1071,7 @@ h2 {
 }
 
 .compare-caption {
-  padding: 8px 10px;
+  padding: var(--spacing-2) var(--spacing-3);
   font-size: 12px;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color-light);
@@ -1081,8 +1081,8 @@ h2 {
 .warning-card .warning-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-2);
   font-size: 12px;
   color: var(--text-secondary);
 }
@@ -1100,29 +1100,6 @@ h2 {
 
 .table-wrap {
   overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-th,
-td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border-color-light);
-  text-align: left;
-}
-
-thead th {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  font-weight: 700;
-}
-
-tbody tr:hover {
-  background: rgba(15, 118, 110, 0.06);
 }
 
 @media (max-width: 1200px) {

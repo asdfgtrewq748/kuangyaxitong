@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page">
     <PageHeader
       class="main-header"
@@ -6,7 +6,7 @@
       :description="pi('pageSubtitle')"
     />
 
-    <!-- 选项卡切换 -->
+    <!-- 閫夐」鍗″垏鎹?-->
     <div class="tabs">
       <button
         v-for="tab in tabs"
@@ -19,10 +19,10 @@
       </button>
     </div>
 
-    <!-- 传统矿压指标选项卡 -->
+    <!-- 浼犵粺鐭垮帇鎸囨爣閫夐」鍗?-->
     <div v-show="activeTab === 'traditional'" class="tab-content">
     <div class="grid grid-2">
-      <!-- 参数设置 -->
+      <!-- 鍙傛暟璁剧疆 -->
       <div class="card">
         <h3 class="section-title">{{ pi('traditional.weightsTitle') }}</h3>
         <p class="section-desc">{{ pi('traditional.weightsDesc') }}</p>
@@ -74,7 +74,7 @@
         </div>
       </div>
 
-      <!-- 指标结果 -->
+      <!-- 鎸囨爣缁撴灉 -->
       <div class="card">
         <h3 class="section-title">{{ pi('traditional.indexDistribution') }}</h3>
 
@@ -104,13 +104,13 @@
         </div>
 
         <div v-else class="empty-state">
-          <div class="empty-icon">📈</div>
+          <div class="empty-icon">馃搱</div>
           <p>{{ pi('traditional.emptyState') }}</p>
         </div>
       </div>
     </div>
 
-    <!-- 工作面调整 -->
+    <!-- 宸ヤ綔闈㈣皟鏁?-->
     <div class="card">
       <h3 class="section-title">{{ pi('workface.title') }}</h3>
       <p class="section-desc">{{ pi('workface.description') }}</p>
@@ -162,10 +162,10 @@
     </div>
     </div>
 
-    <!-- MPI指标选项卡 -->
+    <!-- MPI鎸囨爣閫夐」鍗?-->
     <div v-show="activeTab === 'mpi'" class="tab-content">
       <div class="grid grid-2">
-        <!-- MPI权重设置 -->
+        <!-- MPI鏉冮噸璁剧疆 -->
         <div class="card">
           <h3 class="section-title">{{ pi('mpi.weightsTitle') }}</h3>
           <p class="section-desc">{{ pi('mpi.weightsDesc') }}</p>
@@ -219,7 +219,7 @@
           </div>
         </div>
 
-        <!-- MPI网格结果 -->
+        <!-- MPI缃戞牸缁撴灉 -->
         <div class="card">
           <h3 class="section-title">{{ pi('mpi.compositeDistribution') }}</h3>
 
@@ -267,20 +267,20 @@
           </div>
 
           <div v-else class="empty-state">
-            <div class="empty-icon">📊</div>
+            <div class="empty-icon">馃搳</div>
             <p>{{ pi('mpi.emptyState') }}</p>
             <p class="empty-hint">{{ pi('mpi.emptyHint') }}</p>
           </div>
         </div>
       </div>
 
-      <!-- 分项指标说明 -->
+      <!-- 鍒嗛」鎸囨爣璇存槑 -->
       <div class="card">
         <h3 class="section-title">{{ pi('definitions.title') }}</h3>
         <div class="mpi-definitions">
           <div class="mpi-def-item">
             <div class="mpi-def-header">
-              <span class="mpi-def-icon">🏠</span>
+              <span class="mpi-def-icon">馃彔</span>
               <span class="mpi-def-title">{{ pi('definitions.rsi.title') }}</span>
             </div>
             <p class="mpi-def-desc">{{ pi('definitions.rsi.desc') }}</p>
@@ -292,7 +292,7 @@
           </div>
           <div class="mpi-def-item">
             <div class="mpi-def-header">
-              <span class="mpi-def-icon">💥</span>
+              <span class="mpi-def-icon">馃挜</span>
               <span class="mpi-def-title">{{ pi('definitions.bri.title') }}</span>
             </div>
             <p class="mpi-def-desc">{{ pi('definitions.bri.desc') }}</p>
@@ -304,7 +304,7 @@
           </div>
           <div class="mpi-def-item">
             <div class="mpi-def-header">
-              <span class="mpi-def-icon">⚖️</span>
+              <span class="mpi-def-icon">鈿栵笍</span>
               <span class="mpi-def-title">{{ pi('definitions.asi.title') }}</span>
             </div>
             <p class="mpi-def-desc">{{ pi('definitions.asi.desc') }}</p>
@@ -316,7 +316,7 @@
         </div>
       </div>
 
-      <!-- 风险等级说明 -->
+      <!-- 椋庨櫓绛夌骇璇存槑 -->
       <div class="card">
         <h3 class="section-title">{{ pi('riskLevels.title') }}</h3>
         <div class="risk-levels">
@@ -372,14 +372,13 @@ const { t } = useI18n()
 const { workspaceState, setSelectedSeam, markStepDone } = useWorkspaceFlow()
 const pi = (key, params) => t(`pressureIndex.${key}`, params)
 
-// 选项卡
-const tabs = computed(() => ([
-  { key: 'traditional', label: pi('tabs.traditional'), icon: '📈' },
-  { key: 'mpi', label: pi('tabs.mpi'), icon: '📊' }
+// 閫夐」鍗?const tabs = computed(() => ([
+  { key: 'traditional', label: pi('tabs.traditional'), icon: '馃搱' },
+  { key: 'mpi', label: pi('tabs.mpi'), icon: '馃搳' }
 ]))
 const activeTab = ref('traditional')
 
-// 传统指标
+// 浼犵粺鎸囨爣
 const method = ref('kriging')
 const gridSize = ref(60)
 const wElastic = ref(0.4)
@@ -395,7 +394,7 @@ const faceDirection = ref('ascending')
 const faceMode = ref('decrease')
 const faceDecay = ref(0.08)
 
-// MPI相关
+// MPI鐩稿叧
 const mpiWeights = ref({
   roof_stability: 0.4,
   burst_risk: 0.35,
@@ -427,7 +426,7 @@ const normalizedWeights = computed(() => {
   }
 })
 
-// MPI相关计算属性
+// MPI鐩稿叧璁＄畻灞炴€?
 const mpiWeightTotal = computed(() => {
   const total = mpiWeights.value.roof_stability + mpiWeights.value.burst_risk + mpiWeights.value.abutment_stress
   return total.toFixed(2)
@@ -588,13 +587,13 @@ const handleExportWorkfaces = async () => {
   }
 }
 
-// MPI相关函数
+// MPI鐩稿叧鍑芥暟
 const loadMpiWeights = async () => {
   try {
     const { data } = await getMpiWeights()
     mpiWeights.value = data
   } catch (err) {
-    // 使用默认权重
+    // 浣跨敤榛樿鏉冮噸
   }
 }
 
@@ -616,7 +615,7 @@ const handleMpiCalculate = async () => {
 
   loading.value = true
   try {
-    const seamName = workspaceState.selectedSeam || normalizeQuerySeam(route.query?.seam) || '16-3煤'
+    const seamName = workspaceState.selectedSeam || normalizeQuerySeam(route.query?.seam) || '16-3鐓?
     const weights = {
       rsi: mpiWeights.value.roof_stability,
       bri: mpiWeights.value.burst_risk,
@@ -649,7 +648,7 @@ const handleMpiCalculate = async () => {
 const handleMpiExport = async () => {
   if (!mpiGrid.value) return
 
-  // 导出CSV
+  // 瀵煎嚭CSV
   const rows = [['x', 'y', 'mpi', 'rsi', 'bri', 'asi']]
   const grid = mpiGrid.value || []
   const rsiGrid = mpiBreakdown.value.rsi || []
@@ -707,14 +706,14 @@ onMounted(() => {
 }
 
 .section-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--spacing-2) 0;
   font-size: 17px;
   font-weight: 700;
   color: #0f172a;
 }
 
 .section-desc {
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: 13px;
   color: #64748b;
 }
@@ -731,7 +730,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: var(--spacing-3) var(--spacing-4);
   background: #f3f8f7;
   border-radius: 10px;
 }
@@ -745,7 +744,7 @@ onMounted(() => {
 
 .weight-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid #d8e5e2;
   border-radius: 8px;
   font-size: 14px;
@@ -774,7 +773,7 @@ onMounted(() => {
 .param-select,
 .param-input {
   width: 100%;
-  padding: 10px 14px;
+  padding: var(--spacing-3) var(--spacing-4);
   border: 1px solid #d8e5e2;
   border-radius: 10px;
   font-size: 14px;
@@ -797,7 +796,7 @@ onMounted(() => {
 }
 
 .btn {
-  padding: 10px 18px;
+  padding: var(--spacing-3) var(--spacing-5);
   border: 1px solid transparent;
   border-radius: 10px;
   font-size: 14px;
@@ -890,7 +889,7 @@ onMounted(() => {
   justify-content: center;
   gap: 24px;
   margin-top: 16px;
-  padding: 12px;
+  padding: var(--spacing-3);
   background: #f3f8f7;
   border-radius: 10px;
 }
@@ -915,7 +914,7 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: calc(var(--spacing-12) + var(--spacing-3)) var(--spacing-5);
   color: #94a3b8;
 }
 
@@ -947,7 +946,7 @@ onMounted(() => {
   background: linear-gradient(145deg, #ffffff 0%, #f7fbfa 100%);
   border: 1px solid rgba(14, 116, 144, 0.14);
   border-radius: 16px;
-  padding: 20px;
+  padding: var(--spacing-5);
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
 }
 
@@ -969,9 +968,9 @@ onMounted(() => {
 /* Tabs */
 .tabs {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
   margin-bottom: 20px;
-  padding: 6px;
+  padding: var(--spacing-1);
   background: #e8f1ef;
   border-radius: 14px;
 }
@@ -979,8 +978,8 @@ onMounted(() => {
 .tab {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-5);
   border: none;
   border-radius: 10px;
   background: transparent;
@@ -1022,8 +1021,8 @@ onMounted(() => {
 .weight-total {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
   margin-bottom: 16px;
   background: #f0fdf4;
   border-radius: 10px;
@@ -1051,7 +1050,7 @@ onMounted(() => {
 }
 
 .mpi-legend-tab {
-  padding: 6px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   border: 1px solid #d6e6e2;
   border-radius: 8px;
   background: white;
@@ -1082,7 +1081,7 @@ onMounted(() => {
   justify-content: center;
   gap: 20px;
   margin-top: 12px;
-  padding: 10px;
+  padding: var(--spacing-3);
   background: #f3f8f7;
   border-radius: 10px;
   font-size: 12px;
@@ -1102,7 +1101,7 @@ onMounted(() => {
 }
 
 .mpi-def-item {
-  padding: 16px;
+  padding: var(--spacing-4);
   background: #f4f9f8;
   border-radius: 12px;
   border-left: 4px solid var(--color-primary);
@@ -1126,7 +1125,7 @@ onMounted(() => {
 }
 
 .mpi-def-desc {
-  margin: 0 0 10px 0;
+  margin: 0 0 var(--spacing-3) 0;
   font-size: 13px;
   color: #64748b;
   line-height: 1.6;
@@ -1139,7 +1138,7 @@ onMounted(() => {
 }
 
 .mpi-def-breakdown span {
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   background: white;
   border-radius: 6px;
   font-size: 11px;
@@ -1154,7 +1153,7 @@ onMounted(() => {
 }
 
 .risk-level {
-  padding: 14px 16px;
+  padding: var(--spacing-4) var(--spacing-4);
   border-radius: 12px;
   border-left: 4px solid;
 }
@@ -1182,7 +1181,7 @@ onMounted(() => {
 }
 
 .risk-badge {
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 700;
@@ -1216,3 +1215,4 @@ onMounted(() => {
   line-height: 1.5;
 }
 </style>
+

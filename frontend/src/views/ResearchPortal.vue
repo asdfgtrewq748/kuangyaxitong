@@ -377,7 +377,7 @@ onMounted(() => {
 }
 
 .hero-copy h1 {
-  margin: 8px 0 10px;
+  margin: var(--spacing-2) 0 var(--spacing-3);
   font-size: 34px;
   line-height: 1.1;
   font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
@@ -391,14 +391,14 @@ onMounted(() => {
 
 .hero-stats {
   display: grid;
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .stat {
   border: 1px solid rgba(14, 116, 144, 0.22);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.86);
-  padding: 10px 12px;
+  padding: var(--spacing-3);
 }
 
 .stat span {
@@ -409,7 +409,7 @@ onMounted(() => {
 
 .stat strong {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
   font-size: 24px;
   color: #0f172a;
 }
@@ -428,16 +428,16 @@ onMounted(() => {
 
 .quick-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
   flex-wrap: wrap;
 }
 
 .timeline ol {
-  margin: 10px 0 0;
-  padding-left: 18px;
+  margin: var(--spacing-3) 0 0;
+  padding-left: var(--spacing-4);
   display: grid;
-  gap: 6px;
+  gap: var(--spacing-1);
   color: #475569;
   font-size: 13px;
 }
@@ -446,18 +446,18 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .panel-head p {
-  margin: 6px 0 0;
+  margin: var(--spacing-1) 0 0;
   color: #64748b;
   font-size: 12px;
 }
 
 .leaderboard-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
   align-items: center;
 }
 
@@ -466,28 +466,28 @@ onMounted(() => {
 }
 
 .leaderboard-grid {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .result-card {
   border: 1px solid var(--border-color-light);
   border-radius: 12px;
   background: #fff;
-  padding: 12px;
+  padding: var(--spacing-3);
 }
 
 .result-card h3 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--spacing-2);
   font-size: 14px;
 }
 
 .state {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: var(--spacing-3);
   border: 1px dashed #cbd5e1;
   background: #f8fafc;
   color: #475569;
@@ -501,22 +501,22 @@ onMounted(() => {
 }
 
 .paper-list {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   display: grid;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .paper-card {
   border: 1px solid var(--border-color-light);
   border-radius: 12px;
   background: #fff;
-  padding: 12px;
+  padding: var(--spacing-3);
 }
 
 .paper-head {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--spacing-3);
   align-items: center;
 }
 
@@ -526,14 +526,14 @@ onMounted(() => {
 }
 
 .paper-head p {
-  margin: 4px 0 0;
+  margin: var(--spacing-1) 0 0;
   font-size: 12px;
   color: #64748b;
 }
 
 .gate-pill {
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 11px;
   font-weight: 700;
   border: 1px solid transparent;
@@ -552,25 +552,25 @@ onMounted(() => {
 }
 
 .paper-meta {
-  margin-top: 8px;
+  margin-top: var(--spacing-2);
   display: flex;
-  gap: 12px;
+  gap: var(--spacing-3);
   flex-wrap: wrap;
   font-size: 12px;
   color: #64748b;
 }
 
 .paper-actions {
-  margin-top: 10px;
+  margin-top: var(--spacing-3);
 }
 
 .asset-table-wrap {
-  margin-top: 10px;
+  margin-top: var(--spacing-3);
 }
 
 .tag {
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: var(--spacing-1) var(--spacing-2);
   font-size: 11px;
   font-weight: 600;
   border: 1px solid transparent;
@@ -589,13 +589,8 @@ onMounted(() => {
 }
 
 .btn-mini {
-  padding: 6px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 12px;
-}
-
-.table.compact th,
-.table.compact td {
-  padding: 8px 10px;
 }
 
 @media (max-width: 1080px) {

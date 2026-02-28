@@ -1528,7 +1528,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 11px;
   border: 1px solid var(--border-color-light);
   background: #fff;
@@ -1555,13 +1555,13 @@ onMounted(async () => {
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .panel-head {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--spacing-2);
   align-items: baseline;
 }
 
@@ -1602,7 +1602,7 @@ onMounted(async () => {
 .lookup-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
+  gap: var(--spacing-2);
   align-items: center;
 }
 
@@ -1670,18 +1670,18 @@ onMounted(async () => {
 .actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
 }
 
 .actions.actions-split {
   justify-content: flex-start;
-  gap: 8px;
+  gap: var(--spacing-2);
   flex-wrap: wrap;
 }
 
 .compare-label {
   display: grid;
-  gap: 6px;
+  gap: var(--spacing-1);
   font-size: 12px;
   color: #475569;
 }
@@ -1693,7 +1693,7 @@ onMounted(async () => {
 
 .viz-controls label {
   display: inline-grid;
-  gap: 6px;
+  gap: var(--spacing-1);
   font-size: 12px;
   color: #475569;
 }
@@ -1703,7 +1703,7 @@ onMounted(async () => {
 }
 
 .btn-inline {
-  padding: 5px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: 12px;
 }
 
@@ -1714,14 +1714,14 @@ onMounted(async () => {
 
 .suite-summary {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
   flex-wrap: wrap;
 }
 
 .result-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--spacing-3);
 }
 
 .result-card {
@@ -1816,12 +1816,6 @@ onMounted(async () => {
   border: 1px solid var(--border-color);
   color: var(--color-text-primary);
   word-break: break-all;
-}
-
-.table.compact th,
-.table.compact td {
-  padding: 8px 9px;
-  font-size: 12px;
 }
 
 @media (max-width: 1200px) {

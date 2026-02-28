@@ -1,9 +1,10 @@
 <template>
   <div class="health-check-page">
-    <header class="page-header">
-      <h1>系统状态检查</h1>
-      <p class="subtitle">后端服务健康监控</p>
-    </header>
+    <PageHeader
+      class="main-header"
+      title="系统状态检查"
+      description="后端服务健康监控"
+    />
 
     <main class="health-content">
       <section v-if="loading" class="state-card loading-state" aria-live="polite">
@@ -41,6 +42,7 @@
 
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { PageHeader } from '../components/library'
 
 const loading = ref(true)
 const backendRunning = ref(false)
@@ -98,16 +100,8 @@ onBeforeUnmount(() => {
   padding: var(--spacing-6);
 }
 
-.page-header h1 {
-  margin: 0;
-  font-size: var(--font-size-xl);
-  color: var(--text-primary);
-}
-
-.subtitle {
-  margin: var(--spacing-2) 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+.main-header {
+  padding-top: 0;
 }
 
 .health-content {

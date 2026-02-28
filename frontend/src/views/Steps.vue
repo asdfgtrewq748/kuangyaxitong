@@ -225,7 +225,7 @@
       <div class="panel-body">
         <div v-if="loadingStepBatch" class="loading-block">{{ sp('loadingBatch') }}</div>
         <div v-else-if="stepBatch?.items?.length" class="table-wrap">
-          <table>
+          <table class="table">
             <thead>
               <tr>
                 <th>#</th>
@@ -694,16 +694,16 @@ onMounted(async () => {
 }
 
 .card {
-  background: linear-gradient(145deg, #ffffff 0%, #f7fbfa 100%);
-  border: 1px solid rgba(14, 116, 144, 0.16);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-5) var(--spacing-6);
+  box-shadow: var(--shadow-sm);
 }
 
 .hero-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
   flex-wrap: wrap;
   justify-content: flex-end;
 }
@@ -713,7 +713,7 @@ onMounted(async () => {
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
-  padding: 10px 14px;
+  padding: var(--spacing-3) var(--spacing-4);
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
@@ -763,7 +763,7 @@ onMounted(async () => {
 
 .params-card h2,
 .kpi-card h2 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--spacing-3);
   font-size: 16px;
   color: #0f172a;
 }
@@ -771,13 +771,13 @@ onMounted(async () => {
 .params-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .params-grid label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-1);
   font-size: 12px;
   color: #475569;
 }
@@ -786,7 +786,7 @@ onMounted(async () => {
 .params-grid select {
   border: 1px solid #d5e4e1;
   border-radius: 10px;
-  padding: 9px 10px;
+  padding: var(--spacing-2) var(--spacing-3);
   font-size: 13px;
   background: #fff;
 }
@@ -801,7 +801,7 @@ onMounted(async () => {
 .geo-toggle-line {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-2);
   min-height: 38px;
 }
 
@@ -813,13 +813,13 @@ onMounted(async () => {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .kpi-item {
   border: 1px solid rgba(14, 116, 144, 0.16);
   border-radius: 12px;
-  padding: 12px;
+  padding: var(--spacing-3);
   background: linear-gradient(135deg, #ffffff, #f2f8f7);
 }
 
@@ -831,7 +831,7 @@ onMounted(async () => {
 
 .kpi-item strong {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
   font-size: 22px;
   color: #0f172a;
 }
@@ -842,7 +842,7 @@ onMounted(async () => {
 }
 
 .hint {
-  margin: 10px 0 0;
+  margin: var(--spacing-3) 0 0;
   color: #b91c1c;
   font-size: 12px;
 }
@@ -850,7 +850,7 @@ onMounted(async () => {
 .two-col {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  gap: 16px;
+  gap: var(--spacing-4);
 }
 
 .panel {
@@ -861,7 +861,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-3);
 }
 
 .panel-head h3 {
@@ -873,7 +873,7 @@ onMounted(async () => {
 .tag {
   font-size: 11px;
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: var(--spacing-1) var(--spacing-3);
   background: rgba(14, 116, 144, 0.14);
   color: #0e7490;
 }
@@ -881,7 +881,7 @@ onMounted(async () => {
 .panel-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .loading-block,
@@ -899,13 +899,13 @@ onMounted(async () => {
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .stat-item {
   border: 1px solid #d8e6e3;
   border-radius: 10px;
-  padding: 10px;
+  padding: var(--spacing-3);
   background: #fafdfc;
 }
 
@@ -917,7 +917,7 @@ onMounted(async () => {
 
 .stat-item strong {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
   font-size: 16px;
   color: #0f172a;
 }
@@ -926,11 +926,11 @@ onMounted(async () => {
   border: 1px solid #bde8de;
   background: linear-gradient(135deg, #ecfdf8, #ddf7ef);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: var(--spacing-3);
 }
 
 .suggestion h4 {
-  margin: 0 0 4px;
+  margin: 0 0 var(--spacing-1);
   font-size: 13px;
   color: #0f766e;
 }
@@ -945,23 +945,23 @@ onMounted(async () => {
   border: 1px solid #bfd6ff;
   background: linear-gradient(135deg, #edf4ff, #e2ecff);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: var(--spacing-3);
 }
 
 .geo-summary h4,
 .zone-card h4 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--spacing-2);
   font-size: 13px;
   color: #1d4ed8;
 }
 
 .geo-summary-row {
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
 }
 
 .geo-meta,
 .geo-feature {
-  margin: 8px 0 0;
+  margin: var(--spacing-2) 0 0;
   font-size: 12px;
   color: #1e3a8a;
 }
@@ -969,19 +969,19 @@ onMounted(async () => {
 .zone-card {
   border: 1px solid #cfe7db;
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: var(--spacing-3);
   background: #f7fcfa;
 }
 
 .zone-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .zone-item {
   border-radius: 10px;
-  padding: 8px 10px;
+  padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid transparent;
 }
 
@@ -1017,29 +1017,10 @@ onMounted(async () => {
   overflow-x: auto;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-th,
-td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #d9e6e3;
-  text-align: left;
-}
-
-thead th {
-  background: #eff6f4;
-  color: #475569;
-  font-weight: 700;
-}
-
 .table-foot {
-  margin-top: 8px;
+  margin-top: var(--spacing-2);
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 @media (max-width: 1200px) {
