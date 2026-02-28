@@ -1,9 +1,9 @@
-﻿<template>
+<template>
   <div class="page mpi-heatmap-page">
     <PageHeader
       class="main-header"
-      title="MPI鐑姏鍥惧垎鏋?
-      description="鐙珛灞曠ずMPI缁煎悎鎸囨爣鍒嗗竷锛屾敮鎸佸宸ヤ綔闈笂浼犮€佸垏鎹笌鐑姏鍥炬覆鏌?
+      title="MPI 鐑姏鍥惧垎鏋?
+      description="鐙珛灞曠ず MPI 缁煎悎鎸囨爣鍒嗗竷锛屾敮鎸佸宸ヤ綔闈笂浼犮€佸垏鎹笌鐑姏鍥炬覆鏌撱€?
     />
 
     <div class="mpi-layout">
@@ -26,12 +26,11 @@
           </div>
 
           <div class="helper-text">
-            鏈笂浼犲伐浣滈潰鏃讹紝灏嗕娇鐢ㄥ叏閮ㄧ綉鏍艰竟鐣岃繘琛屾覆鏌撱€?
-          </div>
+            鏈笂浼犲伐浣滈潰鏃讹紝灏嗕娇鐢ㄥ叏閮ㄧ綉鏍艰竟鐣岃繘琛屾覆鏌撱€?          </div>
 
           <div class="sample-actions">
-            <button class="btn ghost" @click.stop="downloadSample('csv')">涓嬭浇CSV绀轰緥</button>
-            <button class="btn ghost" @click.stop="downloadSample('json')">涓嬭浇JSON绀轰緥</button>
+            <button class="btn ghost" @click.stop="downloadSample('csv')">涓嬭浇 CSV 绀轰緥</button>
+            <button class="btn ghost" @click.stop="downloadSample('json')">涓嬭浇 JSON 绀轰緥</button>
           </div>
 
           <div v-if="workfaces.length" class="workface-list">
@@ -54,13 +53,13 @@
 
           <EmptyState
             v-else
-            title="暂无工作面文件"
-            description="请上传 CSV / JSON / TXT 工作面坐标文件。"
+            title="鏆傛棤宸ヤ綔闈㈡枃浠?
+            description="璇蜂笂浼?CSV / JSON / TXT 宸ヤ綔闈㈠潗鏍囨枃浠躲€?
           />
         </Card>
 
         <Card>
-          <h3 class="section-title">MPI璁＄畻璁剧疆</h3>
+          <h3 class="section-title">MPI 璁＄畻璁剧疆</h3>
           <div class="param-group">
             <label class="param-label">鐓ゅ眰</label>
             <select v-model="seam" class="param-select">
@@ -83,7 +82,7 @@
           <div class="action-buttons">
             <button class="btn primary" @click="handleMpiCompute" :disabled="loading || !seam">
               <span v-if="loading" class="spinner sm"></span>
-              {{ loading ? '璁＄畻涓?..' : '璁＄畻MPI鐑姏鍥? }}
+              {{ loading ? '璁＄畻涓?..' : '璁＄畻 MPI 鐑姏鍥? }}
             </button>
             <button class="btn secondary" @click="refreshHeatmapImage" :disabled="loading || !hasGrid">
               鍒锋柊鍥惧儚
@@ -116,7 +115,7 @@
       <div class="right-panel">
         <Card>
           <div class="heatmap-header">
-            <h3 class="section-title">MPI缁煎悎鎸囨爣鍒嗗竷</h3>
+            <h3 class="section-title">MPI 缁煎悎鎸囨爣鍒嗗竷</h3>
             <div class="heatmap-actions">
               <span v-if="activeWorkface" class="tag">褰撳墠锛歿{ activeWorkface.name }}</span>
               <span v-else class="tag ghost">鏈€夋嫨宸ヤ綔闈?/span>
@@ -124,8 +123,7 @@
           </div>
 
           <div v-if="activeWorkface?.bounds" class="workface-bounds">
-            鑼冨洿锛歑 {{ activeWorkface.bounds.min_x }} ~ {{ activeWorkface.bounds.max_x }}锛?
-            Y {{ activeWorkface.bounds.min_y }} ~ {{ activeWorkface.bounds.max_y }}
+            鑼冨洿锛歑 {{ activeWorkface.bounds.min_x }} ~ {{ activeWorkface.bounds.max_x }}锛?            Y {{ activeWorkface.bounds.min_y }} ~ {{ activeWorkface.bounds.max_y }}
           </div>
 
           <MpiHeatmapViewer
@@ -145,11 +143,11 @@
           <SkeletonPanel v-if="loading && !hasGrid" :rows="4" compact />
           <template v-else-if="hasGrid">
             <div class="legend">
-              <div class="legend-label">MPI椋庨櫓娓愬彉锛圤DI鑹茬洏锛?/div>
+              <div class="legend-label">MPI 椋庨櫓娓愬彉锛圤DI 鑹茬洏锛?/div>
               <div class="legend-bar" :style="{ background: legendGradient }"></div>
               <div class="legend-scale">
-                <span>楂橀闄╋紙浣嶮PI锛?/span>
-                <span>浣庨闄╋紙楂楳PI锛?/span>
+                <span>楂橀闄╋紙浣?MPI锛?/span>
+                <span>浣庨闄╋紙楂?MPI锛?/span>
               </div>
             </div>
 
@@ -174,15 +172,14 @@
           </template>
           <EmptyState
             v-else
-            title="暂无 MPI 数据"
-            description="请选择煤层并执行 MPI 计算。"
+            title="鏆傛棤 MPI 鏁版嵁"
+            description="璇烽€夋嫨鐓ゅ眰骞舵墽琛?MPI 璁＄畻銆?
           />
         </Card>
       </div>
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from '../composables/useToast'
@@ -269,15 +266,15 @@ const onWorkfaceFile = async (event) => {
     workfaces.value = data.workfaces || []
     activeWorkfaceIndex.value = 0
     saveWorkfaces()
-    toast.add(`宸插鍏?${workfaces.value.length} 涓伐浣滈潰`, 'success')
+    toast.add(`\u5df2\u5bfc\u5165 ${workfaces.value.length} \u4e2a\u5de5\u4f5c\u9762`, 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || '宸ヤ綔闈㈣В鏋愬け璐?, 'error')
+    toast.add(err.response?.data?.detail || '\u5de5\u4f5c\u9762\u89e3\u6790\u5931\u8d25', 'error')
   }
 }
 
 const downloadSample = (type) => {
   if (type === 'csv') {
-    const content = 'name,xmin,xmax,ymin,ymax\n宸ヤ綔闈,100,400,200,600\n宸ヤ綔闈,450,750,150,500\n'
+    const content = 'name,xmin,xmax,ymin,ymax\n\u5de5\u4f5c\u9762A,100,400,200,600\n\u5de5\u4f5c\u9762B,450,750,150,500\n'
     triggerDownload(content, 'workfaces_example.csv', 'text/csv')
     return
   }
@@ -285,11 +282,11 @@ const downloadSample = (type) => {
   const payload = {
     workfaces: [
       {
-        name: '宸ヤ綔闈',
+        name: '\u5de5\u4f5c\u9762A',
         bounds: { min_x: 100, max_x: 400, min_y: 200, max_y: 600 }
       },
       {
-        name: '宸ヤ綔闈',
+        name: '\u5de5\u4f5c\u9762B',
         points: [
           [450, 150],
           [750, 150],
@@ -320,7 +317,7 @@ const loadSeams = async () => {
       seam.value = seams.value[0].name
     }
   } catch (err) {
-    toast.add('鍔犺浇鐓ゅ眰澶辫触', 'error')
+    toast.add('\u52a0\u8f7d\u7164\u5c42\u5931\u8d25', 'error')
   }
 }
 
@@ -386,7 +383,7 @@ const handleMpiCompute = async () => {
     const { data } = await getSeamOverburden(seam.value)
     const boreholes = data.boreholes || []
     if (!boreholes.length) {
-      toast.add('褰撳墠鐓ゅ眰鏃犲彲鐢ㄩ捇瀛旀暟鎹?, 'error')
+      toast.add('\u5f53\u524d\u7164\u5c42\u65e0\u53ef\u7528\u94bb\u5b54\u6570\u636e', 'error')
       return
     }
 
@@ -406,9 +403,9 @@ const handleMpiCompute = async () => {
       await refreshHeatmapImage()
     }
 
-    toast.add('MPI鐑姏鍥捐绠楀畬鎴?, 'success')
+    toast.add('MPI \u70ed\u529b\u56fe\u8ba1\u7b97\u5b8c\u6210', 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || 'MPI璁＄畻澶辫触', 'error')
+    toast.add(err.response?.data?.detail || 'MPI \u8ba1\u7b97\u5931\u8d25', 'error')
   } finally {
     loading.value = false
   }
@@ -419,14 +416,16 @@ const validateWorkfaceBounds = (workfaceBounds, gridBounds) => {
   const outX = workfaceBounds.min_x < gridBounds.min_x || workfaceBounds.max_x > gridBounds.max_x
   const outY = workfaceBounds.min_y < gridBounds.min_y || workfaceBounds.max_y > gridBounds.max_y
   if (outX || outY) {
-    toast.add('宸ヤ綔闈㈣寖鍥磋秴鍑篗PI缃戞牸杈圭晫锛屾樉绀哄彲鑳借瑁佸壀', 'warning')
+    toast.add('\u5de5\u4f5c\u9762\u8303\u56f4\u8d85\u51fa MPI \u7f51\u683c\u8fb9\u754c\uff0c\u663e\u793a\u53ef\u80fd\u88ab\u88c1\u526a', 'warning')
   }
 }
 
 const refreshHeatmapImage = async () => {
   if (!grid.value || !gridBounds.value) return
   try {
-    const title = activeWorkface.value?.name ? `MPI鐑姏鍥?- ${activeWorkface.value.name}` : 'MPI鐑姏鍥?
+    const title = activeWorkface.value?.name
+      ? `MPI \u70ed\u529b\u56fe - ${activeWorkface.value.name}`
+      : 'MPI \u70ed\u529b\u56fe'
     const { data } = await mpiHeatmapImage({
       grid: grid.value,
       bounds: gridBounds.value,
@@ -439,14 +438,14 @@ const refreshHeatmapImage = async () => {
     })
     imageUrl.value = `data:image/png;base64,${data.image}`
   } catch (err) {
-    toast.add(err.response?.data?.detail || '鐑姏鍥惧浘鍍忕敓鎴愬け璐?, 'error')
+    toast.add(err.response?.data?.detail || '\u70ed\u529b\u56fe\u56fe\u50cf\u751f\u6210\u5931\u8d25', 'error')
   }
 }
 
 const handleImageError = () => {
   if (renderMode.value !== 'image') return
   renderMode.value = 'canvas'
-  toast.add('鍥惧儚鍔犺浇澶辫触锛屽凡鍒囨崲鍒癈anvas妯″紡', 'warning')
+  toast.add('\u56fe\u50cf\u52a0\u8f7d\u5931\u8d25\uff0c\u5df2\u5207\u6362\u5230 Canvas \u6a21\u5f0f', 'warning')
 }
 
 watch(renderMode, async (value) => {
@@ -461,7 +460,7 @@ watch(activeWorkfaceIndex, () => {
   gridBounds.value = null
   imageUrl.value = ''
   stats.value = {}
-  toast.add('宸ヤ綔闈㈠凡鍒囨崲锛岃閲嶆柊璁＄畻MPI鐑姏鍥?, 'info')
+  toast.add('\u5de5\u4f5c\u9762\u5df2\u5207\u6362\uff0c\u8bf7\u91cd\u65b0\u8ba1\u7b97 MPI \u70ed\u529b\u56fe', 'info')
 })
 
 onMounted(() => {
@@ -1118,4 +1117,3 @@ onMounted(() => {
   }
 }
 </style>
-
