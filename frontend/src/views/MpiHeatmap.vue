@@ -1,16 +1,12 @@
 <template>
   <div class="page mpi-heatmap-page">
-    <PageHeader
-      class="main-header"
-      title="MPI 鐑姏鍥惧垎鏋?
-      description="鐙珛灞曠ず MPI 缁煎悎鎸囨爣鍒嗗竷锛屾敮鎸佸宸ヤ綔闈笂浼犮€佸垏鎹笌鐑姏鍥炬覆鏌撱€?
-    />
+    <PageHeader class="main-header" :title="tx.pageTitle" :description="tx.pageDescription" />
 
     <div class="mpi-layout">
       <div class="left-panel">
         <Card>
-          <h3 class="section-title">宸ヤ綔闈㈠潗鏍囨枃浠?/h3>
-          <p class="section-desc">涓婁紶澶氬伐浣滈潰鍧愭爣鏂囦欢锛堢煩褰负涓伙紝澶氳竟褰㈠彲閫夛級</p>
+          <h3 class="section-title">{{ tx.workfaceFileTitle }}</h3>
+          <p class="section-desc">{{ tx.workfaceFileDesc }}</p>
 
           <div class="upload-box" @click="triggerWorkfaceUpload" tabindex="0" @keydown.enter="triggerWorkfaceUpload">
             <input ref="workfaceInput" type="file" accept=".csv,.json,.txt" @change="onWorkfaceFile" style="display:none">
@@ -21,22 +17,21 @@
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
             </div>
-            <div class="upload-text">涓婁紶宸ヤ綔闈㈠潗鏍囨枃浠?/div>
-            <div class="upload-hint">鏀寔 CSV / JSON / TXT</div>
+            <div class="upload-text">{{ tx.uploadWorkfaceFile }}</div>
+            <div class="upload-hint">{{ tx.uploadHint }}</div>
           </div>
 
-          <div class="helper-text">
-            鏈笂浼犲伐浣滈潰鏃讹紝灏嗕娇鐢ㄥ叏閮ㄧ綉鏍艰竟鐣岃繘琛屾覆鏌撱€?          </div>
+          <div class="helper-text">{{ tx.helperText }}</div>
 
           <div class="sample-actions">
-            <button class="btn ghost" @click.stop="downloadSample('csv')">涓嬭浇 CSV 绀轰緥</button>
-            <button class="btn ghost" @click.stop="downloadSample('json')">涓嬭浇 JSON 绀轰緥</button>
+            <button class="btn ghost" @click.stop="downloadSample('csv')">{{ tx.downloadCsvSample }}</button>
+            <button class="btn ghost" @click.stop="downloadSample('json')">{{ tx.downloadJsonSample }}</button>
           </div>
 
           <div v-if="workfaces.length" class="workface-list">
             <div class="workface-header">
-              <span>宸茶В鏋?{{ workfaces.length }} 涓伐浣滈潰</span>
-              <button class="btn small ghost" @click="clearWorkfaces">娓呯┖</button>
+              <span>{{ tx.parsedPrefix }} {{ workfaces.length }} {{ tx.parsedSuffix }}</span>
+              <button class="btn small ghost" @click="clearWorkfaces">{{ tx.clearText }}</button>
             </div>
             <div class="workface-items">
               <button
@@ -45,29 +40,25 @@
                 :class="['workface-btn', { active: activeWorkfaceIndex === idx }]"
                 @click="activeWorkfaceIndex = idx"
               >
-                {{ face.name || `宸ヤ綔闈?${idx + 1}` }}
-                <span class="workface-type">{{ face.type === 'polygon' ? '澶氳竟褰? : '鐭╁舰' }}</span>
+                {{ face.name || `${tx.workfaceNamePrefix} ${idx + 1}` }}
+                <span class="workface-type">{{ face.type === 'polygon' ? tx.polygonText : tx.rectText }}</span>
               </button>
             </div>
           </div>
 
-          <EmptyState
-            v-else
-            title="鏆傛棤宸ヤ綔闈㈡枃浠?
-            description="璇蜂笂浼?CSV / JSON / TXT 宸ヤ綔闈㈠潗鏍囨枃浠躲€?
-          />
+          <EmptyState v-else :title="tx.emptyWorkfaceTitle" :description="tx.emptyWorkfaceDesc" />
         </Card>
 
         <Card>
-          <h3 class="section-title">MPI 璁＄畻璁剧疆</h3>
+          <h3 class="section-title">{{ tx.computeSettingsTitle }}</h3>
           <div class="param-group">
-            <label class="param-label">鐓ゅ眰</label>
+            <label class="param-label">{{ tx.seamLabel }}</label>
             <select v-model="seam" class="param-select">
               <option v-for="item in seams" :key="item.name" :value="item.name">{{ item.name }}</option>
             </select>
           </div>
           <div class="param-group">
-            <label class="param-label">鎻掑€兼柟娉?/label>
+            <label class="param-label">{{ tx.methodLabel }}</label>
             <select v-model="method" class="param-select">
               <option value="idw">IDW</option>
               <option value="linear">Linear</option>
@@ -75,37 +66,37 @@
             </select>
           </div>
           <div class="param-group">
-            <label class="param-label">缃戞牸鍒嗚鲸鐜?/label>
+            <label class="param-label">{{ tx.gridSizeLabel }}</label>
             <input v-model.number="gridSize" type="number" min="20" max="200" class="param-input">
           </div>
 
           <div class="action-buttons">
             <button class="btn primary" @click="handleMpiCompute" :disabled="loading || !seam">
               <span v-if="loading" class="spinner sm"></span>
-              {{ loading ? '璁＄畻涓?..' : '璁＄畻 MPI 鐑姏鍥? }}
+              {{ loading ? tx.computingText : tx.computeBtnText }}
             </button>
             <button class="btn secondary" @click="refreshHeatmapImage" :disabled="loading || !hasGrid">
-              鍒锋柊鍥惧儚
+              {{ tx.refreshImageText }}
             </button>
           </div>
         </Card>
 
         <Card>
-          <h3 class="section-title">鏄剧ず璁剧疆</h3>
+          <h3 class="section-title">{{ tx.displaySettingsTitle }}</h3>
           <div class="toggle-row">
             <label class="toggle-item">
               <input type="checkbox" v-model="showBoundary">
-              鏄剧ず杈圭晫
+              {{ tx.showBoundaryText }}
             </label>
             <label class="toggle-item">
               <input type="checkbox" v-model="showMask">
-              鏄剧ず閬僵
+              {{ tx.showMaskText }}
             </label>
           </div>
           <div class="param-group">
-            <label class="param-label">娓叉煋妯″紡</label>
+            <label class="param-label">{{ tx.renderModeLabel }}</label>
             <div class="mode-tabs">
-              <button :class="['mode-tab', { active: renderMode === 'image' }]" @click="renderMode = 'image'">鍥惧儚</button>
+              <button :class="['mode-tab', { active: renderMode === 'image' }]" @click="renderMode = 'image'">{{ tx.imageModeText }}</button>
               <button :class="['mode-tab', { active: renderMode === 'canvas' }]" @click="renderMode = 'canvas'">Canvas</button>
             </div>
           </div>
@@ -115,15 +106,16 @@
       <div class="right-panel">
         <Card>
           <div class="heatmap-header">
-            <h3 class="section-title">MPI 缁煎悎鎸囨爣鍒嗗竷</h3>
+            <h3 class="section-title">{{ tx.resultTitle }}</h3>
             <div class="heatmap-actions">
-              <span v-if="activeWorkface" class="tag">褰撳墠锛歿{ activeWorkface.name }}</span>
-              <span v-else class="tag ghost">鏈€夋嫨宸ヤ綔闈?/span>
+              <span v-if="activeWorkface" class="tag">{{ tx.currentWorkfacePrefix }}{{ activeWorkface.name }}</span>
+              <span v-else class="tag ghost">{{ tx.noWorkfaceSelected }}</span>
             </div>
           </div>
 
           <div v-if="activeWorkface?.bounds" class="workface-bounds">
-            鑼冨洿锛歑 {{ activeWorkface.bounds.min_x }} ~ {{ activeWorkface.bounds.max_x }}锛?            Y {{ activeWorkface.bounds.min_y }} ~ {{ activeWorkface.bounds.max_y }}
+            {{ tx.rangePrefix }} X {{ activeWorkface.bounds.min_x }} ~ {{ activeWorkface.bounds.max_x }}，
+            Y {{ activeWorkface.bounds.min_y }} ~ {{ activeWorkface.bounds.max_y }}
           </div>
 
           <MpiHeatmapViewer
@@ -143,33 +135,39 @@
           <SkeletonPanel v-if="loading && !hasGrid" :rows="4" compact />
           <template v-else-if="hasGrid">
             <div class="legend">
-              <div class="legend-label">MPI 椋庨櫓娓愬彉锛圤DI 鑹茬洏锛?/div>
+              <div class="legend-label">{{ tx.legendLabel }}</div>
               <div class="legend-bar" :style="{ background: legendGradient }"></div>
               <div class="legend-scale">
-                <span>楂橀闄╋紙浣?MPI锛?/span>
-                <span>浣庨闄╋紙楂?MPI锛?/span>
+                <span>{{ tx.highRiskLowMpi }}</span>
+                <span>{{ tx.lowRiskHighMpi }}</span>
               </div>
             </div>
 
             <div class="stats-grid">
               <div class="stat-item">
-                <span class="stat-label">鏈€灏忓€?/span>
+                <span class="stat-label">{{ tx.minLabel }}</span>
                 <span class="stat-value">{{ stats.min?.toFixed(2) || '-' }}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">鏈€澶у€?/span>
+                <span class="stat-label">{{ tx.maxLabel }}</span>
                 <span class="stat-value">{{ stats.max?.toFixed(2) || '-' }}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">骞冲潎鍊?/span>
+                <span class="stat-label">{{ tx.meanLabel }}</span>
                 <span class="stat-value">{{ stats.mean?.toFixed(2) || '-' }}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">鎮仠鍊?/span>
+                <span class="stat-label">{{ tx.hoverLabel }}</span>
                 <span class="stat-value">{{ hoverInfo?.value?.toFixed(2) || '-' }}</span>
               </div>
             </div>
           </template>
+          <EmptyState v-else :title="tx.emptyMpiTitle" :description="tx.emptyMpiDesc" />
+        </Card>
+      </div>
+    </div>
+  </div>
+</template>
           <EmptyState
             v-else
             title="鏆傛棤 MPI 鏁版嵁"
@@ -212,6 +210,62 @@ const grid = ref(null)
 const gridBounds = ref(null)
 const stats = ref({})
 const hoverInfo = ref(null)
+
+const tx = {
+  pageTitle: '\u004d\u0050\u0049 \u70ed\u529b\u56fe\u5206\u6790',
+  pageDescription: '\u72ec\u7acb\u5c55\u793a MPI \u7efc\u5408\u6307\u6807\u5206\u5e03\uff0c\u652f\u6301\u591a\u5de5\u4f5c\u9762\u4e0a\u4f20\u3001\u5207\u6362\u4e0e\u70ed\u529b\u56fe\u6e32\u67d3\u3002',
+  workfaceFileTitle: '\u5de5\u4f5c\u9762\u5750\u6807\u6587\u4ef6',
+  workfaceFileDesc: '\u4e0a\u4f20\u591a\u5de5\u4f5c\u9762\u5750\u6807\u6587\u4ef6\uff08\u77e9\u5f62\u4e3a\u4e3b\uff0c\u591a\u8fb9\u5f62\u53ef\u9009\uff09',
+  uploadWorkfaceFile: '\u4e0a\u4f20\u5de5\u4f5c\u9762\u5750\u6807\u6587\u4ef6',
+  uploadHint: '\u652f\u6301 CSV / JSON / TXT',
+  helperText: '\u672a\u4e0a\u4f20\u5de5\u4f5c\u9762\u65f6\uff0c\u5c06\u4f7f\u7528\u5168\u90e8\u7f51\u683c\u8fb9\u754c\u8fdb\u884c\u6e32\u67d3\u3002',
+  downloadCsvSample: '\u4e0b\u8f7d CSV \u793a\u4f8b',
+  downloadJsonSample: '\u4e0b\u8f7d JSON \u793a\u4f8b',
+  parsedPrefix: '\u5df2\u89e3\u6790',
+  parsedSuffix: '\u4e2a\u5de5\u4f5c\u9762',
+  clearText: '\u6e05\u7a7a',
+  workfaceNamePrefix: '\u5de5\u4f5c\u9762',
+  polygonText: '\u591a\u8fb9\u5f62',
+  rectText: '\u77e9\u5f62',
+  emptyWorkfaceTitle: '\u6682\u65e0\u5de5\u4f5c\u9762\u6587\u4ef6',
+  emptyWorkfaceDesc: '\u8bf7\u4e0a\u4f20 CSV / JSON / TXT \u5de5\u4f5c\u9762\u5750\u6807\u6587\u4ef6\u3002',
+  computeSettingsTitle: 'MPI \u8ba1\u7b97\u8bbe\u7f6e',
+  seamLabel: '\u7164\u5c42',
+  methodLabel: '\u63d2\u503c\u65b9\u6cd5',
+  gridSizeLabel: '\u7f51\u683c\u5206\u8fa8\u7387',
+  computingText: '\u8ba1\u7b97\u4e2d...',
+  computeBtnText: '\u8ba1\u7b97 MPI \u70ed\u529b\u56fe',
+  refreshImageText: '\u5237\u65b0\u56fe\u50cf',
+  displaySettingsTitle: '\u663e\u793a\u8bbe\u7f6e',
+  showBoundaryText: '\u663e\u793a\u8fb9\u754c',
+  showMaskText: '\u663e\u793a\u906e\u7f69',
+  renderModeLabel: '\u6e32\u67d3\u6a21\u5f0f',
+  imageModeText: '\u56fe\u50cf',
+  resultTitle: 'MPI \u7efc\u5408\u6307\u6807\u5206\u5e03',
+  currentWorkfacePrefix: '\u5f53\u524d\uff1a',
+  noWorkfaceSelected: '\u672a\u9009\u62e9\u5de5\u4f5c\u9762',
+  rangePrefix: '\u8303\u56f4\uff1a',
+  legendLabel: 'MPI \u98ce\u9669\u6e10\u53d8\uff08ODI \u8272\u76d8\uff09',
+  highRiskLowMpi: '\u9ad8\u98ce\u9669\uff08\u4f4e MPI\uff09',
+  lowRiskHighMpi: '\u4f4e\u98ce\u9669\uff08\u9ad8 MPI\uff09',
+  minLabel: '\u6700\u5c0f\u503c',
+  maxLabel: '\u6700\u5927\u503c',
+  meanLabel: '\u5e73\u5747\u503c',
+  hoverLabel: '\u60ac\u505c\u503c',
+  emptyMpiTitle: '\u6682\u65e0 MPI \u6570\u636e',
+  emptyMpiDesc: '\u8bf7\u9009\u62e9\u7164\u5c42\u5e76\u6267\u884c MPI \u8ba1\u7b97\u3002',
+  loadSeamsError: '\u52a0\u8f7d\u7164\u5c42\u5931\u8d25',
+  parseWorkfaceSuccessPrefix: '\u5df2\u5bfc\u5165',
+  parseWorkfaceSuccessSuffix: '\u4e2a\u5de5\u4f5c\u9762',
+  parseWorkfaceError: '\u5de5\u4f5c\u9762\u89e3\u6790\u5931\u8d25',
+  noBoreholesError: '\u5f53\u524d\u7164\u5c42\u65e0\u53ef\u7528\u94bb\u5b54\u6570\u636e',
+  computeDone: 'MPI \u70ed\u529b\u56fe\u8ba1\u7b97\u5b8c\u6210',
+  computeError: 'MPI \u8ba1\u7b97\u5931\u8d25',
+  boundsWarning: '\u5de5\u4f5c\u9762\u8303\u56f4\u8d85\u51fa MPI \u7f51\u683c\u8fb9\u754c\uff0c\u663e\u793a\u53ef\u80fd\u88ab\u88c1\u526a',
+  imageBuildError: '\u70ed\u529b\u56fe\u56fe\u50cf\u751f\u6210\u5931\u8d25',
+  imageFallbackWarning: '\u56fe\u50cf\u52a0\u8f7d\u5931\u8d25\uff0c\u5df2\u5207\u6362\u5230 Canvas \u6a21\u5f0f',
+  switchWorkfaceInfo: '\u5de5\u4f5c\u9762\u5df2\u5207\u6362\uff0c\u8bf7\u91cd\u65b0\u8ba1\u7b97 MPI \u70ed\u529b\u56fe'
+}
 
 const layerParamsCache = new LRUCache(120)
 
@@ -266,9 +320,9 @@ const onWorkfaceFile = async (event) => {
     workfaces.value = data.workfaces || []
     activeWorkfaceIndex.value = 0
     saveWorkfaces()
-    toast.add(`\u5df2\u5bfc\u5165 ${workfaces.value.length} \u4e2a\u5de5\u4f5c\u9762`, 'success')
+    toast.add(${tx.parseWorkfaceSuccessPrefix}  , 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || '\u5de5\u4f5c\u9762\u89e3\u6790\u5931\u8d25', 'error')
+    toast.add(err.response?.data?.detail || tx.parseWorkfaceError, 'error')
   }
 }
 
@@ -317,7 +371,7 @@ const loadSeams = async () => {
       seam.value = seams.value[0].name
     }
   } catch (err) {
-    toast.add('\u52a0\u8f7d\u7164\u5c42\u5931\u8d25', 'error')
+    toast.add(tx.loadSeamsError, 'error')
   }
 }
 
@@ -383,7 +437,7 @@ const handleMpiCompute = async () => {
     const { data } = await getSeamOverburden(seam.value)
     const boreholes = data.boreholes || []
     if (!boreholes.length) {
-      toast.add('\u5f53\u524d\u7164\u5c42\u65e0\u53ef\u7528\u94bb\u5b54\u6570\u636e', 'error')
+      toast.add(tx.loadSeamsError, 'error')
       return
     }
 
@@ -403,9 +457,9 @@ const handleMpiCompute = async () => {
       await refreshHeatmapImage()
     }
 
-    toast.add('MPI \u70ed\u529b\u56fe\u8ba1\u7b97\u5b8c\u6210', 'success')
+    toast.add(tx.computeDone, 'success')
   } catch (err) {
-    toast.add(err.response?.data?.detail || 'MPI \u8ba1\u7b97\u5931\u8d25', 'error')
+    toast.add(err.response?.data?.detail || tx.parseWorkfaceError, 'error')
   } finally {
     loading.value = false
   }
@@ -416,14 +470,14 @@ const validateWorkfaceBounds = (workfaceBounds, gridBounds) => {
   const outX = workfaceBounds.min_x < gridBounds.min_x || workfaceBounds.max_x > gridBounds.max_x
   const outY = workfaceBounds.min_y < gridBounds.min_y || workfaceBounds.max_y > gridBounds.max_y
   if (outX || outY) {
-    toast.add('\u5de5\u4f5c\u9762\u8303\u56f4\u8d85\u51fa MPI \u7f51\u683c\u8fb9\u754c\uff0c\u663e\u793a\u53ef\u80fd\u88ab\u88c1\u526a', 'warning')
+    toast.add(tx.boundsWarning, 'warning')
   }
 }
 
 const refreshHeatmapImage = async () => {
   if (!grid.value || !gridBounds.value) return
   try {
-    const title = activeWorkface.value?.name
+    const title = activeWorkface.value?.name ? MPI \u70ed\u529b\u56fe -  : 'MPI \u70ed\u529b\u56fe'
       ? `MPI \u70ed\u529b\u56fe - ${activeWorkface.value.name}`
       : 'MPI \u70ed\u529b\u56fe'
     const { data } = await mpiHeatmapImage({
@@ -438,14 +492,14 @@ const refreshHeatmapImage = async () => {
     })
     imageUrl.value = `data:image/png;base64,${data.image}`
   } catch (err) {
-    toast.add(err.response?.data?.detail || '\u70ed\u529b\u56fe\u56fe\u50cf\u751f\u6210\u5931\u8d25', 'error')
+    toast.add(err.response?.data?.detail || tx.parseWorkfaceError, 'error')
   }
 }
 
 const handleImageError = () => {
   if (renderMode.value !== 'image') return
   renderMode.value = 'canvas'
-  toast.add('\u56fe\u50cf\u52a0\u8f7d\u5931\u8d25\uff0c\u5df2\u5207\u6362\u5230 Canvas \u6a21\u5f0f', 'warning')
+  toast.add(tx.boundsWarning, 'warning')
 }
 
 watch(renderMode, async (value) => {
@@ -460,7 +514,7 @@ watch(activeWorkfaceIndex, () => {
   gridBounds.value = null
   imageUrl.value = ''
   stats.value = {}
-  toast.add('\u5de5\u4f5c\u9762\u5df2\u5207\u6362\uff0c\u8bf7\u91cd\u65b0\u8ba1\u7b97 MPI \u70ed\u529b\u56fe', 'info')
+  toast.add(tx.switchWorkfaceInfo, 'info')
 })
 
 onMounted(() => {
