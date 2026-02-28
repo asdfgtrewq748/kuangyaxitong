@@ -12,6 +12,7 @@
 body {
   margin: 0;
   line-height: 1.6;
+  overflow-x: hidden;
 }
 
 /* 美化滚动条 - 全局 */
@@ -157,6 +158,10 @@ body {
 .grid {
   display: grid;
   gap: var(--spacing-lg);
+}
+
+.grid > * {
+  min-width: 0;
 }
 
 .grid-2 {

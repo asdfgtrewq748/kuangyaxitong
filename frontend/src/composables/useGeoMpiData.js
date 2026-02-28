@@ -7,6 +7,7 @@ import {
   listGeomodelArtifacts,
   mpiInterpolateGeo,
 } from '../api'
+import { LRUCache } from '../lib/lruCache'
 
 const pickSeamNames = (payload) => {
   const rawItems = payload?.seams || []
@@ -125,7 +126,7 @@ export const useGeoMpiData = (state, i18n = {}) => {
   const geomodelArtifacts = ref([])
   const geomodelError = ref('')
 
-  const layerParamsCache = new Map()
+  const layerParamsCache = new LRUCache(120)
 
   const resetTiles = () => {
     metricTiles.value = createEmptyTiles()

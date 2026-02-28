@@ -203,6 +203,7 @@ import {
   parseMpiWorkfaces,
   mpiHeatmapImage
 } from '../api'
+import { LRUCache } from '../lib/lruCache'
 
 const toast = useToast()
 const seams = ref([])
@@ -222,7 +223,7 @@ const gridBounds = ref(null)
 const stats = ref({})
 const hoverInfo = ref(null)
 
-const layerParamsCache = new Map()
+const layerParamsCache = new LRUCache(120)
 
 const odiPalette = [
   '#0e7490',

@@ -241,9 +241,9 @@
               </div>
               <VirtualList
                 :items="filteredBoreholes"
-                :item-height="44"
-                :height="320"
-                :buffer="5"
+                :item-height="VIRTUAL_LIST_ITEM_HEIGHT"
+                :height="VIRTUAL_LIST_VIEWPORT_HEIGHT"
+                :buffer="virtualListBuffer"
                 key-field="name"
                 item-class="virtual-row"
               >
@@ -338,6 +338,12 @@ import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import BoreholeMap from '../components/BoreholeMap.vue'
 import VirtualList from '../components/VirtualList.vue'
+import {
+  VIRTUAL_LIST_DEFAULT_BUFFER,
+  VIRTUAL_LIST_ITEM_HEIGHT,
+  VIRTUAL_LIST_THRESHOLD,
+  VIRTUAL_LIST_VIEWPORT_HEIGHT
+} from '../constants/performance'
 import { scanBoreholes, uploadBoreholes, previewBorehole } from '../api'
 
 const toast = useToast()
@@ -352,7 +358,6 @@ const coordMode = ref('manual')
 const selectedBorehole = ref(null)
 const searchQuery = ref('')
 const clearDialogVisible = ref(false)
-const VIRTUAL_LIST_THRESHOLD = 50
 
 // 钻孔坐标数据
 const boreholes = ref([])
@@ -375,6 +380,13 @@ const filteredBoreholes = computed(() => {
 })
 
 const useVirtualList = computed(() => filteredBoreholes.value.length >= VIRTUAL_LIST_THRESHOLD)
+const virtualListBuffer = computed(() => {
+  const size = filteredBoreholes.value.length
+  if (size >= 2000) return 14
+  if (size >= 800) return 12
+  if (size >= 300) return 10
+  return VIRTUAL_LIST_DEFAULT_BUFFER
+})
 
 // 监听选中状态，同步到地图组件
 watch(selectedBorehole, (val) => {

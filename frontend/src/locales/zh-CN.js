@@ -475,6 +475,8 @@
     refreshLeaderboard: '刷新榜单',
     loadingLeaderboard: '正在计算实验榜单...',
     noLeaderboardData: '暂无实验结果，请先在科研工作台运行实验。',
+    noPaperAssets: '暂无科研稿件资产',
+    noPaperAssetsHint: '请检查后端 docs/papers 目录，或点击刷新状态重新同步。',
     topRuns: '最佳实验（{metric}）',
     model: '模型',
     value: '数值',

@@ -267,6 +267,7 @@ import {
   pressureStepsBatch,
   pressureStepsGrid
 } from '../api'
+import { LRUCache } from '../lib/lruCache'
 
 const toast = useToast()
 const { t } = useI18n()
@@ -310,7 +311,7 @@ const stepGridError = ref('')
 const stepBatchError = ref('')
 const mpiError = ref('')
 
-const layerParamsCache = new Map()
+const layerParamsCache = new LRUCache(120)
 
 const formatNumber = (value, digits = 2, suffix = '') => {
   const n = Number(value)

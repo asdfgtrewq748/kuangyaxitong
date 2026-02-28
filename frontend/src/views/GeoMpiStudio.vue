@@ -318,4 +318,29 @@ const modeLabel = (value) => {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 1024px) {
+  .card {
+    padding: var(--spacing-lg);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-actions {
+    width: 100%;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+  }
+
+  .mode-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tag {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+}
 </style>

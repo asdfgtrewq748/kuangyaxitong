@@ -404,5 +404,44 @@ onBeforeUnmount(() => {
 @media (max-width: 1280px) {
   .main-layout { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 1024px) {
+  .main-header {
+    padding: 0 var(--spacing-3);
+  }
+
+  .summary-strip {
+    padding: var(--spacing-2);
+  }
+
+  .main-layout {
+    padding: var(--spacing-2);
+  }
+}
+
+@media (max-width: 768px) {
+  .metric-row {
+    grid-template-columns: 1fr;
+  }
+
+  .chip {
+    font-size: 11px;
+  }
+
+  .card {
+    padding: var(--spacing-2);
+  }
+}
+
+@media (max-width: 420px) {
+  .summary-strip {
+    gap: 6px;
+  }
+
+  .field select,
+  .field input {
+    font-size: 12px;
+  }
+}
 </style>
 

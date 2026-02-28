@@ -475,6 +475,8 @@
     refreshLeaderboard: 'Refresh Leaderboard',
     loadingLeaderboard: 'Computing leaderboard...',
     noLeaderboardData: 'No experiment results yet. Run experiments in Research Workbench first.',
+    noPaperAssets: 'No research manuscript assets',
+    noPaperAssetsHint: 'Check backend docs/papers directory, or refresh status to sync again.',
     topRuns: 'Top Runs ({metric})',
     model: 'Model',
     value: 'Value',

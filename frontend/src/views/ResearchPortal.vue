@@ -60,9 +60,13 @@
         </div>
       </div>
 
-      <div v-if="leaderboardLoading" class="state">{{ t('researchPortal.loadingLeaderboard') }}</div>
+      <SkeletonPanel v-if="leaderboardLoading" :rows="6" />
       <div v-else-if="leaderboardError" class="state error">{{ leaderboardError }}</div>
-      <div v-else-if="!leaderboardRows.length" class="state">{{ t('researchPortal.noLeaderboardData') }}</div>
+      <EmptyState
+        v-else-if="!leaderboardRows.length"
+        :title="t('researchPortal.noLeaderboardData')"
+        :description="t('researchPortal.loadingLeaderboard')"
+      />
       <div v-else class="leaderboard-grid">
         <article class="result-card">
           <h3>{{ t('researchPortal.topRuns', { metric: leaderboardMetric }) }}</h3>
@@ -140,9 +144,15 @@
         </button>
       </div>
 
-      <div v-if="loading" class="state">{{ t('researchPortal.syncingAssets') }}</div>
+      <SkeletonPanel v-if="loading" :rows="8" />
       <div v-else-if="errorMessage" class="state error">{{ errorMessage }}</div>
-
+      <EmptyState
+        v-else-if="!papers.length"
+        :title="t('researchPortal.noPaperAssets')"
+        :description="t('researchPortal.noPaperAssetsHint')"
+        :action-label="t('researchPortal.refreshStatus')"
+        @action="loadOverview"
+      />
       <div v-else class="paper-list">
         <article v-for="paper in papers" :key="paper.paper_id" class="paper-card">
           <header class="paper-head">
@@ -219,6 +229,7 @@ import {
   researchExperimentLeaderboard,
   researchPapersOverview
 } from '../api'
+import { EmptyState, SkeletonPanel } from '../components/library'
 import { useI18n } from '../composables/useI18n'
 import { useToast } from '../composables/useToast'
 
@@ -605,6 +616,47 @@ onMounted(() => {
 
   .leaderboard-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .panel-head {
+    flex-direction: column;
+  }
+
+  .leaderboard-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .leaderboard-actions select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .paper-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .paper-meta {
+    flex-direction: column;
+    gap: var(--spacing-1);
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-copy h1 {
+    font-size: 24px;
+  }
+
+  .quick-actions .btn {
+    width: 100%;
+  }
+
+  .paper-card,
+  .result-card {
+    padding: var(--spacing-2);
   }
 }
 </style>

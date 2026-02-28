@@ -263,6 +263,7 @@ import {
   summarySteps,
   summaryStepsWorkfaces
 } from '../api'
+import { LRUCache } from '../lib/lruCache'
 
 const toast = useToast()
 const route = useRoute()
@@ -288,7 +289,7 @@ const week3Research = ref(null)
 const reportPerformance = ref(null)
 const reportCacheHit = ref(false)
 
-const layerParamsCache = new Map()
+const layerParamsCache = new LRUCache(120)
 const layerParamsPending = new Map()
 
 const formatNumber = (value, digits = 3) => {

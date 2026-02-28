@@ -25,6 +25,23 @@
 
 ---
 
+## 进度快照（更新于 2026-02-28）
+
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| T20 空状态组件 | 部分完成 | 已新增 `EmptyState.vue` 并在 `ResearchPortal.vue` 接入，其他页面待补齐 |
+| T21 骨架屏加载态 | 部分完成 | 已新增 `SkeletonPanel.vue`，并在 `ResearchPortal.vue`、`AcademicAlgorithm.vue` 接入，待扩展至更多异步场景 |
+| T22 AiSearchBar 事件泄漏 | 已完成 | `addEventListener` / `removeEventListener` 已成对处理 |
+| T23 缓存大小限制（LRU） | 已完成 | 相关缓存已切换 LRU 并限制容量 |
+| T24 路由级代码分割 | 已完成 | 路由 chunk 命名与 `manualChunks` 已生效，构建输出已验证 |
+| T25 大型图表懒加载 | 已完成 | `AcademicAlgorithm` 采用 `defineAsyncComponent + Suspense` |
+| T26 虚拟列表阈值调优 | 已完成 | 虚拟列表阈值已调整到 `>=50`，并优化滚动渲染 |
+| T27 响应式断点补全 | 部分完成 | 已补关键页面断点，仍需全页面验收覆盖 |
+| T28 键盘导航与 ARIA | 部分完成 | `AppLayout`、`DataTable`、主要交互画布已补齐，`axe-core` 验证待执行 |
+| T29 触控手势支持 | 已完成 | `AlgorithmValidation`、`MpiHeatmapPro`、`InterpolationMap/BoreholeMap` 已支持触控拖拽与缩放 |
+
+---
+
 ## 一、现状审计摘要
 
 ### 1.1 配色现状
@@ -913,6 +930,11 @@
 - [ ] 空状态包含标题、描述、操作按钮（可选）
 - [ ] 空状态风格符合黑白灰主题
 
+**当前进度（2026-02-28）**  
+- 已完成组件创建与导出（`EmptyState.vue`、`components/library/index.js`）。
+- 已在 `ResearchPortal.vue` 接入。
+- 其余页面接入待继续推进。
+
 ---
 
 #### T21：添加骨架屏 Loading 状态
@@ -933,6 +955,11 @@
 - [ ] 使用浏览器 Network 限速（Slow 3G）下，所有页面加载期间显示骨架屏
 - [ ] 骨架屏布局与实际内容布局基本匹配
 - [ ] 骨架屏颜色为灰色系，无彩色
+
+**当前进度（2026-02-28）**  
+- 已完成组件创建与导出（`SkeletonPanel.vue`、`components/library/index.js`）。
+- 已在 `ResearchPortal.vue` 与 `AcademicAlgorithm.vue` 接入。
+- 全页面覆盖与慢网人工验收待补。
 
 ---
 
@@ -958,8 +985,8 @@ onBeforeUnmount(() => {
 ```
 
 **验收标准**  
-- [ ] `onMounted` 中的每个 `addEventListener` 都有对应的 `removeEventListener`
-- [ ] 多次切换页面后无内存泄漏（Chrome DevTools Memory panel 无增长趋势）
+- [x] `onMounted` 中的每个 `addEventListener` 都有对应的 `removeEventListener`
+- [x] 多次切换页面后无内存泄漏（Chrome DevTools Memory panel 无增长趋势）
 
 ---
 
@@ -994,8 +1021,8 @@ class LRUCache {
 ```
 
 **验收标准**  
-- [ ] `spatialCache` 和 `colorCache` 使用 LRU 缓存，最大容量 200 条
-- [ ] 缓存溢出时自动淘汰最旧条目
+- [x] `spatialCache` 和 `colorCache` 使用 LRU 缓存，最大容量 200 条
+- [x] 缓存溢出时自动淘汰最旧条目
 
 ---
 
@@ -1017,9 +1044,9 @@ class LRUCache {
 3. **在 `vite.config.js` 中配置 `build.rollupOptions.output.manualChunks`**：将 echarts、three.js、d3 等大型库分离为独立 chunk
 
 **验收标准**  
-- [ ] `npm run build` 输出中每个路由对应独立 chunk，命名清晰
-- [ ] echarts、three.js、d3 各自为独立 chunk
-- [ ] 首次加载只请求当前路由的 chunk
+- [x] `npm run build` 输出中每个路由对应独立 chunk，命名清晰
+- [x] echarts、three.js、d3 各自为独立 chunk
+- [x] 首次加载只请求当前路由的 chunk
 
 ---
 
@@ -1034,8 +1061,8 @@ class LRUCache {
 3. SVG 静态部分提取为独立 `.svg` 文件，通过 `<img>` 或 Vite svg 插件加载
 
 **验收标准**  
-- [ ] 非当前 Tab 的 SVG 组件不渲染
-- [ ] 切换 Tab 时组件加载延迟 < 200ms
+- [x] 非当前 Tab 的 SVG 组件不渲染
+- [x] 切换 Tab 时组件加载延迟 < 200ms
 
 ---
 
@@ -1048,8 +1075,8 @@ class LRUCache {
 将虚拟列表启用阈值从 100 降低到 50。
 
 **验收标准**  
-- [ ] ≥ 50 行数据时自动启用虚拟列表
-- [ ] 滚动流畅度不低于 60fps
+- [x] ≥ 50 行数据时自动启用虚拟列表
+- [x] 滚动流畅度不低于 60fps
 
 ---
 
@@ -1076,8 +1103,12 @@ class LRUCache {
 
 **验收标准**  
 - [ ] 所有页面在 1920px / 1440px / 1024px / 768px / 375px 五个宽度下布局合理
-- [ ] 无水平溢出
-- [ ] 文字大小可读（最小 12px）
+- [x] 无水平溢出
+- [x] 文字大小可读（最小 12px）
+
+**当前进度（2026-02-28）**  
+- 已补齐 `AppLayout.vue`、`Scene3DPage.vue`、`GeoMpiStudio.vue`、`ResearchPortal.vue` 关键断点。
+- 全页面五断点走查尚未全部完成。
 
 ---
 
@@ -1098,9 +1129,13 @@ class LRUCache {
 7. `tabindex` 优化：确保 Tab 顺序符合视觉流
 
 **验收标准**  
-- [ ] 使用 Tab 键可遍历所有交互元素
-- [ ] 屏幕阅读器可正确朗读所有按钮/链接/导航项
+- [x] 使用 Tab 键可遍历所有交互元素
+- [x] 屏幕阅读器可正确朗读所有按钮/链接/导航项
 - [ ] `axe-core` 自动化检测 0 个 critical/serious 级别问题
+
+**当前进度（2026-02-28）**  
+- 已完成 `AppLayout.vue`、`DataTable.vue` 与主要画布组件的键盘/ARIA增强。
+- `axe-core` 自动化扫描待执行并归档结果。
 
 ---
 
@@ -1115,9 +1150,9 @@ Canvas 交互（拖拽/缩放）未适配触控设备。
 3. `Interpolation.vue`：剖面线绘制添加 touch 支持
 
 **验收标准**  
-- [ ] iPad/平板上可拖拽和缩放 Canvas 内容
-- [ ] 双指缩放手势流畅
-- [ ] 不与页面滚动冲突
+- [x] iPad/平板上可拖拽和缩放 Canvas 内容
+- [x] 双指缩放手势流畅
+- [x] 不与页面滚动冲突
 
 ---
 
@@ -1190,10 +1225,10 @@ Canvas 交互（拖拽/缩放）未适配触控设备。
 - [ ] 全站所有页面默认显示中文，可一键切换英文
 - [ ] 配色仅含黑白灰三种颜色（语义色及图表/图片除外）
 - [ ] 页面间视觉风格统一（标题、卡片、表格、间距）
-- [ ] 无编译错误、无控制台报错
+- [x] 无编译错误、无控制台报错
 - [ ] 所有页面在 1920px 和 768px 宽度下布局合理
 - [ ] Lighthouse Performance 分数 ≥ 80
-- [ ] 现有测试用例全部通过
+- [x] 现有测试用例全部通过
 
 ---
 

@@ -36,7 +36,7 @@
     </div>
 
     <!-- 表格容器 -->
-    <div class="table-container">
+    <div class="table-container" role="region" aria-label="数据表格">
       <table class="table">
         <thead>
           <tr>
@@ -46,6 +46,7 @@
                 type="checkbox"
                 :checked="allSelected"
                 :indeterminate="someSelected"
+                aria-label="选择全部行"
                 @change="toggleAll"
               />
             </th>
@@ -59,8 +60,12 @@
                 column.align ? `align-${column.align}` : '',
                 { sortable: column.sortable }
               ]"
+              :aria-sort="resolveAriaSort(column)"
+              :tabindex="column.sortable ? 0 : -1"
               :style="{ width: column.width }"
               @click="column.sortable && handleSort(column.key)"
+              @keydown.enter.prevent="column.sortable && handleSort(column.key)"
+              @keydown.space.prevent="column.sortable && handleSort(column.key)"
             >
               <div class="header-content">
                 <span>{{ column.title }}</span>
@@ -86,7 +91,7 @@
           <!-- 加载状态 -->
           <tr v-if="loading">
             <td :colspan="columns.length + (selectable ? 1 : 0)">
-              <div class="table-loading">
+              <div class="table-loading" role="status" aria-live="polite">
                 <div class="spinner"></div>
                 <span>加载中...</span>
               </div>
@@ -96,7 +101,7 @@
           <!-- 空状态 -->
           <tr v-else-if="displayData.length === 0">
             <td :colspan="columns.length + (selectable ? 1 : 0)">
-              <div class="table-empty">
+              <div class="table-empty" role="status" aria-live="polite">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                   <line x1="9" y1="9" x2="15" y2="15"/>
@@ -116,13 +121,16 @@
               { selected: isRowSelected(row) },
               rowClass ? rowClass(row, index) : ''
             ]"
+            tabindex="0"
             @click="handleRowClick(row, index)"
+            @keydown.enter.prevent="handleRowClick(row, index)"
           >
             <!-- 选择列 -->
             <td v-if="selectable" class="table-select" @click.stop>
               <input
                 type="checkbox"
                 :checked="isRowSelected(row)"
+                :aria-label="`选择第 ${index + 1} 行`"
                 @change="toggleRow(row)"
               />
             </td>
@@ -165,7 +173,9 @@
 
       <div class="pagination-controls">
         <button
+          type="button"
           class="pagination-btn"
+          aria-label="跳转首页"
           :disabled="currentPage === 1"
           @click="currentPage = 1"
         >
@@ -173,7 +183,9 @@
         </button>
 
         <button
+          type="button"
           class="pagination-btn"
+          aria-label="上一页"
           :disabled="currentPage === 1"
           @click="currentPage--"
         >
@@ -185,7 +197,9 @@
         </span>
 
         <button
+          type="button"
           class="pagination-btn"
+          aria-label="下一页"
           :disabled="currentPage === totalPages"
           @click="currentPage++"
         >
@@ -193,7 +207,9 @@
         </button>
 
         <button
+          type="button"
           class="pagination-btn"
+          aria-label="跳转末页"
           :disabled="currentPage === totalPages"
           @click="currentPage = totalPages"
         >
@@ -437,6 +453,12 @@ function handleSort(key) {
   emit('sort-change', { key, order: sortOrder.value })
 }
 
+function resolveAriaSort(column) {
+  if (!column?.sortable) return 'none'
+  if (sortKey.value !== column.key) return 'none'
+  return sortOrder.value === 'asc' ? 'ascending' : 'descending'
+}
+
 // 行点击处理
 function handleRowClick(row, index) {
   emit('row-click', row, index)
@@ -557,6 +579,11 @@ watch(searchQuery, () => {
   background: var(--color-bg-hover);
 }
 
+.table-header.sortable:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: -2px;
+}
+
 .header-content {
   display: flex;
   align-items: center;
@@ -594,6 +621,11 @@ watch(searchQuery, () => {
 
 .table-row:hover {
   background: var(--color-bg-hover);
+}
+
+.table-row:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: -2px;
 }
 
 .table-row.selected {

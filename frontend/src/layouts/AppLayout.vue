@@ -762,6 +762,54 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 640px) {
+  .sidebar {
+    width: 56px;
+  }
+
+  .main-content {
+    margin-left: 56px;
+    width: calc(100% - 56px);
+  }
+
+  .content-wrapper {
+    padding: 10px;
+  }
+
+  .nav-item {
+    width: 40px;
+    height: 40px;
+  }
+
+  .lang-toggle {
+    width: 40px;
+    height: 28px;
+  }
+
+  .workflow-head {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .workflow-track {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .workflow-step {
+    flex: 0 0 42px;
+    min-width: 42px;
+    min-height: 34px;
+  }
+
+  .ai-search-container {
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
 .ai-search-container {
   position: fixed;
   bottom: 20px;
