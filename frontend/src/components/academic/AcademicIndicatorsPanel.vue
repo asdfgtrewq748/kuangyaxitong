@@ -24,6 +24,8 @@
       <p class="algo-desc">{{ aa('rsiDesc') }}</p>
     </div>
 
+    <AlgorithmFigureAtlas :aa="aa" mode="rsi" />
+
     <div class="principle-grid">
       <div class="principle-section">
         <h4>{{ aa('rsiPhysicalTitle') }}</h4>
@@ -76,6 +78,8 @@
       <h3>{{ aa('briTitle') }}</h3>
       <p class="algo-desc">{{ aa('briDesc') }}</p>
     </div>
+
+    <AlgorithmFigureAtlas :aa="aa" mode="bri" />
 
     <div class="principle-grid">
       <div class="principle-section">
@@ -136,6 +140,8 @@
       <p class="algo-desc">{{ aa('asiDesc') }}</p>
     </div>
 
+    <AlgorithmFigureAtlas :aa="aa" mode="asi" />
+
     <div class="principle-grid">
       <div class="principle-section">
         <h4>{{ aa('asiTheoryTitle') }}</h4>
@@ -190,6 +196,8 @@
       <p class="algo-desc">{{ aa('dbnDesc') }}</p>
     </div>
 
+    <AlgorithmFigureAtlas :aa="aa" mode="dbn" />
+
     <div class="principle-grid">
       <div class="principle-section">
         <h4>{{ aa('dbnNetworkTitle') }}</h4>
@@ -242,6 +250,7 @@ import DepthRiskCurve from './DepthRiskCurve.vue'
 import AsiStressDistribution from './AsiStressDistribution.vue'
 import DbnNetworkFigure from './DbnNetworkFigure.vue'
 import DbnInferenceExample from './DbnInferenceExample.vue'
+import AlgorithmFigureAtlas from './AlgorithmFigureAtlas.vue'
 
 const emit = defineEmits(['update:active-algo', 'update:evidence'])
 
