@@ -127,6 +127,7 @@ export const algorithmStoryboards = [
   {
     key: 'rsi',
     tag: 'RSI',
+    icon: '🔬',
     nameKey: 'storyboards.rsi.name',
     inputKey: 'storyboards.rsi.input',
     processKey: 'storyboards.rsi.process',
@@ -136,6 +137,7 @@ export const algorithmStoryboards = [
   {
     key: 'bri',
     tag: 'BRI',
+    icon: '📡',
     nameKey: 'storyboards.bri.name',
     inputKey: 'storyboards.bri.input',
     processKey: 'storyboards.bri.process',
@@ -145,6 +147,7 @@ export const algorithmStoryboards = [
   {
     key: 'asi',
     tag: 'ASI',
+    icon: '📐',
     nameKey: 'storyboards.asi.name',
     inputKey: 'storyboards.asi.input',
     processKey: 'storyboards.asi.process',
@@ -154,6 +157,7 @@ export const algorithmStoryboards = [
   {
     key: 'dbn',
     tag: 'DBN',
+    icon: '🕸️',
     nameKey: 'storyboards.dbn.name',
     inputKey: 'storyboards.dbn.input',
     processKey: 'storyboards.dbn.process',

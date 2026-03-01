@@ -6,606 +6,377 @@
       :description="rw('description')"
     >
       <template #actions>
-        <div class="status-pills">
-          <span class="status-pill info">{{ rw('statusDataset') }} {{ manifest?.dataset_id || '-' }}</span>
-          <span class="status-pill" :class="splitManifest ? 'ok' : 'idle'">{{ rw('statusSplit') }} {{ splitManifest?.split_id || '-' }}</span>
-          <span class="status-pill" :class="displayResult ? 'ok' : 'idle'">{{ rw('statusExperiment') }} {{ displayResult?.exp_id || '-' }}</span>
+        <div class="workflow-status">
+          <span class="status-pill" :class="{ active: currentStep === 0, complete: stepComplete[0] }">
+            <span class="step-num">1</span> {{ rw('stepRegister') }}
+          </span>
+          <span class="status-pill" :class="{ active: currentStep === 1, complete: stepComplete[1] }">
+            <span class="step-num">2</span> {{ rw('stepSplit') }}
+          </span>
+          <span class="status-pill" :class="{ active: currentStep === 2, complete: stepComplete[2] }">
+            <span class="step-num">3</span> {{ rw('stepExperiment') }}
+          </span>
+          <span class="status-pill" :class="{ active: currentStep === 3, complete: stepComplete[3] }">
+            <span class="step-num">4</span> {{ rw('stepResults') }}
+          </span>
         </div>
       </template>
     </PageHeader>
 
-    <section class="grid grid-2">
-      <article class="card panel">
-        <div class="panel-head">
-          <h2>{{ rw('section1Title') }}</h2>
-          <span class="tip">{{ rw('section1Tip') }}</span>
-        </div>
-        <div class="form-grid">
-          <label>
-            <span>{{ rw('datasetId') }}</span>
-            <input v-model.trim="registerForm.dataset_id" class="input" :placeholder="rw('placeholderDatasetId')" />
-          </label>
-          <label>
-            <span>{{ rw('labelColumn') }}</span>
-            <input v-model.trim="registerForm.label_column" class="input" :placeholder="rw('placeholderLabelColumn')" />
-          </label>
-          <label>
-            <span>{{ rw('positiveValuesComma') }}</span>
-            <input v-model.trim="registerForm.positive_values" class="input" :placeholder="rw('placeholderPositiveValues')" />
-          </label>
-          <label>
-            <span>{{ rw('eventDefinition') }}</span>
-            <input v-model.trim="registerForm.event_definition" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('timeWindowHours') }}</span>
-            <input v-model.number="registerForm.time_window_hours" type="number" min="1" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('thresholdOptional') }}</span>
-            <input v-model.trim="registerForm.threshold" class="input" :placeholder="rw('placeholderThreshold')" />
-          </label>
-          <label class="full">
-            <span>{{ rw('descriptionLabel') }}</span>
-            <textarea v-model.trim="registerForm.description" class="input textarea" rows="3" :placeholder="rw('placeholderDescription')"></textarea>
-          </label>
-        </div>
-        <div class="actions">
-          <button class="btn" :disabled="busy.register || !registerForm.dataset_id || !registerForm.label_column" @click="registerDataset">
-            {{ busy.register ? rw('registering') : rw('registerDataset') }}
-          </button>
-        </div>
-      </article>
+    <!-- Workflow Progress Bar -->
+    <div class="workflow-progress">
+      <div class="progress-track">
+        <div
+          class="progress-fill"
+          :style="{ width: progressWidth + '%' }"
+        ></div>
+      </div>
+      <div class="progress-labels">
+        <span v-for="(label, i) in workflowSteps" :key="i" :class="{ active: currentStep === i }">
+          {{ label }}
+        </span>
+      </div>
+    </div>
 
-      <article class="card panel">
-        <div class="panel-head">
-          <h2>{{ rw('section2Title') }}</h2>
-          <span class="tip">{{ rw('section2Tip') }}</span>
-        </div>
-        <div class="lookup-row">
-          <input v-model.trim="datasetQueryId" class="input" :placeholder="rw('placeholderQueryManifest')" />
-          <button class="btn secondary" :disabled="busy.loadDataset || !datasetQueryId" @click="loadDataset">
-            {{ busy.loadDataset ? rw('querying') : rw('query') }}
-          </button>
-        </div>
-
-        <div v-if="manifest" class="manifest-stats">
-          <StatCard :title="rw('version')" :value="manifest.dataset_version" size="sm" />
-          <StatCard :title="rw('rowCount')" :value="manifest.row_count" size="sm" />
-          <StatCard :title="rw('columnCount')" :value="manifest.column_count" size="sm" />
-          <StatCard :title="rw('file')" :value="manifest.dataset_file" size="sm" />
-        </div>
-
-        <div class="form-grid">
-          <label>
-            <span>{{ rw('strategy') }}</span>
-            <select v-model="splitForm.strategy">
-              <option value="time_borehole_block">time_borehole_block</option>
-              <option value="borehole_block">borehole_block</option>
-              <option value="time_block">time_block</option>
-              <option value="random">random</option>
-            </select>
-          </label>
-          <label>
-            <span>{{ rw('trainRatio') }}</span>
-            <input v-model.number="splitForm.train_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('valRatio') }}</span>
-            <input v-model.number="splitForm.val_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('testRatio') }}</span>
-            <input v-model.number="splitForm.test_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('timeColumnOptional') }}</span>
-            <input v-model.trim="splitForm.time_column" class="input" :placeholder="rw('placeholderTimeColumn')" />
-          </label>
-          <label>
-            <span>{{ rw('boreholeColumnOptional') }}</span>
-            <input v-model.trim="splitForm.borehole_column" class="input" :placeholder="rw('placeholderBoreholeColumn')" />
-          </label>
-          <label>
-            <span>{{ rw('seed') }}</span>
-            <input v-model.number="splitForm.seed" type="number" class="input" />
-          </label>
-        </div>
-
-        <div class="actions">
-          <button class="btn" :disabled="busy.split || !targetDatasetId" @click="splitDataset">
-            {{ busy.split ? rw('splitting') : rw('executeSplit') }}
-          </button>
-        </div>
-
-        <div v-if="splitManifest" class="split-summary">
-          <div class="summary-grid">
-            <div><span>{{ rw('train') }}</span><strong>{{ splitManifest.counts?.train ?? 0 }}</strong></div>
-            <div><span>{{ rw('val') }}</span><strong>{{ splitManifest.counts?.val ?? 0 }}</strong></div>
-            <div><span>{{ rw('test') }}</span><strong>{{ splitManifest.counts?.test ?? 0 }}</strong></div>
+    <!-- Step Content -->
+    <transition name="step-fade" mode="out-in">
+      <!-- Step 1: Dataset Registration -->
+      <section v-if="currentStep === 0" :key="'step-register'" class="workflow-step">
+        <div class="step-header">
+          <div class="step-info">
+            <h2>{{ rw('stepRegister') }}</h2>
+            <p>{{ rw('stepRegisterDesc') }}</p>
           </div>
-          <div class="leakage" :class="hasLeakage ? 'warn' : 'safe'">
-            <span>{{ rw('leakageAudit') }}</span>
-            <b v-if="hasLeakage">
-              train-val {{ splitManifest.leakage_audit?.overlap?.boreholes_train_val || 0 }},
-              train-test {{ splitManifest.leakage_audit?.overlap?.boreholes_train_test || 0 }},
-              val-test {{ splitManifest.leakage_audit?.overlap?.boreholes_val_test || 0 }}
-            </b>
-            <b v-else>{{ rw('noLeakage') }}</b>
+          <div class="step-status">
+            <span class="status-badge" :class="manifest ? 'ok' : 'idle'">
+              {{ manifest ? rw('statusRegistered') : rw('statusPending') }}
+            </span>
           </div>
         </div>
-      </article>
-    </section>
 
-    <section class="grid grid-2">
-      <article class="card panel">
-        <div class="panel-head">
-          <h2>{{ rw('section3Title') }}</h2>
-          <span class="tip">{{ rw('section3Tip') }}</span>
-        </div>
-        <div class="form-grid">
-          <label>
-            <span>{{ rw('datasetId') }}</span>
-            <input v-model.trim="experimentForm.dataset_id" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('datasetVersion') }}</span>
-            <input v-model.trim="experimentForm.dataset_version" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('splitId') }}</span>
-            <input v-model.trim="experimentForm.split_id" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('experimentName') }}</span>
-            <input v-model.trim="experimentForm.experiment_name" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('modelType') }}</span>
-            <select v-model="experimentForm.model_type">
-              <option value="baseline">baseline</option>
-              <option value="rsi_phase_field">rsi_phase_field</option>
-              <option value="asi_ust">asi_ust</option>
-              <option value="geomodel_aware">geomodel_aware</option>
-              <option value="geomodel_ablation">geomodel_ablation</option>
-              <option value="hybrid_augmented">hybrid_augmented</option>
-              <option value="pinchout_sensitive">pinchout_sensitive</option>
-              <option value="pinchout_no_zoning">pinchout_no_zoning</option>
-              <option value="rk_enhanced">rk_enhanced</option>
-              <option value="kriging_baseline">kriging_baseline</option>
-              <option value="custom">custom</option>
-            </select>
-          </label>
-          <label>
-            <span>{{ rw('targetLabelColumnOptional') }}</span>
-            <input v-model.trim="experimentForm.target_label_column" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('metricsComma') }}</span>
-            <input v-model.trim="experimentForm.metrics" class="input" />
-          </label>
-          <label>
-            <span>{{ rw('seed') }}</span>
-            <input v-model.number="experimentForm.seed" type="number" class="input" />
-          </label>
-        </div>
-        <div class="actions">
-          <button
-            class="btn"
-            :disabled="busy.runExperiment || !canRunExperiment"
-            @click="runExperiment"
-          >
-            {{ busy.runExperiment ? rw('running') : rw('runExperiment') }}
-          </button>
-        </div>
-      </article>
-
-      <article class="card panel">
-        <div class="panel-head">
-          <h2>{{ rw('section4Title') }}</h2>
-          <span class="tip">{{ rw('section4Tip') }}</span>
-        </div>
-        <div class="lookup-row">
-          <select v-model="selectedTemplate" :aria-label="rw('section4Title')">
-            <option v-for="name in templateNames" :key="name" :value="name">{{ name }}</option>
-          </select>
-          <button class="btn secondary" :disabled="busy.loadTemplates" @click="loadTemplates">
-            {{ busy.loadTemplates ? rw('refreshing') : rw('refreshTemplate') }}
-          </button>
-        </div>
-        <SkeletonPanel v-if="busy.loadTemplates" :rows="4" compact />
-        <div class="template-preview" v-else-if="templateSteps.length">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>{{ rw('experimentName') }}</th>
-                <th>{{ rw('modelType') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in templateSteps" :key="`${item.experiment_name}-${item.model_type}`">
-                <td>{{ item.experiment_name }}</td>
-                <td>{{ item.model_type }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <EmptyState
-          v-else
-          :title="rw('emptyTemplatesTitle')"
-          :description="rw('emptyTemplatesDesc')"
-          :action-label="rw('refreshTemplate')"
-          @action="loadTemplates"
-        />
-        <div class="actions">
-          <button
-            class="btn"
-            :disabled="busy.runSuite || !canRunSuite || !selectedTemplate"
-            @click="runSuite"
-          >
-            {{ busy.runSuite ? rw('running') : rw('runTemplateExperiment') }}
-          </button>
-        </div>
-        <div v-if="suiteResult" class="suite-summary">
-          <div class="meta-item">{{ rw('suiteId') }}: <b>{{ suiteResult.suite_id }}</b></div>
-          <div class="meta-item">{{ rw('runs') }}: <b>{{ suiteResult.runs?.length || 0 }}</b></div>
-        </div>
-      </article>
-    </section>
-
-    <section class="card panel">
-      <div class="panel-head">
-        <h2>{{ rw('section5Title') }}</h2>
-        <span class="tip">{{ rw('section5Tip') }}</span>
-      </div>
-      <div class="lookup-row">
-        <input v-model.trim="resultQueryExpId" class="input" :placeholder="rw('placeholderQueryExpId')" />
-        <button class="btn secondary" :disabled="busy.loadResult || !resultQueryExpId" @click="loadExperimentResult">
-          {{ busy.loadResult ? rw('querying') : rw('queryResult') }}
-        </button>
-        <button class="btn secondary" :disabled="busy.loadArtifacts || !resultQueryExpId" @click="loadArtifacts">
-          {{ busy.loadArtifacts ? rw('querying') : rw('queryArtifacts') }}
-        </button>
-        <button class="btn secondary" :disabled="busy.exportEvidence || (!displayResult && !comparisonRows.length)" @click="exportEvidenceBundle">
-          {{ busy.exportEvidence ? rw('packing') : rw('exportEvidenceZip') }}
-        </button>
-      </div>
-
-      <SkeletonPanel v-if="busy.loadResult" :rows="7" />
-
-      <template v-else-if="displayResult">
-        <div class="result-grid">
-          <article class="result-card">
-            <h3>{{ rw('keyMetrics') }}</h3>
-            <div class="metric-grid">
-              <div v-for="[name, value] in metricEntries" :key="name" class="metric-item">
-                <span>{{ name }}</span>
-                <b>{{ formatNumber(value, 6) }}</b>
-              </div>
-            </div>
-          </article>
-
-          <article class="result-card">
-            <h3>{{ rw('ci95') }}</h3>
-            <table class="table compact">
-              <thead>
-                <tr>
-                  <th>{{ rw('metric') }}</th>
-                  <th>{{ rw('low') }}</th>
-                  <th>{{ rw('high') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="[name, range] in ciEntries" :key="name">
-                  <td>{{ name }}</td>
-                  <td>{{ formatNumber(range?.[0], 6) }}</td>
-                  <td>{{ formatNumber(range?.[1], 6) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </article>
+        <div class="card panel-main">
+          <div class="form-grid">
+            <label>
+              <span>{{ rw('datasetId') }}</span>
+              <input v-model.trim="registerForm.dataset_id" class="input" :placeholder="rw('placeholderDatasetId')" />
+            </label>
+            <label>
+              <span>{{ rw('labelColumn') }}</span>
+              <input v-model.trim="registerForm.label_column" class="input" :placeholder="rw('placeholderLabelColumn')" />
+            </label>
+            <label>
+              <span>{{ rw('positiveValuesComma') }}</span>
+              <input v-model.trim="registerForm.positive_values" class="input" :placeholder="rw('placeholderPositiveValues')" />
+            </label>
+            <label>
+              <span>{{ rw('eventDefinition') }}</span>
+              <input v-model.trim="registerForm.event_definition" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('timeWindowHours') }}</span>
+              <input v-model.number="registerForm.time_window_hours" type="number" min="1" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('thresholdOptional') }}</span>
+              <input v-model.trim="registerForm.threshold" class="input" :placeholder="rw('placeholderThreshold')" />
+            </label>
+            <label class="full">
+              <span>{{ rw('descriptionLabel') }}</span>
+              <textarea v-model.trim="registerForm.description" class="input textarea" rows="3" :placeholder="rw('placeholderDescription')"></textarea>
+            </label>
+          </div>
+          <div class="step-actions">
+            <button class="btn primary" :disabled="busy.register || !registerForm.dataset_id || !registerForm.label_column" @click="registerDataset">
+              <span v-if="busy.register" class="spinner sm"></span>
+              {{ busy.register ? rw('registering') : rw('registerDataset') }}
+            </button>
+            <button class="btn secondary" :disabled="!manifest" @click="currentStep = 1">
+              {{ rw('nextStep') }} →
+            </button>
+          </div>
         </div>
 
-        <div class="result-grid">
-          <article class="result-card">
-            <h3>{{ rw('calibrationReport') }}</h3>
-            <div class="meta-row">
-              <span>ECE: <b>{{ formatNumber(displayResult.calibration?.ece, 6) }}</b></span>
-              <span>MCE: <b>{{ formatNumber(displayResult.calibration?.mce, 6) }}</b></span>
-              <span>{{ rw('bins') }}: <b>{{ displayResult.calibration?.bin_count ?? 0 }}</b></span>
-            </div>
-            <table class="table compact">
-              <thead>
-                <tr>
-                  <th>{{ rw('bin') }}</th>
-                  <th>{{ rw('count') }}</th>
-                  <th>{{ rw('acc') }}</th>
-                  <th>{{ rw('conf') }}</th>
-                  <th>{{ rw('gap') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in (displayResult.calibration?.bins || []).slice(0, 10)" :key="item.bin">
-                  <td>{{ item.bin }}</td>
-                  <td>{{ item.count }}</td>
-                  <td>{{ formatNumber(item.acc, 4) }}</td>
-                  <td>{{ formatNumber(item.conf, 4) }}</td>
-                  <td>{{ formatNumber(item.gap, 4) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </article>
-
-          <article class="result-card">
-            <h3>{{ rw('traceability') }}</h3>
-            <div class="trace-row">
-              <span>{{ rw('datasetManifest') }}</span>
-              <code>{{ displayResult.traceability?.dataset_manifest || '-' }}</code>
-            </div>
-            <div class="trace-row">
-              <span>{{ rw('splitManifest') }}</span>
-              <code>{{ displayResult.traceability?.split_manifest || '-' }}</code>
-            </div>
-            <div class="trace-row">
-              <span>{{ rw('createdAt') }}</span>
-              <code>{{ displayResult.created_at || '-' }}</code>
-            </div>
-          </article>
-        </div>
-      </template>
-
-      <EmptyState
-        v-else
-        :title="rw('emptyResultTitle')"
-        :description="rw('emptyResultDesc')"
-      />
-
-      <SkeletonPanel v-if="busy.loadArtifacts" :rows="5" compact />
-
-      <article v-else-if="artifacts.length" class="result-card">
-        <h3>{{ rw('artifacts') }}</h3>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>{{ rw('name') }}</th>
-              <th>{{ rw('size') }}</th>
-              <th>{{ rw('path') }}</th>
-              <th>{{ rw('action') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in artifacts" :key="item.path">
-              <td>{{ item.name }}</td>
-              <td>{{ formatBytes(item.size_bytes) }}</td>
-              <td><code>{{ item.path }}</code></td>
-              <td>
-                <button
-                  class="btn secondary btn-inline"
-                  :disabled="busy.downloadArtifact && downloadingArtifactName === item.name"
-                  @click="downloadArtifact(item)"
-                >
-                  {{ busy.downloadArtifact && downloadingArtifactName === item.name ? rw('downloading') : rw('download') }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </article>
-
-      <EmptyState
-        v-else-if="resultQueryExpId"
-        :title="rw('emptyArtifactsTitle')"
-        :description="rw('emptyArtifactsDesc')"
-        :action-label="rw('queryArtifacts')"
-        @action="loadArtifacts"
-      />
-    </section>
-
-    <section class="card panel">
-      <div class="panel-head">
-        <h2>{{ rw('section6Title') }}</h2>
-        <span class="tip">{{ rw('section6Tip') }}</span>
-      </div>
-      <label class="compare-label">
-        <span>{{ rw('expIdList') }}</span>
-        <textarea
-          v-model.trim="compareExpIdsText"
-          class="input textarea"
-          rows="4"
-          placeholder="exp_20260208_120000_xxxxxx, exp_20260208_120500_yyyyyy"
-        ></textarea>
-      </label>
-      <div class="actions actions-split">
-        <button class="btn" :disabled="busy.compare" @click="loadComparison">
-          {{ busy.compare ? rw('loading') : rw('loadComparison') }}
-        </button>
-        <button class="btn secondary" :disabled="!comparisonRows.length" @click="exportComparisonCsv">
-          {{ rw('exportCsv') }}
-        </button>
-        <button class="btn secondary" :disabled="!comparisonRows.length" @click="exportComparisonJson">
-          {{ rw('exportJson') }}
-        </button>
-      </div>
-
-      <SkeletonPanel v-if="busy.compare" :rows="6" />
-
-      <div v-if="comparisonRows.length" class="viz-controls">
-        <label>
-          <span>{{ rw('visualMetric') }}</span>
-          <select v-model="compareVizMetric">
-            <option v-for="metric in comparisonMetricOrder" :key="`viz-${metric}`" :value="metric">{{ metric }}</option>
-          </select>
-        </label>
-      </div>
-
-      <div v-if="comparisonPointChart" class="result-grid">
-        <article class="result-card">
-          <h3>{{ rw('comparisonDistWithCi', { metric: compareVizMetric }) }}</h3>
-          <svg class="compare-svg" :viewBox="`0 0 ${comparisonPointChart.width} ${comparisonPointChart.height}`" preserveAspectRatio="none">
-            <rect
-              :x="comparisonPointChart.margin.left"
-              :y="comparisonPointChart.margin.top"
-              :width="comparisonPointChart.plotWidth"
-              :height="comparisonPointChart.plotHeight"
-              fill="#f8fafc"
-              stroke="#e2e8f0"
-            />
-            <g v-for="tick in comparisonPointChart.ticks" :key="`tick-${tick}`">
-              <line
-                :x1="comparisonPointChart.scaleX(tick)"
-                :x2="comparisonPointChart.scaleX(tick)"
-                :y1="comparisonPointChart.margin.top"
-                :y2="comparisonPointChart.margin.top + comparisonPointChart.plotHeight"
-                stroke="#cbd5e1"
-                stroke-dasharray="3 3"
-              />
-              <text
-                :x="comparisonPointChart.scaleX(tick)"
-                :y="comparisonPointChart.height - 8"
-                text-anchor="middle"
-                class="axis-label"
-              >
-                {{ formatNumber(tick, 4) }}
-              </text>
-            </g>
-            <g v-for="row in comparisonPointChart.rows" :key="`pt-${row.exp_id}`">
-              <line
-                v-if="row.hasCi"
-                :x1="comparisonPointChart.scaleX(row.ciLow)"
-                :x2="comparisonPointChart.scaleX(row.ciHigh)"
-                :y1="row.y"
-                :y2="row.y"
-                stroke="#64748b"
-                stroke-width="1.5"
-              />
-              <circle
-                :cx="comparisonPointChart.scaleX(row.value)"
-                :cy="row.y"
-                r="4.5"
-                :fill="row.isChampion ? '#0f766e' : '#0e7490'"
-              />
-              <text
-                :x="comparisonPointChart.margin.left - 6"
-                :y="row.y + 4"
-                text-anchor="end"
-                class="axis-label left"
-              >
-                {{ row.shortExpId }}
-              </text>
-            </g>
+        <div v-if="manifest" class="success-card">
+          <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
           </svg>
-        </article>
+          <div>
+            <h3>{{ rw('datasetRegistered') }}</h3>
+            <p>{{ rw('datasetId') }}: <strong>{{ manifest.dataset_id }}</strong></p>
+          </div>
+        </div>
+      </section>
 
-        <article class="result-card" v-if="comparisonModelBarChart">
-          <h3>{{ rw('modelMeanBar', { metric: compareVizMetric }) }}</h3>
-          <svg class="compare-svg" :viewBox="`0 0 ${comparisonModelBarChart.width} ${comparisonModelBarChart.height}`" preserveAspectRatio="none">
-            <rect
-              :x="comparisonModelBarChart.margin.left"
-              :y="comparisonModelBarChart.margin.top"
-              :width="comparisonModelBarChart.plotWidth"
-              :height="comparisonModelBarChart.plotHeight"
-              fill="#f8fafc"
-              stroke="#e2e8f0"
-            />
-            <g v-for="bar in comparisonModelBarChart.rows" :key="`bar-${bar.model_type}`">
-              <rect
-                :x="comparisonModelBarChart.margin.left"
-                :y="bar.y - bar.height / 2"
-                :width="comparisonModelBarChart.scaleX(bar.value) - comparisonModelBarChart.margin.left"
-                :height="bar.height"
-                rx="6"
-                fill="#0f766e"
-                opacity="0.88"
-              />
-              <text :x="comparisonModelBarChart.margin.left - 8" :y="bar.y + 4" text-anchor="end" class="axis-label left">
-                {{ bar.model_type }}
-              </text>
-              <text :x="comparisonModelBarChart.scaleX(bar.value) + 6" :y="bar.y + 4" class="axis-label">
-                {{ formatNumber(bar.value, 4) }}
-              </text>
-            </g>
-          </svg>
-        </article>
-      </div>
+      <!-- Step 2: Dataset Split -->
+      <section v-else-if="currentStep === 1" :key="'step-split'" class="workflow-step">
+        <div class="step-header">
+          <div class="step-info">
+            <h2>{{ rw('stepSplit') }}</h2>
+            <p>{{ rw('stepSplitDesc') }}</p>
+          </div>
+          <div class="step-status">
+            <span class="status-badge" :class="splitManifest ? 'ok' : 'idle'">
+              {{ splitManifest ? rw('statusSplit') : rw('statusPending') }}
+            </span>
+          </div>
+        </div>
 
-      <div v-if="comparisonRows.length" class="result-card">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>{{ rw('expId') }}</th>
-              <th>{{ rw('modelType') }}</th>
-              <th v-for="metric in comparisonMetricOrder" :key="`head-${metric}`">{{ metric }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in comparisonRows" :key="row.exp_id">
-              <td><code>{{ row.exp_id }}</code></td>
-              <td>{{ row.spec?.model_type || '-' }}</td>
-              <td v-for="metric in comparisonMetricOrder" :key="`${row.exp_id}-${metric}`">
-                <span :class="{ best: isBestMetricValue(metric, row.metrics?.[metric]) }">
-                  {{ formatNumber(row.metrics?.[metric], 6) }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="card panel-main">
+          <div class="lookup-row">
+            <input v-model.trim="datasetQueryId" class="input" :placeholder="rw('placeholderQueryManifest')" />
+            <button class="btn secondary" :disabled="busy.loadDataset || !datasetQueryId" @click="loadDataset">
+              {{ busy.loadDataset ? rw('querying') : rw('query') }}
+            </button>
+          </div>
 
-      <div v-if="comparisonModelRows.length" class="result-card">
-        <h3>{{ rw('aggregateByModel') }}</h3>
-        <table class="table compact">
-          <thead>
-            <tr>
-              <th>{{ rw('modelType') }}</th>
-              <th>{{ rw('samples') }}</th>
-              <th v-for="metric in comparisonMetricOrder" :key="`model-head-${metric}`">{{ metric }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in comparisonModelRows" :key="row.model_type">
-              <td>{{ row.model_type }}</td>
-              <td>{{ row.sample_count }}</td>
-              <td v-for="metric in comparisonMetricOrder" :key="`model-${row.model_type}-${metric}`">
-                {{ formatNumber(row.metrics?.[metric], 6) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          <div v-if="manifest" class="manifest-stats">
+            <StatCard :title="rw('version')" :value="manifest.dataset_version" size="sm" />
+            <StatCard :title="rw('rowCount')" :value="manifest.row_count" size="sm" />
+            <StatCard :title="rw('columnCount')" :value="manifest.column_count" size="sm" />
+            <StatCard :title="rw('file')" :value="manifest.dataset_file" size="sm" />
+          </div>
 
-      <div v-if="comparisonChampionRows.length" class="result-card">
-        <h3>{{ rw('metricChampions') }}</h3>
-        <table class="table compact">
-          <thead>
-            <tr>
-              <th>{{ rw('metric') }}</th>
-              <th>{{ rw('bestValue') }}</th>
-              <th>{{ rw('expId') }}</th>
-              <th>{{ rw('modelType') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in comparisonChampionRows" :key="`champion-${item.metric}`">
-              <td>{{ item.metric }}</td>
-              <td>{{ formatNumber(item.value, 6) }}</td>
-              <td><code>{{ item.exp_id }}</code></td>
-              <td>{{ item.model_type }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          <div class="form-grid">
+            <label>
+              <span>{{ rw('strategy') }}</span>
+              <select v-model="splitForm.strategy">
+                <option value="time_borehole_block">time_borehole_block</option>
+                <option value="borehole_block">borehole_block</option>
+                <option value="time_block">time_block</option>
+                <option value="random">random</option>
+              </select>
+            </label>
+            <label>
+              <span>{{ rw('trainRatio') }}</span>
+              <input v-model.number="splitForm.train_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('valRatio') }}</span>
+              <input v-model.number="splitForm.val_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('testRatio') }}</span>
+              <input v-model.number="splitForm.test_ratio" type="number" step="0.05" min="0.05" max="0.95" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('timeColumnOptional') }}</span>
+              <input v-model.trim="splitForm.time_column" class="input" :placeholder="rw('placeholderTimeColumn')" />
+            </label>
+            <label>
+              <span>{{ rw('boreholeColumnOptional') }}</span>
+              <input v-model.trim="splitForm.borehole_column" class="input" :placeholder="rw('placeholderBoreholeColumn')" />
+            </label>
+            <label>
+              <span>{{ rw('seed') }}</span>
+              <input v-model.number="splitForm.seed" type="number" class="input" />
+            </label>
+          </div>
 
-      <EmptyState
-        v-if="!busy.compare && !comparisonRows.length"
-        :title="rw('emptyComparisonTitle')"
-        :description="rw('emptyComparisonDesc')"
-      />
-    </section>
+          <div class="step-actions">
+            <button class="btn secondary" @click="currentStep = 0">
+              ← {{ rw('prevStep') }}
+            </button>
+            <button class="btn primary" :disabled="busy.split || !targetDatasetId" @click="splitDataset">
+              <span v-if="busy.split" class="spinner sm"></span>
+              {{ busy.split ? rw('splitting') : rw('executeSplit') }}
+            </button>
+            <button class="btn secondary" :disabled="!splitManifest" @click="currentStep = 2">
+              {{ rw('nextStep') }} →
+            </button>
+          </div>
+
+          <div v-if="splitManifest" class="split-summary">
+            <div class="summary-grid">
+              <div><span>{{ rw('train') }}</span><strong>{{ splitManifest.counts?.train ?? 0 }}</strong></div>
+              <div><span>{{ rw('val') }}</span><strong>{{ splitManifest.counts?.val ?? 0 }}</strong></div>
+              <div><span>{{ rw('test') }}</span><strong>{{ splitManifest.counts?.test ?? 0 }}</strong></div>
+            </div>
+            <div class="leakage" :class="hasLeakage ? 'warn' : 'safe'">
+              <span>{{ rw('leakageAudit') }}</span>
+              <b v-if="hasLeakage">
+                train-val {{ splitManifest.leakage_audit?.overlap?.boreholes_train_val || 0 }},
+                train-test {{ splitManifest.leakage_audit?.overlap?.boreholes_train_test || 0 }},
+                val-test {{ splitManifest.leakage_audit?.overlap?.boreholes_val_test || 0 }}
+              </b>
+              <b v-else>{{ rw('noLeakage') }}</b>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Run Experiment -->
+      <section v-else-if="currentStep === 2" :key="'step-experiment'" class="workflow-step">
+        <div class="step-header">
+          <div class="step-info">
+            <h2>{{ rw('stepExperiment') }}</h2>
+            <p>{{ rw('stepExperimentDesc') }}</p>
+          </div>
+          <div class="step-status">
+            <span class="status-badge" :class="experimentResult ? 'ok' : 'idle'">
+              {{ experimentResult ? rw('statusCompleted') : rw('statusPending') }}
+            </span>
+          </div>
+        </div>
+
+        <div class="card panel-main">
+          <div class="form-grid">
+            <label>
+              <span>{{ rw('datasetId') }}</span>
+              <input v-model.trim="experimentForm.dataset_id" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('datasetVersion') }}</span>
+              <input v-model.trim="experimentForm.dataset_version" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('splitId') }}</span>
+              <input v-model.trim="experimentForm.split_id" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('experimentName') }}</span>
+              <input v-model.trim="experimentForm.experiment_name" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('modelType') }}</span>
+              <select v-model="experimentForm.model_type">
+                <option value="baseline">baseline</option>
+                <option value="rsi_phase_field">rsi_phase_field</option>
+                <option value="asi_ust">asi_ust</option>
+                <option value="geomodel_aware">geomodel_aware</option>
+                <option value="geomodel_ablation">geomodel_ablation</option>
+                <option value="hybrid_augmented">hybrid_augmented</option>
+                <option value="pinchout_sensitive">pinchout_sensitive</option>
+                <option value="pinchout_no_zoning">pinchout_no_zoning</option>
+                <option value="rk_enhanced">rk_enhanced</option>
+                <option value="kriging_baseline">kriging_baseline</option>
+                <option value="custom">custom</option>
+              </select>
+            </label>
+            <label>
+              <span>{{ rw('targetLabelColumnOptional') }}</span>
+              <input v-model.trim="experimentForm.target_label_column" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('metricsComma') }}</span>
+              <input v-model.trim="experimentForm.metrics" class="input" />
+            </label>
+            <label>
+              <span>{{ rw('seed') }}</span>
+              <input v-model.number="experimentForm.seed" type="number" class="input" />
+            </label>
+          </div>
+
+          <div class="step-actions">
+            <button class="btn secondary" @click="currentStep = 1">
+              ← {{ rw('prevStep') }}
+            </button>
+            <button class="btn primary" :disabled="busy.runExperiment || !canRunExperiment" @click="runExperiment">
+              <span v-if="busy.runExperiment" class="spinner sm"></span>
+              {{ busy.runExperiment ? rw('running') : rw('runExperiment') }}
+            </button>
+            <button class="btn secondary" :disabled="!experimentResult" @click="currentStep = 3">
+              {{ rw('nextStep') }} →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 4: Results -->
+      <section v-else-if="currentStep === 3" :key="'step-results'" class="workflow-step">
+        <div class="step-header">
+          <div class="step-info">
+            <h2>{{ rw('stepResults') }}</h2>
+            <p>{{ rw('stepResultsDesc') }}</p>
+          </div>
+        </div>
+
+        <div class="card panel-main">
+          <div class="lookup-row">
+            <input v-model.trim="resultQueryExpId" class="input" :placeholder="rw('placeholderQueryExpId')" />
+            <button class="btn secondary" :disabled="busy.loadResult || !resultQueryExpId" @click="loadExperimentResult">
+              {{ busy.loadResult ? rw('querying') : rw('queryResult') }}
+            </button>
+            <button class="btn secondary" :disabled="busy.loadArtifacts || !resultQueryExpId" @click="loadArtifacts">
+              {{ busy.loadArtifacts ? rw('querying') : rw('queryArtifacts') }}
+            </button>
+          </div>
+
+          <SkeletonPanel v-if="busy.loadResult" :rows="7" />
+
+          <template v-else-if="displayResult">
+            <div class="result-grid">
+              <article class="result-card">
+                <h3>{{ rw('keyMetrics') }}</h3>
+                <div class="metric-grid">
+                  <div v-for="[name, value] in metricEntries" :key="name" class="metric-item">
+                    <span>{{ name }}</span>
+                    <b>{{ formatNumber(value, 6) }}</b>
+                  </div>
+                </div>
+              </article>
+
+              <article class="result-card">
+                <h3>{{ rw('ci95') }}</h3>
+                <table class="table compact">
+                  <thead>
+                    <tr>
+                      <th>{{ rw('metric') }}</th>
+                      <th>{{ rw('low') }}</th>
+                      <th>{{ rw('high') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="[name, range] in ciEntries" :key="name">
+                      <td>{{ name }}</td>
+                      <td>{{ formatNumber(range?.[0], 6) }}</td>
+                      <td>{{ formatNumber(range?.[1], 6) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </article>
+            </div>
+
+            <div class="result-grid">
+              <article class="result-card">
+                <h3>{{ rw('traceability') }}</h3>
+                <div class="trace-row">
+                  <span>{{ rw('datasetManifest') }}</span>
+                  <code>{{ displayResult.traceability?.dataset_manifest || '-' }}</code>
+                </div>
+                <div class="trace-row">
+                  <span>{{ rw('splitManifest') }}</span>
+                  <code>{{ displayResult.traceability?.split_manifest || '-' }}</code>
+                </div>
+                <div class="trace-row">
+                  <span>{{ rw('createdAt') }}</span>
+                  <code>{{ displayResult.created_at || '-' }}</code>
+                </div>
+              </article>
+            </div>
+          </template>
+
+          <EmptyState
+            v-else
+            :title="rw('emptyResultTitle')"
+            :description="rw('emptyResultDesc')"
+          />
+
+          <div class="step-actions">
+            <button class="btn secondary" @click="currentStep = 2">
+              ← {{ rw('prevStep') }}
+            </button>
+            <button class="btn secondary" @click="resetWorkflow">
+              {{ rw('startOver') }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   researchDownloadArtifact,
@@ -632,6 +403,42 @@ const rw = (key, params) => t(`researchWorkbench.${key}`, params)
 
 const comparisonMetricOrder = ['auc', 'pr_auc', 'f1', 'brier', 'mae', 'rmse', 'paired_significance_p']
 const higherBetterMetrics = new Set(['auc', 'pr_auc', 'f1'])
+
+// ============================================
+// WORKFLOW STATE
+// ============================================
+const currentStep = ref(0)
+const workflowSteps = computed(() => [
+  rw('stepRegister'),
+  rw('stepSplit'),
+  rw('stepExperiment'),
+  rw('stepResults')
+])
+
+const stepComplete = computed(() => [
+  Boolean(manifest.value),
+  Boolean(splitManifest.value),
+  Boolean(experimentResult.value),
+  Boolean(displayResult.value)
+])
+
+const progressWidth = computed(() => {
+  const completeCount = stepComplete.value.filter(Boolean).length
+  return (completeCount / workflowSteps.value.length) * 100
+})
+
+const resetWorkflow = () => {
+  currentStep.value = 0
+}
+
+// Auto-advance to next step when current step completes
+const advanceToNextStep = () => {
+  // Find the next incomplete step
+  const nextIncomplete = stepComplete.value.findIndex((complete, i) => i > currentStep.value && !complete)
+  if (nextIncomplete !== -1) {
+    currentStep.value = nextIncomplete
+  }
+}
 
 const busy = reactive({
   register: false,
@@ -681,6 +488,19 @@ const experimentForm = reactive({
 const manifest = ref(null)
 const splitManifest = ref(null)
 const experimentResult = ref(null)
+
+// Watch for step completion and auto-advance
+watch([manifest, splitManifest, experimentResult], () => {
+  // Auto-populate next step's form fields when current step completes
+  if (manifest.value && currentStep.value === 0) {
+    experimentForm.dataset_id = manifest.value.dataset_id || ''
+    experimentForm.dataset_version = manifest.value.dataset_version || ''
+  }
+  if (splitManifest.value && currentStep.value === 1) {
+    experimentForm.split_id = splitManifest.value.split_id || ''
+  }
+}, { deep: true })
+
 const suiteResult = ref(null)
 const templates = ref({})
 const selectedTemplate = ref('')
@@ -1493,6 +1313,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ============================================
+   科研工作台 - 工作流布局样式
+   ============================================ */
+
 .research-page {
   display: flex;
   flex-direction: column;
@@ -1506,6 +1330,228 @@ onMounted(async () => {
   border-radius: var(--radius-lg);
   padding: var(--spacing-5);
   box-shadow: var(--shadow-sm);
+}
+
+/* Workflow Status Pills */
+.workflow-status {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.workflow-status .status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--color-bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s;
+}
+
+.workflow-status .status-pill .step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.workflow-status .status-pill.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.workflow-status .status-pill.active .step-num {
+  background: var(--color-primary);
+}
+
+.workflow-status .status-pill.complete {
+  background: #ecfdf3;
+  color: #16a34a;
+  border-color: #86efac;
+}
+
+.workflow-status .status-pill.complete .step-num {
+  background: #16a34a;
+}
+
+/* Workflow Progress Bar */
+.workflow-progress {
+  margin-bottom: var(--spacing-5);
+}
+
+.progress-track {
+  position: relative;
+  height: 6px;
+  background: var(--color-bg-subtle);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: var(--spacing-2);
+}
+
+.progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.progress-labels span.active {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* Workflow Steps */
+.workflow-step {
+  animation: step-fade-in 0.3s ease-out;
+}
+
+@keyframes step-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-fade-enter-active,
+.step-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.step-fade-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.step-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.step-fade-enter-to,
+.step-fade-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Step Header */
+.step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-4);
+}
+
+.step-info h2 {
+  margin: 0 0 var(--spacing-1) 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.step-info p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.step-status .status-badge {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.step-status .status-badge.ok {
+  background: #ecfdf3;
+  color: #16a34a;
+}
+
+.step-status .status-badge.idle {
+  background: var(--color-bg-subtle);
+  color: var(--text-tertiary);
+}
+
+/* Panel Main */
+.panel-main {
+  padding: var(--spacing-6);
+}
+
+/* Step Actions */
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Success Card */
+.success-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  border: 1px solid #86efac;
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-4);
+}
+
+.success-icon {
+  width: 24px;
+  height: 24px;
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.success-card h3 {
+  margin: 0 0 var(--spacing-1) 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.success-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Original styles kept below */
+.grid {
+  display: grid;
+  gap: var(--spacing-5);
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 /* Status Pills in Toolbar */

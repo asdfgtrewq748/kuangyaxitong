@@ -18,29 +18,35 @@
     </PageHeader>
 
     <section class="card controls">
-      <div class="control-item">
-        <label>{{ rp('seam') }}</label>
-        <select v-model="selectedSeam" :disabled="!seamOptions.length" :aria-label="rp('seam')">
-          <option v-for="item in seamOptions" :key="item.name" :value="item.name">{{ item.name }}</option>
-        </select>
+      <div class="control-group">
+        <div class="control-item">
+          <label>{{ rp('seam') }}</label>
+          <select v-model="selectedSeam" :disabled="!seamOptions.length" :aria-label="rp('seam')">
+            <option v-for="item in seamOptions" :key="item.name" :value="item.name">{{ item.name }}</option>
+          </select>
+        </div>
       </div>
-      <div class="control-item status">
-        <label>{{ rp('reportStatus') }}</label>
-        <span class="status-chip" :class="loading ? 'loading' : summary.length ? 'ready' : 'idle'">
-          {{ loading ? rp('statusCalculating') : summary.length ? rp('statusReady') : rp('statusEmpty') }}
-        </span>
+      <div class="control-group">
+        <div class="control-item status">
+          <label>{{ rp('reportStatus') }}</label>
+          <span class="status-chip" :class="loading ? 'loading' : summary.length ? 'ready' : 'idle'">
+            {{ loading ? rp('statusCalculating') : summary.length ? rp('statusReady') : rp('statusEmpty') }}
+          </span>
+        </div>
+        <div class="control-item status">
+          <label>{{ rp('lastUpdated') }}</label>
+          <span>{{ generatedAt || '-' }}</span>
+        </div>
       </div>
-      <div class="control-item status">
-        <label>{{ rp('lastUpdated') }}</label>
-        <span>{{ generatedAt || '-' }}</span>
-      </div>
-      <div class="control-item geomodel-control">
-        <label>{{ rp('geomodelJobId') }}</label>
-        <div class="geomodel-input-row">
-          <input v-model.trim="geomodelJobId" type="text" :placeholder="rp('geomodelJobPlaceholder')">
-          <button class="btn secondary small" :disabled="geomodelLoading || !geomodelJobId" @click="loadGeomodelQuality(true)">
-            {{ geomodelLoading ? rp('loadingGeomodel') : rp('loadGeomodelQuality') }}
-          </button>
+      <div class="control-group geomodel-group">
+        <div class="control-item geomodel-control">
+          <label>{{ rp('geomodelJobId') }}</label>
+          <div class="geomodel-input-row">
+            <input v-model.trim="geomodelJobId" type="text" :placeholder="rp('geomodelJobPlaceholder')">
+            <button class="btn secondary small" :disabled="geomodelLoading || !geomodelJobId" @click="loadGeomodelQuality(true)">
+              {{ geomodelLoading ? rp('loadingGeomodel') : rp('loadGeomodelQuality') }}
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -72,10 +78,17 @@
       />
     </section>
 
-    <section class="card">
-      <h2>{{ rp('mpiAnalysis') }}</h2>
-      <SkeletonPanel v-if="loading && !mpiSummary" :rows="6" />
-      <div v-else-if="mpiSummary" class="mpi-layout">
+    <section class="card collapsible-card">
+      <div class="card-header" @click="collapsedSections.mpi = !collapsedSections.mpi">
+        <h2>{{ rp('mpiAnalysis') }}</h2>
+        <svg class="chevron" :class="{ rotated: !collapsedSections.mpi }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <transition name="collapse">
+        <div v-show="!collapsedSections.mpi" class="card-content">
+          <SkeletonPanel v-if="loading && !mpiSummary" :rows="6" />
+          <div v-else-if="mpiSummary" class="mpi-layout">
         <div class="mpi-stats">
           <div class="stat-item"><span>{{ rp('seam') }}</span><strong>{{ mpiSummary.seamName }}</strong></div>
           <div class="stat-item"><span>{{ rp('mpiMean') }}</span><strong>{{ formatNumber(mpiSummary.stats.mean, 2) }}</strong></div>
@@ -105,13 +118,22 @@
         v-else
         :title="rp('noMpiAnalysis')"
       />
+        </div>
+      </transition>
     </section>
 
-    <section class="card">
-      <h2>{{ rp('geomodelQualitySection') }}</h2>
-      <div v-if="geomodelError" class="error">{{ geomodelError }}</div>
-      <SkeletonPanel v-else-if="geomodelLoading && !geomodelQuality" :rows="5" />
-      <div v-else-if="geomodelQuality" class="geomodel-quality-grid">
+    <section class="card collapsible-card">
+      <div class="card-header" @click="collapsedSections.geomodel = !collapsedSections.geomodel">
+        <h2>{{ rp('geomodelQualitySection') }}</h2>
+        <svg class="chevron" :class="{ rotated: !collapsedSections.geomodel }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <transition name="collapse">
+        <div v-show="!collapsedSections.geomodel" class="card-content">
+          <div v-if="geomodelError" class="error">{{ geomodelError }}</div>
+          <SkeletonPanel v-else-if="geomodelLoading && !geomodelQuality" :rows="5" />
+          <div v-else-if="geomodelQuality" class="geomodel-quality-grid">
         <article class="metric-card">
           <h3>{{ rp('jobStatus') }}</h3>
           <div class="metric-main">{{ geomodelStatusLabel(geomodelQuality.status) }}</div>
@@ -138,10 +160,19 @@
         </article>
       </div>
       <EmptyState v-else :title="rp('geomodelPrompt')" />
+        </div>
+      </transition>
     </section>
 
-    <section class="card">
-      <h2>{{ rp('week3Progress') }}</h2>
+    <section class="card collapsible-card week3-card">
+      <div class="card-header" @click="collapsedSections.week3 = !collapsedSections.week3">
+        <h2>{{ rp('week3Progress') }}</h2>
+        <svg class="chevron" :class="{ rotated: !collapsedSections.week3 }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <transition name="collapse">
+        <div v-show="!collapsedSections.week3" class="card-content">
       <div v-if="week3Research && week3Research.status !== 'missing'" class="week3-layout">
         <article class="metric-card week3-perf-card" v-if="reportPerformance">
           <h3>{{ rp('reportApiPerformance') }}</h3>
@@ -219,10 +250,19 @@
         v-else-if="!(week3Research && week3Research.status !== 'missing')"
         :title="rp('noWeek3Summary')"
       />
+        </div>
+      </transition>
     </section>
 
-    <section class="card">
-      <h2>{{ rp('detailStatsTable') }}</h2>
+    <section class="card collapsible-card table-card">
+      <div class="card-header" @click="collapsedSections.detailTable = !collapsedSections.detailTable">
+        <h2>{{ rp('detailStatsTable') }}</h2>
+        <svg class="chevron" :class="{ rotated: !collapsedSections.detailTable }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <transition name="collapse">
+        <div v-show="!collapsedSections.detailTable" class="card-content">
       <SkeletonPanel v-if="loading && !summary.length" :rows="8" />
       <div v-else-if="summary.length" class="table-wrap">
         <table class="table">
@@ -256,6 +296,8 @@
         v-else
         :title="rp('noDetailStats')"
       />
+        </div>
+      </transition>
     </section>
   </div>
 </template>
@@ -305,6 +347,14 @@ const geomodelError = ref('')
 const week3Research = ref(null)
 const reportPerformance = ref(null)
 const reportCacheHit = ref(false)
+
+// Collapsible sections state
+const collapsedSections = ref({
+  mpi: false,
+  geomodel: false,
+  week3: true,
+  detailTable: true
+})
 
 const layerParamsCache = new LRUCache(120)
 const layerParamsPending = new Map()
@@ -754,9 +804,89 @@ onMounted(async () => {
 }
 
 .controls {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
+}
+
+.control-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.geomodel-group {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.04) 0%, rgba(14, 165, 233, 0.01) 100%);
+  border-color: rgba(14, 165, 233, 0.2);
+}
+
+/* Collapsible Cards */
+.collapsible-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-5) var(--spacing-6);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid transparent;
+  transition: background 0.2s ease;
+}
+
+.card-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.25s ease;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.card-content {
+  padding: var(--spacing-5) var(--spacing-6);
+}
+
+/* Collapse transition */
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  max-height: 2000px;
+  opacity: 1;
 }
 
 .control-item {

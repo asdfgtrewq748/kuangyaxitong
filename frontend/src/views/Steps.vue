@@ -1,268 +1,401 @@
 ﻿<template>
   <div class="steps-page">
+    <!-- Page Header with compact actions -->
     <PageHeader
       class="main-header"
       :title="sp('title')"
       :description="sp('subtitle')"
     >
       <template #actions>
-        <div class="hero-actions">
+        <div class="header-actions">
           <button class="btn primary" :disabled="refreshing" @click="refreshAll(true)">
-            <span v-if="refreshing" class="spinner"></span>
+            <span v-if="refreshing" class="spinner sm"></span>
             {{ refreshing ? sp('refreshing') : sp('refreshAll') }}
           </button>
-          <button class="btn secondary" :disabled="!stepGrid" @click="handleExportGrid">{{ sp('exportStepGrid') }}</button>
-          <button class="btn secondary" :disabled="!stepBatch" @click="handleExportBatch">{{ sp('exportBatch') }}</button>
+          <div class="action-divider"></div>
+          <button class="btn secondary" :disabled="!stepGrid" @click="handleExportGrid" :title="sp('exportStepGrid')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+          </button>
+          <button class="btn secondary" :disabled="!stepBatch" @click="handleExportBatch" :title="sp('exportBatch')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+          </button>
         </div>
       </template>
     </PageHeader>
 
-    <section class="card params-card">
-      <h2>{{ sp('params') }}</h2>
-      <div class="params-grid">
-        <label>
-          {{ sp('mechanicalModel') }}
-          <select v-model="stepModel">
-            <option value="fixed">{{ sp('model.fixed') }}</option>
-            <option value="simply">{{ sp('model.simply') }}</option>
-            <option value="shear">{{ sp('model.shear') }}</option>
-            <option value="empirical">{{ sp('model.empirical') }}</option>
-          </select>
-        </label>
-
-        <label>
-          {{ sp('target') }}
-          <select v-model="stepTarget">
-            <option value="initial">{{ sp('targetOption.initial') }}</option>
-            <option value="periodic">{{ sp('targetOption.periodic') }}</option>
-          </select>
-        </label>
-
-        <label>
-          {{ sp('roofThickness') }} h (m)
-          <input v-model.number="stepH" type="number" step="0.1" min="0.1">
-        </label>
-
-        <label>
-          {{ sp('load') }} q (MPa)
-          <input v-model.number="stepQ" type="number" step="0.1" min="0.1">
-        </label>
-
-        <label>
-          {{ sp('tensile') }} t (MPa)
-          <input v-model.number="stepT" type="number" step="0.1" min="0.1">
-        </label>
-
-        <label>
-          {{ sp('shear') }} s (MPa)
-          <input v-model.number="stepS" type="number" step="0.1" min="0.1">
-        </label>
-
-        <label>
-          {{ sp('hMode') }}
-          <select v-model="hMode">
-            <option value="total">{{ sp('hModeTotal') }}</option>
-          </select>
-        </label>
-
-        <label>
-          {{ sp('qMode') }}
-          <select v-model="qMode">
-            <option value="density_thickness">{{ sp('qModeDensityThickness') }}</option>
-            <option value="default">{{ sp('qModeDefault') }}</option>
-          </select>
-        </label>
-
-        <label v-if="qMode === 'default'">
-          {{ sp('defaultQ') }}
-          <input v-model.number="defaultQ" type="number" step="0.1" min="0.1">
-        </label>
-
-        <label>
-          {{ sp('gridSize') }}
-          <input v-model.number="gridSize" type="number" min="20" max="120" step="1">
-        </label>
-
-        <label>
-          {{ sp('mpiSeam') }}
-          <select v-model="mpiSeam" :disabled="mpiSeams.length === 0">
-            <option v-for="seam in mpiSeams" :key="seam.name" :value="seam.name">{{ seam.name }}</option>
-          </select>
-        </label>
-
-        <label>
-          {{ sp('mpiGrid') }}
-          <input v-model.number="mpiGridSize" type="number" min="20" max="150" step="1">
-        </label>
-
-        <label>
-          {{ sp('mpiInterpolation') }}
-          <select v-model="mpiMethod">
-            <option value="idw">{{ sp('mpiMethod.idw') }}</option>
-            <option value="linear">{{ sp('mpiMethod.linear') }}</option>
-            <option value="nearest">{{ sp('mpiMethod.nearest') }}</option>
-          </select>
-        </label>
-
-        <label class="geo-toggle">
-          {{ sp('geoAware') }}
-          <span class="geo-toggle-line">
-            <input v-model="geoAwareEnabled" type="checkbox">
-            <span>{{ geoAwareEnabled ? sp('enabled') : sp('disabled') }}</span>
-          </span>
-        </label>
-
-        <label v-if="geoAwareEnabled">
-          {{ sp('geomodelJobIdOptional') }}
-          <input v-model.trim="geoModelJobId" type="text" :placeholder="sp('geomodelJobPlaceholder')">
-        </label>
-      </div>
-    </section>
-
-    <section class="card kpi-card">
-      <h2>{{ sp('kpiTitle') }}</h2>
-      <div class="kpi-grid">
-        <article class="kpi-item">
-          <span>{{ sp('initialStep') }}</span>
-          <strong>{{ formatNumber(stepResult?.initial_step, 2, 'm') }}</strong>
-          <small v-if="loadingStepResult">{{ sp('autoComputing') }}</small>
-        </article>
-        <article class="kpi-item">
-          <span>{{ sp('periodicStep') }}</span>
-          <strong>{{ formatNumber(stepResult?.periodic_step, 2, 'm') }}</strong>
-          <small v-if="loadingStepResult">{{ sp('autoComputing') }}</small>
-        </article>
-        <article class="kpi-item">
-          <span>{{ sp('mpiMean') }}</span>
-          <strong>{{ formatNumber(mpiStats?.mean, 2) }}</strong>
-          <small v-if="loadingMpi">{{ sp('autoComputing') }}</small>
-        </article>
-        <article class="kpi-item">
-          <span>{{ sp('batchCount') }}</span>
-          <strong>{{ stepBatch?.items?.length || 0 }}</strong>
-          <small v-if="loadingStepBatch">{{ sp('autoComputing') }}</small>
-        </article>
-      </div>
-      <p class="hint" v-if="stepResultError || stepGridError || stepBatchError || mpiError">
-        {{ stepResultError || stepGridError || stepBatchError || mpiError }}
-      </p>
-    </section>
-
-    <section class="two-col">
-      <article class="card panel">
-        <div class="panel-head">
-          <h3>{{ sp('stepGridTitle') }}</h3>
-          <span class="tag">{{ stepModelLabel(stepModel) }} / {{ stepTargetLabel(stepTarget) }}</span>
+    <!-- Main Layout: Sidebar + Preview Area -->
+    <div class="steps-layout">
+      <!-- Left Sidebar: Parameter Groups (Accordion) -->
+      <aside class="params-sidebar">
+        <div class="sidebar-header">
+          <h3>{{ sp('params') }}</h3>
+          <button class="expand-all-btn" @click="toggleAllGroups">
+            {{ allGroupsExpanded ? sp('collapseAll') : sp('expandAll') }}
+          </button>
         </div>
-        <div class="panel-body">
-          <SkeletonPanel v-if="loadingStepGrid" :rows="5" compact />
-          <HeatmapCanvas v-else-if="stepGrid?.values?.length" :grid="stepGrid.values" :size="480" />
-          <EmptyState
-            v-else
-            :title="sp('noStepGrid')"
-            :description="sp('stepGridTitle')"
-          />
-        </div>
-      </article>
 
-      <article class="card panel">
-        <div class="panel-head">
-          <h3>{{ sp('mpiPanelTitle') }}</h3>
-          <span class="tag">{{ mpiSeam || sp('unselectedSeam') }}</span>
-        </div>
-        <div class="panel-body">
-          <SkeletonPanel v-if="loadingMpi" :rows="5" compact />
-          <HeatmapCanvas v-else-if="mpiGrid?.length" :grid="mpiGrid" :size="420" />
-          <EmptyState
-            v-else
-            :title="sp('noMpi')"
-            :description="sp('mpiPanelTitle')"
-          />
-
-          <div class="stats-row">
-            <div class="stat-item"><span>{{ sp('min') }}</span><strong>{{ formatNumber(mpiStats?.min, 2) }}</strong></div>
-            <div class="stat-item"><span>{{ sp('max') }}</span><strong>{{ formatNumber(mpiStats?.max, 2) }}</strong></div>
-            <div class="stat-item"><span>{{ sp('mean') }}</span><strong>{{ formatNumber(mpiStats?.mean, 2) }}</strong></div>
-          </div>
-
-          <div class="suggestion">
-            <h4>{{ sp('stepSuggestionTitle') }}</h4>
-            <p>{{ mpiSuggestion }}</p>
-          </div>
-
-          <div v-if="geoCompareSummary" class="geo-summary">
-            <h4>{{ sp('geoCompareTitle') }}</h4>
-            <div class="stats-row geo-summary-row">
-              <div class="stat-item">
-                <span>{{ sp('baselineMean') }}</span>
-                <strong>{{ formatNumber(geoCompareSummary.baselineMean, 2) }}</strong>
-              </div>
-              <div class="stat-item">
-                <span>{{ sp('geoAwareMean') }}</span>
-                <strong>{{ formatNumber(geoCompareSummary.geoMean, 2) }}</strong>
-              </div>
-              <div class="stat-item">
-                <span>{{ sp('deltaMean') }}</span>
-                <strong>{{ formatNumber(geoCompareSummary.delta, 2) }}</strong>
-              </div>
+        <!-- Parameter Groups -->
+        <div class="param-groups">
+          <!-- Group 1: Mechanical Model -->
+          <div class="param-group" :class="{ open: openGroups.has('mechanical') }">
+            <button class="param-group-header" @click="toggleGroup('mechanical')">
+              <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v6m0 6v6M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24M4.93 19.07l4.24-4.24m5.66-5.66l4.24-4.24"/>
+              </svg>
+              <span class="group-label">{{ sp('groupMechanical') }}</span>
+              <span class="group-count">3</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="param-group-body">
+              <label class="param-field">
+                <span>{{ sp('mechanicalModel') }}</span>
+                <select v-model="stepModel">
+                  <option value="fixed">{{ sp('model.fixed') }}</option>
+                  <option value="simply">{{ sp('model.simply') }}</option>
+                  <option value="shear">{{ sp('model.shear') }}</option>
+                  <option value="empirical">{{ sp('model.empirical') }}</option>
+                </select>
+              </label>
+              <label class="param-field">
+                <span>{{ sp('target') }}</span>
+                <select v-model="stepTarget">
+                  <option value="initial">{{ sp('targetOption.initial') }}</option>
+                  <option value="periodic">{{ sp('targetOption.periodic') }}</option>
+                </select>
+              </label>
+              <label class="param-field">
+                <span>{{ sp('roofThickness') }} h (m)</span>
+                <input v-model.number="stepH" type="number" step="0.1" min="0.1">
+              </label>
             </div>
-            <p class="geo-meta">
-              {{ sp('mode') }}{{ geoCompareSummary.algorithmMode }} · {{ sp('fallback') }}{{ geoCompareSummary.fallbackUsed ? t('common.yes') : t('common.no') }}
-            </p>
-            <p v-if="geoFeatureSummary" class="geo-feature">{{ geoFeatureSummary }}</p>
           </div>
 
-          <div class="zone-card" v-if="zoneRiskSummary.length">
-            <h4>{{ sp('zoneRiskTitle') }}</h4>
-            <div class="zone-grid">
-              <div v-for="zone in zoneRiskSummary" :key="zone.key" class="zone-item" :class="zone.key">
-                <span>{{ zone.label }}</span>
-                <strong>{{ sp('zoneCount', { count: zone.count, ratio: zone.ratio }) }}</strong>
-              </div>
+          <!-- Group 2: Load Parameters -->
+          <div class="param-group" :class="{ open: openGroups.has('load') }">
+            <button class="param-group-header" @click="toggleGroup('load')">
+              <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+              </svg>
+              <span class="group-label">{{ sp('groupLoad') }}</span>
+              <span class="group-count">3</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="param-group-body">
+              <label class="param-field">
+                <span>{{ sp('load') }} q (MPa)</span>
+                <input v-model.number="stepQ" type="number" step="0.1" min="0.1">
+              </label>
+              <label class="param-field">
+                <span>{{ sp('tensile') }} t (MPa)</span>
+                <input v-model.number="stepT" type="number" step="0.1" min="0.1">
+              </label>
+              <label class="param-field">
+                <span>{{ sp('shear') }} s (MPa)</span>
+                <input v-model.number="stepS" type="number" step="0.1" min="0.1">
+              </label>
+            </div>
+          </div>
+
+          <!-- Group 3: Calculation Mode -->
+          <div class="param-group" :class="{ open: openGroups.has('calcMode') }">
+            <button class="param-group-header" @click="toggleGroup('calcMode')">
+              <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="4" y="4" width="16" height="16" rx="2"/>
+                <path d="M9 9h6M9 12h6M9 15h4"/>
+              </svg>
+              <span class="group-label">{{ sp('groupCalcMode') }}</span>
+              <span class="group-count">5</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="param-group-body">
+              <label class="param-field">
+                <span>{{ sp('hMode') }}</span>
+                <select v-model="hMode">
+                  <option value="total">{{ sp('hModeTotal') }}</option>
+                </select>
+              </label>
+              <label class="param-field">
+                <span>{{ sp('qMode') }}</span>
+                <select v-model="qMode">
+                  <option value="density_thickness">{{ sp('qModeDensityThickness') }}</option>
+                  <option value="default">{{ sp('qModeDefault') }}</option>
+                </select>
+              </label>
+              <label class="param-field" v-if="qMode === 'default'">
+                <span>{{ sp('defaultQ') }}</span>
+                <input v-model.number="defaultQ" type="number" step="0.1" min="0.1">
+              </label>
+              <label class="param-field">
+                <span>{{ sp('gridSize') }}</span>
+                <input v-model.number="gridSize" type="number" min="20" max="120" step="1">
+              </label>
+            </div>
+          </div>
+
+          <!-- Group 4: MPI Settings -->
+          <div class="param-group" :class="{ open: openGroups.has('mpi') }">
+            <button class="param-group-header" @click="toggleGroup('mpi')">
+              <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span class="group-label">{{ sp('groupMpi') }}</span>
+              <span class="group-count">5</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="param-group-body">
+              <label class="param-field">
+                <span>{{ sp('mpiSeam') }}</span>
+                <select v-model="mpiSeam" :disabled="mpiSeams.length === 0">
+                  <option value="">{{ sp('selectSeam') }}</option>
+                  <option v-for="seam in mpiSeams" :key="seam.name" :value="seam.name">{{ seam.name }}</option>
+                </select>
+              </label>
+              <label class="param-field">
+                <span>{{ sp('mpiGrid') }}</span>
+                <input v-model.number="mpiGridSize" type="number" min="20" max="150" step="1">
+              </label>
+              <label class="param-field">
+                <span>{{ sp('mpiInterpolation') }}</span>
+                <select v-model="mpiMethod">
+                  <option value="idw">{{ sp('mpiMethod.idw') }}</option>
+                  <option value="linear">{{ sp('mpiMethod.linear') }}</option>
+                  <option value="nearest">{{ sp('mpiMethod.nearest') }}</option>
+                </select>
+              </label>
+              <label class="param-field toggle-field">
+                <span class="toggle-label">
+                  <input v-model="geoAwareEnabled" type="checkbox">
+                  <span>{{ sp('geoAware') }}</span>
+                </span>
+                <span class="toggle-status">{{ geoAwareEnabled ? sp('enabled') : sp('disabled') }}</span>
+              </label>
+              <label class="param-field" v-if="geoAwareEnabled">
+                <span>{{ sp('geomodelJobIdOptional') }}</span>
+                <input v-model.trim="geoModelJobId" type="text" :placeholder="sp('geomodelJobPlaceholder')">
+              </label>
             </div>
           </div>
         </div>
-      </article>
-    </section>
 
-    <section class="card panel">
-      <div class="panel-head">
-        <h3>{{ sp('batchResultTitle') }}</h3>
-        <span class="tag">{{ sp('batchPreviewLimit') }}</span>
-      </div>
-      <div class="panel-body">
-        <SkeletonPanel v-if="loadingStepBatch" :rows="6" />
-        <div v-else-if="stepBatch?.items?.length" class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>{{ sp('initialStep') }} (m)</th>
-                <th>{{ sp('periodicStep') }} (m)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(item, i) in stepBatch.items.slice(0, 20)" :key="i">
-                <td>{{ i + 1 }}</td>
-                <td>{{ formatNumber(item.initial, 2) }}</td>
-                <td>{{ formatNumber(item.periodic, 2) }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="table-foot" v-if="stepBatch.items.length > 20">{{ sp('batchMore', { count: stepBatch.items.length - 20 }) }}</div>
+        <!-- Error Display -->
+        <p class="sidebar-error" v-if="stepResultError || stepGridError || stepBatchError || mpiError">
+          {{ stepResultError || stepGridError || stepBatchError || mpiError }}
+        </p>
+      </aside>
+
+      <!-- Right: Preview Area -->
+      <main class="preview-area">
+        <!-- KPI Cards Row with Sparklines -->
+        <div class="kpi-row">
+          <article class="kpi-card" :class="{ loading: loadingStepResult }">
+            <div class="kpi-header">
+              <span class="kpi-label">{{ sp('initialStep') }}</span>
+              <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
+            <div class="kpi-value">{{ formatNumber(stepResult?.initial_step, 2, 'm') }}</div>
+            <canvas ref="initialSparklineCanvas" class="kpi-sparkline"></canvas>
+            <small class="kpi-hint" v-if="loadingStepResult">{{ sp('autoComputing') }}</small>
+          </article>
+
+          <article class="kpi-card" :class="{ loading: loadingStepResult }">
+            <div class="kpi-header">
+              <span class="kpi-label">{{ sp('periodicStep') }}</span>
+              <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+            </div>
+            <div class="kpi-value">{{ formatNumber(stepResult?.periodic_step, 2, 'm') }}</div>
+            <canvas ref="periodicSparklineCanvas" class="kpi-sparkline"></canvas>
+            <small class="kpi-hint" v-if="loadingStepResult">{{ sp('autoComputing') }}</small>
+          </article>
+
+          <article class="kpi-card" :class="{ loading: loadingMpi, 'risk-high': isMpiHighRisk }">
+            <div class="kpi-header">
+              <span class="kpi-label">{{ sp('mpiMean') }}</span>
+              <svg class="kpi-icon" :class="{ 'risk-icon': isMpiHighRisk }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div class="kpi-value">{{ formatNumber(mpiStats?.mean, 2) }}</div>
+            <canvas ref="mpiSparklineCanvas" class="kpi-sparkline"></canvas>
+            <small class="kpi-hint" v-if="loadingMpi">{{ sp('autoComputing') }}</small>
+          </article>
+
+          <article class="kpi-card" :class="{ loading: loadingStepBatch }">
+            <div class="kpi-header">
+              <span class="kpi-label">{{ sp('batchCount') }}</span>
+              <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+              </svg>
+            </div>
+            <div class="kpi-value">{{ stepBatch?.items?.length || 0 }}</div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" :style="{ width: batchProgress + '%' }"></div>
+            </div>
+            <small class="kpi-hint" v-if="loadingStepBatch">{{ sp('autoComputing') }}</small>
+          </article>
         </div>
-        <EmptyState
-          v-else
-          :title="sp('noBatch')"
-          :description="sp('batchResultTitle')"
-        />
-      </div>
-    </section>
+
+        <!-- Visualization Grid -->
+        <div class="viz-grid">
+          <!-- Step Grid Heatmap -->
+          <section class="viz-card main-viz">
+            <div class="viz-header">
+              <div>
+                <h3>{{ sp('stepGridTitle') }}</h3>
+                <p class="viz-meta">{{ stepModelLabel(stepModel) }} / {{ stepTargetLabel(stepTarget) }} · {{ gridSize }}×{{ gridSize }}</p>
+              </div>
+              <span class="viz-tag">{{ sp('tagHeatmap') }}</span>
+            </div>
+            <div class="viz-body">
+              <SkeletonPanel v-if="loadingStepGrid" :rows="5" compact />
+              <HeatmapCanvas v-else-if="stepGrid?.values?.length" :grid="stepGrid.values" :size="480" />
+              <EmptyState v-else :title="sp('noStepGrid')" :description="sp('stepGridTitle')" />
+            </div>
+          </section>
+
+          <!-- MPI Analysis Panel -->
+          <section class="viz-card mpi-viz">
+            <div class="viz-header">
+              <div>
+                <h3>{{ sp('mpiPanelTitle') }}</h3>
+                <p class="viz-meta">{{ mpiSeam || sp('unselectedSeam') }}</p>
+              </div>
+              <span class="viz-tag">{{ sp('tagSpatial') }}</span>
+            </div>
+            <div class="viz-body scrollable">
+              <SkeletonPanel v-if="loadingMpi" :rows="5" compact />
+              <template v-else>
+                <HeatmapCanvas v-if="mpiGrid?.length" :grid="mpiGrid" :size="380" />
+                <EmptyState v-else :title="sp('noMpi')" :description="sp('mpiPanelTitle')" />
+
+                <!-- Stats Row -->
+                <div class="mini-stats-row">
+                  <div class="mini-stat">
+                    <span>{{ sp('min') }}</span>
+                    <strong>{{ formatNumber(mpiStats?.min, 2) }}</strong>
+                  </div>
+                  <div class="mini-stat">
+                    <span>{{ sp('max') }}</span>
+                    <strong>{{ formatNumber(mpiStats?.max, 2) }}</strong>
+                  </div>
+                  <div class="mini-stat">
+                    <span>{{ sp('mean') }}</span>
+                    <strong>{{ formatNumber(mpiStats?.mean, 2) }}</strong>
+                  </div>
+                </div>
+
+                <!-- Suggestion Card -->
+                <div class="suggestion-card">
+                  <svg class="suggestion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4M12 8h.01"/>
+                  </svg>
+                  <div>
+                    <h4>{{ sp('stepSuggestionTitle') }}</h4>
+                    <p>{{ mpiSuggestion }}</p>
+                  </div>
+                </div>
+
+                <!-- Geo-aware Comparison -->
+                <div v-if="geoCompareSummary" class="geo-compare-card">
+                  <h4>{{ sp('geoCompareTitle') }}</h4>
+                  <div class="compare-stats">
+                    <div class="compare-item">
+                      <span>{{ sp('baselineMean') }}</span>
+                      <strong>{{ formatNumber(geoCompareSummary.baselineMean, 2) }}</strong>
+                    </div>
+                    <div class="compare-item delta">
+                      <span>{{ sp('deltaMean') }}</span>
+                      <strong :class="{ positive: geoCompareSummary.delta > 0, negative: geoCompareSummary.delta < 0 }">
+                        {{ geoCompareSummary.delta > 0 ? '+' : ''}}{{ formatNumber(geoCompareSummary.delta, 2) }}
+                      </strong>
+                    </div>
+                    <div class="compare-item">
+                      <span>{{ sp('geoAwareMean') }}</span>
+                      <strong>{{ formatNumber(geoCompareSummary.geoMean, 2) }}</strong>
+                    </div>
+                  </div>
+                  <p class="geo-meta">
+                    {{ sp('mode') }}{{ geoCompareSummary.algorithmMode }} · {{ sp('fallback') }}{{ geoCompareSummary.fallbackUsed ? t('common.yes') : t('common.no') }}
+                  </p>
+                </div>
+
+                <!-- Zone Risk Summary -->
+                <div v-if="zoneRiskSummary.length" class="zone-risk-card">
+                  <h4>{{ sp('zoneRiskTitle') }}</h4>
+                  <div class="zone-items">
+                    <div v-for="zone in zoneRiskSummary" :key="zone.key" class="zone-item" :class="zone.key">
+                      <span>{{ zone.label }}</span>
+                      <strong>{{ zone.count }} ({{ zone.ratio }}%)</strong>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </section>
+        </div>
+
+        <!-- Batch Results (Collapsible) -->
+        <section class="batch-section" :class="{ collapsed: batchCollapsed }">
+          <button class="batch-header" @click="batchCollapsed = !batchCollapsed">
+            <h3>{{ sp('batchResultTitle') }}</h3>
+            <span class="batch-count">{{ stepBatch?.items?.length || 0 }} {{ sp('batchItems') }}</span>
+            <svg class="collapse-chevron" :class="{ flipped: !batchCollapsed }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="batch-body" v-show="!batchCollapsed">
+            <SkeletonPanel v-if="loadingStepBatch" :rows="6" />
+            <div v-else-if="stepBatch?.items?.length" class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>{{ sp('initialStep') }} (m)</th>
+                    <th>{{ sp('periodicStep') }} (m)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(item, i) in stepBatch.items.slice(0, 20)" :key="i">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ formatNumber(item.initial, 2) }}</td>
+                    <td>{{ formatNumber(item.periodic, 2) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="table-foot" v-if="stepBatch.items.length > 20">{{ sp('batchMore', { count: stepBatch.items.length - 20 }) }}</div>
+            </div>
+            <EmptyState v-else :title="sp('noBatch')" :description="sp('batchResultTitle')" />
+          </div>
+        </section>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useToast } from '../composables/useToast'
 import { useI18n } from '../composables/useI18n'
 import HeatmapCanvas from '../components/HeatmapCanvas.vue'
@@ -322,6 +455,128 @@ const stepResultError = ref('')
 const stepGridError = ref('')
 const stepBatchError = ref('')
 const mpiError = ref('')
+
+// Accordion groups state
+const openGroups = ref(new Set(['mechanical', 'load']))
+const allGroupsExpanded = computed(() => openGroups.value.size === 4)
+
+// Batch collapse state
+const batchCollapsed = ref(false)
+
+// Sparkline canvas refs
+const initialSparklineCanvas = ref(null)
+const periodicSparklineCanvas = ref(null)
+const mpiSparklineCanvas = ref(null)
+
+// Sparkline history data (for trend visualization)
+const sparklineHistory = ref({
+  initial: [],
+  periodic: [],
+  mpi: []
+})
+
+// Computed: batch progress (for visual bar)
+const batchProgress = computed(() => {
+  const count = stepBatch.value?.items?.length || 0
+  return Math.min((count / 100) * 100, 100)
+})
+
+// Computed: MPI high risk indicator
+const isMpiHighRisk = computed(() => {
+  const mean = Number(mpiStats.value?.mean)
+  return Number.isFinite(mean) && mean < 60
+})
+
+// Toggle accordion group
+const toggleGroup = (groupId) => {
+  if (openGroups.value.has(groupId)) {
+    openGroups.value.delete(groupId)
+  } else {
+    openGroups.value.add(groupId)
+  }
+  // Force reactivity
+  openGroups.value = new Set(openGroups.value)
+}
+
+// Toggle all accordion groups
+const toggleAllGroups = () => {
+  if (allGroupsExpanded.value) {
+    openGroups.value = new Set(['mechanical'])
+  } else {
+    openGroups.value = new Set(['mechanical', 'load', 'calcMode', 'mpi'])
+  }
+}
+
+// Draw sparkline on canvas
+const drawSparkline = (canvas, data, color = '#0f766e') => {
+  if (!canvas || !Array.isArray(data) || data.length < 2) return
+
+  const ctx = canvas.getContext('2d')
+  const rect = canvas.getBoundingClientRect()
+  canvas.width = rect.width * window.devicePixelRatio
+  canvas.height = rect.height * window.devicePixelRatio
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+
+  const width = rect.width
+  const height = rect.height
+  const padding = 4
+  const drawWidth = width - padding * 2
+  const drawHeight = height - padding * 2
+
+  const min = Math.min(...data)
+  const max = Math.max(...data)
+  const range = max - min || 1
+
+  ctx.clearRect(0, 0, width, height)
+  ctx.beginPath()
+  ctx.strokeStyle = color
+  ctx.lineWidth = 2
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+
+  data.forEach((value, i) => {
+    const x = padding + (i / (data.length - 1)) * drawWidth
+    const y = padding + drawHeight - ((value - min) / range) * drawHeight
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  })
+
+  ctx.stroke()
+
+  // Add gradient fill
+  ctx.lineTo(padding + drawWidth, height)
+  ctx.lineTo(padding, height)
+  ctx.closePath()
+  const gradient = ctx.createLinearGradient(0, 0, 0, height)
+  gradient.addColorStop(0, color + '20')
+  gradient.addColorStop(1, color + '00')
+  ctx.fillStyle = gradient
+  ctx.fill()
+}
+
+// Update sparkline data
+const updateSparklines = () => {
+  // Update history with current values
+  if (stepResult.value?.initial_step !== undefined) {
+    sparklineHistory.value.initial.push(stepResult.value.initial_step)
+    if (sparklineHistory.value.initial.length > 20) sparklineHistory.value.initial.shift()
+  }
+  if (stepResult.value?.periodic_step !== undefined) {
+    sparklineHistory.value.periodic.push(stepResult.value.periodic_step)
+    if (sparklineHistory.value.periodic.length > 20) sparklineHistory.value.periodic.shift()
+  }
+  if (mpiStats.value?.mean !== undefined) {
+    sparklineHistory.value.mpi.push(mpiStats.value.mean)
+    if (sparklineHistory.value.mpi.length > 20) sparklineHistory.value.mpi.shift()
+  }
+
+  // Draw sparklines
+  nextTick(() => {
+    drawSparkline(initialSparklineCanvas.value, sparklineHistory.value.initial, '#0f766e')
+    drawSparkline(periodicSparklineCanvas.value, sparklineHistory.value.periodic, '#7c3aed')
+    drawSparkline(mpiSparklineCanvas.value, sparklineHistory.value.mpi, isMpiHighRisk.value ? '#dc2626' : '#0ea5e9')
+  })
+}
 
 const layerParamsCache = new LRUCache(120)
 
@@ -692,15 +947,55 @@ watch(geoModelJobId, () => {
   debounceMpiGeo()
 })
 
+// Watch for data changes to update sparklines
+watch([stepResult, mpiStats], () => {
+  if (initialized.value) {
+    updateSparklines()
+  }
+}, { deep: true })
+
 onMounted(async () => {
   await loadMpiSeams()
   initialized.value = true
   await refreshAll(false)
+  // Initialize sparklines after initial data load
+  nextTick(updateSparklines)
 })
 </script>
 
 <style scoped>
+/* ============================================
+   来压步距页面 - 重构设计
+   - 左侧手风琴参数面板
+   - 右侧预览区（KPI + 可视化）
+   ============================================ */
+
 .steps-page {
+  --sidebar-width: 320px;
+  --gap-xl: 24px;
+  --gap-lg: 16px;
+  --gap-md: 12px;
+  --gap-sm: 8px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --color-primary: #0f766e;
+  --color-primary-light: #ccfbf1;
+  --color-accent: #7c3aed;
+  --color-danger: #dc2626;
+  --color-warning: #f59e0b;
+  --color-success: #10b981;
+  --color-bg-elevated: #ffffff;
+  --color-bg-subtle: #f8fafc;
+  --color-bg-surface: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1059,6 +1354,694 @@ onMounted(async () => {
   }
 
   .zone-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   NEW REFACTORED STYLES
+   ============================================ */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.action-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+  margin: 0 var(--gap-sm);
+}
+
+/* MAIN LAYOUT */
+.steps-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  gap: var(--gap-xl);
+  align-items: start;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* PARAMS SIDEBAR */
+.params-sidebar {
+  position: sticky;
+  top: var(--gap-lg);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--gap-lg);
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(to bottom, var(--color-bg-subtle), var(--color-bg-elevated));
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.expand-all-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.expand-all-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.param-groups {
+  padding: var(--gap-md);
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ACCORDION GROUPS */
+.param-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--gap-sm);
+  background: var(--color-bg-elevated);
+  transition: all 0.2s;
+}
+
+.param-group.open {
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.param-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-md);
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--radius-md);
+  transition: background 0.2s;
+}
+
+.param-group-header:hover {
+  background: var(--color-bg-subtle);
+}
+
+.group-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.group-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.group-count {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+  color: var(--text-tertiary);
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.param-group.open .chevron {
+  transform: rotate(180deg);
+}
+
+.param-group-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease-out;
+}
+
+.param-group.open .param-group-body {
+  grid-template-rows: 1fr;
+}
+
+.param-group-body > * {
+  overflow: hidden;
+}
+
+.param-fields {
+  padding: 0 var(--gap-md) var(--gap-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.param-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.param-field > span {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.param-field input,
+.param-field select {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--color-bg-elevated);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.param-field input:focus,
+.param-field select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+}
+
+.param-field.toggle-field {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  font-size: 13px;
+}
+
+.toggle-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+}
+
+.toggle-status {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: var(--color-bg-elevated);
+  color: var(--text-tertiary);
+}
+
+.sidebar-error {
+  margin: var(--gap-md);
+  padding: var(--gap-md);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  color: #dc2626;
+  font-size: 12px;
+}
+
+/* PREVIEW AREA */
+.preview-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xl);
+}
+
+/* KPI CARDS ROW */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap-lg);
+}
+
+.kpi-card {
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: var(--gap-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.kpi-card:hover::before {
+  opacity: 1;
+}
+
+.kpi-card.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.kpi-card.risk-high {
+  border-color: #fecaca;
+  background: linear-gradient(to bottom, #fff5f5, var(--color-bg-elevated));
+}
+
+.kpi-card.risk-high::before {
+  background: var(--color-danger);
+}
+
+.kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--gap-sm);
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.kpi-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--color-primary);
+}
+
+.kpi-icon.risk-icon {
+  color: var(--color-danger);
+}
+
+.kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-family-mono, 'JetBrains Mono', monospace);
+  margin-bottom: var(--gap-sm);
+}
+
+.kpi-sparkline {
+  width: 100%;
+  height: 32px;
+}
+
+.kpi-bar {
+  height: 4px;
+  background: var(--color-bg-surface);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: var(--gap-sm);
+}
+
+.kpi-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  transition: width 0.5s ease-out;
+}
+
+.kpi-hint {
+  display: block;
+  margin-top: var(--gap-sm);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* VISUALIZATION GRID */
+.viz-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--gap-xl);
+}
+
+.viz-card {
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--gap-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.viz-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.viz-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.viz-tag {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.viz-body {
+  padding: var(--gap-lg);
+  flex: 1;
+  min-height: 280px;
+}
+
+.viz-body.scrollable {
+  overflow-y: auto;
+  max-height: 480px;
+}
+
+.mpi-viz .viz-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+/* Mini Stats Row */
+.mini-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap-sm);
+}
+
+.mini-stat {
+  padding: var(--gap-sm);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.mini-stat span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.mini-stat strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+/* Suggestion Card */
+.suggestion-card {
+  display: flex;
+  gap: var(--gap-md);
+  padding: var(--gap-md);
+  background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
+  border: 1px solid #ccfbf1;
+  border-radius: var(--radius-md);
+}
+
+.suggestion-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.suggestion-card h4 {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  color: var(--color-primary);
+}
+
+.suggestion-card p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Geo Compare Card */
+.geo-compare-card {
+  padding: var(--gap-md);
+  background: linear-gradient(135deg, #eff6ff, #eef2ff);
+  border: 1px solid #dbeafe;
+  border-radius: var(--radius-md);
+}
+
+.geo-compare-card h4 {
+  margin: 0 0 var(--gap-sm) 0;
+  font-size: 13px;
+  color: #1d4ed8;
+}
+
+.compare-stats {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--gap-sm);
+  align-items: center;
+}
+
+.compare-item {
+  text-align: center;
+}
+
+.compare-item span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.compare-item strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.compare-item.delta strong {
+  font-size: 16px;
+  color: var(--color-warning);
+}
+
+.compare-item.delta strong.positive {
+  color: var(--color-success);
+}
+
+.compare-item.delta strong.negative {
+  color: var(--color-danger);
+}
+
+.geo-meta {
+  margin: var(--gap-sm) 0 0 0;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* Zone Risk Card */
+.zone-risk-card {
+  padding: var(--gap-md);
+  background: linear-gradient(135deg, #fefce8, #fef9c3);
+  border: 1px solid #fef08a;
+  border-radius: var(--radius-md);
+}
+
+.zone-risk-card h4 {
+  margin: 0 0 var(--gap-sm) 0;
+  font-size: 13px;
+  color: #a16207;
+}
+
+.zone-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap-sm);
+}
+
+.zone-item {
+  padding: var(--gap-sm);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.zone-item span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.zone-item strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.zone-item.high {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.zone-item.medium {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.zone-item.low {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+/* BATCH SECTION (Collapsible) */
+.batch-section {
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.batch-header {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-lg);
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.batch-header:hover {
+  background: var(--color-bg-subtle);
+}
+
+.batch-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.batch-count {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+  color: var(--text-secondary);
+}
+
+.collapse-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+  transition: transform 0.2s;
+}
+
+.collapse-chevron.flipped {
+  transform: rotate(180deg);
+}
+
+.batch-body {
+  padding: 0 var(--gap-lg) var(--gap-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.batch-section.collapsed .batch-body {
+  display: none;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1400px) {
+  .steps-layout {
+    grid-template-columns: 280px 1fr;
+  }
+}
+
+@media (max-width: 1200px) {
+  .steps-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .params-sidebar {
+    position: static;
+    max-height: none;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .viz-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .zone-items {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-stats-row {
     grid-template-columns: 1fr;
   }
 }

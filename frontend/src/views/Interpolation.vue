@@ -4,22 +4,22 @@
     <div class="header interp-header">
       <div class="header-content">
         <div class="header-title-group">
-          <h2>插值分析</h2>
-          <span class="header-subtitle">Spatial Interpolation Analysis</span>
+          <h2>{{ ip('title') }}</h2>
+          <span class="header-subtitle">{{ ip('subtitle') }}</span>
         </div>
-        <div class="muted">{{ selectedSeam?.name || '请选择煤层并执行空间插值分析' }}</div>
+        <div class="muted">{{ selectedSeam?.name || ip('selectSeamHint') }}</div>
       </div>
       <div v-if="selectedSeam && seamStats" class="header-stats">
         <div class="stat-badge">
-          <span class="stat-label">厚度范围</span>
+          <span class="stat-label">{{ ip('statThicknessRange') }}</span>
           <strong>{{ seamStats?.thickness?.min?.toFixed(2) || '-' }} – {{ seamStats?.thickness?.max?.toFixed(2) || '-' }} m</strong>
         </div>
         <div class="stat-badge primary">
-          <span class="stat-label">平均厚度</span>
+          <span class="stat-label">{{ ip('statAvgThickness') }}</span>
           <strong>{{ seamStats?.thickness?.mean?.toFixed(2) || '-' }} m</strong>
         </div>
         <div class="stat-badge">
-          <span class="stat-label">钻孔数量</span>
+          <span class="stat-label">{{ ip('statBoreholeCount') }}</span>
           <strong>{{ seamStats?.borehole_count || seamPoints.length || '-' }}</strong>
         </div>
       </div>
@@ -33,9 +33,9 @@
           <line x1="3" y1="9" x2="21" y2="9"></line>
           <line x1="9" y1="21" x2="9" y2="9"></line>
         </svg>
-        选择分析煤层
+        {{ ip('selectSeamTitle') }}
       </h3>
-      <p class="section-desc">从以下可用煤层中选择一个进行空间插值分析，系统将自动计算厚度与埋深分布</p>
+      <p class="section-desc">{{ ip('selectSeamDesc') }}</p>
 
       <div class="seam-selection-grid">
         <div
@@ -51,17 +51,17 @@
               <span class="seam-name">{{ seam.name }}</span>
               <span class="seam-count">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
-                {{ seam.borehole_count }} 个钻孔
+                {{ ip('boreholeCount', { count: seam.borehole_count }) }}
               </span>
             </div>
             <div class="seam-card-stats">
               <div class="mini-stat">
-                <span class="mini-stat-label">均厚</span>
+                <span class="mini-stat-label">{{ ip('avgThickness') }}</span>
                 <span class="mini-stat-value">{{ seam.avg_thickness?.toFixed(2) }} m</span>
               </div>
               <div class="mini-stat-divider"></div>
               <div class="mini-stat">
-                <span class="mini-stat-label">范围</span>
+                <span class="mini-stat-label">{{ ip('thicknessRange') }}</span>
                 <span class="mini-stat-value">{{ seam.thickness_range?.min?.toFixed(1) }}–{{ seam.thickness_range?.max?.toFixed(1) }} m</span>
               </div>
             </div>
@@ -72,7 +72,7 @@
 
     <!-- Main Dashboard -->
     <div v-else class="grid interp-grid">
-      <!-- Card 1: Interpolation Parameters -->
+      <!-- Card 1: Interpolation Parameters (Refactored with collapsible groups) -->
       <div class="card params-card compact-card">
         <h3 class="section-title">
           <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -81,152 +81,217 @@
             <path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24"></path>
             <path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24"></path>
           </svg>
-          插值参数
+          {{ ip('paramsSection') }}
         </h3>
 
-        <div class="param-section">
-          <label class="param-label">插值方法</label>
-          <div class="method-buttons">
-            <button
-              v-for="opt in methodOptions"
-              :key="opt.key"
-              :class="['method-btn', { active: method === opt.key }]"
-              @click="method = opt.key"
-            >
-              <span class="method-btn-label">{{ opt.label }}</span>
-            </button>
+        <!-- Method Group -->
+        <div class="control-group">
+          <div class="control-group-header" @click="collapsedSections.method = !collapsedSections.method">
+            <span class="control-group-title">{{ ip('groupMethod') }}</span>
+            <span class="control-group-hint" :title="ip('tooltipMethod')">ⓘ</span>
+            <svg class="chevron" :class="{ rotated: !collapsedSections.method }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
+          <transition name="collapse">
+            <div v-show="!collapsedSections.method" class="control-group-content">
+              <div class="method-buttons">
+                <button
+                  v-for="opt in methodOptions"
+                  :key="opt.key"
+                  :class="['method-btn', { active: method === opt.key }]"
+                  @click="method = opt.key"
+                >
+                  <span class="method-btn-label">{{ opt.label }}</span>
+                </button>
+              </div>
+            </div>
+          </transition>
         </div>
 
-        <div class="param-section">
-          <div class="param-header">
-            <label class="param-label">网格密度</label>
-            <span class="param-value-badge">{{ gridSize }}</span>
+        <!-- Grid Settings Group -->
+        <div class="control-group">
+          <div class="control-group-header" @click="collapsedSections.grid = !collapsedSections.grid">
+            <span class="control-group-title">{{ ip('groupGrid') }}</span>
+            <svg class="chevron" :class="{ rotated: !collapsedSections.grid }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
-          <div class="slider-track">
-            <input v-model.number="gridSize" type="range" min="30" max="150" step="10" class="slider">
-          </div>
-          <div class="slider-labels">
-            <span>粗</span>
-            <span>细</span>
-          </div>
+          <transition name="collapse">
+            <div v-show="!collapsedSections.grid" class="control-group-content">
+              <div class="param-row">
+                <label class="param-label">{{ ip('gridSize') }}</label>
+                <span class="param-value-badge">{{ gridSize }}</span>
+              </div>
+              <div class="slider-track">
+                <input v-model.number="gridSize" type="range" min="30" max="150" step="10" class="slider">
+              </div>
+              <div class="slider-labels">
+                <span>{{ ip('sliderCoarse') }}</span>
+                <span>{{ ip('sliderFine') }}</span>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">{{ ip('contourLevels') }}</label>
+                <span class="param-value-badge">{{ contourLevels }}</span>
+              </div>
+              <div class="slider-track">
+                <input v-model.number="contourLevels" type="range" min="5" max="20" step="1" class="slider">
+              </div>
+              <div class="slider-labels">
+                <span>{{ ip('sliderLow') }}</span>
+                <span>{{ ip('sliderHigh') }}</span>
+              </div>
+
+              <!-- Smart Recommendation -->
+              <div v-if="recommendedParams" class="param-recommendation">
+                <div class="recommendation-text">
+                  推荐: 网格 {{ recommendedParams.gridSize }}, 等值线 {{ recommendedParams.contourLevels }}
+                </div>
+                <button class="btn secondary small" @click="applyRecommendedParams">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                  </svg>
+                  应用推荐
+                </button>
+              </div>
+            </div>
+          </transition>
         </div>
 
-        <div class="param-section">
-          <div class="param-header">
-            <label class="param-label">等值线级别</label>
-            <span class="param-value-badge">{{ contourLevels }}</span>
+        <!-- Render Settings Group -->
+        <div class="control-group">
+          <div class="control-group-header" @click="collapsedSections.render = !collapsedSections.render">
+            <span class="control-group-title">{{ ip('groupRender') }}</span>
+            <span class="control-group-hint" :title="ip('tooltipRenderQuality')">ⓘ</span>
+            <svg class="chevron" :class="{ rotated: !collapsedSections.render }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
-          <div class="slider-track">
-            <input v-model.number="contourLevels" type="range" min="5" max="20" step="1" class="slider">
-          </div>
-          <div class="slider-labels">
-            <span>少</span>
-            <span>多</span>
-          </div>
+          <transition name="collapse">
+            <div v-show="!collapsedSections.render" class="control-group-content">
+              <div class="quality-buttons">
+                <button
+                  v-for="opt in renderQualityOptions"
+                  :key="opt.key"
+                  :class="['quality-btn', { active: renderQuality === opt.key }]"
+                  @click="renderQuality = opt.key"
+                >
+                  {{ opt.label }}
+                </button>
+              </div>
+              <p class="param-hint">{{ ip('renderQualityHint') }}</p>
+            </div>
+          </transition>
         </div>
 
-        <div class="param-section">
-          <label class="param-label">渲染质量</label>
-          <div class="quality-buttons">
-            <button
-              v-for="opt in renderQualityOptions"
-              :key="opt.key"
-              :class="['quality-btn', { active: renderQuality === opt.key }]"
-              @click="renderQuality = opt.key"
-            >
-              {{ opt.label }}
-            </button>
+        <!-- Advanced Options Group -->
+        <div class="control-group" v-if="thicknessResult">
+          <div class="control-group-header" @click="collapsedSections.advanced = !collapsedSections.advanced">
+            <span class="control-group-title">{{ ip('groupAdvanced') }}</span>
+            <span class="control-group-hint" :title="ip('tooltipCrossSection')">ⓘ</span>
+            <svg class="chevron" :class="{ rotated: !collapsedSections.advanced }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
-          <p class="param-hint">默认先快速预览，需要时再切换更高质量重算。</p>
+          <transition name="collapse">
+            <div v-show="!collapsedSections.advanced" class="control-group-content">
+              <label class="toggle-btn" style="width: 100%">
+                <input type="checkbox" v-model="crossSectionMode">
+                <span>{{ ip('drawProfile') }}</span>
+              </label>
+              <p v-if="crossSectionMode" class="hint-text">{{ ip('drawProfileHint') }}</p>
+            </div>
+          </transition>
         </div>
 
-        <div class="param-section" v-if="thicknessResult">
-          <label class="toggle-btn" style="width: 100%">
-            <input type="checkbox" v-model="crossSectionMode">
-            <span>绘制剖面线</span>
-          </label>
-          <p v-if="crossSectionMode" class="hint-text">在地图上点击两点绘制剖面线</p>
+        <!-- Geomodel Group -->
+        <div class="control-group geomodel-group">
+          <div class="control-group-header" @click="collapsedSections.geomodel = !collapsedSections.geomodel">
+            <span class="control-group-title">{{ ip('groupGeomodel') }}</span>
+            <span class="control-group-hint" :title="ip('tooltipGeomodel')">ⓘ</span>
+            <svg class="chevron" :class="{ rotated: !collapsedSections.geomodel }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+          <transition name="collapse">
+            <div v-show="!collapsedSections.geomodel" class="control-group-content">
+              <div class="geomodel-controls">
+                <select v-model="geomodelMethod" class="geomodel-select">
+                  <option
+                    v-for="opt in geomodelMethodOptions"
+                    :key="opt.key"
+                    :value="opt.key"
+                  >
+                    {{ opt.label }}
+                  </option>
+                </select>
+                <div class="geomodel-range">
+                  <label>{{ ip('geomodelResolution') }}</label>
+                  <input v-model.number="geomodelResolution" type="number" min="1" max="500" step="1">
+                </div>
+                <button class="btn outline geomodel-btn" @click="startGeomodelJob" :disabled="geomodelSubmitting">
+                  {{ geomodelSubmitting ? ip('geomodelSubmitting') : ip('geomodelSubmit') }}
+                </button>
+              </div>
+
+              <div v-if="geomodelJob" class="geomodel-status">
+                <span>{{ ip('geomodelStatus') }}: {{ geomodelJob.status }}</span>
+                <span v-if="geomodelPolling">{{ ip('geomodelPolling') }}</span>
+                <span v-if="geomodelJob.message">{{ geomodelJob.message }}</span>
+              </div>
+              <p v-if="geomodelError" class="geomodel-error">{{ geomodelError }}</p>
+
+              <div v-if="geomodelQualitySummary" class="geomodel-summary">
+                <div class="summary-item">
+                  <span>{{ ip('geomodelContinuity') }}</span>
+                  <strong>{{ Number(geomodelQualitySummary.continuity_score || 0).toFixed(3) }}</strong>
+                </div>
+                <div class="summary-item">
+                  <span>{{ ip('geomodelPinchoutRatio') }}</span>
+                  <strong>{{ Number(geomodelQualitySummary.pinchout_ratio || 0).toFixed(3) }}</strong>
+                </div>
+                <div class="summary-item">
+                  <span>{{ ip('geomodelLayerCv') }}</span>
+                  <strong>{{ Number(geomodelQualitySummary.layer_cv || 0).toFixed(3) }}</strong>
+                </div>
+              </div>
+
+              <div class="geomodel-files" v-if="geomodelArtifacts.length">
+                <button
+                  v-for="artifact in geomodelArtifacts"
+                  :key="artifact.name"
+                  class="file-chip"
+                  @click="downloadGeomodelFile(artifact.name)"
+                >
+                  {{ artifact.name }}
+                </button>
+              </div>
+            </div>
+          </transition>
         </div>
 
         <div class="action-buttons">
           <button class="btn primary" @click="handleInterpolate({ forceRefresh: true, silent: false })" :disabled="loading">
             <svg v-if="!loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             <span v-if="loading" class="spinner sm"></span>
-            {{ loading ? '计算中...' : '生成等值线图' }}
+            {{ loading ? ip('computing') : ip('generateContours') }}
           </button>
           <button class="btn outline" @click="selectedSeam = null; thicknessResult = null; depthResult = null">
-            更换煤层
+            {{ ip('changeSeam') }}
           </button>
           <button
             v-if="thicknessResult || depthResult"
             class="btn outline"
             @click="goPressureAnalysis"
           >
-            下一步
+            {{ ip('nextStep') }}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
         </div>
         <p v-if="interpolationStatus" class="status-text">{{ interpolationStatus }}</p>
-
-        <div class="geomodel-panel" v-if="selectedSeam">
-          <div class="geomodel-head">
-            <span class="geomodel-title">地质建模任务</span>
-            <span class="geomodel-jobid" v-if="geomodelJobId">#{{ geomodelJobId }}</span>
-          </div>
-
-          <div class="geomodel-controls">
-            <select v-model="geomodelMethod" class="geomodel-select">
-              <option
-                v-for="opt in geomodelMethodOptions"
-                :key="opt.key"
-                :value="opt.key"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-            <div class="geomodel-range">
-              <label>分辨率</label>
-              <input v-model.number="geomodelResolution" type="number" min="1" max="500" step="1">
-            </div>
-            <button class="btn outline geomodel-btn" @click="startGeomodelJob" :disabled="geomodelSubmitting">
-              {{ geomodelSubmitting ? '提交中...' : '发起建模' }}
-            </button>
-          </div>
-
-          <div v-if="geomodelJob" class="geomodel-status">
-            <span>状态: {{ geomodelJob.status }}</span>
-            <span v-if="geomodelPolling">轮询中...</span>
-            <span v-if="geomodelJob.message">{{ geomodelJob.message }}</span>
-          </div>
-          <p v-if="geomodelError" class="geomodel-error">{{ geomodelError }}</p>
-
-          <div v-if="geomodelQualitySummary" class="geomodel-summary">
-            <div class="summary-item">
-              <span>连续性</span>
-              <strong>{{ Number(geomodelQualitySummary.continuity_score || 0).toFixed(3) }}</strong>
-            </div>
-            <div class="summary-item">
-              <span>尖灭比例</span>
-              <strong>{{ Number(geomodelQualitySummary.pinchout_ratio || 0).toFixed(3) }}</strong>
-            </div>
-            <div class="summary-item">
-              <span>层厚变异</span>
-              <strong>{{ Number(geomodelQualitySummary.layer_cv || 0).toFixed(3) }}</strong>
-            </div>
-          </div>
-
-          <div class="geomodel-files" v-if="geomodelArtifacts.length">
-            <button
-              v-for="artifact in geomodelArtifacts"
-              :key="artifact.name"
-              class="file-chip"
-              @click="downloadGeomodelFile(artifact.name)"
-            >
-              {{ artifact.name }}
-            </button>
-          </div>
-        </div>
       </div>
 
       <!-- Card 2: Data Distribution -->
@@ -237,7 +302,7 @@
             <line x1="12" y1="20" x2="12" y2="4"></line>
             <line x1="6" y1="20" x2="6" y2="14"></line>
           </svg>
-          数据分布
+          {{ ip('dataDistSection') }}
         </h3>
         <div v-if="seamPoints.length > 0" class="figure-wrapper">
           <canvas ref="histogramCanvas" class="figure-canvas histogram-canvas"></canvas>
@@ -246,32 +311,32 @@
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
             <line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>
           </svg>
-          <p>暂无数据分布</p>
+          <p>{{ ip('noDataDist') }}</p>
         </div>
         <!-- 统计信息 -->
         <div v-if="seamPoints.length > 0" class="stats-grid">
           <div class="stat-item">
-            <span class="stat-label">样本数</span>
+            <span class="stat-label">{{ ip('sampleCount') }}</span>
             <span class="stat-value">{{ seamThicknessStats.count }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">均值</span>
+            <span class="stat-label">{{ ip('meanValue') }}</span>
             <span class="stat-value">{{ seamThicknessStats.mean.toFixed(2) }}m</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">标准差</span>
+            <span class="stat-label">{{ ip('stdDev') }}</span>
             <span class="stat-value">{{ seamThicknessStats.stdDev.toFixed(2) }}m</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">变异系数</span>
+            <span class="stat-label">{{ ip('cv') }}</span>
             <span class="stat-value">{{ seamThicknessStats.cv.toFixed(2) }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">最小值</span>
+            <span class="stat-label">{{ ip('minValue') }}</span>
             <span class="stat-value">{{ seamThicknessStats.min.toFixed(2) }}m</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">最大值</span>
+            <span class="stat-label">{{ ip('maxValue') }}</span>
             <span class="stat-value">{{ seamThicknessStats.max.toFixed(2) }}m</span>
           </div>
         </div>
@@ -285,12 +350,13 @@
             <path d="m2 17 10 5 10-5"></path>
             <path d="m2 12 10 5 10-5"></path>
           </svg>
-          地层柱状图
+          {{ ip('stratSection') }}
         </h3>
         <div class="figure-wrapper strat-figure">
           <canvas ref="stratigraphicCanvas" class="figure-canvas stratigraphic-canvas"></canvas>
         </div>
         <div class="lithology-legend">
+          <div class="legend-title">{{ ip('lithologyLegend') }}</div>
           <div v-for="(color, name) in lithologyColors" :key="name" class="legend-chip">
             <span class="legend-dot" :style="{ background: color }"></span>
             <span class="legend-text">{{ name }}</span>
@@ -307,19 +373,18 @@
                 <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
                 </svg>
-                煤层厚度分布
+                {{ ip('thicknessMapSection') }}
               </h3>
               <p class="section-desc map-method-desc" v-if="thicknessResult">
                 <span class="method-tag">{{ methodName(method) }}</span>
                 {{ thicknessResult?.valueRange?.min?.toFixed(1) }} – {{ thicknessResult?.valueRange?.max?.toFixed(1) }} m
               </p>
-              <p class="section-desc" v-else>正在准备厚度分布图...</p>
+              <p class="section-desc" v-else>{{ ip('preparingMap', { type: ip('thicknessDist') }) }}</p>
             </div>
           </div>
           <div class="map-wrapper">
-            <ContourMap
-              v-if="thicknessResult"
-              :image-url="thicknessResult.imageUrl"
+            <EChartsContourMap
+              v-if="thicknessResult && seamPoints.length > 0"
               :boreholes="seamPoints"
               :bounds="thicknessResult.bounds"
               property="thickness"
@@ -329,9 +394,14 @@
               :cross-section-mode="crossSectionMode"
               @cross-section-complete="handleCrossSectionComplete"
             />
-            <div v-else class="map-placeholder" :class="{ loading }">
-              <div v-if="loading" class="spinner"></div>
-              <p>{{ loading ? '正在计算厚度分布图...' : '点击“生成等值线图”后显示厚度分布图。' }}</p>
+            <SkeletonMap
+              v-else-if="loading"
+              :show-progress="true"
+              :progress="loadingProgress"
+              :progress-text="loadingStage || ip('generatingMap', { type: ip('thicknessDist') })"
+            />
+            <div v-else class="map-placeholder">
+              <p>{{ ip('noMapClickHint', { type: ip('thicknessDist') }) }}</p>
             </div>
           </div>
         </div>
@@ -344,19 +414,18 @@
                   <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
                   <path d="m2 17 10 5 10-5"></path>
                 </svg>
-                煤层埋深分布
+                {{ ip('depthMapSection') }}
               </h3>
               <p class="section-desc map-method-desc" v-if="depthResult">
                 <span class="method-tag">{{ methodName(method) }}</span>
                 {{ depthResult?.valueRange?.min?.toFixed(1) }} – {{ depthResult?.valueRange?.max?.toFixed(1) }} m
               </p>
-              <p class="section-desc" v-else>正在准备埋深分布图...</p>
+              <p class="section-desc" v-else>{{ ip('preparingMap', { type: ip('depthDist') }) }}</p>
             </div>
           </div>
           <div class="map-wrapper">
-            <ContourMap
-              v-if="depthResult"
-              :image-url="depthResult.imageUrl"
+            <EChartsContourMap
+              v-if="depthResult && seamPoints.length > 0"
               :boreholes="seamPoints"
               :bounds="depthResult.bounds"
               property="burial_depth"
@@ -366,9 +435,14 @@
               :cross-section-mode="crossSectionMode"
               @cross-section-complete="handleCrossSectionComplete"
             />
-            <div v-else class="map-placeholder" :class="{ loading }">
-              <div v-if="loading" class="spinner"></div>
-              <p>{{ loading ? '正在计算埋深分布图...' : '点击“生成等值线图”后显示埋深分布图。' }}</p>
+            <SkeletonMap
+              v-else-if="loading"
+              :show-progress="true"
+              :progress="loadingProgress"
+              :progress-text="loadingStage || ip('generatingMap', { type: ip('depthDist') })"
+            />
+            <div v-else class="map-placeholder">
+              <p>{{ ip('noMapClickHint', { type: ip('depthDist') }) }}</p>
             </div>
           </div>
         </div>
@@ -384,19 +458,24 @@
                 <line x1="12" y1="8" x2="12" y2="12"></line>
                 <line x1="12" y1="16" x2="12.01" y2="16"></line>
               </svg>
-              插值不确定性分布
+              {{ ip('uncertaintyMapSection') }}
             </h3>
             <p class="section-desc">
-              <span class="uncertainty-high">■</span> 高不确定性区域 &nbsp;
-              <span class="uncertainty-low">■</span> 可靠区域
+              <span class="uncertainty-high">■</span> {{ ip('uncertaintyHigh') }} &nbsp;
+              <span class="uncertainty-low">■</span> {{ ip('uncertaintyLow') }}
             </p>
           </div>
         </div>
         <div class="map-wrapper uncertainty-wrapper">
           <canvas v-if="thicknessResult" ref="uncertaintyCanvas" class="uncertainty-canvas"></canvas>
-          <div v-else class="map-placeholder" :class="{ loading }">
-            <div v-if="loading" class="spinner"></div>
-            <p>{{ loading ? '正在计算不确定性分布图...' : '完成插值后显示不确定性分布图。' }}</p>
+          <SkeletonMap
+            v-else-if="loading"
+            :show-progress="true"
+            :progress="loadingProgress"
+            :progress-text="loadingStage || ip('generatingMap', { type: ip('uncertaintyMapSection') })"
+          />
+          <div v-else class="map-placeholder">
+            <p>{{ ip('noContoursYet') }}</p>
           </div>
         </div>
       </div>
@@ -410,13 +489,13 @@
                 <path d="M3 3v18h18"></path>
                 <path d="m19 9-5 5-4-4-3 3"></path>
               </svg>
-              剖面切片 (A–A')
-              <span class="section-badge">{{ crossSectionData.distance?.toFixed(0) }} m</span>
+              {{ ip('crossSectionSection') }}
+              <span class="section-badge">{{ ip('crossSectionDistance', { distance: crossSectionData.distance?.toFixed(0) }) }}</span>
             </h3>
           </div>
           <button class="btn outline small" @click="resetCrossSection">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-            重置
+            {{ ip('resetCrossSection') }}
           </button>
         </div>
         <div class="cross-section-wrapper">
@@ -429,12 +508,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from '../composables/useI18n'
 import { useToast } from '../composables/useToast'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import { useGeomodelJob } from '../composables/useGeomodelJob'
-import ContourMap from '../components/ContourMap.vue'
+import EChartsContourMap from '../components/EChartsContourMap.vue'
+import SkeletonMap from '../components/SkeletonMap.vue'
 import {
   downloadGeomodelArtifact,
   getCoalSeams,
@@ -445,12 +526,16 @@ import {
 const toast = useToast()
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
+const ip = (key, params) => t(`interpolation.${key}`, params)
 const { workspaceState, setSelectedSeam, markStepDone } = useWorkspaceFlow()
 
 // State
 const loadingSeams = ref(false)
 const seamError = ref(null)
 const loading = ref(false)
+const loadingProgress = ref(0)
+const loadingStage = ref('')
 const availableSeams = ref([])
 const selectedSeam = ref(null)
 const seamStats = ref(null)
@@ -469,21 +554,108 @@ const crossSectionMode = ref(false)
 const crossSectionData = ref({ line: null, points: [], depthProfile: [], distance: null, hasData: false })
 const uncertaintyData = ref(null)
 
+// Auto-save key
+const STORAGE_KEY = 'interpolation-params-v1'
+
+// Smart parameter recommendations
+const recommendedParams = computed(() => {
+  const count = seamPoints.value.length
+  if (count === 0) return null
+
+  // Recommend grid size based on borehole count
+  let recommendedGrid = 60
+  if (count < 10) recommendedGrid = 40
+  else if (count < 20) recommendedGrid = 60
+  else if (count < 50) recommendedGrid = 80
+  else recommendedGrid = 100
+
+  // Recommend contour levels based on data range
+  const thicknesses = seamPoints.value.map(p => p.thickness).filter(v => v != null)
+  const range = thicknesses.length > 0 ? Math.max(...thicknesses) - Math.min(...thicknesses) : 0
+  let recommendedLevels = 10
+  if (range < 2) recommendedLevels = 6
+  else if (range < 5) recommendedLevels = 10
+  else recommendedLevels = 14
+
+  return {
+    gridSize: recommendedGrid,
+    contourLevels: recommendedLevels,
+    method: count < 15 ? 'idw' : 'kriging' // Use IDW for sparse data, Kriging for dense
+  }
+})
+
+const applyRecommendedParams = () => {
+  const rec = recommendedParams.value
+  if (!rec) return
+
+  gridSize.value = rec.gridSize
+  contourLevels.value = rec.contourLevels
+  method.value = rec.method
+  toast.success(`已应用推荐参数: 网格 ${rec.gridSize}, 等值线 ${rec.contourLevels}, ${rec.method === 'kriging' ? '克里金' : 'IDW'}插值`)
+}
+
+// Load saved parameters from localStorage
+const loadSavedParams = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const params = JSON.parse(saved)
+      if (params.method) method.value = params.method
+      if (params.gridSize) gridSize.value = params.gridSize
+      if (params.contourLevels) contourLevels.value = params.contourLevels
+      if (params.renderQuality) renderQuality.value = params.renderQuality
+      if (params.collapsedSections) {
+        collapsedSections.value = { ...collapsedSections.value, ...params.collapsedSections }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load saved params:', e)
+  }
+}
+
+// Save parameters to localStorage
+const saveParams = () => {
+  try {
+    const params = {
+      method: method.value,
+      gridSize: gridSize.value,
+      contourLevels: contourLevels.value,
+      renderQuality: renderQuality.value,
+      collapsedSections: collapsedSections.value,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(params))
+  } catch (e) {
+    console.warn('Failed to save params:', e)
+  }
+}
+
 // Canvas refs
 const histogramCanvas = ref(null)
 const crossSectionCanvas = ref(null)
 const stratigraphicCanvas = ref(null)
 const uncertaintyCanvas = ref(null)
 
+// Collapsible sections state
+const collapsedSections = ref({
+  method: false,
+  grid: false,
+  render: false,
+  advanced: false,
+  geomodel: true,
+  maps: false
+})
+
 // Geomodel state
 const geomodelMethod = ref('thickness')
 const geomodelResolution = ref(20)
-const geomodelMethodOptions = [
-  { key: 'thickness', label: '厚度建模' },
-  { key: 'hybrid', label: '混合建模' },
-  { key: 'regression_kriging', label: '回归克里金' },
-  { key: 'smart_pinchout', label: '智能尖灭' }
-]
+const geomodelMethodOptions = computed(() => [
+  { key: 'thickness', label: ip('geomodelMethodThickness') },
+  { key: 'hybrid', label: ip('geomodelMethodHybrid') },
+  { key: 'regression_kriging', label: ip('geomodelMethodRegressionKriging') },
+  { key: 'smart_pinchout', label: ip('geomodelMethodSmartPinchout') }
+])
+
 const {
   jobId: geomodelJobId,
   job: geomodelJob,
@@ -496,24 +668,24 @@ const {
 } = useGeomodelJob()
 
 // Options
-const methodOptions = [
-  { key: 'kriging', label: 'Kriging' },
-  { key: 'idw', label: 'IDW' },
-  { key: 'linear', label: 'Linear' },
-  { key: 'nearest', label: 'Nearest' }
-]
+const methodOptions = computed(() => [
+  { key: 'kriging', label: ip('methodKriging') },
+  { key: 'idw', label: ip('methodIdw') },
+  { key: 'linear', label: ip('methodLinear') },
+  { key: 'nearest', label: ip('methodNearest') }
+])
 
-const renderQualityOptions = [
-  { key: 'fast', label: '快速' },
-  { key: 'standard', label: '标准' },
-  { key: 'high', label: '高精' }
-]
+const renderQualityOptions = computed(() => [
+  { key: 'fast', label: ip('renderFast') },
+  { key: 'standard', label: ip('renderStandard') },
+  { key: 'high', label: ip('renderHigh') }
+])
 
-const renderQualityConfig = {
-  fast: { dpi: 120, smoothSigma: 0.75, label: '快速' },
-  standard: { dpi: 200, smoothSigma: 1.15, label: '标准' },
-  high: { dpi: 300, smoothSigma: 1.35, label: '高精' }
-}
+const renderQualityConfig = computed(() => ({
+  fast: { dpi: 120, smoothSigma: 0.75, label: ip('renderFast') },
+  standard: { dpi: 200, smoothSigma: 1.15, label: ip('renderStandard') },
+  high: { dpi: 300, smoothSigma: 1.35, label: ip('renderHigh') }
+}))
 
 const LAST_CONTOUR_CACHE_KEY = 'interpolation:lastContour:v1'
 const UNCERTAINTY_RESOLUTION_BASE = { fast: 72, standard: 96, high: 128 }
@@ -563,7 +735,12 @@ const lithologyStyles = {
 }
 
 const methodName = (key) => {
-  const names = { kriging: 'Kriging', idw: 'IDW', linear: 'Linear', nearest: 'Nearest' }
+  const names = {
+    kriging: ip('methodKriging'),
+    idw: ip('methodIdw'),
+    linear: ip('methodLinear'),
+    nearest: ip('methodNearest')
+  }
   return names[key] || key
 }
 
@@ -855,13 +1032,21 @@ const handleInterpolate = async (options = {}) => {
     autoMode = false
   } = options
 
-  const preset = renderQualityConfig[presetKey] || renderQualityConfig.standard
+  const preset = renderQualityConfig.value[presetKey] || renderQualityConfig.value.standard
   const seamName = selectedSeam.value.name
   const requestToken = ++interpolateRequestToken
   loading.value = true
-  interpolationStatus.value = autoMode
-    ? `正在生成${preset.label}预览图...`
-    : `正在渲染${preset.label}质量结果...`
+  loadingProgress.value = 0
+  loadingStage.value = autoMode ? `正在生成${preset.label}预览图...` : `正在渲染${preset.label}质量结果...`
+
+  // 模拟进度更新
+  const progressInterval = setInterval(() => {
+    if (loadingProgress.value < 90) {
+      loadingProgress.value += Math.random() * 15
+      if (loadingProgress.value > 90) loadingProgress.value = 90
+    }
+  }, 300)
+
   try {
     const { data } = await getSeamContourImages(
       seamName,
@@ -879,6 +1064,11 @@ const handleInterpolate = async (options = {}) => {
     applyContourResult(data)
     writeLastContourCache(seamName, data)
 
+    // 完成进度
+    clearInterval(progressInterval)
+    loadingProgress.value = 100
+    loadingStage.value = '渲染完成'
+
     // Calculate uncertainty map and draw other charts after DOM update
     await nextTick()
     scheduleUncertaintyCalculation()
@@ -887,15 +1077,18 @@ const handleInterpolate = async (options = {}) => {
       interpolationPoints: seamPoints.value.length || 0
     })
     if (!silent) {
-      toast.add('等值线图生成完成', 'success')
+      toast.success('等值线图生成完成')
     }
   } catch (err) {
     console.error('Interpolate error:', err)
     console.error('Error response:', err.response?.data)
     toast.add(err.response?.data?.detail || '生成等值线图失败', 'error')
   } finally {
+    clearInterval(progressInterval)
     if (requestToken === interpolateRequestToken) {
       loading.value = false
+      loadingProgress.value = 0
+      loadingStage.value = ''
       interpolationStatus.value = ''
     }
   }
@@ -1232,28 +1425,24 @@ const calculateUncertainty = () => {
 
 }
 
-// Draw histogram - Nature journal style
+// Draw histogram - clean modern style matching AlgorithmValidation
 const drawHistogram = () => {
   const canvas = histogramCanvas.value
-  if (!canvas) {
-    return
-  }
-  if (seamPoints.value.length === 0) {
-    return
-  }
+  if (!canvas || seamPoints.value.length === 0) return
 
   const ctx = canvas.getContext('2d')
   if (!ctx) return
+
   const dpr = window.devicePixelRatio || 1
   const container = canvas.parentElement
   const cssW = container?.clientWidth || canvas.clientWidth || 500
-  const cssH = container?.clientHeight || canvas.clientHeight || 350
+  const cssH = container?.clientHeight || canvas.clientHeight || 280
   canvas.width = Math.round(cssW * dpr)
   canvas.height = Math.round(cssH * dpr)
   canvas.style.width = `${cssW}px`
   canvas.style.height = `${cssH}px`
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  applyFigureRenderDefaults(ctx)
+
   const w = cssW
   const h = cssH
 
@@ -1262,7 +1451,7 @@ const drawHistogram = () => {
     .filter((v) => Number.isFinite(v))
   if (values.length === 0) return
 
-  // Calculate statistics
+  // Statistics
   const minVal = Math.min(...values)
   const maxVal = Math.max(...values)
   const mean = values.reduce((a, b) => a + b, 0) / values.length
@@ -1270,273 +1459,136 @@ const drawHistogram = () => {
   const stdDev = Math.sqrt(variance)
 
   const valueSpan = maxVal - minVal
-  const sortedValues = [...values].sort((a, b) => a - b)
-  const q1 = sortedValues[Math.floor((sortedValues.length - 1) * 0.25)] ?? minVal
-  const q3 = sortedValues[Math.floor((sortedValues.length - 1) * 0.75)] ?? maxVal
-  const iqr = Math.max(q3 - q1, 0)
-  const fdBinWidth = iqr > Number.EPSILON ? (2 * iqr) / Math.cbrt(sortedValues.length) : 0
-  const roughBinCount = fdBinWidth > 0 && valueSpan > 0 ? Math.round(valueSpan / fdBinWidth) : 16
-  const numBins = Math.max(10, Math.min(28, roughBinCount || 16))
+  const numBins = 20
   const binWidthVal = valueSpan > 0 ? valueSpan / numBins : 1
 
-  // Calculate histogram bins
+  // Calculate bins
   const bins = Array(numBins).fill(0)
   for (const v of values) {
-    const rawBin = valueSpan > 0
-      ? Math.floor((v - minVal) / binWidthVal)
-      : Math.floor(numBins / 2)
-    const bin = Math.max(0, Math.min(rawBin, numBins - 1))
+    const bin = Math.min(Math.floor((v - minVal) / binWidthVal), numBins - 1)
     bins[bin]++
   }
-
   const maxCount = Math.max(...bins)
 
-  // Academic color palette - inspired by Nature/Science journals
-  const barColorBase = '#3B6FA0'       // Steel blue (academic standard)
-  const barColorHighlight = '#4A82B8'   // Lighter highlight
-  const curveColor = '#C44E52'          // Academic red for density curve
-  const meanLineColor = '#E8963E'       // Amber for mean line
+  // Colors matching AlgorithmValidation
+  const barColor = '#0f766e'
+  const curveColor = '#f59e0b'
+  const meanColor = '#dc2626'
 
-  // Clear canvas - crisp white background
+  // Clear
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, w, h)
 
-  const padding = { left: 56, right: 28, top: 48, bottom: 50 }
+  const padding = { left: 48, right: 20, top: 40, bottom: 40 }
   const drawW = w - padding.left - padding.right
   const drawH = h - padding.top - padding.bottom
 
-  // Calculate bar width with subtle gaps
   const barWidth = drawW / numBins
-  const barGap = Math.max(1, barWidth * 0.08)
-  const scaleY = drawH / (maxCount * 1.15)
+  const scaleY = drawH / (maxCount * 1.1)
 
-  // Draw subtle grid lines (academic style - horizontal only)
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)'
-  ctx.lineWidth = 0.5
-  for (let i = 1; i <= 5; i++) {
-    const y = h - padding.bottom - (i / 5) * drawH
+  // Draw grid lines
+  ctx.strokeStyle = '#f1f5f9'
+  ctx.lineWidth = 1
+  for (let i = 1; i <= 4; i++) {
+    const y = h - padding.bottom - (i / 4) * drawH
     ctx.beginPath()
     ctx.moveTo(padding.left, y)
     ctx.lineTo(w - padding.right, y)
     ctx.stroke()
   }
 
-  // Draw histogram bars with gradient fill
+  // Draw histogram bars
   for (let i = 0; i < numBins; i++) {
     const barH = bins[i] * scaleY
-    const x = padding.left + i * barWidth + barGap / 2
+    const x = padding.left + i * barWidth + 1
     const y = h - padding.bottom - barH
-    const bw = barWidth - barGap
+    const bw = barWidth - 2
 
     if (barH > 0) {
-      // Create subtle vertical gradient for each bar
-      const grad = ctx.createLinearGradient(x, y, x, h - padding.bottom)
-      grad.addColorStop(0, barColorHighlight)
-      grad.addColorStop(1, barColorBase)
-      ctx.fillStyle = grad
-      ctx.globalAlpha = 0.88
-
-      // Draw bar with slight rounded top
-      const radius = Math.min(3, bw / 4)
-      ctx.beginPath()
-      ctx.moveTo(x, h - padding.bottom)
-      ctx.lineTo(x, y + radius)
-      ctx.quadraticCurveTo(x, y, x + radius, y)
-      ctx.lineTo(x + bw - radius, y)
-      ctx.quadraticCurveTo(x + bw, y, x + bw, y + radius)
-      ctx.lineTo(x + bw, h - padding.bottom)
-      ctx.closePath()
-      ctx.fill()
-
-      // Subtle edge
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)'
-      ctx.lineWidth = 0.5
-      ctx.stroke()
+      ctx.fillStyle = barColor
+      ctx.globalAlpha = 0.8
+      ctx.fillRect(x, y, bw, barH)
     }
   }
-  ctx.globalAlpha = 1.0
+  ctx.globalAlpha = 1
 
-  // Draw mean vertical dashed line
+  // Draw density curve
+  if (stdDev > Number.EPSILON && valueSpan > 0) {
+    ctx.strokeStyle = curveColor
+    ctx.lineWidth = 2
+    ctx.beginPath()
+
+    const segments = 100
+    for (let i = 0; i <= segments; i++) {
+      const x = padding.left + (i / segments) * drawW
+      const val = minVal + (i / segments) * valueSpan
+      const pdf = (1 / (stdDev * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((val - mean) / stdDev) ** 2)
+      const curveCount = pdf * values.length * binWidthVal
+      const y = h - padding.bottom - curveCount * scaleY
+
+      if (i === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+  }
+
+  // Draw mean line
   if (valueSpan > 0) {
     const meanX = padding.left + ((mean - minVal) / valueSpan) * drawW
-    ctx.save()
-    ctx.strokeStyle = meanLineColor
-    ctx.lineWidth = 1.5
-    ctx.setLineDash([5, 3])
+    ctx.strokeStyle = meanColor
+    ctx.lineWidth = 2
+    ctx.setLineDash([4, 2])
     ctx.beginPath()
     ctx.moveTo(meanX, padding.top)
     ctx.lineTo(meanX, h - padding.bottom)
     ctx.stroke()
     ctx.setLineDash([])
-    ctx.restore()
   }
 
-  // Draw density fit curve (Normal distribution) - smooth and polished
-  const canDrawDensityCurve = stdDev > Number.EPSILON && valueSpan > 0
-  if (canDrawDensityCurve) {
-    ctx.strokeStyle = curveColor
-    ctx.lineWidth = 2.2
-    ctx.beginPath()
-
-    const segments = 150
-    for (let i = 0; i <= segments; i++) {
-      const x = padding.left + (i / segments) * drawW
-      const val = minVal + (i / segments) * valueSpan
-
-      // Normal distribution PDF
-      const pdf = (1 / (stdDev * Math.sqrt(2 * Math.PI))) *
-                  Math.exp(-0.5 * ((val - mean) / stdDev) ** 2)
-
-      // Convert PDF to count scale
-      const curveCount = pdf * values.length * binWidthVal
-      const y = h - padding.bottom - curveCount * scaleY
-
-      if (i === 0) {
-        ctx.moveTo(x, y)
-      } else {
-        ctx.lineTo(x, y)
-      }
-    }
-    ctx.stroke()
-  }
-
-  // Draw frame axes - clean spines (left + bottom only)
-  ctx.strokeStyle = '#333333'
-  ctx.lineWidth = 1.2
-
-  // Left spine (Y-axis)
+  // Draw axes
+  ctx.strokeStyle = '#94a3b8'
+  ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.moveTo(padding.left, padding.top - 4)
+  ctx.moveTo(padding.left, padding.top)
   ctx.lineTo(padding.left, h - padding.bottom)
+  ctx.lineTo(w - padding.right, h - padding.bottom)
   ctx.stroke()
 
-  // Bottom spine (X-axis)
-  ctx.beginPath()
-  ctx.moveTo(padding.left, h - padding.bottom)
-  ctx.lineTo(w - padding.right + 4, h - padding.bottom)
-  ctx.stroke()
-
-  // Draw ticks - outward facing, academic style
-  const tickLength = 5
-
-  // X-axis ticks
-  ctx.strokeStyle = '#333333'
-  ctx.lineWidth = 1.0
-  for (let i = 0; i <= 6; i++) {
-    const x = padding.left + (i / 6) * drawW
-    ctx.beginPath()
-    ctx.moveTo(x, h - padding.bottom)
-    ctx.lineTo(x, h - padding.bottom + tickLength)
-    ctx.stroke()
-  }
-
-  // Y-axis ticks
-  for (let i = 0; i <= 5; i++) {
-    const y = h - padding.bottom - (i / 5) * drawH
-    ctx.beginPath()
-    ctx.moveTo(padding.left, y)
-    ctx.lineTo(padding.left - tickLength, y)
-    ctx.stroke()
-  }
-
-  // X-axis labels
-  ctx.fillStyle = '#555555'
-  ctx.font = figureFont(10.5)
+  // X labels
+  ctx.fillStyle = '#64748b'
+  ctx.font = '11px sans-serif'
   ctx.textAlign = 'center'
-  for (let i = 0; i <= 6; i++) {
-    const val = minVal + (i / 6) * (maxVal - minVal)
-    const x = padding.left + (i / 6) * drawW
-    ctx.fillText(val.toFixed(1), x, h - padding.bottom + 18)
+  for (let i = 0; i <= 5; i++) {
+    const val = minVal + (i / 5) * (maxVal - minVal)
+    const x = padding.left + (i / 5) * drawW
+    ctx.fillText(val.toFixed(1), x, h - padding.bottom + 16)
   }
 
-  // Y-axis labels
+  // Y labels
   ctx.textAlign = 'right'
-  for (let i = 0; i <= 5; i++) {
-    const count = Math.round((i / 5) * (maxCount * 1.15))
-    const y = h - padding.bottom - (i / 5) * drawH
-    ctx.fillText(count.toString(), padding.left - 8, y + 4)
+  for (let i = 0; i <= 4; i++) {
+    const count = Math.round((i / 4) * (maxCount * 1.1))
+    const y = h - padding.bottom - (i / 4) * drawH
+    ctx.fillText(count.toString(), padding.left - 6, y + 4)
   }
 
-  // Axis labels - academic italic style
-  ctx.fillStyle = '#333333'
-  ctx.font = figureFont(11.5)
-
-  // X-axis label
+  // Axis labels
+  ctx.fillStyle = '#475569'
+  ctx.font = '12px sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('厚度 (m)', padding.left + drawW / 2, h - 6)
+  ctx.fillText('厚度 (m)', padding.left + drawW / 2, h - 8)
 
-  // Y-axis label
   ctx.save()
-  ctx.translate(14, padding.top + drawH / 2)
+  ctx.translate(16, padding.top + drawH / 2)
   ctx.rotate(-Math.PI / 2)
   ctx.fillText('频数', 0, 0)
   ctx.restore()
 
-  // Title - academic format: "Fig. X |" bold, rest normal
+  // Title
+  ctx.fillStyle = '#1f2937'
+  ctx.font = 'bold 13px sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillStyle = '#1a1a1a'
-  ctx.font = figureFont(12, 700)
-  const titlePrefix = 'Fig. 1'
-  ctx.fillText(titlePrefix, padding.left, 22)
-  const prefixWidth = ctx.measureText(titlePrefix).width
-  ctx.fillStyle = '#333'
-  ctx.font = figureFont(12, 400)
-  ctx.fillText(` | 煤层厚度频率分布 (n=${values.length})`, padding.left + prefixWidth, 22)
-
-  // Legend - elegant inline style
-  const legendX = w - padding.right - 140
-  const legendY = padding.top + 4
-
-  // Legend background
-  ctx.fillStyle = 'rgba(255,255,255,0.85)'
-  roundRect(ctx, legendX - 8, legendY - 10, 148, canDrawDensityCurve ? 62 : 36, 4)
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(0,0,0,0.08)'
-  ctx.lineWidth = 0.5
-  ctx.stroke()
-
-  // Histogram bar in legend
-  ctx.fillStyle = barColorBase
-  ctx.globalAlpha = 0.88
-  roundRect(ctx, legendX, legendY, 14, 10, 2)
-  ctx.fill()
-  ctx.globalAlpha = 1.0
-
-  ctx.fillStyle = '#333'
-  ctx.font = figureFont(10.5)
-  ctx.textAlign = 'left'
-  ctx.fillText('观测频率', legendX + 20, legendY + 9)
-
-  if (canDrawDensityCurve) {
-    // Density fit legend
-    ctx.strokeStyle = curveColor
-    ctx.lineWidth = 2.2
-    ctx.beginPath()
-    ctx.moveTo(legendX, legendY + 24)
-    ctx.lineTo(legendX + 14, legendY + 24)
-    ctx.stroke()
-
-    ctx.fillStyle = '#333'
-    ctx.fillText('正态拟合', legendX + 20, legendY + 28)
-  }
-
-  // Mean line legend
-  if (valueSpan > 0) {
-    ctx.save()
-    ctx.strokeStyle = meanLineColor
-    ctx.lineWidth = 1.5
-    ctx.setLineDash([4, 2])
-    ctx.beginPath()
-    ctx.moveTo(legendX, legendY + (canDrawDensityCurve ? 42 : 24))
-    ctx.lineTo(legendX + 14, legendY + (canDrawDensityCurve ? 42 : 24))
-    ctx.stroke()
-    ctx.setLineDash([])
-    ctx.restore()
-
-    ctx.fillStyle = '#333'
-    ctx.fillText(`μ = ${mean.toFixed(2)} m`, legendX + 20, legendY + (canDrawDensityCurve ? 46 : 28))
-  }
-
+  ctx.fillText(`煤层厚度分布 (n=${values.length}, μ=${mean.toFixed(2)}m)`, padding.left, 24)
 }
 
 // Helper function to draw rounded rectangle
@@ -1554,8 +1606,7 @@ const roundRect = (ctx, x, y, w, h, r) => {
   ctx.closePath()
 }
 
-// Draw stratigraphic column - Nature style (Light theme)
-// Draw stratigraphic column - Publication quality (Nature/Science style)
+// Draw stratigraphic column - clean modern style
 const drawStratigraphicColumn = () => {
   const canvas = stratigraphicCanvas.value
   if (!canvas || sortedLayers.value.length === 0) return
@@ -1564,18 +1615,18 @@ const drawStratigraphicColumn = () => {
   const dpr = window.devicePixelRatio || 1
   const container = canvas.parentElement
   const cssW = container?.clientWidth || canvas.clientWidth || 280
-  const cssH = container?.clientHeight || canvas.clientHeight || 500
+  const cssH = container?.clientHeight || canvas.clientHeight || 400
   canvas.width = Math.round(cssW * dpr)
   canvas.height = Math.round(cssH * dpr)
   canvas.style.width = `${cssW}px`
   canvas.style.height = `${cssH}px`
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  applyFigureRenderDefaults(ctx)
+
   const w = cssW
   const h = cssH
 
-  // Background
-  ctx.fillStyle = '#FFFFFF'
+  // Clean white background
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, w, h)
 
   const layers = sortedLayers.value
@@ -1585,127 +1636,301 @@ const drawStratigraphicColumn = () => {
   }
   if (!Number.isFinite(totalDepth) || totalDepth <= 0) return
 
-  const padding = { top: 32, bottom: 24 }
-  const scale = (h - padding.top - padding.bottom) / totalDepth
-  const topMargin = padding.top
-  const axisGap = 16
-  const labelArea = Math.max(120, Math.min(170, w * 0.32))
-  const columnWidth = Math.max(85, Math.min(150, w * 0.24))
-  const groupWidth = axisGap + columnWidth + 20 + labelArea
-  const startX = Math.max(18, (w - groupWidth) / 2)
-  const axisX = startX
-  const columnX = axisX + axisGap
-  const labelX = columnX + columnWidth + 20
+  // Simple clean layout
+  const padding = { top: 20, bottom: 20, left: 10, right: 10 }
+  const drawHeight = h - padding.top - padding.bottom
+  const scale = drawHeight / totalDepth
+  const topY = padding.top
 
-  // Title - academic format
-  ctx.textAlign = 'left'
-  ctx.fillStyle = '#1a1a1a'
-  ctx.font = figureFont(12, 700)
-  const titlePrefix2 = 'Fig. 2'
-  ctx.fillText(titlePrefix2, columnX, 20)
-  const prefixW2 = ctx.measureText(titlePrefix2).width
-  ctx.fillStyle = '#333'
-  ctx.font = figureFont(12, 400)
-  ctx.fillText(' | 代表性钻孔地层柱状图', columnX + prefixW2, 20)
+  // Layout: depth axis | column | labels
+  const axisWidth = 45
+  const columnWidth = Math.max(55, Math.min(80, w * 0.28))
+  const labelWidth = w - axisWidth - columnWidth - 25
+  const axisX = padding.left + 30
+  const columnX = axisX + 10
+  const labelX = columnX + columnWidth + 8
 
-  // Draw depth scale
-  const tickSize = 5
-  const depthStep = Math.max(5, Math.ceil(totalDepth / 6 / 5) * 5) || 10
-
-  // Y-axis line
-  ctx.strokeStyle = '#333333'
-  ctx.lineWidth = 1.2
+  // Depth axis line
+  ctx.strokeStyle = '#64748b'
+  ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.moveTo(axisX, topMargin)
+  ctx.moveTo(axisX, topY)
   ctx.lineTo(axisX, h - padding.bottom)
   ctx.stroke()
 
-  ctx.fillStyle = '#555555'
-  ctx.font = figureFont(10)
+  // Depth ticks and labels
+  const depthStep = Math.max(20, Math.ceil(totalDepth / 5 / 10) * 10)
   ctx.textAlign = 'right'
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif'
 
   for (let depth = 0; depth <= totalDepth; depth += depthStep) {
-    const y = topMargin + depth * scale
+    const y = topY + depth * scale
 
     // Tick
-    ctx.strokeStyle = '#333333'
-    ctx.lineWidth = 1.0
+    ctx.strokeStyle = '#64748b'
+    ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.moveTo(axisX, y)
-    ctx.lineTo(axisX + tickSize, y)
+    ctx.moveTo(axisX - 4, y)
+    ctx.lineTo(axisX, y)
     ctx.stroke()
 
-    // Depth label
-    ctx.fillStyle = '#555555'
-    ctx.fillText(`${Math.round(depth)} m`, axisX - 6, y + 3)
+    // Label
+    ctx.fillStyle = '#475569'
+    ctx.fillText(`${Math.round(depth)}`, axisX - 6, y + 4)
   }
 
-  // Axis label
+  // Unit
   ctx.save()
-  ctx.translate(axisX - 30, topMargin + (h - padding.bottom - topMargin) / 2)
+  ctx.translate(axisX - 28, topY + drawHeight / 2)
   ctx.rotate(-Math.PI / 2)
   ctx.textAlign = 'center'
-  ctx.fillStyle = '#333333'
-  ctx.font = figureFont(11)
+  ctx.fillStyle = '#64748b'
+  ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.fillText('深度 (m)', 0, 0)
   ctx.restore()
 
-  // Draw layers with refined patterns
-  layers.forEach((layer, i) => {
-    const yTop = topMargin + (layer.z_top || 0) * scale
-    const thickness = layer.thickness || 0
-    const layerHeight = Math.max(thickness * scale, 3)
+  // Column border
+  const columnBottom = h - padding.bottom
+  ctx.strokeStyle = '#334155'
+  ctx.lineWidth = 1.5
+  ctx.strokeRect(columnX, topY, columnWidth, columnBottom - topY)
 
-    // Get lithology style
+  // Draw layers
+  layers.forEach((layer) => {
+    const yTop = topY + (layer.z_top || 0) * scale
+    const thickness = layer.thickness || 0
+    const layerHeight = Math.max(thickness * scale, 2)
+
     const style = lithologyStyles[layer.name] || {
-      facecolor: '#D3D3D3',
+      facecolor: '#e2e8f0',
       hatch: '---',
-      edgecolor: '#666666'
+      edgecolor: '#94a3b8'
     }
 
-    // Layer rectangle with base color
+    // Fill
     ctx.fillStyle = style.facecolor
     ctx.fillRect(columnX, yTop, columnWidth, layerHeight)
 
-    // Draw hatch pattern
-    if (layerHeight > 6 && style.hatch) {
-      drawNatureHatchPattern(ctx, style.hatch, columnX, yTop, columnWidth, layerHeight, style.edgecolor)
+    // Hatch pattern (subtle)
+    if (layerHeight > 4 && style.hatch) {
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(columnX, yTop, columnWidth, layerHeight)
+      ctx.clip()
+      ctx.strokeStyle = style.edgecolor
+      ctx.globalAlpha = 0.25
+      ctx.lineWidth = 0.5
+
+      const spacing = 6
+      switch (style.hatch) {
+        case '...':
+          for (let dx = 3; dx < columnWidth; dx += spacing) {
+            for (let dy = 3; dy < layerHeight; dy += spacing) {
+              ctx.beginPath()
+              ctx.arc(columnX + dx, yTop + dy, 0.7, 0, Math.PI * 2)
+              ctx.stroke()
+            }
+          }
+          break
+        case '---':
+          for (let dy = 4; dy < layerHeight; dy += spacing) {
+            ctx.beginPath()
+            ctx.moveTo(columnX, yTop + dy)
+            ctx.lineTo(columnX + columnWidth, yTop + dy)
+            ctx.stroke()
+          }
+          break
+        case '+++':
+          for (let dx = spacing; dx < columnWidth; dx += spacing) {
+            for (let dy = spacing; dy < layerHeight; dy += spacing) {
+              const s = 2
+              ctx.beginPath()
+              ctx.moveTo(columnX + dx - s, yTop + dy)
+              ctx.lineTo(columnX + dx + s, yTop + dy)
+              ctx.stroke()
+              ctx.beginPath()
+              ctx.moveTo(columnX + dx, yTop + dy - s)
+              ctx.lineTo(columnX + dx, yTop + dy + s)
+              ctx.stroke()
+            }
+          }
+          break
+      }
+      ctx.restore()
     }
 
-    // Clean edge
-    ctx.strokeStyle = '#2a2a2a'
-    ctx.lineWidth = 0.6
-    ctx.strokeRect(columnX, yTop, columnWidth, layerHeight)
+    // Layer boundary line
+    ctx.strokeStyle = '#475569'
+    ctx.lineWidth = 0.8
+    ctx.beginPath()
+    ctx.moveTo(columnX, yTop)
+    ctx.lineTo(columnX + columnWidth, yTop)
+    ctx.stroke()
 
-    // Layer info on the right - refined typography
-    if (layerHeight > 12) {
-      const midY = yTop + layerHeight / 2
-
-      // Connector line from column to label
-      ctx.strokeStyle = 'rgba(0,0,0,0.12)'
-      ctx.lineWidth = 0.5
-      ctx.beginPath()
-      ctx.moveTo(columnX + columnWidth + 2, midY)
-      ctx.lineTo(labelX - 6, midY)
-      ctx.stroke()
-
-      // Lithology name
-      ctx.fillStyle = '#333333'
-      ctx.font = figureFont(10.5, 500)
+    // Label
+    if (layerHeight >= 14) {
+      ctx.fillStyle = '#1e293b'
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif'
       ctx.textAlign = 'left'
-      ctx.fillText(layer.name, labelX, midY + 3)
-
-      // Thickness value
-      ctx.fillStyle = '#3B6FA0'
-      ctx.font = figureFont(9.5, 500, true)
-      ctx.fillText(`${thickness.toFixed(1)} m`, labelX, midY + 16)
+      const midY = yTop + layerHeight / 2 + 4
+      ctx.fillText(layer.name, labelX, midY)
+    } else if (layerHeight >= 8) {
+      ctx.fillStyle = '#1e293b'
+      ctx.font = '9px -apple-system, BlinkMacSystemFont, sans-serif'
+      ctx.textAlign = 'left'
+      const midY = yTop + layerHeight / 2 + 3
+      ctx.fillText(layer.name.slice(0, 3), labelX, midY)
     }
   })
 
-  // Column border
-  ctx.strokeStyle = '#555555'
-  ctx.lineWidth = 1.2
-  ctx.strokeRect(columnX, topMargin, columnWidth, h - topMargin - padding.bottom)
+  // Bottom border
+  ctx.strokeStyle = '#334155'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(columnX, columnBottom)
+  ctx.lineTo(columnX + columnWidth, columnBottom)
+  ctx.stroke()
+}
+
+// Professional geological hatch patterns
+const drawSimpleHatch = (ctx, hatch, x, y, w, h, edgeColor) => {
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(x, y, w, h)
+  ctx.clip()
+
+  ctx.strokeStyle = edgeColor
+  ctx.lineWidth = 0.8
+
+  const spacing = 6
+
+  switch (hatch) {
+    case '...': // Sandstone - fine dots
+      ctx.fillStyle = edgeColor
+      for (let dx = 2; dx < w; dx += 3) {
+        for (let dy = 2; dy < h; dy += 3) {
+          ctx.beginPath()
+          ctx.arc(x + dx, y + dy, 0.6, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+      break
+
+    case 'ooo': // Conglomerate - circles
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 0.6
+      for (let dx = spacing; dx < w; dx += spacing) {
+        for (let dy = spacing; dy < h; dy += spacing) {
+          ctx.beginPath()
+          ctx.arc(x + dx, y + dy, 2, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+      }
+      break
+
+    case '---': // Mudstone - horizontal lines
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 0.7
+      ctx.setLineDash([3, 2])
+      for (let dy = spacing/2; dy < h; dy += spacing) {
+        ctx.beginPath()
+        ctx.moveTo(x, y + dy)
+        ctx.lineTo(x + w, y + dy)
+        ctx.stroke()
+      }
+      ctx.setLineDash([])
+      break
+
+    case '+++': // Limestone - cross pattern
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 0.6
+      for (let dx = spacing; dx < w; dx += spacing) {
+        for (let dy = spacing; dy < h; dy += spacing) {
+          const size = 2.5
+          ctx.beginPath()
+          ctx.moveTo(x + dx - size, y + dy)
+          ctx.lineTo(x + dx + size, y + dy)
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.moveTo(x + dx, y + dy - size)
+          ctx.lineTo(x + dx, y + dy + size)
+          ctx.stroke()
+        }
+      }
+      break
+
+    case '-..': // Sandy mudstone - mixed
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 0.6
+      for (let dy = spacing/2; dy < h; dy += spacing * 2) {
+        ctx.beginPath()
+        ctx.moveTo(x, y + dy)
+        ctx.lineTo(x + w, y + dy)
+        ctx.stroke()
+      }
+      ctx.fillStyle = edgeColor
+      for (let dx = 2; dx < w; dx += 4) {
+        for (let dy = spacing + 1; dy < h; dy += spacing * 2) {
+          ctx.beginPath()
+          ctx.arc(x + dx, y + dy, 0.5, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+      break
+
+    case '.-.': // Muddy sandstone - mixed reverse
+      ctx.fillStyle = edgeColor
+      for (let dx = 2; dx < w; dx += 4) {
+        ctx.beginPath()
+        ctx.arc(x + dx, y + spacing/2, 0.5, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 0.6
+      for (let dy = spacing + 1; dy < h; dy += spacing * 2) {
+        ctx.beginPath()
+        ctx.moveTo(x, y + dy)
+        ctx.lineTo(x + w, y + dy)
+        ctx.stroke()
+      }
+      break
+
+    case '///': // Diagonal lines
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 0.7
+      for (let offset = -h; offset < w; offset += spacing) {
+        ctx.beginPath()
+        ctx.moveTo(x + offset, y + h)
+        ctx.lineTo(x + offset + h, y)
+        ctx.stroke()
+      }
+      break
+
+    case '\\\\\\': // Reverse diagonal
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 0.7
+      for (let offset = 0; offset < w + h; offset += spacing) {
+        ctx.beginPath()
+        ctx.moveTo(x + offset, y)
+        ctx.lineTo(x + offset - h, y + h)
+        ctx.stroke()
+      }
+      break
+
+    default:
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 0.5
+      ctx.globalAlpha = 0.2
+      for (let dy = spacing/2; dy < h; dy += spacing) {
+        ctx.beginPath()
+        ctx.moveTo(x, y + dy)
+        ctx.lineTo(x + w, y + dy)
+        ctx.stroke()
+      }
+      ctx.globalAlpha = 1
+  }
+
+  ctx.restore()
 }
 
 // Draw Nature-style hatch patterns (matching Python matplotlib hatches)
@@ -2183,7 +2408,25 @@ const normalizeQueryJobId = (value) => {
   return typeof value === 'string' ? value.trim() : ''
 }
 
+// Resize handler for stratigraphic column
+let resizeTimeout = null
+const handleResize = () => {
+  clearTimeout(resizeTimeout)
+  resizeTimeout = setTimeout(() => {
+    drawStratigraphicColumn()
+    drawHistogram()
+  }, 150)
+}
+
 onMounted(async () => {
+  // Load saved parameters first
+  loadSavedParams()
+
+  // Watch for parameter changes and auto-save
+  watch([method, gridSize, contourLevels, renderQuality, collapsedSections], () => {
+    saveParams()
+  }, { deep: true })
+
   await loadSeams()
   const preferredJobId = normalizeQueryJobId(route.query?.geomodel_job_id || route.query?.geomodelJobId)
   if (preferredJobId) {
@@ -2200,11 +2443,69 @@ onMounted(async () => {
   if (preferred) {
     await selectSeam(preferred)
   }
+
+  // Register keyboard shortcuts
+  document.addEventListener('keydown', handleKeydown)
+
+  // Register resize handler
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('resize', handleResize)
+  clearTimeout(resizeTimeout)
 })
 
 // Reset view function
 const resetView = () => {
   resetCrossSection()
+}
+
+// Keyboard shortcuts
+const handleKeydown = (e) => {
+  // Only handle shortcuts when not in input fields
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    return
+  }
+
+  switch (e.key.toLowerCase()) {
+    case 'r':
+      // Reset cross-section
+      e.preventDefault()
+      resetCrossSection()
+      toast.info('已重置视图')
+      break
+    case '+':
+    case '=':
+      // Zoom in - handled by map component
+      break
+    case '-':
+      // Zoom out - handled by map component
+      break
+    case 'c':
+      // Toggle cross-section mode
+      e.preventDefault()
+      if (selectedSeam.value) {
+        crossSectionMode.value = !crossSectionMode.value
+        toast.info(crossSectionMode.value ? '剖面模式已开启，点击两点绘制剖面线' : '剖面模式已关闭')
+      }
+      break
+    case 'escape':
+      // Cancel cross-section drawing
+      if (crossSectionMode.value) {
+        crossSectionMode.value = false
+        resetCrossSection()
+      }
+      break
+    case 'g':
+      // Generate contours
+      e.preventDefault()
+      if (selectedSeam.value && !loading.value) {
+        handleInterpolate()
+      }
+      break
+  }
 }
 
 defineExpose({ resetView })
@@ -2214,23 +2515,88 @@ defineExpose({ resetView })
 /* Interpolation Analysis - scientific dashboard refinement */
 
 .interp-page {
-  --panel-gap: var(--spacing-lg);
+  --panel-gap: var(--spacing-md);
+  --header-height: 64px;
 }
 
+/* Main layout grid - 使用更灵活的布局 */
 .interp-grid {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: minmax(260px, 0.9fr) minmax(340px, 1.3fr) minmax(260px, 0.9fr);
   gap: var(--panel-gap);
+  align-items: start;
+  min-width: 0;
 }
 
+/* 卡片基础样式 */
 .compact-card {
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
+/* 三个顶部卡片 */
 .params-card,
 .data-dist-card,
 .strat-card {
-  grid-column: span 4;
+  grid-column: auto;
+  min-height: 400px;
+  max-height: 500px;
+  min-width: 0;
+}
+
+/* 参数卡片 */
+.params-card {
+  overflow-y: auto;
+  min-width: 0;
+  max-height: 480px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.params-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.params-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.params-card::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.params-card::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* 数据分布卡片 */
+.data-dist-card .figure-canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 地层卡片 */
+.strat-card {
+  min-width: 0;
+}
+
+.strat-card .figure-wrapper {
+  flex: 1;
+  min-height: 280px;
+  max-height: 380px;
+  position: relative;
+  overflow: hidden;
+}
+
+.strat-card .figure-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .interp-header {
@@ -2441,6 +2807,7 @@ defineExpose({ resetView })
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-md);
   background: var(--bg-secondary);
+  min-width: 0;
 }
 
 .method-btn,
@@ -2448,12 +2815,16 @@ defineExpose({ resetView })
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-secondary);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: var(--font-weight-medium);
-  padding: 8px 10px;
+  padding: 6px 4px;
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .method-btn:hover,
@@ -2589,6 +2960,148 @@ defineExpose({ resetView })
   margin: var(--spacing-sm) 0 0;
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
+}
+
+/* Collapsible Control Groups */
+.control-group {
+  margin-bottom: var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.control-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+.control-group-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.control-group-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.control-group-hint {
+  margin-right: var(--spacing-xs);
+  font-size: 14px;
+  color: var(--text-tertiary);
+  cursor: help;
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  color: var(--text-tertiary);
+}
+
+.chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.param-recommendation {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #86efac;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.recommendation-text {
+  font-size: 11px;
+  color: #166534;
+  font-weight: 500;
+}
+
+.param-recommendation .btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.param-recommendation .btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.control-group-content {
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+  min-width: 0;
+}
+
+.param-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+  gap: var(--spacing-sm);
+  min-width: 0;
+}
+
+.param-row label,
+.param-row .param-label {
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.param-row input,
+.param-row select {
+  min-width: 0;
+  max-width: 120px;
+}
+
+/* Collapse transition */
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  max-height: 500px;
+  opacity: 1;
+}
+
+/* Legend styles */
+.lithology-legend {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.legend-title {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-tertiary);
+  margin-bottom: var(--spacing-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .geomodel-panel {
@@ -2824,18 +3337,22 @@ defineExpose({ resetView })
 }
 
 .map-row {
-  grid-column: span 12;
+  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--spacing-lg);
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--panel-gap);
 }
 
 .map-card-large {
-  grid-column: span 6;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 380px;
+  max-height: 480px;
 }
 
 .map-card-full {
-  grid-column: span 12;
+  grid-column: 1 / -1;
 }
 
 .cross-section-card {
@@ -2846,10 +3363,15 @@ defineExpose({ resetView })
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-md);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
   border-bottom: 1px solid var(--border-color-light);
+}
+
+.map-header h3 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .map-section-title {
@@ -2889,18 +3411,19 @@ defineExpose({ resetView })
 
 .map-wrapper {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  flex: 1;
+  min-height: 280px;
   border-radius: var(--border-radius-md);
   border: 1px solid var(--border-color-light);
   overflow: hidden;
   background: var(--bg-primary);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   position: relative;
 }
 
-.map-wrapper :deep(.contour-map-wrapper),
+.map-wrapper :deep(.canvas-contour-wrapper),
 .map-wrapper :deep(.contour-image) {
   width: 100%;
   height: 100%;
@@ -2912,8 +3435,8 @@ defineExpose({ resetView })
 }
 
 .uncertainty-wrapper {
-  min-height: 500px;
-  height: 500px;
+  min-height: 380px;
+  max-height: 480px;
 }
 
 .uncertainty-canvas,
@@ -2927,7 +3450,7 @@ defineExpose({ resetView })
 
 .cross-section-wrapper {
   min-height: 340px;
-  height: 340px;
+  max-height: 420px;
 }
 
 .map-placeholder {
@@ -2977,10 +3500,19 @@ defineExpose({ resetView })
 }
 
 @media (max-width: 1400px) {
-  .params-card,
+  .interp-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .params-card {
+    grid-column: 1 / -1;
+    order: -1;
+    max-height: none;
+  }
+
   .data-dist-card,
   .strat-card {
-    grid-column: span 6;
+    grid-column: auto;
   }
 
   .map-row {
@@ -2988,7 +3520,7 @@ defineExpose({ resetView })
   }
 
   .map-card-large {
-    grid-column: span 12;
+    grid-column: 1 / -1;
   }
 }
 
@@ -2999,19 +3531,32 @@ defineExpose({ resetView })
 
   .params-card,
   .data-dist-card,
-  .strat-card,
+  .strat-card {
+    grid-column: 1 / -1;
+    max-height: none;
+    min-height: 350px;
+  }
+
   .map-card-large,
   .map-card-full {
-    grid-column: span 1;
+    grid-column: 1 / -1;
   }
 
   .interp-header {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--spacing-md);
   }
 
   .header-stats {
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .stat-badge {
+    min-width: auto;
+    flex: 1;
+    min-width: 120px;
   }
 
   .stat-badge {
@@ -3047,8 +3592,8 @@ defineExpose({ resetView })
   .map-wrapper,
   .uncertainty-wrapper,
   .cross-section-wrapper {
-    min-height: 300px;
-    height: 300px;
+    min-height: 280px;
+    max-height: 360px;
   }
 }
 </style>
