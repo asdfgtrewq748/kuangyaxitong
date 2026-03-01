@@ -15,22 +15,6 @@
       </template>
     </PageHeader>
 
-    <section class="card overview-card">
-      <div class="overview-text">
-        <h2>{{ aa('overviewTitle') }}</h2>
-        <p>
-          {{ aa('overviewTextPrefix') }}<strong>{{ aa('overviewStrong1') }}</strong>, <strong>{{ aa('overviewStrong2') }}</strong>, <strong>{{ aa('overviewStrong3') }}</strong>{{ aa('overviewTextMid') }}
-          <strong>{{ aa('overviewStrong4') }}</strong>{{ aa('overviewTextSuffix') }}
-        </p>
-      </div>
-      <div class="overview-badges">
-        <span class="badge">{{ aa('overviewBadge1') }}</span>
-        <span class="badge">{{ aa('overviewBadge2') }}</span>
-        <span class="badge">{{ aa('overviewBadge3') }}</span>
-        <span class="badge">{{ aa('overviewBadge4') }}</span>
-      </div>
-    </section>
-
     <template v-if="activeTab === 'principle'">
       <Suspense>
         <template #default>
@@ -38,8 +22,6 @@
             <AcademicPrincipleIntro
               :aa="aa"
               :newcomer-journey="newcomerJourney"
-              :term-glossary="termGlossary"
-              :algorithm-storyboards="algorithmStoryboards"
               :flow-nodes="flowNodes"
               :active-flow-node="activeFlowNode"
               @update:active-flow-node="activeFlowNode = $event"
@@ -117,11 +99,9 @@ import { useAcademicFormulaRenderer } from '../composables/useAcademicFormulaRen
 import { PageHeader, SkeletonPanel } from '../components/library'
 import {
   algorithms,
-  algorithmStoryboards,
   flowNodes,
   formulas,
   newcomerJourney,
-  termGlossary,
   weightItems
 } from './academicAlgorithm.constants'
 

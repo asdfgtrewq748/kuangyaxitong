@@ -364,6 +364,8 @@ onMounted(async () => {
   const querySeam = typeof route.query.seam === 'string' ? route.query.seam : ''
   if (querySeam && seamOptions.value.includes(querySeam)) {
     selectedSeam.value = querySeam
+  } else if (seamOptions.value.includes('16-3煤')) {
+    selectedSeam.value = '16-3煤'
   } else if (seamOptions.value.length > 0) {
     selectedSeam.value = seamOptions.value[0]
   }

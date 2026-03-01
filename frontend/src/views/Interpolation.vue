@@ -2437,7 +2437,7 @@ onMounted(async () => {
       toast.add('读取 Geomodel 任务状态失败: ' + (err?.response?.data?.detail || err?.message || ''), 'warning')
     }
   }
-  const preferredName = normalizeQuerySeam(route.query?.seam) || workspaceState.selectedSeam
+  const preferredName = normalizeQuerySeam(route.query?.seam) || workspaceState.selectedSeam || '16-3煤'
   if (!preferredName) return
   const preferred = availableSeams.value.find((item) => item.name === preferredName)
   if (preferred) {

@@ -36,7 +36,7 @@ const routes = [
     alias: ['/pressure'],
     name: 'AlgorithmValidation',
     component: () => import('../views/AlgorithmValidation.vue'),
-    meta: { title: '新算法实证', titleKey: 'nav.algorithmValidation', icon: 'flask', navOrder: 50, flowOrder: 40 }
+    meta: { title: '新算法实证', titleKey: 'nav.algorithmValidation', icon: 'flask', navOrder: 35, flowOrder: 40 }
   },
   {
     path: '/research-workbench',

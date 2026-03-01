@@ -403,7 +403,7 @@ const loadSeams = async () => {
     const seamFromQuery = normalizeQuerySeam(route.query?.seam)
     const jobFromQuery = normalizeQueryJobId(route.query?.geomodel_job_id) || normalizeQueryJobId(route.query?.geomodelJobId)
     if (jobFromQuery) geomodelJobId.value = jobFromQuery
-    const preferred = seamFromQuery || seamOptions.value[0]?.name || ''
+    const preferred = seamFromQuery || seamOptions.value.find(s => s.name === '16-3煤')?.name || seamOptions.value[0]?.name || ''
     selectedSeam.value = preferred
     if (preferred) setSelectedSeam(preferred)
   } catch {

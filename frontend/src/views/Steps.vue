@@ -903,7 +903,10 @@ const loadMpiSeams = async () => {
   try {
     const { data } = await getCoalSeams()
     mpiSeams.value = data?.seams || []
-    if (!mpiSeam.value && mpiSeams.value.length) mpiSeam.value = mpiSeams.value[0].name
+    if (!mpiSeam.value && mpiSeams.value.length) {
+      const defaultSeam = mpiSeams.value.find(s => s.name === '16-3煤')
+      mpiSeam.value = defaultSeam?.name || mpiSeams.value[0].name
+    }
   } catch {
     mpiSeams.value = []
     mpiSeam.value = ''

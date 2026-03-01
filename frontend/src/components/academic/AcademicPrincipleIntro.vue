@@ -1,30 +1,4 @@
 <template>
-  <!-- Quick Start Tips (Collapsible) -->
-  <section class="card quickstart-card">
-    <div class="section-header clickable" @click="quickstartExpanded = !quickstartExpanded">
-      <h2>{{ aa('quickstartTitle') }}</h2>
-      <span class="expand-icon" :class="{ expanded: quickstartExpanded }">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </span>
-    </div>
-    <transition name="collapse">
-      <div v-show="quickstartExpanded" class="quickstart-content">
-        <p class="quickstart-intro">{{ aa('quickstartIntro') }}</p>
-        <div class="quickstart-tips">
-          <div v-for="(tip, idx) in quickTips" :key="idx" class="quickstart-tip">
-            <span class="tip-icon">{{ tip.icon }}</span>
-            <div class="tip-body">
-              <strong>{{ aa(tip.titleKey) }}</strong>
-              <p>{{ aa(tip.descKey) }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </transition>
-  </section>
-
   <!-- Interactive Algorithm Flow -->
   <section class="card flow-card">
     <div class="section-header">
@@ -93,61 +67,6 @@
     </transition>
   </section>
 
-  <!-- Algorithm Storyboards (Compact) -->
-  <section class="card storyboard-card">
-    <div class="section-header">
-      <h2>{{ aa('storyboardTitle') }}</h2>
-      <p>{{ aa('storyboardDesc') }}</p>
-    </div>
-    <div class="storyboard-grid">
-      <article
-        class="storyboard-item"
-        v-for="item in algorithmStoryboards"
-        :key="item.key"
-        @click="emit('update:active-algo', item.key)"
-      >
-        <div class="storyboard-icon">{{ item.icon }}</div>
-        <div class="storyboard-content">
-          <div class="storyboard-head">
-            <span class="storyboard-tag">{{ item.tag }}</span>
-            <h3>{{ aa(item.nameKey) }}</h3>
-          </div>
-          <div class="storyboard-flow">
-            <span class="flow-badge input">{{ aa('storyNodeInput') }}</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-badge process">{{ aa('storyNodeProcess') }}</span>
-            <span class="flow-arrow">→</span>
-            <span class="flow-badge output">{{ aa('storyNodeOutput') }}</span>
-          </div>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <!-- Glossary (Compact Pills) -->
-  <section class="card glossary-card">
-    <div class="section-header clickable" @click="glossaryExpanded = !glossaryExpanded">
-      <h2>{{ aa('glossaryTitle') }}</h2>
-      <span class="expand-icon" :class="{ expanded: glossaryExpanded }">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </span>
-    </div>
-    <transition name="collapse">
-      <div v-show="glossaryExpanded" class="glossary-pills">
-        <div
-          v-for="item in termGlossary"
-          :key="item.termKey"
-          class="glossary-pill"
-          :title="aa(item.cueKey)"
-        >
-          <span class="pill-term">{{ aa(item.termKey) }}</span>
-          <span class="pill-hint">{{ aa(item.plainKey) }}</span>
-        </div>
-      </div>
-    </transition>
-  </section>
 </template>
 
 <script setup>
@@ -164,14 +83,6 @@ const props = defineProps({
     type: Array,
     required: true
   },
-  termGlossary: {
-    type: Array,
-    required: true
-  },
-  algorithmStoryboards: {
-    type: Array,
-    required: true
-  },
   flowNodes: {
     type: Array,
     required: true
@@ -182,17 +93,9 @@ const props = defineProps({
   }
 })
 
-const quickstartExpanded = ref(false)
-const glossaryExpanded = ref(false)
 const visitedNodes = ref(new Set([0]))
 
 const activeNode = computed(() => props.flowNodes[props.activeFlowNode])
-
-const quickTips = [
-  { icon: '📖', titleKey: 'quickTip1Title', descKey: 'quickTip1Desc' },
-  { icon: '🔄', titleKey: 'quickTip2Title', descKey: 'quickTip2Desc' },
-  { icon: '🎯', titleKey: 'quickTip3Title', descKey: 'quickTip3Desc' }
-]
 
 const setFlowNode = (idx) => {
   emit('update:active-flow-node', idx)
@@ -248,56 +151,6 @@ watch(() => props.activeFlowNode, (newIdx) => {
 
 .expand-icon.expanded {
   transform: rotate(180deg);
-}
-
-/* Quick Start Card */
-.quickstart-card {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.04) 0%, rgba(14, 165, 233, 0.01) 100%);
-}
-
-.quickstart-content {
-  padding-top: 4px;
-}
-
-.quickstart-intro {
-  margin: 0 0 16px;
-  font-size: 14px;
-  color: var(--text-primary);
-  line-height: 1.6;
-}
-
-.quickstart-tips {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.quickstart-tip {
-  display: flex;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-}
-
-.tip-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.tip-body strong {
-  display: block;
-  font-size: 13px;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.tip-body p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.5;
 }
 
 /* Flow Diagram */
@@ -502,139 +355,6 @@ watch(() => props.activeFlowNode, (newIdx) => {
   background: rgba(14, 165, 233, 0.1);
 }
 
-/* Storyboard */
-.storyboard-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.storyboard-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.storyboard-item:hover {
-  border-color: var(--color-primary);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
-  transform: translateY(-2px);
-}
-
-.storyboard-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  background: var(--bg-primary);
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-
-.storyboard-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.storyboard-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.storyboard-tag {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-}
-
-.storyboard-head h3 {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-
-.storyboard-flow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.flow-badge {
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.flow-badge.input {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(14, 165, 233, 0.05));
-  color: #0369a1;
-}
-
-.flow-badge.process {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05));
-  color: #7c3aed;
-}
-
-.flow-badge.output {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
-  color: #16a34a;
-}
-
-.flow-arrow {
-  color: var(--text-tertiary);
-  font-size: 12px;
-}
-
-/* Glossary */
-.glossary-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-top: 4px;
-}
-
-.glossary-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 20px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  cursor: help;
-  transition: all 0.2s ease;
-}
-
-.glossary-pill:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-}
-
-.pill-term {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.pill-hint {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
 
 /* Transitions */
 .collapse-enter-active,
@@ -668,11 +388,6 @@ watch(() => props.activeFlowNode, (newIdx) => {
 
 /* Responsive */
 @media (max-width: 1100px) {
-  .quickstart-tips,
-  .storyboard-grid {
-    grid-template-columns: 1fr;
-  }
-
   .flow-row {
     flex-wrap: wrap;
     gap: 20px;
@@ -690,16 +405,6 @@ watch(() => props.activeFlowNode, (newIdx) => {
 @media (max-width: 768px) {
   .flow-node {
     flex: 0 0 100%;
-  }
-
-  .quickstart-tip {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .storyboard-item {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 

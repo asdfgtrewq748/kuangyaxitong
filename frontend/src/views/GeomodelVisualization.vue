@@ -526,7 +526,7 @@ onMounted(async () => {
       .filter((name) => typeof name === 'string' && name.length > 0)
 
     if (seams.value.length > 0) {
-      selectedSeam.value = seams.value[0]
+      selectedSeam.value = seams.value.find(s => s === '16-3煤') || seams.value[0]
       await loadSeamData()
     }
   } catch (err) {

@@ -624,7 +624,7 @@ const handleMpiCalculate = async () => {
 
   loading.value = true
   try {
-    const seamName = workspaceState.selectedSeam || normalizeQuerySeam(route.query?.seam) || '16-3鐓?
+    const seamName = workspaceState.selectedSeam || normalizeQuerySeam(route.query?.seam) || '16-3煤'
     const weights = {
       rsi: mpiWeights.value.roof_stability,
       bri: mpiWeights.value.burst_risk,
