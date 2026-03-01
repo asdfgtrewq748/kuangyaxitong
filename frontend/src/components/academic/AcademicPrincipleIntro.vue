@@ -323,8 +323,6 @@
           <path class="line" d="M940,690 L940,706" />
           <path class="line" d="M1200,690 L1200,706" />
 
-          <path class="line-dash" d="M940,706 C920,640 960,600 1085,360" />
-          <text class="txt-foot" x="950" y="615">反馈回路</text>
 
           <rect class="legend-box" x="1086" y="862" width="236" height="30" rx="6" ry="6" />
           <line class="legend-line" x1="1100" y1="876" x2="1126" y2="876" />

@@ -1414,6 +1414,43 @@
     fig4LegendHidden: 'H: 隐状态',
     fig4LegendRisk: 'R: 风险输出',
     fig4LegendDashed: '虚线：时间转移',
+
+    // RSI Science Figure
+    rsiFigureAria: 'RSI 科学期刊风格四联机理图',
+    rsiFigureTag: 'Fig. 1',
+    rsiFigureCaption: '相场断裂力学与岩石稳定指标(RSI)计算流程。（A）相场序参量从完整材料(φ=0)到完全断裂(φ=1)的演化；（B）裂纹随时间步扩展序列，显示损伤区域椭圆；（C）Griffith能量平衡曲线，展示能量释放率G与临界阈值Gc的关系；（D）RSI计算流程图。',
+    rsiPanelA_Title: '相场序参量',
+    rsiPanelB_Title: '裂纹扩展序列',
+    rsiPanelC_Title: 'Griffith能量平衡',
+    rsiPanelD_Title: 'RSI计算流程',
+
+    // BRI Science Figure
+    briFigureAria: 'BRI 科学期刊风格四联机理图',
+    briFigureTag: 'Fig. 2',
+    briFigureCaption: '震源机制分析与冲击风险指标(BRI)计算流程。（A）地震波形分析，标注P波和S波到达时间；（B）矩张量分量分解（ISO、DC、CLVD）及百分比组成；（C）深度-风险关系曲线，标注硬岩层和煤层位置；（D）BRI计算流程图。',
+    briPanelA_Title: '地震波形分析',
+    briPanelB_Title: '矩张量分量',
+    briPanelC_Title: '深度-风险关系',
+    briPanelD_Title: 'BRI计算流程',
+
+    // ASI Science Figure
+    asiFigureAria: 'ASI 科学期刊风格四联机理图',
+    asiFigureTag: 'Fig. 3',
+    asiFigureCaption: '应力分布与支承应力指标(ASI)计算流程。（A）Kirsch应力分布，展示圆形巷道周围应力集中等值线；（B）统一强度理论(UST)破坏包络线，比较Mohr-Coulomb、UST和Twin-Shear理论；（C）Mohr应力圆，展示不同应力状态下的破坏判据；（D）ASI计算流程图。',
+    asiPanelA_Title: 'Kirsch应力分布',
+    asiPanelB_Title: 'UST破坏包络',
+    asiPanelC_Title: 'Mohr应力圆',
+    asiPanelD_Title: 'ASI计算流程',
+
+    // DBN Science Figure
+    dbnFigureAria: 'DBN 科学期刊风格四联机理图',
+    dbnFigureTag: 'Fig. 4',
+    dbnFigureCaption: '动态贝叶斯网络(DBN)推理与风险演化。（A）网络架构，展示三个时间片(t-1, t, t+1)及节点(O, H, R)间的时间边；（B）条件概率转移矩阵P(H_t|H_{t-1})的热力图；（C）推理过程，展示证据在网络中的传播与消息传递；（D）风险演化时间线，展示后验概率P(Risk|Evidence)随时间变化。',
+    dbnPanelA_Title: '网络架构',
+    dbnPanelB_Title: '条件概率',
+    dbnPanelC_Title: '推理过程',
+    dbnPanelD_Title: '风险演化时间线',
+
     atlas: {
       rsi: {
         aria: 'RSI 四联机理示意图',

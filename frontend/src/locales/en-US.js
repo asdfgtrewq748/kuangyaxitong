@@ -1413,6 +1413,43 @@
     fig4LegendHidden: 'H: hidden state',
     fig4LegendRisk: 'R: risk output',
     fig4LegendDashed: 'dashed: temporal transition',
+
+    // RSI Science Figure
+    rsiFigureAria: 'RSI scientific journal-style four-panel mechanism figure',
+    rsiFigureTag: 'Fig. 1',
+    rsiFigureCaption: 'Phase-field fracture mechanics and Rock Stability Index (RSI) computation flow. (A) Phase-field order parameter evolution from intact material (φ=0) to fully fractured (φ=1); (B) Crack propagation sequence showing damage zone ellipses at different time steps; (C) Griffith energy balance curve showing strain energy release rate G vs critical threshold Gc; (D) RSI computation flowchart.',
+    rsiPanelA_Title: 'Phase Field Order Parameter',
+    rsiPanelB_Title: 'Crack Propagation Sequence',
+    rsiPanelC_Title: 'Griffith Energy Balance',
+    rsiPanelD_Title: 'RSI Computation Flow',
+
+    // BRI Science Figure
+    briFigureAria: 'BRI scientific journal-style four-panel mechanism figure',
+    briFigureTag: 'Fig. 2',
+    briFigureCaption: 'Seismic source mechanism analysis and Burst Risk Index (BRI) computation flow. (A) Seismic waveform analysis with P-wave and S-wave arrival annotations; (B) Moment tensor component decomposition (ISO, DC, CLVD) with percentage composition; (C) Depth-risk relationship curve with hard layer and coal seam annotations; (D) BRI computation flowchart.',
+    briPanelA_Title: 'Seismic Waveform Analysis',
+    briPanelB_Title: 'Moment Tensor Components',
+    briPanelC_Title: 'Depth-Risk Relationship',
+    briPanelD_Title: 'BRI Computation Flow',
+
+    // ASI Science Figure
+    asiFigureAria: 'ASI scientific journal-style four-panel mechanism figure',
+    asiFigureTag: 'Fig. 3',
+    asiFigureCaption: 'Stress distribution and Abutment Stress Index (ASI) computation flow. (A) Kirsch stress distribution showing stress concentration contours around circular opening; (B) Unified Strength Theory (UST) failure envelope comparing Mohr-Coulomb, UST, and Twin-Shear theories; (C) Mohr stress circles representing different stress states with failure criterion; (D) ASI computation flowchart.',
+    asiPanelA_Title: 'Kirsch Stress Distribution',
+    asiPanelB_Title: 'UST Failure Envelope',
+    asiPanelC_Title: 'Mohr Stress Circles',
+    asiPanelD_Title: 'ASI Computation Flow',
+
+    // DBN Science Figure
+    dbnFigureAria: 'DBN scientific journal-style four-panel mechanism figure',
+    dbnFigureTag: 'Fig. 4',
+    dbnFigureCaption: 'Dynamic Bayesian Network (DBN) inference and risk evolution. (A) Network architecture showing three time slices (t-1, t, t+1) with temporal edges between nodes (O, H, R); (B) Conditional probability transition matrix P(H_t|H_{t-1}) heatmap; (C) Inference process showing evidence propagation and message passing through the network; (D) Risk evolution timeline showing posterior probability P(Risk|Evidence) over time steps.',
+    dbnPanelA_Title: 'Network Architecture',
+    dbnPanelB_Title: 'Conditional Probabilities',
+    dbnPanelC_Title: 'Inference Process',
+    dbnPanelD_Title: 'Risk Evolution Timeline',
+
     atlas: {
       rsi: {
         aria: 'RSI four-panel mechanism schematic',
