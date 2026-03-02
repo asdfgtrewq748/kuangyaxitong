@@ -47,10 +47,10 @@
     <!-- 主Canvas区域 -->
     <div class="canvas-wrapper" ref="canvasWrapperRef">
       <div class="canvas-container" ref="canvasContainerRef">
-        <!-- 背景层：采区边界 -->
-        <canvas ref="backgroundCanvasRef" class="background-canvas"></canvas>
+        <!-- 背景层：采区背景（静态，不随缩放） -->
+        <div class="mining-area-bg"></div>
         
-        <!-- 数据层：热力图 -->
+        <!-- 主Canvas：包含工作面边框和数据 -->
         <canvas
           ref="canvasRef"
           :width="internalWidth"
@@ -249,8 +249,7 @@
 import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { 
   COLORS, 
-  WORKFACE_BOUNDS, 
-  MINING_AREA_BOUNDS,
+  WORKFACE_BOUNDS,
   createColorLookup 
 } from '@/utils/pressureDataProcessor'
 
@@ -284,7 +283,6 @@ const containerRef = ref(null)
 const canvasWrapperRef = ref(null)
 const canvasContainerRef = ref(null)
 const canvasRef = ref(null)
-const backgroundCanvasRef = ref(null)
 
 const currentViewMode = ref('heatmap')
 const currentColorScheme = ref('diverging')
@@ -337,9 +335,8 @@ const colorSchemes = Object.entries(COLORS).map(([id, config]) => ({
 
 // 区域颜色
 const REGION_COLORS = {
-  workface: null,           // 工作面内显示实际数据
-  mining_area: '#F0F0F0',   // 采区背景色
-  outside: '#FFFFFF'        // 采区外
+  mining_area: '#F5F5F5',   // 采区背景色
+  workface_border: '#666666' // 工作面边框
 }
 
 // ============================================================================
@@ -395,7 +392,6 @@ const yAxisTicks = computed(() => {
   if (!hasData.value) return []
   const ticks = []
   const count = props.numRows
-  // 显示5个刻度
   for (let i = 0; i <= 4; i++) {
     const supportNum = Math.round(1 + (count - 1) * (i / 4))
     ticks.push({
@@ -466,46 +462,7 @@ function getCellColor(value) {
 }
 
 /**
- * 绘制背景层：采区和工作面边界
- */
-function drawBackground() {
-  const canvas = backgroundCanvasRef.value
-  if (!canvas) return
-  
-  const ctx = canvas.getContext('2d')
-  const width = canvas.width = canvasContainerRef.value?.clientWidth || 800
-  const height = canvas.height = canvasContainerRef.value?.clientHeight || 500
-  
-  ctx.clearRect(0, 0, width, height)
-  
-  // 绘制采区背景（浅灰色）
-  ctx.fillStyle = REGION_COLORS.mining_area
-  ctx.fillRect(0, 0, width, height)
-  
-  // 绘制工作面边界框
-  const workfaceWidth = width * 0.8  // 工作面占80%宽度
-  const workfaceHeight = height * 0.9  // 工作面占90%高度
-  const x = (width - workfaceWidth) / 2
-  const y = (height - workfaceHeight) / 2
-  
-  // 清除工作面内部（显示白色，准备绘制数据）
-  ctx.clearRect(x, y, workfaceWidth, workfaceHeight)
-  
-  // 绘制工作面边框
-  ctx.strokeStyle = '#333'
-  ctx.lineWidth = 2
-  ctx.strokeRect(x, y, workfaceWidth, workfaceHeight)
-  
-  // 标注
-  ctx.fillStyle = '#666'
-  ctx.font = '12px Arial'
-  ctx.fillText('工作面边界', x + 5, y - 5)
-}
-
-/**
- * 核心渲染：正确的坐标系
- * X轴 = 推进距离（列）
- * Y轴 = 支架编号（行，1在底部）
+ * 核心渲染：包含工作面边框和数据，一起缩放平移
  */
 function render() {
   if (renderPending) return
@@ -530,7 +487,7 @@ function render() {
 
 function drawHeatmap() {
   const canvas = canvasRef.value
-  if (!canvas || !hasData.value) return
+  if (!canvas) return
 
   const ctx = canvas.getContext('2d', { alpha: true })
   const width = canvas.width
@@ -548,20 +505,44 @@ function drawHeatmap() {
   ctx.translate(offsetX.value, offsetY.value)
   ctx.scale(scale.value, scale.value)
 
+  // 计算数据区域尺寸
   const numSupports = props.numRows
   const numDays = props.numCols
+  
+  if (numSupports > 0 && numDays > 0) {
+    // 计算单元格大小
+    const cellWidth = displayWidth / numDays
+    const cellHeight = displayHeight / numSupports
+    
+    // 数据区域总尺寸
+    const dataWidth = numDays * cellWidth
+    const dataHeight = numSupports * cellHeight
+    
+    // 绘制工作面边框（跟随缩放平移）
+    ctx.strokeStyle = REGION_COLORS.workface_border
+    ctx.lineWidth = 3 / scale.value
+    ctx.strokeRect(0, 0, dataWidth, dataHeight)
+    
+    // 绘制工作面标签
+    ctx.fillStyle = REGION_COLORS.workface_border
+    ctx.font = `${12 / scale.value}px Arial`
+    ctx.fillText('工作面边界', 5 / scale.value, -8 / scale.value)
+    
+    // 绘制热力图数据
+    if (hasData.value) {
+      drawHeatmapData(ctx, cellWidth, cellHeight, numSupports, numDays)
+    }
+  }
 
-  // 计算单元格大小
-  // X轴：推进距离（天数）
-  // Y轴：支架编号
-  const cellWidth = displayWidth / numDays
-  const cellHeight = displayHeight / numSupports
+  ctx.restore()
+}
 
+function drawHeatmapData(ctx, cellWidth, cellHeight, numSupports, numDays) {
   // 只渲染可见区域
   const visibleStartCol = Math.max(0, Math.floor(-offsetX.value / scale.value / cellWidth))
-  const visibleEndCol = Math.min(numDays, Math.ceil((-offsetX.value + displayWidth) / scale.value / cellWidth))
+  const visibleEndCol = Math.min(numDays, Math.ceil((-offsetX.value + ctx.canvas.width / dpr.value) / scale.value / cellWidth))
   const visibleStartRow = Math.max(0, Math.floor(-offsetY.value / scale.value / cellHeight))
-  const visibleEndRow = Math.min(numSupports, Math.ceil((-offsetY.value + displayHeight) / scale.value / cellHeight))
+  const visibleEndRow = Math.min(numSupports, Math.ceil((-offsetY.value + ctx.canvas.height / dpr.value) / scale.value / cellHeight))
 
   // 批量绘制
   const batchSize = 500
@@ -572,7 +553,7 @@ function drawHeatmap() {
       const value = props.matrix[row]?.[col]
       if (!Number.isFinite(value)) continue
       
-      // Y轴反转：row 0 在矩阵顶部，但在画布上支架1应该在底部
+      // Y轴反转：row 0 在矩阵顶部，画布上支架1在底部
       const y = (numSupports - 1 - row) * cellHeight
       const x = col * cellWidth
       
@@ -597,15 +578,13 @@ function drawHeatmap() {
 
   // 网格线
   if (showGrid.value) {
-    drawGrid(ctx, numDays, numSupports, displayWidth, displayHeight)
+    drawGrid(ctx, numDays, numSupports, cellWidth, cellHeight)
   }
   
   // 高亮悬停单元格
   if (hoveredCell.value) {
     drawHighlight(ctx, hoveredCell.value, numSupports, cellWidth, cellHeight)
   }
-
-  ctx.restore()
 }
 
 function drawBatch(ctx, batch) {
@@ -621,25 +600,22 @@ function drawBatch(ctx, batch) {
   })
 }
 
-function drawGrid(ctx, cols, rows, width, height) {
-  ctx.strokeStyle = 'rgba(0,0,0,0.06)'
+function drawGrid(ctx, cols, rows, cellWidth, cellHeight) {
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)'
   ctx.lineWidth = 0.5 / scale.value
   ctx.beginPath()
   
-  const cellW = width / cols
-  const cellH = height / rows
-  
   // 纵向网格（每10天）
   for (let i = 0; i <= cols; i += 10) {
-    const x = i * cellW
+    const x = i * cellWidth
     ctx.moveTo(x, 0)
-    ctx.lineTo(x, height)
+    ctx.lineTo(x, rows * cellHeight)
   }
   // 横向网格（每10个支架）
   for (let i = 0; i <= rows; i += 10) {
-    const y = i * cellH
+    const y = i * cellHeight
     ctx.moveTo(0, y)
-    ctx.lineTo(width, y)
+    ctx.lineTo(cols * cellWidth, y)
   }
   ctx.stroke()
 }
@@ -675,7 +651,7 @@ function getCellAtEvent(event) {
   const cellHeight = rect.height / numSupports
 
   const col = Math.floor(x / cellWidth)
-  // Y轴反转：row 0 在矩阵顶部对应画布底部
+  // Y轴反转
   const row = numSupports - 1 - Math.floor(y / cellHeight)
 
   if (col >= 0 && col < numDays && row >= 0 && row < numSupports) {
@@ -813,14 +789,12 @@ function formatDateFull(date) {
 onMounted(() => {
   initColorLookup()
   nextTick(() => {
-    drawBackground()
     if (hasData.value) render()
   })
   
   window.addEventListener('resize', () => {
     dpr.value = window.devicePixelRatio || 1
     nextTick(() => {
-      drawBackground()
       render()
     })
   })
@@ -829,7 +803,6 @@ onMounted(() => {
 watch(() => props.matrix, () => {
   initColorLookup()
   nextTick(() => {
-    drawBackground()
     render()
   })
 }, { deep: true })
@@ -966,7 +939,7 @@ watch(() => props.matrix, () => {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #f5f5f5;
+  background: #F5F5F5; /* 采区背景色 */
 }
 
 .canvas-container {
@@ -977,10 +950,10 @@ watch(() => props.matrix, () => {
   grid-template-rows: 1fr var(--axis-size);
 }
 
-.background-canvas {
+.mining-area-bg {
   grid-column: 2;
   grid-row: 1;
-  background: #F0F0F0; /* 采区背景色 */
+  background: #F5F5F5;
 }
 
 canvas {
@@ -1108,7 +1081,7 @@ canvas {
 }
 
 .legend-color.mining-area {
-  background: #F0F0F0;
+  background: #F5F5F5;
 }
 
 /* Zoom Controls */
