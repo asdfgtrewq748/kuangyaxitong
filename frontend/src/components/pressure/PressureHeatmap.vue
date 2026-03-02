@@ -440,14 +440,9 @@ function getCellAtEvent(event) {
   const row = Math.floor(y / cellHeight)
 
   if (col >= 0 && col < props.numCols && row >= 0 && row < props.numRows) {
-    // 查找对应的单元格数据
+    // 查找对应的单元格数据，cell 对象已包含 advanceDistance
     const cell = props.cells.find(c => c.row === row && c.col === col)
-    if (cell) {
-      return {
-        ...cell,
-        advanceDistance: row * 10 // 10m/天
-      }
-    }
+    return cell || null
   }
 
   return null

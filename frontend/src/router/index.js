@@ -78,7 +78,7 @@ const routes = [
   {
     path: '/pressure-analysis',
     name: 'PressureAnalysis',
-    component: () => import('../views/PressureAnalysis.vue'),
+    component: () => import('../views/PressureAnalysisUltra.vue'),
     meta: { title: '矿压数据分析', titleKey: 'nav.pressureAnalysis', icon: 'chart', navOrder: 59 }
   }
 ]

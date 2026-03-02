@@ -1,5 +1,5 @@
 """
-AI Chat Service using GLM-5 API
+AI Chat Service supporting GLM-5 and Kimi APIs
 
 Provides intelligent chat assistance for the mining pressure assessment system.
 """
@@ -14,8 +14,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 # GLM-5 API configuration
-GLM5_API_KEY = os.getenv("ZHIPUAI_API_KEY", "678cb66cfc1c4471a58a8b914693bc45.pqdjywAMCmS7b7I5")
+GLM5_API_KEY = os.getenv("ZHIPUAI_API_KEY", "b7b15661df2e4926ab77733fe926f41c.8hrmaBnFlQMHXwWt")
 GLM5_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+
+# Kimi API configuration
+KIMI_API_KEY = os.getenv("KIMI_API_KEY", "sk-kimi-3IuF39x3lH87PaAdZzmwOu0gKiqJTeaKgaHh4gtNGWyEeR8ltChQnQ40xfTmJlnU")
+KIMI_API_URL = "https://api.moonshot.cn/v1/chat/completions"
+
+# Supported models
+SUPPORTED_MODELS = {
+    # GLM-5 models
+    "glm-5": {"provider": "glm5", "name": "GLM-5"},
+    "glm-5-flash": {"provider": "glm5", "name": "GLM-5 Flash"},
+    # Kimi models
+    "kimi-moonshot-v1-8k": {"provider": "kimi", "name": "Kimi Moonshot v1 8K"},
+    "kimi-moonshot-v1-32k": {"provider": "kimi", "name": "Kimi Moonshot v1 32K"},
+    "kimi-moonshot-v1-128k": {"provider": "kimi", "name": "Kimi Moonshot v1 128K"},
+}
 
 
 class MessageRole:
@@ -115,8 +130,25 @@ class AIChatService:
 
     def __init__(self):
         self.sessions: Dict[str, ChatSession] = {}
-        self.api_key = GLM5_API_KEY
-        self.api_url = GLM5_API_URL
+        self.glm5_api_key = GLM5_API_KEY
+        self.glm5_api_url = GLM5_API_URL
+        self.kimi_api_key = KIMI_API_KEY
+        self.kimi_api_url = KIMI_API_URL
+
+    def _get_provider_config(self, model: str) -> tuple[str, str, str]:
+        """
+        Get API configuration for the specified model
+        
+        Returns:
+            Tuple of (provider, api_key, api_url)
+        """
+        model_info = SUPPORTED_MODELS.get(model, {"provider": "glm5"})
+        provider = model_info["provider"]
+        
+        if provider == "kimi":
+            return ("kimi", self.kimi_api_key, self.kimi_api_url)
+        else:
+            return ("glm5", self.glm5_api_key, self.glm5_api_url)
 
     def get_or_create_session(self, session_id: str, user_id: Optional[str] = None) -> ChatSession:
         """Get existing session or create new one"""
@@ -176,8 +208,11 @@ class AIChatService:
         try:
             import httpx
 
+            # Get provider-specific configuration
+            provider, api_key, api_url = self._get_provider_config(model)
+            
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
 
@@ -189,11 +224,13 @@ class AIChatService:
                 "stream": True
             }
 
+            logger.info(f"Using {provider} API with model: {model}")
+
             async with httpx.AsyncClient(timeout=60.0) as client:
-                async with client.stream("POST", self.api_url, headers=headers, json=payload) as response:
+                async with client.stream("POST", api_url, headers=headers, json=payload) as response:
                     if response.status_code != 200:
                         error_text = await response.aread()
-                        logger.error(f"GLM-5 API error: {response.status_code} - {error_text}")
+                        logger.error(f"{provider.upper()} API error: {response.status_code} - {error_text}")
                         yield f"[错误] API调用失败: {response.status_code}"
                         return
 
@@ -249,8 +286,11 @@ class AIChatService:
         try:
             import httpx
 
+            # Get provider-specific configuration
+            provider, api_key, api_url = self._get_provider_config(model)
+            
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
 
@@ -262,8 +302,10 @@ class AIChatService:
                 "stream": False
             }
 
+            logger.info(f"Using {provider} API with model: {model}")
+
             async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(self.api_url, headers=headers, json=payload)
+                response = await client.post(api_url, headers=headers, json=payload)
 
                 if response.status_code != 200:
                     return {

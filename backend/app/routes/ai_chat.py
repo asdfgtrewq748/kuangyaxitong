@@ -34,6 +34,19 @@ class ChatRequest(BaseModel):
     temperature: float = 0.7
     max_tokens: int = 2048
     stream: bool = False
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "你好，请介绍一下系统功能",
+                "session_id": "optional-session-id",
+                "user_id": "optional-user-id",
+                "model": "glm-5-flash",
+                "temperature": 0.7,
+                "max_tokens": 2048,
+                "stream": False
+            }
+        }
 
 
 class ChatResponse(BaseModel):
@@ -62,8 +75,15 @@ async def chat(request: ChatRequest) -> ChatResponse:
     Send a chat message and get AI response
 
     - Supports both streaming and non-streaming modes
-    - Uses GLM-5 Flash for fast responses
+    - Supports GLM-5 and Kimi models
     - Maintains conversation history per session
+    
+    **Supported Models:**
+    - `glm-5-flash` - GLM-5 Flash (fast, default)
+    - `glm-5` - GLM-5 Standard
+    - `kimi-moonshot-v1-8k` - Kimi Moonshot v1 8K
+    - `kimi-moonshot-v1-32k` - Kimi Moonshot v1 32K
+    - `kimi-moonshot-v1-128k` - Kimi Moonshot v1 128K
     """
     service = get_ai_chat_service()
 
@@ -125,7 +145,7 @@ async def chat_stream(request: ChatRequest):
     Send a chat message and stream AI response via Server-Sent Events
 
     - Returns streaming response for real-time chat experience
-    - Supports GLM-5 Flash and GLM-5 models
+    - Supports GLM-5 and Kimi models
     """
     service = get_ai_chat_service()
 
@@ -201,10 +221,29 @@ async def list_sessions(user_id: Optional[str] = None) -> List[SessionInfo]:
 async def health_check() -> Dict[str, Any]:
     """Check AI chat service health"""
     service = get_ai_chat_service()
+    
+    # Check both API configurations
+    glm5_configured = bool(service.glm5_api_key and service.glm5_api_key != "YOUR_API_KEY")
+    kimi_configured = bool(service.kimi_api_key and service.kimi_api_key != "YOUR_API_KEY")
+    
     return {
         "status": "healthy",
         "active_sessions": len(service.sessions),
-        "api_configured": bool(service.api_key and service.api_key != "YOUR_API_KEY")
+        "providers": {
+            "glm5": {
+                "configured": glm5_configured,
+                "available_models": ["glm-5", "glm-5-flash"]
+            },
+            "kimi": {
+                "configured": kimi_configured,
+                "available_models": [
+                    "kimi-moonshot-v1-8k",
+                    "kimi-moonshot-v1-32k", 
+                    "kimi-moonshot-v1-128k"
+                ]
+            }
+        },
+        "default_model": "glm-5-flash"
     }
 
 
