@@ -74,6 +74,12 @@ const routes = [
     name: 'Scene3D',
     component: () => import('../views/Scene3DPage.vue'),
     meta: { title: '三维指标可视化', titleKey: 'nav.scene3d', icon: 'chart', navOrder: 58 }
+  },
+  {
+    path: '/pressure-analysis',
+    name: 'PressureAnalysis',
+    component: () => import('../views/PressureAnalysis.vue'),
+    meta: { title: '矿压数据分析', titleKey: 'nav.pressureAnalysis', icon: 'chart', navOrder: 59 }
   }
 ]
 
