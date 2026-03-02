@@ -31,7 +31,9 @@ let chartInstance = null
 const COLORS = {
   primary: '#0072B2',
   secondary: '#D55E00',
-  line: '#000000'
+  line: '#171717',
+  refLine: '#a3a3a3',
+  grid: '#e5e5e5'
 }
 
 const footnote = computed(() => {
@@ -152,18 +154,18 @@ function updateChart() {
       min: 0,
       max: Math.ceil(maxVal / 10) * 10,
       axisLine: {
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisTick: {
         inside: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisLabel: {
         fontSize: 7,
-        color: '#000000'
+        color: '#171717'
       },
       splitLine: {
-        lineStyle: { color: '#e2e8f0', width: 0.5, type: 'dashed' }
+        lineStyle: { color: COLORS.grid, width: 0.5, type: 'dashed' }
       }
     },
 
@@ -173,18 +175,18 @@ function updateChart() {
       max: Math.ceil(maxVal / 10) * 10,
       axisLine: {
         show: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisTick: {
         inside: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisLabel: {
         fontSize: 7,
-        color: '#000000'
+        color: '#171717'
       },
       splitLine: {
-        lineStyle: { color: '#e2e8f0', width: 0.5, type: 'dashed' }
+        lineStyle: { color: COLORS.grid, width: 0.5, type: 'dashed' }
       }
     },
 
@@ -196,7 +198,7 @@ function updateChart() {
         data: refLineData,
         symbol: 'none',
         lineStyle: {
-          color: '#94a3b8',
+          color: COLORS.refLine,
           width: 0.5,
           type: 'dashed'
         },
@@ -207,10 +209,20 @@ function updateChart() {
         name: 'Data',
         type: 'scatter',
         data: scatterData,
-        symbolSize: 3,
+        symbolSize: 4,
         itemStyle: {
           color: COLORS.primary,
-          opacity: 0.6
+          opacity: 0.6,
+          borderColor: '#ffffff',
+          borderWidth: 0.5
+        },
+        emphasis: {
+          itemStyle: {
+            color: COLORS.secondary,
+            opacity: 1,
+            shadowBlur: 6,
+            shadowColor: 'rgba(0, 0, 0, 0.2)'
+          }
         },
         z: 2
       },
@@ -222,37 +234,59 @@ function updateChart() {
         symbol: 'none',
         lineStyle: {
           color: COLORS.secondary,
-          width: 1
+          width: 1.5
         },
         z: 3
       }
     ],
 
+    // 提示框
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e5e5e5',
+      borderWidth: 1,
+      textStyle: {
+        color: '#171717',
+        fontSize: 11
+      },
+      formatter: (params) => {
+        if (params.seriesName === 'Data') {
+          return `<div style="font-weight:600;margin-bottom:4px;">数据点</div>
+                  <div>前柱: <span style="color:${COLORS.primary};font-weight:600;">${params.value[0]}</span> MPa</div>
+                  <div>后柱: <span style="color:${COLORS.primary};font-weight:600;">${params.value[1]}</span> MPa</div>`
+        }
+        return ''
+      }
+    },
+
     // 图形标注
     graphic: [
       {
         type: 'text',
-        right: 20,
+        right: 25,
         top: 40,
         style: {
           text: `y = ${slope.toFixed(2)}x + ${intercept.toFixed(1)}`,
-          font: '7pt Arial',
-          fill: '#64748b'
+          font: '7pt PingFang SC, Arial',
+          fill: '#737373'
         }
       },
       {
         type: 'text',
-        right: 20,
+        right: 25,
         top: 55,
         style: {
-          text: `R² = ${r2.toFixed(2)}`,
-          font: '7pt Arial',
-          fill: '#64748b'
+          text: `R² = ${r2.toFixed(3)}`,
+          font: '7pt PingFang SC, Arial',
+          fill: '#737373'
         }
       }
     ],
 
-    animation: false
+    animation: true,
+    animationDuration: 800,
+    animationEasing: 'cubicOut'
   }
 
   chartInstance.setOption(option, true)
@@ -280,5 +314,15 @@ watch(() => [props.frontData, props.rearData], updateChart, { deep: true })
   width: 100%;
   height: 100%;
   min-height: 150px;
+  animation: chartFadeIn 0.5s ease;
+}
+
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>

@@ -106,12 +106,40 @@ function updateChart() {
         type: 'heatmap',
         data: displayData,
         itemStyle: {
-          borderWidth: 0
+          borderWidth: 0,
+          borderRadius: 1
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.3)'
+          }
         }
       }
     ],
 
-    animation: false
+    // 提示框
+    tooltip: {
+      position: 'top',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e5e5e5',
+      borderWidth: 1,
+      textStyle: {
+        color: '#171717',
+        fontSize: 11
+      },
+      formatter: (params) => {
+        const [x, y, value] = params.value
+        const i = n - 1 - Math.round(y)
+        const j = Math.round(x)
+        return `<div style="font-weight:600;margin-bottom:4px;">支架 ${i} vs ${j}</div>
+                <div>r = <span style="font-weight:600;">${value.toFixed(3)}</span></div>`
+      }
+    },
+
+    animation: true,
+    animationDuration: 800,
+    animationEasing: 'cubicOut'
   }
 
   chartInstance.setOption(option, true)
@@ -138,6 +166,16 @@ watch(() => props.matrix, updateChart, { deep: true })
 .echarts-container {
   width: 100%;
   height: 130px;
+  animation: chartFadeIn 0.5s ease;
+}
+
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .legend-bar {
@@ -151,7 +189,8 @@ watch(() => props.matrix, updateChart, { deep: true })
   width: 100px;
   height: 10px;
   background: linear-gradient(to right, #2166AC, #F7F7F7, #B2182B);
-  border-radius: 2px;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .legend-labels {
@@ -159,12 +198,14 @@ watch(() => props.matrix, updateChart, { deep: true })
   justify-content: space-between;
   width: 100px;
   font-size: 7pt;
-  color: #64748b;
+  color: #737373;
+  font-weight: 500;
 }
 
 .legend-title {
-  font-size: 7pt;
-  color: #000000;
-  font-weight: 500;
+  font-size: 8pt;
+  color: #171717;
+  font-weight: 600;
+  font-style: italic;
 }
 </style>

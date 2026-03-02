@@ -1,159 +1,208 @@
 <template>
   <div class="pressure-analysis-page">
     <!-- 顶部导航 -->
-    <nav class="top-nav">
+    <header class="top-nav">
       <div class="nav-left">
-        <button class="back-btn" @click="goBack">
-          <span class="back-icon">←</span>
+        <button class="back-btn" @click="goBack" :aria-label="'返回'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
         </button>
-        <h1 class="page-title">{{ pageTitle }}</h1>
-        <span class="divider"></span>
-        <span class="workface-label">02 工作面</span>
-        <span class="date-range" v-if="dateRangeText">{{ dateRangeText }}</span>
+
+        <div class="title-group">
+          <h1 class="page-title">{{ pageTitle }}</h1>
+          <div class="title-meta">
+            <span class="workface-badge">
+              <svg viewBox="0 0 16 16" fill="currentColor">
+                <rect x="2" y="2" width="12" height="12" rx="2"/>
+              </svg>
+              02 工作面
+            </span>
+            <span class="date-range" v-if="dateRangeText">{{ dateRangeText }}</span>
+          </div>
+        </div>
       </div>
+
+      <div class="nav-center">
+        <div class="live-stats" v-if="stats">
+          <div class="stat-pill">
+            <span class="stat-label">均值</span>
+            <span class="stat-value">{{ stats.mean.toFixed(1) }}</span>
+            <span class="stat-unit">MPa</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">峰值</span>
+            <span class="stat-value">{{ stats.max.toFixed(1) }}</span>
+            <span class="stat-unit">MPa</span>
+          </div>
+          <div class="stat-pill danger" v-if="anomalyCount > 0">
+            <span class="stat-label">异常</span>
+            <span class="stat-value">{{ anomalyCount }}</span>
+          </div>
+        </div>
+      </div>
+
       <div class="nav-right">
-        <span class="mini-stats" v-if="stats">
-          <span>均值 <b>{{ stats.mean.toFixed(1) }}</b> MPa</span>
-          <span>最大 <b>{{ stats.max.toFixed(1) }}</b> MPa</span>
-          <span class="warning" v-if="anomalyCount > 0">
-            异常 <b>{{ anomalyCount }}</b>
-          </span>
-        </span>
-        <button class="tool-btn" @click="exportAll">导出全部</button>
+        <button class="nav-action" @click="toggleFullscreen" :title="'全屏'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+          </svg>
+        </button>
+        <button class="nav-action primary" @click="exportAll">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          <span>导出</span>
+        </button>
       </div>
-    </nav>
+    </header>
 
     <!-- 主内容区 -->
     <main class="main-content">
       <!-- 左侧控制面板 -->
-      <aside class="control-panel">
-        <PressureControlPanel
-          v-model:columnType="columnType"
-          v-model:startDate="startDate"
-          v-model:endDate="endDate"
-          v-model:lowThreshold="lowThreshold"
-          v-model:highThreshold="highThreshold"
-          v-model:supportStart="supportStart"
-          v-model:supportEnd="supportEnd"
-          v-model:showGrid="showGrid"
-          v-model:showAnomalies="showAnomalies"
-          v-model:showPeaks="showPeaks"
-          v-model:colorScheme="colorScheme"
-          :stats="stats"
-          @apply="applyFilters"
-          @reset="resetFilters"
-        />
+      <aside class="control-panel" :class="{ collapsed: controlPanelCollapsed }">
+        <div class="panel-toggle" @click="controlPanelCollapsed = !controlPanelCollapsed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </div>
+        <div class="panel-content" v-show="!controlPanelCollapsed">
+          <PressureControlPanel
+            v-model:columnType="columnType"
+            v-model:startDate="startDate"
+            v-model:endDate="endDate"
+            v-model:lowThreshold="lowThreshold"
+            v-model:highThreshold="highThreshold"
+            v-model:supportStart="supportStart"
+            v-model:supportEnd="supportEnd"
+            v-model:showGrid="showGrid"
+            v-model:showAnomalies="showAnomalies"
+            v-model:showPeaks="showPeaks"
+            v-model:colorScheme="colorScheme"
+            :stats="stats"
+            @apply="applyFilters"
+            @reset="resetFilters"
+          />
+        </div>
       </aside>
 
       <!-- 中央热力图 -->
       <section class="heatmap-section">
-        <PressureHeatmap
-          :matrix="heatmapMatrix"
-          :cells="heatmapCells"
-          :stats="stats"
-          :num-rows="numRows"
-          :num-cols="numCols"
-          :start-date="startDate"
-          :end-date="endDate"
-          :loading="loading"
-          :color-scale="colorScheme"
-          :show-grid="showGrid"
-          @cell-select="onCellSelect"
-          @export="onHeatmapExport"
-        />
+        <div class="heatmap-container">
+          <PressureHeatmap
+            :matrix="heatmapMatrix"
+            :cells="heatmapCells"
+            :stats="stats"
+            :num-rows="numRows"
+            :num-cols="numCols"
+            :start-date="startDate"
+            :end-date="endDate"
+            :loading="loading"
+            :color-scale="colorScheme"
+            :show-grid="showGrid"
+            @cell-select="onCellSelect"
+            @export="onHeatmapExport"
+          />
+        </div>
       </section>
 
       <!-- 右侧统计面板 -->
       <aside class="stats-panel">
         <!-- KPI 卡片 -->
-        <PressureKpiCards
-          :stats="stats"
-          :anomalies="anomalies"
-          :peaks="peaks"
-        />
+        <div class="kpi-section">
+          <PressureKpiCards
+            :stats="stats"
+            :anomalies="anomalies"
+            :peaks="peaks"
+          />
+        </div>
 
         <!-- 图表标签页 -->
         <div class="chart-tabs">
           <button
-            v-for="tab in chartTabs"
+            v-for="(tab, index) in chartTabs"
             :key="tab.id"
             :class="['tab-btn', { active: activeTab === tab.id }]"
             @click="activeTab = tab.id"
+            :style="{ animationDelay: `${index * 50}ms` }"
           >
-            {{ tab.label }}
+            <span class="tab-icon">{{ tab.icon }}</span>
+            <span class="tab-label">{{ tab.label }}</span>
           </button>
         </div>
 
         <!-- 图表区域 -->
         <div class="chart-area">
-          <!-- 时间序列图 -->
-          <div v-show="activeTab === 'time'" class="chart-wrapper">
-            <PressureTimeSeries
-              :data="selectedSupportData"
-              :support-id="selectedSupport"
-              :show-peaks="showPeaks"
-              :peaks="selectedSupportPeaks"
-            />
-          </div>
+          <TransitionGroup name="chart-fade" tag="div" class="chart-container">
+            <!-- 时间序列图 -->
+            <div v-if="activeTab === 'time'" key="time" class="chart-wrapper">
+              <PressureTimeSeries
+                :data="selectedSupportData"
+                :support-id="selectedSupport"
+                :show-peaks="showPeaks"
+                :peaks="selectedSupportPeaks"
+              />
+            </div>
 
-          <!-- 直方图 -->
-          <div v-show="activeTab === 'hist'" class="chart-wrapper">
-            <PressureHistogram
-              :data="histogramData"
-              :bins="30"
-            />
-          </div>
+            <!-- 直方图 -->
+            <div v-if="activeTab === 'hist'" key="hist" class="chart-wrapper">
+              <PressureHistogram :data="histogramData" :bins="30" />
+            </div>
 
-          <!-- 空间分布图 -->
-          <div v-show="activeTab === 'spatial'" class="chart-wrapper">
-            <PressureSpatialDist
-              :data="spatialDistData"
-            />
-          </div>
+            <!-- 空间分布图 -->
+            <div v-if="activeTab === 'spatial'" key="spatial" class="chart-wrapper">
+              <PressureSpatialDist :data="spatialDistData" />
+            </div>
 
-          <!-- 周期检测图 -->
-          <div v-show="activeTab === 'cycle'" class="chart-wrapper">
-            <PressureCycleDetect
-              :data="cycleData"
-              :periods="detectedPeriods"
-            />
-          </div>
+            <!-- 周期检测图 -->
+            <div v-if="activeTab === 'cycle'" key="cycle" class="chart-wrapper">
+              <PressureCycleDetect :data="cycleData" :periods="detectedPeriods" />
+            </div>
 
-          <!-- 相关性矩阵 -->
-          <div v-show="activeTab === 'corr'" class="chart-wrapper">
-            <PressureCorrelation
-              :matrix="correlationMatrix"
-            />
-          </div>
+            <!-- 相关性矩阵 -->
+            <div v-if="activeTab === 'corr'" key="corr" class="chart-wrapper">
+              <PressureCorrelation :matrix="correlationMatrix" />
+            </div>
 
-          <!-- 前后柱对比 -->
-          <div v-show="activeTab === 'compare'" class="chart-wrapper">
-            <PressureColumnCompare
-              :front-data="frontColumnData"
-              :rear-data="rearColumnData"
-            />
-          </div>
+            <!-- 前后柱对比 -->
+            <div v-if="activeTab === 'compare'" key="compare" class="chart-wrapper">
+              <PressureColumnCompare
+                :front-data="frontColumnData"
+                :rear-data="rearColumnData"
+              />
+            </div>
+          </TransitionGroup>
         </div>
       </aside>
     </main>
 
     <!-- 底部状态栏 -->
     <footer class="status-bar">
-      <span class="status-item">
-        <span class="status-label">数据：</span>
-        <span class="status-value">{{ dataPoints }} 条</span>
-      </span>
-      <span class="status-item">
-        <span class="status-label">时段：</span>
-        <span class="status-value">{{ dateRangeText }}</span>
-      </span>
-      <span class="status-item">
-        <span class="status-label">支架：</span>
-        <span class="status-value">{{ supportStart }}-{{ supportEnd }}</span>
-      </span>
-      <span class="status-item" v-if="loading">
-        <span class="loading-indicator">加载中...</span>
-      </span>
+      <div class="status-left">
+        <div class="status-item">
+          <span class="status-dot"></span>
+          <span class="status-label">数据点</span>
+          <span class="status-value">{{ formatNumber(dataPoints) }}</span>
+        </div>
+        <div class="status-divider"></div>
+        <div class="status-item">
+          <span class="status-label">时间跨度</span>
+          <span class="status-value">{{ dateRangeText }}</span>
+        </div>
+        <div class="status-divider"></div>
+        <div class="status-item">
+          <span class="status-label">支架范围</span>
+          <span class="status-value">#{{ supportStart }} - #{{ supportEnd }}</span>
+        </div>
+      </div>
+      <div class="status-right">
+        <Transition name="fade">
+          <div v-if="loading" class="loading-status">
+            <span class="loading-spinner"></span>
+            <span>数据加载中...</span>
+          </div>
+        </Transition>
+      </div>
     </footer>
   </div>
 </template>
@@ -175,7 +224,6 @@ import PressureColumnCompare from '@/components/pressure/charts/PressureColumnCo
 
 // 数据处理模块
 import {
-  loadRawData,
   aggregateByDay,
   generateHeatmapMatrix,
   calculateStats,
@@ -201,6 +249,7 @@ function goBack() {
 // ============================================================================
 
 const pageTitle = '矿压数据分析'
+const controlPanelCollapsed = ref(false)
 
 // 控制面板状态
 const columnType = ref('all')
@@ -235,12 +284,12 @@ const selectedSupportPeaks = ref([])
 // 图表标签页
 const activeTab = ref('time')
 const chartTabs = [
-  { id: 'time', label: '时序' },
-  { id: 'hist', label: '分布' },
-  { id: 'spatial', label: '空间' },
-  { id: 'cycle', label: '周期' },
-  { id: 'corr', label: '相关' },
-  { id: 'compare', label: '对比' }
+  { id: 'time', label: '时序', icon: '📈' },
+  { id: 'hist', label: '分布', icon: '📊' },
+  { id: 'spatial', label: '空间', icon: '🗺' },
+  { id: 'cycle', label: '周期', icon: '🔄' },
+  { id: 'corr', label: '相关', icon: '🔗' },
+  { id: 'compare', label: '对比', icon: '⚖' }
 ]
 
 // ============================================================================
@@ -251,9 +300,9 @@ const dateRangeText = computed(() => {
   if (!startDate.value || !endDate.value) return ''
   const fmt = (d) => {
     const date = new Date(d)
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}`
   }
-  return `${fmt(startDate.value)} ~ ${fmt(endDate.value)}`
+  return `${fmt(startDate.value)} - ${fmt(endDate.value)}`
 })
 
 const anomalyCount = computed(() => anomalies.value.length)
@@ -264,11 +313,11 @@ const dataPoints = computed(() => rawData.value.length)
 const histogramData = computed(() => {
   if (!heatmapMatrix.value || heatmapMatrix.value.length === 0) return []
   const values = heatmapMatrix.value.flat().filter(v => Number.isFinite(v))
+  if (values.length === 0) return []
 
-  // 计算直方图
   const min = Math.min(...values)
   const max = Math.max(...values)
-  const binWidth = (max - min) / 30
+  const binWidth = (max - min) / 30 || 1
   const bins = Array(30).fill(0)
 
   values.forEach(v => {
@@ -308,7 +357,6 @@ const spatialDistData = computed(() => {
 const cycleData = computed(() => {
   if (!heatmapMatrix.value || heatmapMatrix.value.length === 0) return []
 
-  // 取中间支架的数据
   const midCol = Math.floor(numCols.value / 2)
   return heatmapMatrix.value.map((row, i) => ({
     date: new Date(startDate.value.getTime() + i * 24 * 60 * 60 * 1000),
@@ -342,17 +390,25 @@ const rearColumnData = computed(() => {
 // Methods
 // ============================================================================
 
+function formatNumber(num) {
+  if (!num) return '0'
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
+  return num.toString()
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen()
+  } else {
+    document.exitFullscreen()
+  }
+}
+
 async function loadData() {
   loading.value = true
 
   try {
-    // 在实际应用中，这里应该从 API 或文件加载数据
-    // 目前使用模拟数据
-    // const response = await fetch('/data/kuangya/末阻力数据1-9 (2).csv')
-    // const csvContent = await response.text()
-    // rawData.value = loadRawData(csvContent)
-
-    // 模拟数据用于演示
     generateMockData()
     processData()
   } catch (error) {
@@ -363,14 +419,12 @@ async function loadData() {
 }
 
 function generateMockData() {
-  // 生成模拟数据用于开发测试
   const mockData = []
   const start = new Date('2025-01-01')
   const end = new Date('2025-09-30')
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     for (let s = 1; s <= 125; s++) {
-      // 生成带有一定规律的阻力值
       const baseValue = 25 + Math.sin(s / 20) * 10
       const noise = (Math.random() - 0.5) * 15
       const value = Math.max(0, Math.min(60, baseValue + noise))
@@ -393,10 +447,8 @@ function generateMockData() {
 function processData() {
   if (!rawData.value || rawData.value.length === 0) return
 
-  // 聚合数据
   aggregatedData.value = aggregateByDay(rawData.value, columnType.value)
 
-  // 生成热力图矩阵
   const result = generateHeatmapMatrix(aggregatedData.value, {
     startDate: startDate.value,
     endDate: endDate.value,
@@ -409,7 +461,6 @@ function processData() {
   numCols.value = result.numCols
   stats.value = result.stats
 
-  // 检测异常
   const values = rawData.value.map(r => r.finalResistanceValue)
   const anomalyResult = detectAnomalies(values, 2)
   anomalies.value = anomalyResult.indices.map(i => ({
@@ -417,7 +468,6 @@ function processData() {
     value: values[i]
   }))
 
-  // 更新选中支架的时间序列
   updateSelectedSupportData()
 }
 
@@ -430,11 +480,11 @@ function updateSelectedSupportData() {
     const dayData = aggregatedData.value.get(dateKey)
 
     if (dayData && dayData.has(selectedSupport.value)) {
-      const stats = dayData.get(selectedSupport.value)
+      const cellStats = dayData.get(selectedSupport.value)
       supportData.push({
         date: new Date(current),
-        value: stats.mean,
-        std: stats.std
+        value: cellStats.mean,
+        std: cellStats.std
       })
     }
 
@@ -443,7 +493,6 @@ function updateSelectedSupportData() {
 
   selectedSupportData.value = supportData
 
-  // 检测峰值
   const values = supportData.map(d => d.value)
   const cycleResult = detectPressureCycles(values)
   selectedSupportPeaks.value = cycleResult.peakIndices || []
@@ -482,7 +531,6 @@ function onHeatmapExport() {
 }
 
 function exportAll() {
-  // 导出所有图表为 PDF
   console.log('Exporting all charts...')
 }
 
@@ -494,236 +542,632 @@ onMounted(() => {
   loadData()
 })
 
-// 监听筛选条件变化
 watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
   // 自动更新（可选）
-  // processData()
 })
 </script>
 
 <style scoped>
+/* ============================================================================
+   压力分析页面 - 优化版
+   ============================================================================ */
+
 .pressure-analysis-page {
-  --nav-height: 48px;
-  --status-height: 28px;
-  --panel-width: 220px;
-  --stats-width: 320px;
+  /* 布局变量 */
+  --nav-height: 56px;
+  --status-height: 32px;
+  --panel-width: 240px;
+  --stats-width: 360px;
+  --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #f8fafc;
-  font-family: 'Arial', 'Helvetica', sans-serif;
-  font-size: 8pt;
+  background: var(--bg-secondary, #fafafa);
+  font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  overflow: hidden;
+
+  /* 页面进入动画 */
+  animation: pageEnter 0.5s var(--transition-smooth);
 }
 
-/* 顶部导航 */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================================
+   顶部导航
+   ============================================================================ */
+
 .top-nav {
   height: var(--nav-height);
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--bg-primary, #ffffff);
+  border-bottom: 1px solid var(--border-color, #e5e5e5);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+  animation: navSlideDown 0.4s var(--transition-smooth);
+}
+
+@keyframes navSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .nav-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .back-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--bg-tertiary, #f5f5f5);
+  border-radius: var(--radius-md, 8px);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-secondary, #525252);
+  transition: all 0.2s var(--transition-smooth);
+}
+
+.back-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .back-btn:hover {
-  background: #f1f5f9;
+  background: var(--color-primary, #1a1a1a);
+  color: var(--text-inverted, #ffffff);
+  transform: translateX(-2px);
 }
 
-.back-icon {
-  font-size: 16px;
-  color: #64748b;
+.back-btn:active {
+  transform: translateX(0) scale(0.95);
+}
+
+.title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .page-title {
   margin: 0;
-  font-size: 11pt;
+  font-size: 16px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary, #171717);
+  letter-spacing: -0.01em;
 }
 
-.divider {
-  width: 1px;
-  height: 20px;
-  background: #e2e8f0;
+.title-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.workface-label {
-  font-size: 8pt;
-  color: #64748b;
-  padding: 4px 8px;
-  background: #f1f5f9;
+.workface-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #525252);
+  padding: 3px 8px;
+  background: var(--bg-tertiary, #f5f5f5);
   border-radius: 4px;
+}
+
+.workface-badge svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
 }
 
 .date-range {
-  font-size: 8pt;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--text-tertiary, #737373);
+  font-weight: 500;
 }
 
+/* 中间实时统计 */
+.nav-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.live-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-tertiary, #f5f5f5);
+  border-radius: 20px;
+  font-size: 12px;
+  transition: all 0.2s var(--transition-smooth);
+}
+
+.stat-pill:hover {
+  background: var(--border-color, #e5e5e5);
+}
+
+.stat-pill.danger {
+  background: var(--color-error-bg, #fef2f2);
+}
+
+.stat-pill.danger .stat-value {
+  color: var(--color-error, #dc2626);
+}
+
+.stat-label {
+  color: var(--text-tertiary, #737373);
+  font-weight: 500;
+}
+
+.stat-value {
+  color: var(--text-primary, #171717);
+  font-weight: 700;
+}
+
+.stat-unit {
+  color: var(--text-muted, #a3a3a3);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* 右侧操作按钮 */
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
-.mini-stats {
+.nav-action {
   display: flex;
-  gap: 16px;
-  font-size: 8pt;
-  color: #64748b;
-}
-
-.mini-stats b {
-  color: #1e293b;
-  font-weight: 600;
-}
-
-.mini-stats .warning {
-  color: #ef4444;
-}
-
-.mini-stats .warning b {
-  color: #ef4444;
-}
-
-.tool-btn {
-  padding: 6px 12px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 4px;
-  font-size: 8pt;
-  color: #64748b;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-color, #e5e5e5);
+  background: var(--bg-primary, #ffffff);
+  border-radius: var(--radius-md, 8px);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary, #525252);
   cursor: pointer;
+  transition: all 0.2s var(--transition-smooth);
 }
 
-.tool-btn:hover {
-  background: #f1f5f9;
-  border-color: #0f766e;
-  color: #0f766e;
+.nav-action svg {
+  width: 16px;
+  height: 16px;
 }
 
-/* 主内容区 */
+.nav-action:hover {
+  border-color: var(--color-primary, #1a1a1a);
+  color: var(--color-primary, #1a1a1a);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.nav-action.primary {
+  background: var(--color-primary, #1a1a1a);
+  border-color: var(--color-primary, #1a1a1a);
+  color: var(--text-inverted, #ffffff);
+}
+
+.nav-action.primary:hover {
+  background: var(--color-primary-hover, #333333);
+  border-color: var(--color-primary-hover, #333333);
+  color: var(--text-inverted, #ffffff);
+}
+
+/* ============================================================================
+   主内容区
+   ============================================================================ */
+
 .main-content {
   flex: 1;
   display: flex;
   overflow: hidden;
+  position: relative;
 }
 
+/* 控制面板 */
 .control-panel {
   width: var(--panel-width);
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
-  overflow-y: auto;
-}
-
-.heatmap-section {
-  flex: 1;
-  padding: 12px;
+  background: var(--bg-primary, #ffffff);
+  border-right: 1px solid var(--border-color, #e5e5e5);
   display: flex;
   flex-direction: column;
+  position: relative;
+  transition: width 0.3s var(--transition-smooth);
+  animation: panelSlideRight 0.5s var(--transition-smooth) 0.1s backwards;
 }
 
+@keyframes panelSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.control-panel.collapsed {
+  width: 0;
+  overflow: hidden;
+}
+
+.panel-toggle {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #e5e5e5);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s var(--transition-smooth);
+}
+
+.panel-toggle svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary, #737373);
+  transition: transform 0.3s var(--transition-smooth);
+}
+
+.control-panel.collapsed .panel-toggle svg {
+  transform: rotate(180deg);
+}
+
+.panel-toggle:hover {
+  background: var(--bg-tertiary, #f5f5f5);
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 热力图区域 */
+.heatmap-section {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  animation: contentFadeIn 0.6s var(--transition-smooth) 0.2s backwards;
+}
+
+@keyframes contentFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.heatmap-container {
+  flex: 1;
+  background: var(--bg-primary, #ffffff);
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid var(--border-color, #e5e5e5);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.06));
+}
+
+/* 统计面板 */
 .stats-panel {
   width: var(--stats-width);
-  background: #ffffff;
-  border-left: 1px solid #e2e8f0;
+  background: var(--bg-primary, #ffffff);
+  border-left: 1px solid var(--border-color, #e5e5e5);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: panelSlideLeft 0.5s var(--transition-smooth) 0.15s backwards;
+}
+
+@keyframes panelSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.kpi-section {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color, #e5e5e5);
 }
 
 /* 图表标签页 */
 .chart-tabs {
   display: flex;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 0 8px;
-  background: #fafafa;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #fafafa);
+  border-bottom: 1px solid var(--border-color, #e5e5e5);
 }
 
 .tab-btn {
-  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
   border: none;
   background: transparent;
-  font-size: 7pt;
-  color: #64748b;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary, #737373);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s;
+  transition: all 0.2s var(--transition-smooth);
+  animation: tabFadeIn 0.4s var(--transition-smooth) backwards;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tab-icon {
+  font-size: 12px;
 }
 
 .tab-btn:hover {
-  color: #0f766e;
+  background: var(--bg-tertiary, #f5f5f5);
+  color: var(--text-secondary, #525252);
 }
 
 .tab-btn.active {
-  color: #0f766e;
-  border-bottom-color: #0f766e;
-  font-weight: 600;
+  background: var(--color-primary, #1a1a1a);
+  color: var(--text-inverted, #ffffff);
 }
 
 /* 图表区域 */
 .chart-area {
   flex: 1;
-  padding: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.chart-container {
+  width: 100%;
+  height: 100%;
   overflow-y: auto;
 }
 
 .chart-wrapper {
-  min-height: 180px;
+  padding: 12px;
+  min-height: 200px;
 }
 
-/* 底部状态栏 */
+/* 图表切换动画 */
+.chart-fade-enter-active {
+  transition: all 0.3s var(--transition-smooth);
+}
+
+.chart-fade-leave-active {
+  transition: all 0.2s var(--transition-smooth);
+}
+
+.chart-fade-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.chart-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+
+/* ============================================================================
+   底部状态栏
+   ============================================================================ */
+
 .status-bar {
   height: var(--status-height);
-  background: #1e293b;
+  background: var(--color-gray-800, #262626);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 16px;
-  gap: 24px;
+  flex-shrink: 0;
+  animation: statusSlideUp 0.4s var(--transition-smooth) 0.2s backwards;
+}
+
+@keyframes statusSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 7pt;
+  gap: 6px;
+  font-size: 11px;
 }
 
-.status-label {
-  color: #64748b;
-}
-
-.status-value {
-  color: #ffffff;
-}
-
-.loading-indicator {
-  color: #22c55e;
-  animation: pulse 1s infinite;
+.status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-success, #16a34a);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+.status-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--color-gray-600, #525252);
+}
+
+.status-label {
+  color: var(--color-gray-400, #a3a3a3);
+}
+
+.status-value {
+  color: var(--text-inverted, #ffffff);
+  font-weight: 600;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+}
+
+.loading-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-success, #16a34a);
+}
+
+.loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(22, 163, 74, 0.2);
+  border-top-color: var(--color-success, #16a34a);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 淡入淡出动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s var(--transition-smooth);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ============================================================================
+   响应式布局
+   ============================================================================ */
+
+@media (max-width: 1200px) {
+  .control-panel {
+    width: 200px;
+  }
+
+  .stats-panel {
+    width: 300px;
+  }
+
+  .nav-center {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .control-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-lg, 0 12px 28px rgba(0, 0, 0, 0.12));
+  }
+
+  .control-panel.collapsed {
+    width: 0;
+    box-shadow: none;
+  }
+
+  .stats-panel {
+    width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-lg, 0 12px 28px rgba(0, 0, 0, 0.12));
+    transform: translateX(100%);
+    transition: transform 0.3s var(--transition-smooth);
+  }
+
+  .heatmap-section {
+    padding: 8px;
+  }
 }
 </style>

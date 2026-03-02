@@ -36,7 +36,8 @@ const footnote = computed(() => {
 // Nature 配色
 const COLORS = {
   primary: '#0072B2',
-  kde: '#D55E00'
+  kde: '#D55E00',
+  grid: '#e5e5e5'
 }
 
 function calculateHistogram(data, bins) {
@@ -81,6 +82,10 @@ function updateChart() {
     xData.push(((edges[i] + edges[i + 1]) / 2).toFixed(1))
   }
 
+  // 计算统计信息
+  const maxCount = Math.max(...values)
+  const maxIdx = values.indexOf(maxCount)
+
   const option = {
     title: { show: false },
 
@@ -95,15 +100,15 @@ function updateChart() {
       type: 'category',
       data: xData,
       axisLine: {
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisTick: {
         inside: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisLabel: {
         fontSize: 7,
-        color: '#000000',
+        color: '#171717',
         interval: Math.floor(xData.length / 5)
       },
       splitLine: { show: false }
@@ -113,18 +118,18 @@ function updateChart() {
       type: 'value',
       axisLine: {
         show: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisTick: {
         inside: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisLabel: {
         fontSize: 7,
-        color: '#000000'
+        color: '#171717'
       },
       splitLine: {
-        lineStyle: { color: '#e2e8f0', width: 0.5, type: 'dashed' }
+        lineStyle: { color: COLORS.grid, width: 0.5, type: 'dashed' }
       }
     },
 
@@ -132,21 +137,75 @@ function updateChart() {
       {
         name: 'Frequency',
         type: 'bar',
-        data: values,
+        data: values.map((val, idx) => ({
+          value: val,
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: COLORS.primary },
+              { offset: 1, color: '#4da6e8' }
+            ]),
+            borderRadius: idx === values.length - 1 ? [2, 2, 0, 0] : 0
+          }
+        })),
         barWidth: '90%',
-        itemStyle: {
-          color: COLORS.primary,
-          borderWidth: 0
-        },
         emphasis: {
           itemStyle: {
-            color: COLORS.primary
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: COLORS.kde },
+              { offset: 1, color: '#f5a623' }
+            ]),
+            shadowBlur: 8,
+            shadowColor: 'rgba(0, 0, 0, 0.15)'
           }
+        },
+        // 高亮峰值柱
+        markPoint: {
+          symbol: 'pin',
+          symbolSize: 30,
+          data: [
+            {
+              coord: [maxIdx, maxCount],
+              value: maxCount,
+              itemStyle: { color: COLORS.kde }
+            }
+          ],
+          label: {
+            fontSize: 8,
+            color: '#fff'
+          },
+          animationDelay: 500
         }
       }
     ],
 
-    animation: false
+    // 提示框
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e5e5e5',
+      borderWidth: 1,
+      textStyle: {
+        color: '#171717',
+        fontSize: 11
+      },
+      axisPointer: {
+        type: 'shadow',
+        shadowStyle: {
+          color: 'rgba(0, 114, 178, 0.08)'
+        }
+      },
+      formatter: (params) => {
+        const data = params[0]
+        if (!data) return ''
+        return `<div style="font-weight:600;margin-bottom:4px;">${data.axisValue} MPa</div>
+                <div>频数: <span style="color:${COLORS.primary};font-weight:600;">${data.value}</span></div>`
+      }
+    },
+
+    animation: true,
+    animationDuration: 600,
+    animationEasing: 'cubicOut',
+    animationDelay: (idx) => idx * 10
   }
 
   chartInstance.setOption(option, true)
@@ -174,5 +233,15 @@ watch(() => props.data, updateChart, { deep: true })
   width: 100%;
   height: 100%;
   min-height: 130px;
+  animation: chartFadeIn 0.5s ease;
+}
+
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>

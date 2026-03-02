@@ -29,7 +29,9 @@ let chartInstance = null
 // Nature 配色
 const COLORS = {
   primary: '#0072B2',
-  peak: '#CC79A7'
+  peak: '#CC79A7',
+  threshold: '#D55E00',
+  grid: '#e5e5e5'
 }
 
 const footnote = computed(() => {
@@ -69,6 +71,9 @@ function updateChart() {
   // 峰值数据
   const peakData = peakIndices.map(i => [xData[i], values[i]])
 
+  // 计算均值用于参考线
+  const meanValue = values.reduce((a, b) => a + b, 0) / values.length
+
   const option = {
     title: { show: false },
 
@@ -84,15 +89,15 @@ function updateChart() {
       min: 0,
       max: Math.ceil(xData[xData.length - 1] / 500) * 500,
       axisLine: {
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisTick: {
         inside: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisLabel: {
         fontSize: 7,
-        color: '#000000'
+        color: '#171717'
       },
       splitLine: { show: false }
     },
@@ -103,18 +108,18 @@ function updateChart() {
       max: 70,
       axisLine: {
         show: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisTick: {
         inside: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisLabel: {
         fontSize: 7,
-        color: '#000000'
+        color: '#171717'
       },
       splitLine: {
-        lineStyle: { color: '#e2e8f0', width: 0.5, type: 'dashed' }
+        lineStyle: { color: COLORS.grid, width: 0.5, type: 'dashed' }
       }
     },
 
@@ -128,7 +133,13 @@ function updateChart() {
         symbol: 'none',
         lineStyle: {
           color: COLORS.primary,
-          width: 1
+          width: 1.5
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(0, 114, 178, 0.15)' },
+            { offset: 1, color: 'rgba(0, 114, 178, 0.02)' }
+          ])
         },
         z: 1
       },
@@ -138,15 +149,52 @@ function updateChart() {
         type: 'scatter',
         data: peakData,
         symbol: 'triangle',
-        symbolSize: 8,
+        symbolSize: 10,
         itemStyle: {
-          color: COLORS.peak
+          color: COLORS.peak,
+          borderColor: '#ffffff',
+          borderWidth: 1
+        },
+        emphasis: {
+          itemStyle: {
+            color: COLORS.peak,
+            shadowBlur: 6,
+            shadowColor: 'rgba(204, 121, 167, 0.4)'
+          }
         },
         z: 2
       }
     ],
 
-    animation: false
+    // 参考线
+    visualMap: {
+      show: false,
+      pieces: [
+        { gt: threshold, color: COLORS.peak }
+      ]
+    },
+
+    // 提示框
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e5e5e5',
+      borderWidth: 1,
+      textStyle: {
+        color: '#171717',
+        fontSize: 11
+      },
+      formatter: (params) => {
+        const data = params[0]
+        if (!data) return ''
+        return `<div style="font-weight:600;margin-bottom:4px;">${data.value[0]} m</div>
+                <div>末阻力: <span style="color:${COLORS.primary};font-weight:600;">${data.value[1]}</span> MPa</div>`
+      }
+    },
+
+    animation: true,
+    animationDuration: 800,
+    animationEasing: 'cubicOut'
   }
 
   chartInstance.setOption(option, true)
@@ -174,5 +222,15 @@ watch(() => props.data, updateChart, { deep: true })
   width: 100%;
   height: 100%;
   min-height: 130px;
+  animation: chartFadeIn 0.5s ease;
+}
+
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>

@@ -39,7 +39,8 @@ const footnote = computed(() => {
 const COLORS = {
   primary: '#0072B2',
   secondary: '#D55E00',
-  peak: '#CC79A7'
+  peak: '#CC79A7',
+  grid: '#e5e5e5'
 }
 
 function initChart() {
@@ -76,15 +77,15 @@ function updateChart() {
       type: 'category',
       data: dates,
       axisLine: {
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisTick: {
         inside: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisLabel: {
         fontSize: 7,
-        color: '#000000',
+        color: '#171717',
         formatter: (value) => {
           if (!value) return ''
           const d = new Date(value)
@@ -101,18 +102,18 @@ function updateChart() {
       max: 70,
       axisLine: {
         show: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisTick: {
         inside: true,
-        lineStyle: { color: '#000000', width: 0.5 }
+        lineStyle: { color: '#171717', width: 0.5 }
       },
       axisLabel: {
         fontSize: 7,
-        color: '#000000'
+        color: '#171717'
       },
       splitLine: {
-        lineStyle: { color: '#e2e8f0', width: 0.5, type: 'dashed' }
+        lineStyle: { color: COLORS.grid, width: 0.5, type: 'dashed' }
       }
     },
 
@@ -173,10 +174,21 @@ function updateChart() {
         symbolSize: 4,
         lineStyle: {
           color: COLORS.primary,
-          width: 1
+          width: 1.5
         },
         itemStyle: {
-          color: COLORS.primary
+          color: COLORS.primary,
+          borderColor: '#ffffff',
+          borderWidth: 1
+        },
+        emphasis: {
+          itemStyle: {
+            color: COLORS.secondary,
+            borderColor: '#ffffff',
+            borderWidth: 2,
+            shadowBlur: 4,
+            shadowColor: 'rgba(0, 0, 0, 0.2)'
+          }
         },
         z: 2
       },
@@ -187,16 +199,46 @@ function updateChart() {
         type: 'scatter',
         data: props.peaks.map(i => [dates[i], values[i]]),
         symbol: 'triangle',
-        symbolSize: 8,
+        symbolSize: 10,
         itemStyle: {
-          color: COLORS.peak
+          color: COLORS.peak,
+          borderColor: '#ffffff',
+          borderWidth: 1
+        },
+        emphasis: {
+          itemStyle: {
+            color: COLORS.peak,
+            shadowBlur: 6,
+            shadowColor: 'rgba(204, 121, 167, 0.4)'
+          }
         },
         z: 3
       }] : [])
     ],
 
+    // 提示框
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e5e5e5',
+      borderWidth: 1,
+      textStyle: {
+        color: '#171717',
+        fontSize: 11
+      },
+      formatter: (params) => {
+        const date = params[0].axisValue
+        const value = params.find(p => p.seriesName === 'Resistance')?.value || '-'
+        const d = new Date(date)
+        return `<div style="font-weight:600;margin-bottom:4px;">${d.toLocaleDateString('zh-CN')}</div>
+                <div>末阻力: <span style="color:${COLORS.primary};font-weight:600;">${value}</span> MPa</div>`
+      }
+    },
+
     // 动画
-    animation: false
+    animation: true,
+    animationDuration: 800,
+    animationEasing: 'cubicOut'
   }
 
   chartInstance.setOption(option, true)
@@ -225,5 +267,15 @@ watch(() => props.showPeaks, updateChart)
   width: 100%;
   height: 100%;
   min-height: 150px;
+  animation: chartFadeIn 0.5s ease;
+}
+
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>
