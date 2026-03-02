@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="I"
     :title="title"
-    x-axis-label="Front column resistance (MPa)"
-    y-axis-label="Rear column resistance (MPa)"
+    x-axis-label="前柱阻力"
+    y-axis-label="后柱阻力"
     :footnote="footnote"
     width="full"
     height="200px"
@@ -19,7 +19,7 @@ import NatureChartContainer from '../shared/NatureChartContainer.vue'
 import { mean, std } from '@/utils/pressureDataProcessor'
 
 const props = defineProps({
-  title: { type: String, default: 'Front vs Rear column comparison' },
+  title: { type: String, default: '前后柱阻力对比' },
   frontData: { type: Array, default: () => [] },
   rearData: { type: Array, default: () => [] }
 })

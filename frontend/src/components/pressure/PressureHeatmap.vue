@@ -48,12 +48,12 @@
 
       <!-- Y轴标签 (推进距离) -->
       <div class="y-axis-label">
-        <span>Advance distance (m)</span>
+        <span>推进距离</span>
       </div>
 
       <!-- X轴标签 (支架号) -->
       <div class="x-axis-label">
-        <span>Support position (number)</span>
+        <span>支架位置 (编号)</span>
       </div>
 
       <!-- 加载状态 -->
@@ -89,31 +89,31 @@
       >
         <div class="tooltip-header">
           <span class="tooltip-panel-label">A</span>
-          <span class="tooltip-title">Cell Info</span>
+          <span class="tooltip-title">单元格信息</span>
         </div>
         <div class="tooltip-body">
           <div class="tooltip-row">
-            <span class="tooltip-label">Support</span>
+            <span class="tooltip-label">支架</span>
             <span class="tooltip-value">#{{ hoveredCell.supportId }}</span>
           </div>
           <div class="tooltip-row">
-            <span class="tooltip-label">Date</span>
+            <span class="tooltip-label">日期</span>
             <span class="tooltip-value">{{ formatDate(hoveredCell.date) }}</span>
           </div>
           <div class="tooltip-row">
-            <span class="tooltip-label">Advance</span>
+            <span class="tooltip-label">推进</span>
             <span class="tooltip-value">{{ hoveredCell.advanceDistance.toFixed(1) }} m</span>
           </div>
           <div class="tooltip-row highlight">
-            <span class="tooltip-label">Resistance</span>
+            <span class="tooltip-label">阻力</span>
             <span class="tooltip-value">{{ formatValue(hoveredCell.value) }} MPa</span>
           </div>
           <div class="tooltip-row">
-            <span class="tooltip-label">s.d.</span>
+            <span class="tooltip-label">标准差</span>
             <span class="tooltip-value">±{{ formatValue(hoveredCell.std) }}</span>
           </div>
           <div class="tooltip-row">
-            <span class="tooltip-label">n</span>
+            <span class="tooltip-label">样本数</span>
             <span class="tooltip-value">{{ hoveredCell.count }}</span>
           </div>
         </div>
@@ -123,19 +123,19 @@
     <!-- 统计信息面板 -->
     <div v-if="showStats && stats" class="stats-panel">
       <div class="stat-item">
-        <span class="stat-label">Mean</span>
+        <span class="stat-label">均值</span>
         <span class="stat-value">{{ formatValue(stats.mean) }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">s.d.</span>
+        <span class="stat-label">标准差</span>
         <span class="stat-value">±{{ formatValue(stats.std) }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">Min</span>
+        <span class="stat-label">最小值</span>
         <span class="stat-value">{{ formatValue(stats.min) }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">Max</span>
+        <span class="stat-label">最大值</span>
         <span class="stat-value">{{ formatValue(stats.max) }}</span>
       </div>
     </div>
@@ -151,7 +151,7 @@ import { PRESSURE_CONFIG, getDateKey } from '@/utils/pressureDataProcessor'
 // ============================================================================
 
 const props = defineProps({
-  title: { type: String, default: 'End Resistance Heatmap' },
+  title: { type: String, default: '末阻力热力图' },
   subtitle: String,
 
   // 数据

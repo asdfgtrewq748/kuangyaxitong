@@ -8,18 +8,18 @@
         </button>
         <h1 class="page-title">{{ pageTitle }}</h1>
         <span class="divider"></span>
-        <span class="workface-label">02 Workface</span>
+        <span class="workface-label">02 工作面</span>
         <span class="date-range" v-if="dateRangeText">{{ dateRangeText }}</span>
       </div>
       <div class="nav-right">
         <span class="mini-stats" v-if="stats">
-          <span>Mean <b>{{ stats.mean.toFixed(1) }}</b> MPa</span>
-          <span>Max <b>{{ stats.max.toFixed(1) }}</b> MPa</span>
+          <span>均值 <b>{{ stats.mean.toFixed(1) }}</b> MPa</span>
+          <span>最大 <b>{{ stats.max.toFixed(1) }}</b> MPa</span>
           <span class="warning" v-if="anomalyCount > 0">
-            Anomalies <b>{{ anomalyCount }}</b>
+            异常 <b>{{ anomalyCount }}</b>
           </span>
         </span>
-        <button class="tool-btn" @click="exportAll">Export All</button>
+        <button class="tool-btn" @click="exportAll">导出全部</button>
       </div>
     </nav>
 
@@ -140,19 +140,19 @@
     <!-- 底部状态栏 -->
     <footer class="status-bar">
       <span class="status-item">
-        <span class="status-label">Data:</span>
-        <span class="status-value">{{ dataPoints }} points</span>
+        <span class="status-label">数据：</span>
+        <span class="status-value">{{ dataPoints }} 条</span>
       </span>
       <span class="status-item">
-        <span class="status-label">Period:</span>
+        <span class="status-label">时段：</span>
         <span class="status-value">{{ dateRangeText }}</span>
       </span>
       <span class="status-item">
-        <span class="status-label">Supports:</span>
+        <span class="status-label">支架：</span>
         <span class="status-value">{{ supportStart }}-{{ supportEnd }}</span>
       </span>
       <span class="status-item" v-if="loading">
-        <span class="loading-indicator">Loading...</span>
+        <span class="loading-indicator">加载中...</span>
       </span>
     </footer>
   </div>
@@ -200,7 +200,7 @@ function goBack() {
 // 状态
 // ============================================================================
 
-const pageTitle = 'Mine Pressure Data Analysis'
+const pageTitle = '矿压数据分析'
 
 // 控制面板状态
 const columnType = ref('all')
@@ -235,12 +235,12 @@ const selectedSupportPeaks = ref([])
 // 图表标签页
 const activeTab = ref('time')
 const chartTabs = [
-  { id: 'time', label: 'Time' },
-  { id: 'hist', label: 'Dist' },
-  { id: 'spatial', label: 'Spatial' },
-  { id: 'cycle', label: 'Cycle' },
-  { id: 'corr', label: 'Corr' },
-  { id: 'compare', label: 'Compare' }
+  { id: 'time', label: '时序' },
+  { id: 'hist', label: '分布' },
+  { id: 'spatial', label: '空间' },
+  { id: 'cycle', label: '周期' },
+  { id: 'corr', label: '相关' },
+  { id: 'compare', label: '对比' }
 ]
 
 // ============================================================================

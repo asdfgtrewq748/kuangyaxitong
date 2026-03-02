@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="B"
     :title="title"
-    x-axis-label="Time (month)"
-    y-axis-label="End resistance (MPa)"
+    x-axis-label="时间 (月)"
+    y-axis-label="末阻力"
     :footnote="footnote"
     width="full"
     height="200px"
@@ -18,7 +18,7 @@ import * as echarts from 'echarts'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: 'Support resistance over time' },
+  title: { type: String, default: '支架阻力时序变化' },
   data: { type: Array, default: () => [] }, // [{ date, value, std }]
   supportId: { type: Number, default: null },
   showErrorBar: { type: Boolean, default: true },
@@ -32,7 +32,7 @@ let chartInstance = null
 const footnote = computed(() => {
   if (!props.data || props.data.length === 0) return ''
   const n = props.data.length
-  return `Mean ± s.d., n = ${n}`
+  return `均值 ± 标准差, n = ${n}`
 })
 
 // Nature 配色

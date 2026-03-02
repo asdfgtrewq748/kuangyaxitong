@@ -40,7 +40,7 @@ const kpis = computed(() => {
   return [
     {
       key: 'mean',
-      label: 'Mean',
+      label: '均值',
       value: stats.mean,
       unit: 'MPa',
       trend: prev ? ((stats.mean - prev.mean) / prev.mean) * 100 : null,
@@ -49,14 +49,14 @@ const kpis = computed(() => {
     },
     {
       key: 'std',
-      label: 's.d.',
+      label: '标准差',
       value: stats.std,
       unit: 'MPa',
       trend: prev ? ((stats.std - prev.std) / prev.std) * 100 : null
     },
     {
       key: 'max',
-      label: 'Max',
+      label: '最大值',
       value: stats.max,
       unit: 'MPa',
       isWarning: stats.max > 50,
@@ -64,13 +64,13 @@ const kpis = computed(() => {
     },
     {
       key: 'min',
-      label: 'Min',
+      label: '最小值',
       value: stats.min,
       unit: 'MPa'
     },
     {
       key: 'anomalies',
-      label: 'Anomalies',
+      label: '异常值',
       value: props.anomalies.length,
       unit: '',
       isWarning: props.anomalies.length > 10,
@@ -78,13 +78,13 @@ const kpis = computed(() => {
     },
     {
       key: 'peaks',
-      label: 'Peaks',
+      label: '峰值',
       value: props.peaks.length,
       unit: ''
     },
     {
       key: 'samples',
-      label: 'n',
+      label: '样本数',
       value: stats.n,
       unit: ''
     }

@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="C"
     :title="title"
-    x-axis-label="Support number"
-    y-axis-label="End resistance (MPa)"
+    x-axis-label="支架编号"
+    y-axis-label="末阻力"
     :footnote="footnote"
     width="full"
     height="180px"
@@ -18,7 +18,7 @@ import * as echarts from 'echarts'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: 'Spatial distribution by support' },
+  title: { type: String, default: '支架空间分布' },
   data: { type: Array, default: () => [] } // [{ supportId, mean, count }]
 })
 
@@ -31,7 +31,7 @@ const COLORS = {
 
 const footnote = computed(() => {
   if (!props.data || props.data.length === 0) return ''
-  return `n = ${props.data.length} supports`
+  return `n = ${props.data.length} 个支架`
 })
 
 function initChart() {

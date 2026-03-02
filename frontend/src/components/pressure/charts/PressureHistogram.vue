@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="D"
     :title="title"
-    x-axis-label="End resistance (MPa)"
-    y-axis-label="Frequency"
+    x-axis-label="末阻力"
+    y-axis-label="频数"
     :footnote="footnote"
     width="full"
     height="180px"
@@ -18,7 +18,7 @@ import * as echarts from 'echarts'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: 'Resistance distribution' },
+  title: { type: String, default: '阻力分布' },
   data: { type: Array, default: () => [] },
   bins: { type: Number, default: 30 },
   showKDE: { type: Boolean, default: false }

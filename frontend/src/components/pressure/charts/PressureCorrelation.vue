@@ -27,7 +27,7 @@ import * as echarts from 'echarts'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: 'Support correlation matrix' },
+  title: { type: String, default: '支架相关性矩阵' },
   matrix: { type: Array, default: () => [] } // 2D correlation matrix
 })
 
@@ -36,7 +36,7 @@ let chartInstance = null
 
 const footnote = computed(() => {
   if (!props.matrix || props.matrix.length === 0) return ''
-  return 'Pearson correlation coefficient'
+  return '皮尔逊相关系数'
 })
 
 function initChart() {

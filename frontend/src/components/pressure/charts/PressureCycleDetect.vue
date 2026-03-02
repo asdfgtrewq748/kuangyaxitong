@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="E"
     :title="title"
-    x-axis-label="Advance distance (m)"
-    y-axis-label="End resistance (MPa)"
+    x-axis-label="推进距离"
+    y-axis-label="末阻力"
     :footnote="footnote"
     width="full"
     height="180px"
@@ -18,7 +18,7 @@ import * as echarts from 'echarts'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: 'Periodic pressure detection' },
+  title: { type: String, default: '周期来压检测' },
   data: { type: Array, default: () => [] }, // [{ date, value }]
   periods: { type: Object, default: null } // { meanPeriod, stdPeriod, numCycles }
 })
@@ -35,7 +35,7 @@ const COLORS = {
 const footnote = computed(() => {
   if (!props.periods || props.periods.numCycles === 0) return ''
   const { meanPeriod, stdPeriod, numCycles } = props.periods
-  return `Period: ${meanPeriod.toFixed(1)} ± ${stdPeriod.toFixed(1)} m (n=${numCycles})`
+  return `周期: ${meanPeriod.toFixed(1)} ± ${stdPeriod.toFixed(1)} m (n=${numCycles})`
 })
 
 function initChart() {

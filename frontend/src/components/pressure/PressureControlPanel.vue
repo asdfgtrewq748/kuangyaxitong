@@ -2,12 +2,12 @@
   <div class="pressure-control-panel">
     <!-- 面板标题 -->
     <div class="panel-header">
-      <h3 class="panel-title">Control Panel</h3>
+      <h3 class="panel-title">控制面板</h3>
     </div>
 
     <!-- 柱类型选择 -->
     <div class="control-section">
-      <label class="section-label">Column Type</label>
+      <label class="section-label">立柱类型</label>
       <div class="button-group">
         <button
           v-for="option in columnTypeOptions"
@@ -22,10 +22,10 @@
 
     <!-- 时间范围 -->
     <div class="control-section">
-      <label class="section-label">Time Range</label>
+      <label class="section-label">时间范围</label>
       <div class="date-inputs">
         <div class="date-field">
-          <span class="date-label">Start</span>
+          <span class="date-label">起始</span>
           <input
             type="date"
             :value="formatDateForInput(startDate)"
@@ -34,7 +34,7 @@
           />
         </div>
         <div class="date-field">
-          <span class="date-label">End</span>
+          <span class="date-label">结束</span>
           <input
             type="date"
             :value="formatDateForInput(endDate)"
@@ -59,10 +59,10 @@
 
     <!-- 阻力阈值 -->
     <div class="control-section">
-      <label class="section-label">Resistance Threshold</label>
+      <label class="section-label">阻力阈值</label>
       <div class="threshold-controls">
         <div class="threshold-item">
-          <span class="threshold-label">Low</span>
+          <span class="threshold-label">下限</span>
           <input
             type="range"
             min="0"
@@ -74,7 +74,7 @@
           <span class="threshold-value">{{ lowThreshold }} MPa</span>
         </div>
         <div class="threshold-item">
-          <span class="threshold-label">High</span>
+          <span class="threshold-label">上限</span>
           <input
             type="range"
             min="30"
@@ -90,10 +90,10 @@
 
     <!-- 支架选择 -->
     <div class="control-section">
-      <label class="section-label">Support Selection</label>
+      <label class="section-label">支架选择</label>
       <div class="support-range">
         <div class="range-input">
-          <span class="range-label">From</span>
+          <span class="range-label">从</span>
           <input
             type="number"
             min="1"
@@ -105,7 +105,7 @@
         </div>
         <span class="range-separator">—</span>
         <div class="range-input">
-          <span class="range-label">To</span>
+          <span class="range-label">到</span>
           <input
             type="number"
             min="1"
@@ -133,7 +133,7 @@
 
     <!-- 显示选项 -->
     <div class="control-section">
-      <label class="section-label">Display Options</label>
+      <label class="section-label">显示选项</label>
       <div class="checkbox-group">
         <label class="checkbox-item">
           <input
@@ -141,7 +141,7 @@
             :checked="showGrid"
             @change="$emit('update:showGrid', $event.target.checked)"
           />
-          <span class="checkbox-label">Show grid</span>
+          <span class="checkbox-label">显示网格</span>
         </label>
         <label class="checkbox-item">
           <input
@@ -149,7 +149,7 @@
             :checked="showContours"
             @change="$emit('update:showContours', $event.target.checked)"
           />
-          <span class="checkbox-label">Show contours</span>
+          <span class="checkbox-label">显示等值线</span>
         </label>
         <label class="checkbox-item">
           <input
@@ -157,7 +157,7 @@
             :checked="showAnomalies"
             @change="$emit('update:showAnomalies', $event.target.checked)"
           />
-          <span class="checkbox-label">Highlight anomalies</span>
+          <span class="checkbox-label">高亮异常值</span>
         </label>
         <label class="checkbox-item">
           <input
@@ -165,14 +165,14 @@
             :checked="showPeaks"
             @change="$emit('update:showPeaks', $event.target.checked)"
           />
-          <span class="checkbox-label">Mark peaks</span>
+          <span class="checkbox-label">标记峰值</span>
         </label>
       </div>
     </div>
 
     <!-- 颜色方案 -->
     <div class="control-section">
-      <label class="section-label">Color Scale</label>
+      <label class="section-label">配色方案</label>
       <div class="color-schemes">
         <button
           v-for="scheme in colorSchemes"
@@ -189,37 +189,37 @@
     <div class="control-section actions">
       <button class="action-btn primary" @click="$emit('apply')">
         <span class="btn-icon">✓</span>
-        Apply Changes
+        应用更改
       </button>
       <button class="action-btn secondary" @click="$emit('reset')">
         <span class="btn-icon">↺</span>
-        Reset
+        重置
       </button>
     </div>
 
     <!-- 当前统计 -->
     <div class="control-section stats" v-if="stats">
-      <label class="section-label">Current Statistics</label>
+      <label class="section-label">当前统计</label>
       <div class="stats-grid">
         <div class="stat-box">
           <span class="stat-value">{{ formatNumber(stats.mean) }}</span>
-          <span class="stat-label">Mean</span>
+          <span class="stat-label">均值</span>
         </div>
         <div class="stat-box">
           <span class="stat-value">±{{ formatNumber(stats.std) }}</span>
-          <span class="stat-label">s.d.</span>
+          <span class="stat-label">标准差</span>
         </div>
         <div class="stat-box">
           <span class="stat-value">{{ formatNumber(stats.min) }}</span>
-          <span class="stat-label">Min</span>
+          <span class="stat-label">最小值</span>
         </div>
         <div class="stat-box">
           <span class="stat-value">{{ formatNumber(stats.max) }}</span>
-          <span class="stat-label">Max</span>
+          <span class="stat-label">最大值</span>
         </div>
         <div class="stat-box wide">
           <span class="stat-value">{{ stats.n || '-' }}</span>
-          <span class="stat-label">n (samples)</span>
+          <span class="stat-label">样本数</span>
         </div>
       </div>
     </div>
@@ -284,16 +284,16 @@ const emit = defineEmits([
 // ============================================================================
 
 const columnTypeOptions = [
-  { value: 'all', label: 'Combined' },
-  { value: '前左柱', label: 'Front Left' },
-  { value: '后右柱', label: 'Rear Right' }
+  { value: 'all', label: '综合' },
+  { value: '前左柱', label: '前左柱' },
+  { value: '后右柱', label: '后右柱' }
 ]
 
 const timePresets = [
-  { label: '1M', value: 30 },
-  { label: '3M', value: 90 },
-  { label: '6M', value: 180 },
-  { label: 'All', value: 365 }
+  { label: '1个月', value: 30 },
+  { label: '3个月', value: 90 },
+  { label: '6个月', value: 180 },
+  { label: '全部', value: 365 }
 ]
 
 const supportPresets = [
@@ -304,10 +304,10 @@ const supportPresets = [
 ]
 
 const colorSchemes = [
-  { value: 'diverging', label: 'Diverging', gradient: 'linear-gradient(to right, #2166AC, #F7F7F7, #B2182B)' },
-  { value: 'sequential', label: 'Sequential', gradient: 'linear-gradient(to right, #440154, #31688E, #35B779, #FDE725)' },
-  { value: 'viridis', label: 'Viridis', gradient: 'linear-gradient(to right, #440154, #31688E, #35B779, #FDE725)' },
-  { value: 'heat', label: 'Heat', gradient: 'linear-gradient(to right, #0000FF, #00FF00, #FFFF00, #FF0000)' }
+  { value: 'diverging', label: '发散', gradient: 'linear-gradient(to right, #2166AC, #F7F7F7, #B2182B)' },
+  { value: 'sequential', label: '顺序', gradient: 'linear-gradient(to right, #440154, #31688E, #35B779, #FDE725)' },
+  { value: 'viridis', label: '翠绿', gradient: 'linear-gradient(to right, #440154, #31688E, #35B779, #FDE725)' },
+  { value: 'heat', label: '热力', gradient: 'linear-gradient(to right, #0000FF, #00FF00, #FFFF00, #FF0000)' }
 ]
 
 // ============================================================================

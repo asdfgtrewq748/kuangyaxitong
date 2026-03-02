@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "d:\\xiangmu\\kuangyaxitong"],
+      "description": "文件系统访问 - 读写本地文件"
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "description": "知识图谱记忆 - AI 长期记忆"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "description": "结构化思考 - 复杂任务分解"
+    },
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "d:\\xiangmu\\kuangyaxitong"],
+      "description": "Git 仓库操作 - 分支、提交、历史"
+    }
+  }
+}
