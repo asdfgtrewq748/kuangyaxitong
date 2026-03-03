@@ -128,20 +128,41 @@
         </div>
       </div>
 
-      <!-- 加载状态 -->
-      <div v-if="loading" class="loading-overlay">
-        <div class="loading-spinner">
-          <div class="spinner-ring"></div>
-          <div class="spinner-ring"></div>
+      <!-- 骨架屏加载状态 -->
+      <div v-if="loading" class="skeleton-overlay">
+        <div class="skeleton-container">
+          <div class="skeleton-header">
+            <div class="skeleton-badge"></div>
+            <div class="skeleton-titles">
+              <div class="skeleton-title"></div>
+              <div class="skeleton-subtitle"></div>
+            </div>
+          </div>
+          <div class="skeleton-chart">
+            <div class="skeleton-grid">
+              <div v-for="n in 8" :key="n" class="skeleton-row">
+                <div v-for="m in 12" :key="m" class="skeleton-cell"></div>
+              </div>
+            </div>
+          </div>
         </div>
         <p class="loading-text">{{ loadingText || '数据加载中...' }}</p>
+        <div class="loading-progress-bar" v-if="loadingProgress > 0">
+          <div class="progress-fill" :style="{ width: loadingProgress + '%' }"></div>
+        </div>
       </div>
 
       <!-- 空状态 -->
-      <div v-if="!loading && !hasData" class="empty-state">
-        <div class="empty-icon">📊</div>
+      <div v-else-if="!hasData" class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="8" y="8" width="48" height="48" rx="4"/>
+            <path d="M16 48l12-12 8 8 12-16 8 8" stroke-linecap="round"/>
+          </svg>
+        </div>
         <h3 class="empty-title">{{ emptyText || '暂无数据' }}</h3>
         <p class="empty-desc">请导入数据或调整筛选条件</p>
+        <button class="empty-action" @click="$emit('request-data')">导入数据</button>
       </div>
     </div>
 
@@ -1278,7 +1299,7 @@ canvas {
 }
 
 /* Loading & Empty */
-.loading-overlay, .empty-state {
+.loading-overlay, .empty-state, .skeleton-overlay {
   position: absolute;
   inset: 0;
   display: flex;
@@ -1286,8 +1307,113 @@ canvas {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255,255,255,0.98);
   z-index: 20;
+}
+
+.skeleton-overlay {
+  padding: 16px;
+  background: white;
+}
+
+.skeleton-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+}
+
+.skeleton-badge {
+  width: 28px;
+  height: 28px;
+  background: #e5e5e5;
+  border-radius: 6px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-title {
+  width: 140px;
+  height: 16px;
+  background: #e5e5e5;
+  border-radius: 4px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-subtitle {
+  width: 200px;
+  height: 12px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-chart {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.skeleton-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.skeleton-row {
+  display: flex;
+  gap: 4px;
+  height: 24px;
+}
+
+.skeleton-cell {
+  flex: 1;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e5e5e5 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 2px;
+  animation: shimmer 1.5s infinite;
+}
+
+.loading-progress-bar {
+  width: 200px;
+  height: 4px;
+  background: #e5e5e5;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #1a1a1a;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .loading-spinner {
@@ -1315,13 +1441,20 @@ canvas {
 }
 
 .empty-icon {
-  font-size: 48px;
+  width: 64px;
+  height: 64px;
+  color: #d4d4d4;
+}
+
+.empty-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .empty-title {
   margin: 0;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   color: #525252;
 }
 
@@ -1329,6 +1462,24 @@ canvas {
   margin: 0;
   font-size: 13px;
   color: #737373;
+}
+
+.empty-action {
+  margin-top: 8px;
+  padding: 10px 20px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.empty-action:hover {
+  background: #333;
+  transform: translateY(-1px);
 }
 
 /* Footer */

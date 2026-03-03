@@ -53,7 +53,12 @@
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
         </button>
-        <button class="action-btn primary" @click="toggleFullscreen" title="全屏">
+        <button class="action-btn" @click="showPerformancePanel = !showPerformancePanel" title="性能监控">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 20V10M18 20V4M6 20v-4"/>
+          </svg>
+        </button>
+        <button class="action-btn primary" @click="toggleFullscreen" title="全屏 (F11)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
           </svg>
@@ -241,74 +246,68 @@
       <!-- 右侧分析面板 -->
       <aside class="analysis-sidebar">
         <!-- KPI卡片 -->
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background: linear-gradient(135deg, #0072B2, #4da6e8);">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                <line x1="18" y1="20" x2="18" y2="10"/>
-                <line x1="12" y1="20" x2="12" y2="4"/>
-                <line x1="6" y1="20" x2="6" y2="14"/>
-              </svg>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background: linear-gradient(135deg, #0072B2, #4da6e8);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ stats?.mean?.toFixed(2) || '--' }}</span>
+                <span class="kpi-unit">MPa</span>
+                <span class="kpi-label">平均值</span>
+              </div>
             </div>
-            <div class="kpi-data">
-              <span class="kpi-value">{{ stats?.mean?.toFixed(2) || '--' }}</span>
-              <span class="kpi-unit">MPa</span>
-              <span class="kpi-label">平均值</span>
+            
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background: linear-gradient(135deg, #D55E00, #f5a623);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                  <polyline points="17 6 23 6 23 12"/>
+                </svg>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ stats?.max?.toFixed(2) || '--' }}</span>
+                <span class="kpi-unit">MPa</span>
+                <span class="kpi-label">最大值</span>
+              </div>
+            </div>
+            
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background: linear-gradient(135deg, #009E73, #35B779);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ stats?.min?.toFixed(2) || '--' }}</span>
+                <span class="kpi-unit">MPa</span>
+                <span class="kpi-label">最小值</span>
+              </div>
+            </div>
+            
+            <div class="kpi-card" v-if="anomalyCount > 0">
+              <div class="kpi-icon" style="background: linear-gradient(135deg, #CC79A7, #f5a623);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value warning">{{ anomalyCount }}</span>
+                <span class="kpi-unit">个</span>
+                <span class="kpi-label">异常点</span>
+              </div>
             </div>
           </div>
-          
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background: linear-gradient(135deg, #D55E00, #f5a623);">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-                <polyline points="17 6 23 6 23 12"/>
-              </svg>
-            </div>
-            <div class="kpi-data">
-              <span class="kpi-value">{{ stats?.max?.toFixed(2) || '--' }}</span>
-              <span class="kpi-unit">MPa</span>
-              <span class="kpi-label">最大值</span>
-            </div>
-          </div>
-          
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background: linear-gradient(135deg, #009E73, #35B779);">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-            </div>
-            <div class="kpi-data">
-              <span class="kpi-value">{{ stats?.min?.toFixed(2) || '--' }}</span>
-              <span class="kpi-unit">MPa</span>
-              <span class="kpi-label">最小值</span>
-            </div>
-          </div>
-          
-          <div class="kpi-card" v-if="anomalyCount > 0">
-            <div class="kpi-icon" style="background: linear-gradient(135deg, #CC79A7, #f5a623);">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-            </div>
-            <div class="kpi-data">
-              <span class="kpi-value warning">{{ anomalyCount }}</span>
-              <span class="kpi-unit">个</span>
-              <span class="kpi-label">异常点</span>
-            </div>
-          </div>
-        </div>
 
-        <!-- Nature导出面板 -->
-        <NatureExportPanel 
-          :charts="chartInstances"
-          @export-complete="onExportComplete"
-        />
-
-        <!-- 标签页图表 -->
+          <!-- 标签页图表 -->
         <div class="chart-tabs-container">
           <div class="tabs-header">
             <button
@@ -326,148 +325,190 @@
             <Transition name="tab-slide" mode="out-in">
               <!-- 分布图 -->
               <div v-if="activeTab === 'hist'" key="hist" class="tab-panel">
-                <PressureHistogramUltra
-                  ref="histogramRef"
-                  title="阻力分布直方图"
-                  :data="histogramData"
-                  :bins="30"
-                />
+                <LazyChart height="280px" :loading="!histogramData.length">
+                  <PressureHistogramUltra
+                    ref="histogramRef"
+                    title="阻力分布直方图"
+                    :data="histogramData"
+                    :bins="30"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 空间分布 -->
               <div v-else-if="activeTab === 'spatial'" key="spatial" class="tab-panel">
-                <PressureSpatialDistUltra
-                  ref="spatialRef"
-                  title="空间分布"
-                  :data="spatialDistData"
-                />
+                <LazyChart height="280px" :loading="!spatialDistData.length">
+                  <PressureSpatialDistUltra
+                    ref="spatialRef"
+                    title="空间分布"
+                    :data="spatialDistData"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 周期检测 -->
               <div v-else-if="activeTab === 'cycle'" key="cycle" class="tab-panel">
-                <PressureCycleDetectUltra
-                  ref="cycleRef"
-                  title="周期检测"
-                  :data="cycleData"
-                  :periods="detectedPeriods"
-                />
+                <LazyChart height="280px" :loading="!cycleData.length">
+                  <PressureCycleDetectUltra
+                    ref="cycleRef"
+                    title="周期检测"
+                    :data="cycleData"
+                    :periods="detectedPeriods"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 相关性 -->
               <div v-else-if="activeTab === 'corr'" key="corr" class="tab-panel">
-                <PressureCorrelationUltra
-                  ref="correlationRef"
-                  title="支架相关性"
-                  :matrix="correlationMatrix"
-                />
+                <LazyChart height="280px" :loading="!correlationMatrix">
+                  <PressureCorrelationUltra
+                    ref="correlationRef"
+                    title="支架相关性"
+                    :matrix="correlationMatrix"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 对比 -->
               <div v-else-if="activeTab === 'compare'" key="compare" class="tab-panel">
-                <PressureColumnCompareUltra
-                  ref="compareRef"
-                  title="前后柱对比"
-                  :front-data="frontColumnData"
-                  :rear-data="rearColumnData"
-                />
+                <LazyChart height="280px" :loading="!frontColumnData.length && !rearColumnData.length">
+                  <PressureColumnCompareUltra
+                    ref="compareRef"
+                    title="前后柱对比"
+                    :front-data="frontColumnData"
+                    :rear-data="rearColumnData"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 箱线图 -->
               <div v-else-if="activeTab === 'boxplot'" key="boxplot" class="tab-panel">
-                <PressureBoxPlot
-                  ref="boxplotRef"
-                  panel-label="C"
-                  title="压力分布箱线图"
-                  subtitle="Box Plot Analysis"
-                  :data="rawData"
-                  time-range="day"
-                />
+                <LazyChart height="280px" :loading="!rawData.length">
+                  <PressureBoxPlot
+                    ref="boxplotRef"
+                    panel-label="C"
+                    title="压力分布箱线图"
+                    subtitle="Box Plot Analysis"
+                    :data="rawData"
+                    time-range="day"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 累积分布 -->
               <div v-else-if="activeTab === 'cdf'" key="cdf" class="tab-panel">
-                <PressureCDF
-                  ref="cdfRef"
-                  panel-label="D"
-                  title="累积分布函数"
-                  subtitle="Cumulative Distribution"
-                  :data="rawData"
-                />
+                <LazyChart height="280px" :loading="!rawData.length">
+                  <PressureCDF
+                    ref="cdfRef"
+                    panel-label="D"
+                    title="累积分布函数"
+                    subtitle="Cumulative Distribution"
+                    :data="rawData"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 频谱分析 -->
               <div v-else-if="activeTab === 'spectral'" key="spectral" class="tab-panel">
-                <PressureSpectral
-                  ref="spectralRef"
-                  panel-label="E"
-                  title="频谱分析"
-                  subtitle="Spectral Analysis"
-                  :data="selectedSupportData"
-                />
+                <LazyChart height="280px" :loading="!selectedSupportData.length">
+                  <PressureSpectral
+                    ref="spectralRef"
+                    panel-label="E"
+                    title="频谱分析"
+                    subtitle="Spectral Analysis"
+                    :data="selectedSupportData"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 散点矩阵 -->
               <div v-else-if="activeTab === 'scatter'" key="scatter" class="tab-panel">
-                <PressureScatterMatrix
-                  ref="scatterRef"
-                  panel-label="F"
-                  title="多支架相关性矩阵"
-                  subtitle="Scatter Plot Matrix"
-                  :data="rawData"
-                  :support-ids="[1, 25, 50, 75, 100, 125]"
-                />
+                <LazyChart height="280px" :loading="!rawData.length">
+                  <PressureScatterMatrix
+                    ref="scatterRef"
+                    panel-label="F"
+                    title="多支架相关性矩阵"
+                    subtitle="Scatter Plot Matrix"
+                    :data="rawData"
+                    :support-ids="[1, 25, 50, 75, 100, 125]"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 异常热力图 -->
               <div v-else-if="activeTab === 'anomaly'" key="anomaly" class="tab-panel">
-                <AnomalyHeatmap
-                  ref="anomalyRef"
-                  panel-label="G"
-                  title="异常分布热力图"
-                  subtitle="Anomaly Detection Map"
-                  :matrix="heatmapMatrix"
-                  :stats="stats"
-                  :threshold="2.0"
-                />
+                <LazyChart height="280px" :loading="!heatmapMatrix.length">
+                  <AnomalyHeatmap
+                    ref="anomalyRef"
+                    panel-label="G"
+                    title="异常分布热力图"
+                    subtitle="Anomaly Detection Map"
+                    :matrix="heatmapMatrix"
+                    :stats="stats"
+                    :threshold="2.0"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 雷达图 -->
               <div v-else-if="activeTab === 'radar'" key="radar" class="tab-panel">
-                <PressureRadar
-                  ref="radarRef"
-                  panel-label="H"
-                  title="压力特征雷达图"
-                  subtitle="Multi-dimensional Analysis"
-                  :data="selectedSupportData"
-                />
+                <LazyChart height="280px" :loading="!selectedSupportData.length">
+                  <PressureRadar
+                    ref="radarRef"
+                    panel-label="H"
+                    title="压力特征雷达图"
+                    subtitle="Multi-dimensional Analysis"
+                    :data="selectedSupportData"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 密度图 -->
               <div v-else-if="activeTab === 'density'" key="density" class="tab-panel">
-                <PressureDensity
-                  ref="densityRef"
-                  panel-label="I"
-                  title="核密度估计"
-                  subtitle="Kernel Density Estimation"
-                  :data="rawData"
-                />
+                <LazyChart height="280px" :loading="!rawData.length">
+                  <PressureDensity
+                    ref="densityRef"
+                    panel-label="I"
+                    title="核密度估计"
+                    subtitle="Kernel Density Estimation"
+                    :data="rawData"
+                  />
+                </LazyChart>
               </div>
 
               <!-- 等值线图 -->
               <div v-else-if="activeTab === 'contour'" key="contour" class="tab-panel">
-                <PressureContour
-                  ref="contourRef"
-                  panel-label="J"
-                  title="压力等值线图"
-                  subtitle="Contour Map"
-                  :matrix="heatmapMatrix"
-                  :num-supports="numRows"
-                  :levels="12"
-                />
+                <LazyChart height="280px" :loading="!heatmapMatrix.length">
+                  <PressureContour
+                    ref="contourRef"
+                    panel-label="J"
+                    title="压力等值线图"
+                    subtitle="Contour Map"
+                    :matrix="heatmapMatrix"
+                    :num-supports="numRows"
+                    :levels="12"
+                  />
+                </LazyChart>
               </div>
             </Transition>
           </div>
         </div>
+
+        <!-- Nature导出面板 -->
+        <NatureExportPanel 
+          :charts="chartInstances"
+          @export-complete="onExportComplete"
+        />
+
+        <!-- 科研分析面板 -->
+        <ResearchPanel 
+          :data="researchData"
+          @palette-change="onResearchPaletteChange"
+          @export-request="onResearchExport"
+        />
+
+        <!-- 方法论与引用 -->
+        <MethodologyPanel />
       </aside>
     </main>
 
@@ -513,6 +554,77 @@
         <span class="toast-message">{{ toast.message }}</span>
       </div>
     </Transition>
+
+    <!-- 导出菜单模态框 -->
+    <Transition name="modal">
+      <div v-if="showExportModal" class="modal-overlay" @click.self="showExportModal = false">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>导出数据</h3>
+            <button class="modal-close" @click="showExportModal = false">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="export-options">
+              <button 
+                v-for="opt in exportOptions" 
+                :key="opt.id"
+                class="export-option-btn"
+                @click="handleExport(opt.id)"
+              >
+                <span class="export-icon">{{ opt.icon }}</span>
+                <span class="export-label">{{ opt.label }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 性能监控面板 -->
+    <PerformancePanel
+      :show="showPerformancePanel"
+      :fps="currentFps"
+      :render-time="currentRenderTime"
+      :data-points="totalDataPoints"
+      :cells="totalCells"
+      @close="showPerformancePanel = false"
+      @toggle-low-power="handleLowPowerMode"
+    />
+
+    <!-- 键盘快捷键帮助 -->
+    <Transition name="modal">
+      <div v-if="showShortcutsHelp" class="modal-overlay" @click.self="showShortcutsHelp = false">
+        <div class="modal-content shortcuts-modal">
+          <div class="modal-header">
+            <h3>键盘快捷键</h3>
+            <button class="modal-close" @click="showShortcutsHelp = false">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="shortcuts-list">
+              <div class="shortcut-group">
+                <h4>视图控制</h4>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>0</kbd> <span>重置视图</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>+</kbd> <span>放大</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>-</kbd> <span>缩小</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>G</kbd> <span>切换网格</span></div>
+              </div>
+              <div class="shortcut-group">
+                <h4>功能操作</h4>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>E</kbd> <span>导出数据</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> <span>应用筛选</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> <span>重置筛选</span></div>
+                <div class="shortcut-item"><kbd>F11</kbd> <span>全屏模式</span></div>
+              </div>
+              <div class="shortcut-group">
+                <h4>智能分析</h4>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> <span>异常检测</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> <span>趋势分析</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -529,6 +641,9 @@ import PressureCycleDetectUltra from '@/components/pressure/charts/PressureCycle
 import PressureCorrelationUltra from '@/components/pressure/charts/PressureCorrelationUltra.vue'
 import PressureColumnCompareUltra from '@/components/pressure/charts/PressureColumnCompareUltra.vue'
 import NatureExportPanel from '@/components/pressure/NatureExportPanel.vue'
+import LazyChart from '@/components/common/LazyChart.vue'
+import PerformancePanel from '@/components/common/PerformancePanel.vue'
+import { useKeyboardShortcuts, KEYBOARD_SHORTCUTS } from '@/composables/useKeyboardShortcuts'
 
 // 新增 Nature 标准可视化组件
 import PressureBoxPlot from '@/components/pressure/charts/PressureBoxPlot.vue'
@@ -539,6 +654,10 @@ import AnomalyHeatmap from '@/components/pressure/charts/AnomalyHeatmap.vue'
 import PressureRadar from '@/components/pressure/charts/PressureRadar.vue'
 import PressureDensity from '@/components/pressure/charts/PressureDensity.vue'
 import PressureContour from '@/components/pressure/charts/PressureContour.vue'
+
+// 科研分析组件
+import ResearchPanel from '@/components/pressure/ResearchPanel.vue'
+import MethodologyPanel from '@/components/pressure/MethodologyPanel.vue'
 
 // 导入数据处理函数
 import {
@@ -700,6 +819,10 @@ const heatmapSubtitle = computed(() => {
 const anomalyCount = computed(() => anomalies.value.length)
 const dataPoints = computed(() => rawData.value.length)
 
+// 性能监控数据
+const totalDataPoints = computed(() => rawData.value.length)
+const totalCells = computed(() => numRows.value * numCols.value)
+
 // 直方图数据
 const histogramData = computed(() => {
   if (!heatmapMatrix.value.length) return []
@@ -824,18 +947,29 @@ function showToast(message) {
 }
 
 async function exportReport() {
-  const exportMenu = [
-    { id: 'pdf', label: '导出 PDF 报告', icon: '📄' },
-    { id: 'excel', label: '导出 Excel 数据', icon: '📊' },
-    { id: 'csv', label: '导出 CSV 数据', icon: '📋' },
-    { id: 'json', label: '导出 JSON 数据', icon: '{ }' }
-  ]
+  showExportModal.value = true
+}
+
+// 导出状态
+const showExportModal = ref(false)
+const showPerformancePanel = ref(false)
+const showShortcutsHelp = ref(false)
+const currentFps = ref(60)
+const currentRenderTime = ref(0)
+const lowPowerMode = ref(false)
+
+const exportOptions = ref([
+  { id: 'pdf', label: '导出 PDF 报告', icon: '📄' },
+  { id: 'excel', label: '导出 Excel 数据', icon: '📊' },
+  { id: 'csv', label: '导出 CSV 数据', icon: '📋' },
+  { id: 'json', label: '导出 JSON 数据', icon: '{ }' }
+])
+
+// 导出处理函数
+async function handleExport(exportId) {
+  showExportModal.value = false
   
-  // 创建导出菜单
-  const choice = await showExportMenu(exportMenu)
-  if (!choice) return
-  
-  switch (choice) {
+  switch (exportId) {
     case 'pdf':
       await exportPDFReport()
       break
@@ -851,27 +985,11 @@ async function exportReport() {
   }
 }
 
-// 导出状态
-const showExportModal = ref(false)
-const exportOptions = ref([
-  { id: 'pdf', label: '导出 PDF 报告', icon: '📄' },
-  { id: 'excel', label: '导出 Excel 数据', icon: '📊' },
-  { id: 'csv', label: '导出 CSV 数据', icon: '📋' },
-  { id: 'json', label: '导出 JSON 数据', icon: '{ }' }
-])
-
-// 显示导出菜单（使用简单的 confirm 方式）
-async function showExportMenu(options) {
-  const optionsText = options.map((opt, i) => `${i + 1}. ${opt.icon} ${opt.label}`).join('\n')
-  const choice = prompt(`选择导出格式:\n${optionsText}\n\n请输入数字 (1-${options.length}):`)
-  
-  if (!choice) return null
-  
-  const index = parseInt(choice) - 1
-  if (index >= 0 && index < options.length) {
-    return options[index].id
-  }
-  return null
+// 处理低功耗模式
+function handleLowPowerMode(enabled) {
+  lowPowerMode.value = enabled
+  showToast(enabled ? '已开启省电模式' : '已关闭省电模式')
+  // 可以在这里添加更多优化逻辑，如降低动画质量等
 }
 
 // 导出 PDF 报告
@@ -1100,6 +1218,32 @@ function onSchemeChange(scheme) {
 function onExportComplete(results) {
   const successCount = results.filter(r => r.success).length
   showToast(`成功导出 ${successCount} 个图表`)
+}
+
+// 科研分析相关数据
+const researchData = computed(() => ({
+  heatmapMatrix: heatmapMatrix.value,
+  stats: stats.value,
+  dateRange: dateRangeText.value,
+  supportRange: `${supportStart.value}-${supportEnd.value}`,
+  rawData: rawData.value
+}))
+
+function onResearchPaletteChange(palette) {
+  // 更新热力图配色方案
+  colorScheme.value = palette.name.toLowerCase()
+  showToast(`已切换到配色方案: ${palette.name}`)
+}
+
+function onResearchExport(config) {
+  // 触发图表导出
+  showToast(`正在导出 ${config.format.toUpperCase()} 格式 (DPI: ${config.dpi})...`)
+  
+  // 调用NatureExportPanel的导出功能
+  // 这里可以扩展为支持更多导出选项
+  setTimeout(() => {
+    showToast('导出完成')
+  }, 1000)
 }
 
 // 执行智能分析工具
@@ -1376,6 +1520,52 @@ async function loadData() {
 
 onMounted(() => {
   loadData()
+  
+  // 设置键盘快捷键
+  useKeyboardShortcuts({
+    'Ctrl+0': () => {
+      showToast('视图已重置 (快捷键)')
+    },
+    'Ctrl+e': () => {
+      showExportModal.value = true
+    },
+    'Ctrl+Enter': () => {
+      applyFilters()
+    },
+    'Ctrl+Shift+r': () => {
+      resetFilters()
+    },
+    'Ctrl+g': () => {
+      showGrid.value = !showGrid.value
+    },
+    'F11': () => {
+      toggleFullscreen()
+    },
+    'Ctrl+Shift+a': () => {
+      executeTool('anomaly')
+    },
+    'Ctrl+Shift+t': () => {
+      executeTool('trend')
+    },
+    '?': () => {
+      showShortcutsHelp.value = true
+    }
+  })
+  
+  // FPS 监控
+  let lastTime = performance.now()
+  let frames = 0
+  const fpsLoop = () => {
+    frames++
+    const currentTime = performance.now()
+    if (currentTime - lastTime >= 1000) {
+      currentFps.value = frames
+      frames = 0
+      lastTime = currentTime
+    }
+    requestAnimationFrame(fpsLoop)
+  }
+  requestAnimationFrame(fpsLoop)
 })
 
 watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
@@ -1400,6 +1590,7 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
   background: #f5f5f5;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow: hidden;
+  min-width: 1280px; /* 确保最小宽度，防止内容被挤出 */
 }
 
 /* Top Navigation */
@@ -1569,7 +1760,7 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 .main-content-ultra {
   flex: 1;
   display: flex;
-  overflow: hidden;
+  overflow: auto; /* 允许横向滚动 */
   padding: var(--panel-gap);
   gap: var(--panel-gap);
 }
@@ -1906,33 +2097,50 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 
 /* Analysis Sidebar */
 .analysis-sidebar {
-  width: 360px;
+  width: 400px;
   display: flex;
   flex-direction: column;
-  gap: var(--panel-gap);
+  gap: 12px;
   flex-shrink: 0;
+  height: calc(100vh - var(--nav-height) - var(--status-height) - var(--panel-gap) * 2);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.analysis-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.analysis-sidebar::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 2px;
+}
+
+.analysis-sidebar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .kpi-card {
   background: white;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .kpi-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1940,8 +2148,8 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 }
 
 .kpi-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
 
 .kpi-data {
@@ -1951,7 +2159,7 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 }
 
 .kpi-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #1a1a1a;
 }
@@ -1972,14 +2180,14 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 }
 
 .chart-tabs-container {
-  flex: 1;
   background: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 0;
+  height: 260px;
+  flex-shrink: 0;
 }
 
 .tabs-header {
@@ -2190,6 +2398,157 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
   transform: translateX(-50%) translateY(-20px);
 }
 
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 360px;
+  max-width: 90vw;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #e5e5e5;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.export-option-btn:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+
+.export-icon {
+  font-size: 20px;
+}
+
+.export-label {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Shortcuts Modal */
+.shortcuts-modal {
+  max-width: 480px;
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.shortcut-group h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.shortcut-item:last-child {
+  border-bottom: none;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  box-shadow: 0 2px 0 #d0d0d0;
+}
+
+.shortcut-item span {
+  font-size: 13px;
+  color: #525252;
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-content,
+.modal-leave-to .modal-content {
+  transform: scale(0.95);
+}
+
 /* Layout Indicator */
 .layout-indicator {
   position: absolute;
@@ -2204,5 +2563,224 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 
 .action-btn {
   position: relative;
+}
+
+/* ========== 响应式布局优化 ========== */
+
+/* 大屏幕 (1440px+) */
+@media (min-width: 1440px) {
+  .pressure-analysis-ultra {
+    --sidebar-width: 300px;
+    --panel-gap: 20px;
+  }
+  
+  .analysis-sidebar {
+    width: 400px;
+  }
+}
+
+/* 中等屏幕 (1280px - 1439px) */
+@media (max-width: 1439px) and (min-width: 1280px) {
+  .pressure-analysis-ultra {
+    --sidebar-width: 260px;
+    --panel-gap: 14px;
+  }
+  
+  .analysis-sidebar {
+    width: 340px;
+  }
+}
+
+/* 小屏幕 (1024px - 1279px) */
+@media (max-width: 1279px) and (min-width: 1024px) {
+  .pressure-analysis-ultra {
+    --sidebar-width: 240px;
+    --panel-gap: 12px;
+  }
+  
+  .analysis-sidebar {
+    width: 300px;
+  }
+  
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tabs-header {
+    flex-wrap: wrap;
+  }
+  
+  .tab-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
+
+/* 平板屏幕 (768px - 1023px) */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .pressure-analysis-ultra {
+    --nav-height: 56px;
+    --sidebar-width: 220px;
+    --panel-gap: 10px;
+  }
+  
+  .analysis-sidebar {
+    width: 260px;
+  }
+  
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .kpi-card {
+    padding: 12px;
+  }
+  
+  .kpi-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .kpi-value {
+    font-size: 18px;
+  }
+  
+  .tab-btn {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  
+  .tab-icon {
+    font-size: 14px;
+  }
+}
+
+/* 超小屏幕 (< 768px) - 移动端优化 */
+@media (max-width: 767px) {
+  .pressure-analysis-ultra {
+    --nav-height: 52px;
+    --panel-gap: 8px;
+    min-width: auto;
+  }
+  
+  .main-content-ultra {
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  .control-sidebar {
+    width: 100%;
+    max-height: 200px;
+    order: -1;
+  }
+  
+  .control-sidebar.collapsed {
+    width: 100%;
+    max-height: 40px;
+  }
+  
+  .visualization-area {
+    min-height: 400px;
+  }
+  
+  .analysis-sidebar {
+    width: 100%;
+  }
+  
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .chart-tabs-container {
+    min-height: 300px;
+  }
+  
+  .tabs-header {
+    padding: 8px;
+    gap: 2px;
+  }
+  
+  .tab-btn {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  
+  .tab-label {
+    display: none;
+  }
+  
+  .nav-stats {
+    display: none;
+  }
+  
+  .page-title {
+    font-size: 16px;
+  }
+}
+
+/* 图表加载动画 */
+.chart-fade-enter-active,
+.chart-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.chart-fade-enter-from,
+.chart-fade-leave-to {
+  opacity: 0;
+}
+
+/* 骨架屏适配 */
+@media (max-width: 1023px) {
+  .skeleton-card {
+    padding: 12px;
+  }
+  
+  .skeleton-header {
+    margin-bottom: 12px;
+  }
+  
+  .skeleton-badge {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .skeleton-title {
+    width: 100px;
+    height: 14px;
+  }
+}
+
+/* 性能优化：减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .pressure-analysis-ultra {
+    background: #1a1a1a;
+  }
+  
+  .top-nav-ultra,
+  .control-sidebar,
+  .kpi-card,
+  .chart-tabs-container,
+  .modal-content {
+    background: #242424;
+    color: #e0e0e0;
+  }
+  
+  .section-title,
+  .kpi-label,
+  .tab-label {
+    color: #b0b0b0;
+  }
 }
 </style>

@@ -224,8 +224,19 @@ async function startExport() {
 .nature-export-panel {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.nature-export-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nature-export-panel::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 2px;
 }
 
 .export-header {

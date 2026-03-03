@@ -14,7 +14,8 @@
     steps: 'Pressure Step',
     report: 'Report',
     geomodelVisualization: 'Geological Visualization',
-    scene3d: '3D Metrics'
+    scene3d: '3D Metrics',
+    pressureAnalysis: 'Pressure Analysis'
   },
   layout: {
     mainNavigation: 'Main navigation',

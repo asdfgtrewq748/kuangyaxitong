@@ -70,6 +70,20 @@ const unbindResize = () => {
 onMounted(async () => {
   await nextTick()
   if (!container.value) return
+  
+  // 检查容器尺寸，避免 ECharts 报错
+  const { clientWidth, clientHeight } = container.value
+  if (clientWidth === 0 || clientHeight === 0) {
+    setTimeout(() => {
+      if (!container.value) return
+      chart = echarts.init(container.value, null, { renderer: 'canvas' })
+      chart.on('click', onChartClick)
+      render()
+      bindResize()
+    }, 100)
+    return
+  }
+  
   chart = echarts.init(container.value, null, { renderer: 'canvas' })
   chart.on('click', onChartClick)
   render()

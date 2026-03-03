@@ -14,7 +14,8 @@
     steps: '来压步距',
     report: '结果报告',
     geomodelVisualization: '地质建模可视化',
-    scene3d: '三维指标可视化'
+    scene3d: '三维指标可视化',
+    pressureAnalysis: '矿压数据分析'
   },
   layout: {
     mainNavigation: '主导航',

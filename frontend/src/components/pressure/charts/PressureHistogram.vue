@@ -67,6 +67,14 @@ function calculateHistogram(data, bins) {
 
 function initChart() {
   if (!chartRef.value) return
+  
+  // 检查容器尺寸，避免 ECharts 报错
+  const { clientWidth, clientHeight } = chartRef.value
+  if (clientWidth === 0 || clientHeight === 0) {
+    setTimeout(initChart, 100)
+    return
+  }
+  
   chartInstance = echarts.init(chartRef.value)
   updateChart()
 }
