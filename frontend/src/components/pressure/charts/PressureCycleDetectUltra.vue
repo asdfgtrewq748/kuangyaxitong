@@ -29,6 +29,10 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
+defineExpose({
+  getChartInstance: () => chartInstance
+})
+
 const footnote = computed(() => {
   if (!props.periods) return ''
   return `Dominant period: ${props.periods.period?.toFixed(1) || '--'} days`

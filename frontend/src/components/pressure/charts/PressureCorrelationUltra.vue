@@ -33,6 +33,10 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
+defineExpose({
+  getChartInstance: () => chartInstance
+})
+
 const footnote = computed(() => {
   if (!props.matrix?.length) return ''
   const n = props.matrix.length

@@ -37,13 +37,14 @@
       </div>
 
       <div class="nav-actions">
-        <button class="action-btn" @click="toggleLayout" title="切换布局">
+            <button class="action-btn" @click="toggleLayout" :title="'当前布局: ' + (layoutModes.find(m => m.id === layoutMode)?.label || '默认')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <rect x="3" y="3" width="7" height="7" rx="1"/>
             <rect x="14" y="3" width="7" height="7" rx="1"/>
             <rect x="14" y="14" width="7" height="7" rx="1"/>
             <rect x="3" y="14" width="7" height="7" rx="1"/>
           </svg>
+          <span class="layout-indicator" v-if="layoutMode !== 'default'">●</span>
         </button>
         <button class="action-btn" @click="exportReport" title="导出报告">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -154,6 +155,29 @@
                 <span class="toggle-slider"></span>
                 <span class="toggle-label">显示峰值</span>
               </label>
+            </div>
+          </div>
+
+          <!-- 智能分析工具 -->
+          <div class="control-section">
+            <h4 class="section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+              智能分析
+            </h4>
+            <div class="analysis-tools">
+              <button 
+                v-for="tool in analysisTools" 
+                :key="tool.id"
+                :class="['tool-btn', { active: activeTool === tool.id, loading: toolLoading === tool.id }]"
+                @click="executeTool(tool.id)"
+                :disabled="toolLoading !== null"
+              >
+                <span class="tool-icon">{{ tool.icon }}</span>
+                <span class="tool-label">{{ tool.label }}</span>
+                <span v-if="toolLoading === tool.id" class="tool-spinner"></span>
+              </button>
             </div>
           </div>
 
@@ -303,6 +327,7 @@
               <!-- 分布图 -->
               <div v-if="activeTab === 'hist'" key="hist" class="tab-panel">
                 <PressureHistogramUltra
+                  ref="histogramRef"
                   title="阻力分布直方图"
                   :data="histogramData"
                   :bins="30"
@@ -312,6 +337,7 @@
               <!-- 空间分布 -->
               <div v-else-if="activeTab === 'spatial'" key="spatial" class="tab-panel">
                 <PressureSpatialDistUltra
+                  ref="spatialRef"
                   title="空间分布"
                   :data="spatialDistData"
                 />
@@ -320,6 +346,7 @@
               <!-- 周期检测 -->
               <div v-else-if="activeTab === 'cycle'" key="cycle" class="tab-panel">
                 <PressureCycleDetectUltra
+                  ref="cycleRef"
                   title="周期检测"
                   :data="cycleData"
                   :periods="detectedPeriods"
@@ -329,6 +356,7 @@
               <!-- 相关性 -->
               <div v-else-if="activeTab === 'corr'" key="corr" class="tab-panel">
                 <PressureCorrelationUltra
+                  ref="correlationRef"
                   title="支架相关性"
                   :matrix="correlationMatrix"
                 />
@@ -337,9 +365,104 @@
               <!-- 对比 -->
               <div v-else-if="activeTab === 'compare'" key="compare" class="tab-panel">
                 <PressureColumnCompareUltra
+                  ref="compareRef"
                   title="前后柱对比"
                   :front-data="frontColumnData"
                   :rear-data="rearColumnData"
+                />
+              </div>
+
+              <!-- 箱线图 -->
+              <div v-else-if="activeTab === 'boxplot'" key="boxplot" class="tab-panel">
+                <PressureBoxPlot
+                  ref="boxplotRef"
+                  panel-label="C"
+                  title="压力分布箱线图"
+                  subtitle="Box Plot Analysis"
+                  :data="rawData"
+                  time-range="day"
+                />
+              </div>
+
+              <!-- 累积分布 -->
+              <div v-else-if="activeTab === 'cdf'" key="cdf" class="tab-panel">
+                <PressureCDF
+                  ref="cdfRef"
+                  panel-label="D"
+                  title="累积分布函数"
+                  subtitle="Cumulative Distribution"
+                  :data="rawData"
+                />
+              </div>
+
+              <!-- 频谱分析 -->
+              <div v-else-if="activeTab === 'spectral'" key="spectral" class="tab-panel">
+                <PressureSpectral
+                  ref="spectralRef"
+                  panel-label="E"
+                  title="频谱分析"
+                  subtitle="Spectral Analysis"
+                  :data="selectedSupportData"
+                />
+              </div>
+
+              <!-- 散点矩阵 -->
+              <div v-else-if="activeTab === 'scatter'" key="scatter" class="tab-panel">
+                <PressureScatterMatrix
+                  ref="scatterRef"
+                  panel-label="F"
+                  title="多支架相关性矩阵"
+                  subtitle="Scatter Plot Matrix"
+                  :data="rawData"
+                  :support-ids="[1, 25, 50, 75, 100, 125]"
+                />
+              </div>
+
+              <!-- 异常热力图 -->
+              <div v-else-if="activeTab === 'anomaly'" key="anomaly" class="tab-panel">
+                <AnomalyHeatmap
+                  ref="anomalyRef"
+                  panel-label="G"
+                  title="异常分布热力图"
+                  subtitle="Anomaly Detection Map"
+                  :matrix="heatmapMatrix"
+                  :stats="stats"
+                  :threshold="2.0"
+                />
+              </div>
+
+              <!-- 雷达图 -->
+              <div v-else-if="activeTab === 'radar'" key="radar" class="tab-panel">
+                <PressureRadar
+                  ref="radarRef"
+                  panel-label="H"
+                  title="压力特征雷达图"
+                  subtitle="Multi-dimensional Analysis"
+                  :data="selectedSupportData"
+                />
+              </div>
+
+              <!-- 密度图 -->
+              <div v-else-if="activeTab === 'density'" key="density" class="tab-panel">
+                <PressureDensity
+                  ref="densityRef"
+                  panel-label="I"
+                  title="核密度估计"
+                  subtitle="Kernel Density Estimation"
+                  :data="rawData"
+                />
+              </div>
+
+              <!-- 等值线图 -->
+              <div v-else-if="activeTab === 'contour'" key="contour" class="tab-panel">
+                <PressureContour
+                  ref="contourRef"
+                  panel-label="J"
+                  title="压力等值线图"
+                  subtitle="Contour Map"
+                  :matrix="heatmapMatrix"
+                  :num-supports="numRows"
+                  :levels="12"
                 />
               </div>
             </Transition>
@@ -382,11 +505,19 @@
         </Transition>
       </div>
     </footer>
+
+    <!-- Toast 提示 -->
+    <Transition name="toast">
+      <div v-if="toast.show" class="toast-notification">
+        <span class="toast-icon">✓</span>
+        <span class="toast-message">{{ toast.message }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 
 // 导入优化后的组件
@@ -398,6 +529,16 @@ import PressureCycleDetectUltra from '@/components/pressure/charts/PressureCycle
 import PressureCorrelationUltra from '@/components/pressure/charts/PressureCorrelationUltra.vue'
 import PressureColumnCompareUltra from '@/components/pressure/charts/PressureColumnCompareUltra.vue'
 import NatureExportPanel from '@/components/pressure/NatureExportPanel.vue'
+
+// 新增 Nature 标准可视化组件
+import PressureBoxPlot from '@/components/pressure/charts/PressureBoxPlot.vue'
+import PressureCDF from '@/components/pressure/charts/PressureCDF.vue'
+import PressureSpectral from '@/components/pressure/charts/PressureSpectral.vue'
+import PressureScatterMatrix from '@/components/pressure/charts/PressureScatterMatrix.vue'
+import AnomalyHeatmap from '@/components/pressure/charts/AnomalyHeatmap.vue'
+import PressureRadar from '@/components/pressure/charts/PressureRadar.vue'
+import PressureDensity from '@/components/pressure/charts/PressureDensity.vue'
+import PressureContour from '@/components/pressure/charts/PressureContour.vue'
 
 // 导入数据处理函数
 import {
@@ -417,6 +558,14 @@ const pageRef = ref(null)
 // ============================================================================
 // 状态管理
 // ============================================================================
+
+// 智能分析工具配置（必须在模板使用前定义）
+const analysisTools = [
+  { id: 'anomaly', label: '异常检测', icon: '🔍' },
+  { id: 'trend', label: '趋势分析', icon: '📈' },
+  { id: 'forecast', label: '压力预测', icon: '🔮' },
+  { id: 'cluster', label: '聚类分析', icon: '⚡' }
+]
 
 const loading = ref(false)
 const loadingProgress = ref(0)
@@ -455,12 +604,73 @@ const selectedSupportPeaks = ref([])
 // Chart instances for export
 const chartInstances = ref([])
 
+// 图表组件引用
+const histogramRef = ref(null)
+const spatialRef = ref(null)
+const cycleRef = ref(null)
+const correlationRef = ref(null)
+const compareRef = ref(null)
+
+// 新增 Nature 图表组件引用
+const boxplotRef = ref(null)
+const cdfRef = ref(null)
+const spectralRef = ref(null)
+const scatterRef = ref(null)
+const anomalyRef = ref(null)
+const radarRef = ref(null)
+const densityRef = ref(null)
+const contourRef = ref(null)
+
+// 收集所有图表实例
+function collectChartInstances() {
+  const instances = []
+  const refs = [
+    histogramRef.value,
+    spatialRef.value,
+    cycleRef.value,
+    correlationRef.value,
+    compareRef.value,
+    boxplotRef.value,
+    cdfRef.value,
+    spectralRef.value,
+    scatterRef.value,
+    anomalyRef.value,
+    radarRef.value,
+    densityRef.value,
+    contourRef.value
+  ]
+  
+  refs.forEach(ref => {
+    if (ref?.getChartInstance) {
+      const instance = ref.getChartInstance()
+      if (instance) instances.push(instance)
+    }
+  })
+  
+  chartInstances.value = instances
+}
+
+// 监听标签页切换，收集当前可见图表
+watch(activeTab, () => {
+  nextTick(() => {
+    collectChartInstances()
+  })
+}, { immediate: true })
+
 const chartTabs = [
   { id: 'hist', label: '分布', icon: '📊' },
   { id: 'spatial', label: '空间', icon: '🗺' },
   { id: 'cycle', label: '周期', icon: '🔄' },
   { id: 'corr', label: '相关', icon: '🔗' },
-  { id: 'compare', label: '对比', icon: '⚖' }
+  { id: 'compare', label: '对比', icon: '⚖' },
+  { id: 'boxplot', label: '箱线', icon: '📦' },
+  { id: 'cdf', label: '累积', icon: '📈' },
+  { id: 'spectral', label: '频谱', icon: '🔊' },
+  { id: 'scatter', label: '矩阵', icon: '⬛' },
+  { id: 'anomaly', label: '异常', icon: '⚠️' },
+  { id: 'radar', label: '雷达', icon: '🕸️' },
+  { id: 'density', label: '密度', icon: '🌊' },
+  { id: 'contour', label: '等值', icon: '⭕' }
 ]
 
 // ============================================================================
@@ -561,12 +771,289 @@ function formatNumber(num) {
   return num.toString()
 }
 
+// 布局模式
+const layoutMode = ref('default') // 'default', 'compact', 'focus'
+const layoutModes = [
+  { id: 'default', label: '默认布局', icon: '◫' },
+  { id: 'compact', label: '紧凑布局', icon: '▣' },
+  { id: 'focus', label: '聚焦模式', icon: '⊙' }
+]
+
+// 智能分析工具状态
+const activeTool = ref(null)
+const toolLoading = ref(null)
+
+// 分析结果
+const analysisResults = ref({
+  anomaly: null,
+  trend: null,
+  forecast: null,
+  cluster: null
+})
+
 function toggleLayout() {
-  // 切换布局逻辑
+  const currentIndex = layoutModes.findIndex(m => m.id === layoutMode.value)
+  const nextIndex = (currentIndex + 1) % layoutModes.length
+  layoutMode.value = layoutModes[nextIndex].id
+  
+  // 应用布局
+  applyLayout()
+  
+  // 显示提示
+  showToast(`已切换到: ${layoutModes[nextIndex].label}`)
 }
 
-function exportReport() {
-  console.log('Exporting report...')
+function applyLayout() {
+  // 触发重绘以应用新布局
+  nextTick(() => {
+    // 通知子组件重新计算尺寸
+    window.dispatchEvent(new Event('resize'))
+  })
+}
+
+// Toast 提示
+const toast = ref({ show: false, message: '' })
+let toastTimeout = null
+
+function showToast(message) {
+  toast.value = { show: true, message }
+  if (toastTimeout) clearTimeout(toastTimeout)
+  toastTimeout = setTimeout(() => {
+    toast.value.show = false
+  }, 2000)
+}
+
+async function exportReport() {
+  const exportMenu = [
+    { id: 'pdf', label: '导出 PDF 报告', icon: '📄' },
+    { id: 'excel', label: '导出 Excel 数据', icon: '📊' },
+    { id: 'csv', label: '导出 CSV 数据', icon: '📋' },
+    { id: 'json', label: '导出 JSON 数据', icon: '{ }' }
+  ]
+  
+  // 创建导出菜单
+  const choice = await showExportMenu(exportMenu)
+  if (!choice) return
+  
+  switch (choice) {
+    case 'pdf':
+      await exportPDFReport()
+      break
+    case 'excel':
+      await exportExcelData()
+      break
+    case 'csv':
+      await exportCSVData()
+      break
+    case 'json':
+      await exportJSONData()
+      break
+  }
+}
+
+// 导出状态
+const showExportModal = ref(false)
+const exportOptions = ref([
+  { id: 'pdf', label: '导出 PDF 报告', icon: '📄' },
+  { id: 'excel', label: '导出 Excel 数据', icon: '📊' },
+  { id: 'csv', label: '导出 CSV 数据', icon: '📋' },
+  { id: 'json', label: '导出 JSON 数据', icon: '{ }' }
+])
+
+// 显示导出菜单（使用简单的 confirm 方式）
+async function showExportMenu(options) {
+  const optionsText = options.map((opt, i) => `${i + 1}. ${opt.icon} ${opt.label}`).join('\n')
+  const choice = prompt(`选择导出格式:\n${optionsText}\n\n请输入数字 (1-${options.length}):`)
+  
+  if (!choice) return null
+  
+  const index = parseInt(choice) - 1
+  if (index >= 0 && index < options.length) {
+    return options[index].id
+  }
+  return null
+}
+
+// 导出 PDF 报告
+async function exportPDFReport() {
+  showToast('正在生成 PDF 报告...')
+  
+  try {
+    // 收集所有图表数据
+    const reportData = {
+      title: '矿压数据分析报告',
+      workFace: '02工作面',
+      dateRange: dateRangeText.value,
+      generatedAt: new Date().toLocaleString('zh-CN'),
+      stats: stats.value,
+      summary: generateReportSummary()
+    }
+    
+    // 创建报告 HTML
+    const reportHTML = generateReportHTML(reportData)
+    
+    // 打开打印窗口
+    const printWindow = window.open('', '_blank')
+    printWindow.document.write(reportHTML)
+    printWindow.document.close()
+    
+    // 延迟打印以等待资源加载
+    setTimeout(() => {
+      printWindow.print()
+    }, 500)
+    
+    showToast('PDF 报告已生成')
+  } catch (error) {
+    console.error('导出失败:', error)
+    showToast('导出失败，请重试')
+  }
+}
+
+function generateReportSummary() {
+  if (!stats.value) return ''
+  return `本次分析涵盖 ${dateRangeText.value} 期间的矿压数据，共 ${rawData.value.length} 个数据点。
+平均矿压为 ${stats.value.mean.toFixed(2)} MPa，峰值达到 ${stats.value.max.toFixed(2)} MPa。
+${anomalyCount.value > 0 ? `检测到 ${anomalyCount.value} 个异常数据点，建议进一步分析。` : '未发现明显异常数据。'}`
+}
+
+function generateReportHTML(data) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${data.title}</title>
+      <style>
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+        h1 { font-size: 24px; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; }
+        .meta { color: #666; margin: 20px 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+        .stat-box { background: #f5f5f5; padding: 16px; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #1a1a1a; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+        .summary { background: #fafafa; padding: 20px; border-radius: 8px; line-height: 1.8; margin-top: 24px; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5; font-size: 12px; color: #999; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      <h1>${data.title}</h1>
+      <div class="meta">
+        <div>工作面: ${data.workFace}</div>
+        <div>时间范围: ${data.dateRange}</div>
+        <div>生成时间: ${data.generatedAt}</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value">${data.stats?.mean?.toFixed(2) || '--'}</div>
+          <div class="stat-label">平均值 (MPa)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${data.stats?.max?.toFixed(2) || '--'}</div>
+          <div class="stat-label">最大值 (MPa)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${data.stats?.min?.toFixed(2) || '--'}</div>
+          <div class="stat-label">最小值 (MPa)</div>
+        </div>
+      </div>
+      <div class="summary">
+        <strong>分析摘要</strong><br>
+        ${data.summary}
+      </div>
+      <div class="footer">
+        本报告由矿压监测系统自动生成
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// 导出 Excel 数据
+async function exportExcelData() {
+  showToast('正在生成 Excel...')
+  
+  try {
+    // 使用 CSV 格式作为 Excel 兼容格式
+    const csv = convertToCSV(rawData.value)
+    downloadFile(csv, `矿压数据_${formatDateForFilename()}.csv`, 'text/csv;charset=utf-8;')
+    showToast('Excel 数据已导出')
+  } catch (error) {
+    console.error('导出失败:', error)
+    showToast('导出失败')
+  }
+}
+
+// 导出 CSV 数据
+async function exportCSVData() {
+  showToast('正在生成 CSV...')
+  
+  try {
+    const csv = convertToCSV(rawData.value)
+    downloadFile(csv, `矿压数据_${formatDateForFilename()}.csv`, 'text/csv;charset=utf-8;')
+    showToast('CSV 数据已导出')
+  } catch (error) {
+    console.error('导出失败:', error)
+    showToast('导出失败')
+  }
+}
+
+// 导出 JSON 数据
+async function exportJSONData() {
+  showToast('正在生成 JSON...')
+  
+  try {
+    const json = JSON.stringify({
+      metadata: {
+        exportTime: new Date().toISOString(),
+        workFace: '02工作面',
+        dateRange: dateRangeText.value
+      },
+      data: rawData.value
+    }, null, 2)
+    downloadFile(json, `矿压数据_${formatDateForFilename()}.json`, 'application/json')
+    showToast('JSON 数据已导出')
+  } catch (error) {
+    console.error('导出失败:', error)
+    showToast('导出失败')
+  }
+}
+
+// 转换为 CSV
+function convertToCSV(data) {
+  if (!data.length) return ''
+  
+  const headers = Object.keys(data[0])
+  const rows = data.map(row => 
+    headers.map(h => {
+      const val = row[h]
+      // 处理包含逗号或换行符的值
+      if (typeof val === 'string' && (val.includes(',') || val.includes('\n') || val.includes('"'))) {
+        return `"${val.replace(/"/g, '""')}"`
+      }
+      return val
+    }).join(',')
+  )
+  
+  return [headers.join(','), ...rows].join('\n')
+}
+
+// 下载文件
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+function formatDateForFilename() {
+  const now = new Date()
+  return `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`
 }
 
 function toggleFullscreen() {
@@ -603,7 +1090,7 @@ function onCellSelect(cell) {
 }
 
 function onHeatmapExport() {
-  console.log('Heatmap exported')
+  showToast('热力图已导出')
 }
 
 function onSchemeChange(scheme) {
@@ -611,7 +1098,153 @@ function onSchemeChange(scheme) {
 }
 
 function onExportComplete(results) {
-  console.log('Export completed:', results)
+  const successCount = results.filter(r => r.success).length
+  showToast(`成功导出 ${successCount} 个图表`)
+}
+
+// 执行智能分析工具
+async function executeTool(toolId) {
+  if (toolLoading.value) return
+  
+  toolLoading.value = toolId
+  activeTool.value = toolId
+  
+  try {
+    // 模拟分析延迟
+    await new Promise(r => setTimeout(r, 1500))
+    
+    switch (toolId) {
+      case 'anomaly':
+        await runAnomalyDetection()
+        break
+      case 'trend':
+        await runTrendAnalysis()
+        break
+      case 'forecast':
+        await runForecast()
+        break
+      case 'cluster':
+        await runClusterAnalysis()
+        break
+    }
+  } finally {
+    toolLoading.value = null
+  }
+}
+
+async function runAnomalyDetection() {
+  // 使用现有的异常检测逻辑
+  showAnomalies.value = true
+  
+  const values = rawData.value.map(r => r.finalResistanceValue)
+  const { detectAnomalies } = await import('@/utils/pressureDataProcessor')
+  const result = detectAnomalies(values, 2)
+  
+  analysisResults.value.anomaly = {
+    count: result.indices.length,
+    indices: result.indices,
+    threshold: result.threshold
+  }
+  
+  showToast(`检测到 ${result.indices.length} 个异常点`)
+  
+  // 切换到相关标签页
+  activeTab.value = 'hist'
+}
+
+async function runTrendAnalysis() {
+  if (!selectedSupportData.value.length) {
+    showToast('请先选择支架')
+    return
+  }
+  
+  const values = selectedSupportData.value.map(d => d.value)
+  const n = values.length
+  
+  // 简单线性回归
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0
+  values.forEach((y, x) => {
+    sumX += x
+    sumY += y
+    sumXY += x * y
+    sumXX += x * x
+  })
+  
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
+  const intercept = (sumY - slope * sumX) / n
+  
+  const trend = slope > 0 ? '上升' : slope < 0 ? '下降' : '平稳'
+  
+  analysisResults.value.trend = {
+    slope,
+    intercept,
+    trend,
+    r2: calculateR2(values, slope, intercept)
+  }
+  
+  showToast(`趋势分析: ${trend}趋势 (斜率: ${slope.toFixed(4)})`)
+  showPeaks.value = true
+}
+
+function calculateR2(values, slope, intercept) {
+  const n = values.length
+  const yMean = values.reduce((a, b) => a + b, 0) / n
+  
+  let ssRes = 0, ssTot = 0
+  values.forEach((y, x) => {
+    const yPred = slope * x + intercept
+    ssRes += Math.pow(y - yPred, 2)
+    ssTot += Math.pow(y - yMean, 2)
+  })
+  
+  return 1 - (ssRes / ssTot)
+}
+
+async function runForecast() {
+  if (!selectedSupportData.value.length) {
+    showToast('请先选择支架')
+    return
+  }
+  
+  // 简单预测：基于最近7天的平均值
+  const recent = selectedSupportData.value.slice(-7)
+  const avg = recent.reduce((a, b) => a + b.value, 0) / recent.length
+  
+  analysisResults.value.forecast = {
+    next7Days: avg,
+    confidence: 0.85,
+    trend: avg > stats.value?.mean ? '高于平均' : '低于平均'
+  }
+  
+  showToast(`预测未来7天平均压力: ${avg.toFixed(2)} MPa`)
+}
+
+async function runClusterAnalysis() {
+  // 简单聚类：将支架按压力值分为高、中、低三组
+  const grouped = {}
+  rawData.value.forEach(r => {
+    if (!grouped[r.supportId]) grouped[r.supportId] = []
+    grouped[r.supportId].push(r.finalResistanceValue)
+  })
+  
+  const supportMeans = Object.entries(grouped).map(([id, values]) => ({
+    id: parseInt(id),
+    mean: values.reduce((a, b) => a + b, 0) / values.length
+  }))
+  
+  const sorted = supportMeans.sort((a, b) => a.mean - b.mean)
+  const n = sorted.length
+  
+  analysisResults.value.cluster = {
+    low: sorted.slice(0, Math.floor(n / 3)),
+    medium: sorted.slice(Math.floor(n / 3), Math.floor(2 * n / 3)),
+    high: sorted.slice(Math.floor(2 * n / 3))
+  }
+  
+  showToast(`聚类完成: 低压${analysisResults.value.cluster.low.length}个, 中压${analysisResults.value.cluster.medium.length}个, 高压${analysisResults.value.cluster.high.length}个`)
+  
+  // 切换到空间分布标签
+  activeTab.value = 'spatial'
 }
 
 // 生成更真实的模拟数据
@@ -1177,6 +1810,73 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
   height: 14px;
 }
 
+/* Analysis Tools */
+.analysis-tools {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 1px solid #e5e5e5;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.tool-btn:hover:not(:disabled) {
+  border-color: #1a1a1a;
+  background: #fafafa;
+}
+
+.tool-btn.active {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: white;
+}
+
+.tool-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tool-icon {
+  font-size: 20px;
+}
+
+.tool-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tool-spinner {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0,0,0,0.1);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.tool-btn.active .tool-spinner {
+  border-color: rgba(255,255,255,0.3);
+  border-top-color: white;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Visualization Area */
 .visualization-area {
   flex: 1;
@@ -1284,26 +1984,38 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 
 .tabs-header {
   display: flex;
-  gap: 4px;
-  padding: 12px;
+  gap: 3px;
+  padding: 10px 12px;
   border-bottom: 1px solid #f0f0f0;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d0d0d0 transparent;
+}
+
+.tabs-header::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabs-header::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 2px;
 }
 
 .tab-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 4px;
+  padding: 6px 10px;
   border: none;
   background: transparent;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: #737373;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tab-btn:hover {
@@ -1435,5 +2147,62 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  z-index: 10000;
+}
+
+.toast-icon {
+  width: 20px;
+  height: 20px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-20px);
+}
+
+/* Layout Indicator */
+.layout-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  font-size: 0;
+}
+
+.action-btn {
+  position: relative;
 }
 </style>

@@ -23,13 +23,25 @@ KIMI_API_URL = "https://api.moonshot.cn/v1/chat/completions"
 
 # Supported models
 SUPPORTED_MODELS = {
-    # GLM-5 models
-    "glm-5": {"provider": "glm5", "name": "GLM-5"},
-    "glm-5-flash": {"provider": "glm5", "name": "GLM-5 Flash"},
+    # GLM models
+    "glm-4.7": {"provider": "glm5", "name": "GLM-4.7"},
+    "glm-4.7-flash": {"provider": "glm5", "name": "GLM-4.7 Flash"},
+    "glm-4.6": {"provider": "glm5", "name": "GLM-4.6"},
+    "glm-4-flash": {"provider": "glm5", "name": "GLM-4 Flash"},
+    "glm-4.5-flash": {"provider": "glm5", "name": "GLM-4.5 Flash"},
+    "glm-4.5-air": {"provider": "glm5", "name": "GLM-4.5 Air"},
+    # Legacy aliases kept for backward compatibility
+    "glm-5": {"provider": "glm5", "name": "GLM-5 (alias)"},
+    "glm-5-flash": {"provider": "glm5", "name": "GLM-5 Flash (alias)"},
     # Kimi models
     "kimi-moonshot-v1-8k": {"provider": "kimi", "name": "Kimi Moonshot v1 8K"},
     "kimi-moonshot-v1-32k": {"provider": "kimi", "name": "Kimi Moonshot v1 32K"},
     "kimi-moonshot-v1-128k": {"provider": "kimi", "name": "Kimi Moonshot v1 128K"},
+}
+
+MODEL_ALIASES = {
+    "glm-5": "glm-4-flash",
+    "glm-5-flash": "glm-4-flash",
 }
 
 
@@ -150,6 +162,36 @@ class AIChatService:
         else:
             return ("glm5", self.glm5_api_key, self.glm5_api_url)
 
+    def _resolve_model(self, model: str) -> str:
+        """Resolve legacy or unknown model names to a safe default."""
+        if not model:
+            return "glm-4.7"
+
+        resolved = MODEL_ALIASES.get(model, model)
+        if resolved not in SUPPORTED_MODELS:
+            logger.warning(f"Unknown model '{model}', fallback to glm-4.7")
+            return "glm-4.7"
+        return resolved
+
+    @staticmethod
+    def _extract_upstream_error(error_bytes: bytes) -> str:
+        """Extract concise message from upstream JSON/text error body."""
+        if not error_bytes:
+            return ""
+        text = error_bytes.decode("utf-8", errors="ignore").strip()
+        if not text:
+            return ""
+        try:
+            payload = json.loads(text)
+            err = payload.get("error")
+            if isinstance(err, dict):
+                return str(err.get("message", "")).strip()
+            if isinstance(err, str):
+                return err.strip()
+            return text[:240]
+        except Exception:
+            return text[:240]
+
     def get_or_create_session(self, session_id: str, user_id: Optional[str] = None) -> ChatSession:
         """Get existing session or create new one"""
         if session_id not in self.sessions:
@@ -179,7 +221,7 @@ class AIChatService:
         session_id: str,
         message: str,
         user_id: Optional[str] = None,
-        model: str = "glm-5-flash",
+        model: str = "glm-4.7",
         temperature: float = 0.7,
         max_tokens: int = 2048
     ) -> AsyncGenerator[str, None]:
@@ -190,7 +232,7 @@ class AIChatService:
             session_id: Chat session identifier
             message: User message
             user_id: Optional user identifier
-            model: Model name (glm-5-flash for speed, glm-5 for quality)
+            model: Model name (glm-4.7 default)
             temperature: Response randomness (0-1)
             max_tokens: Maximum response tokens
 
@@ -208,8 +250,10 @@ class AIChatService:
         try:
             import httpx
 
+            resolved_model = self._resolve_model(model)
+
             # Get provider-specific configuration
-            provider, api_key, api_url = self._get_provider_config(model)
+            provider, api_key, api_url = self._get_provider_config(resolved_model)
             
             headers = {
                 "Authorization": f"Bearer {api_key}",
@@ -217,21 +261,25 @@ class AIChatService:
             }
 
             payload = {
-                "model": model,
+                "model": resolved_model,
                 "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
                 "stream": True
             }
 
-            logger.info(f"Using {provider} API with model: {model}")
+            logger.info(f"Using {provider} API with model: {resolved_model}")
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 async with client.stream("POST", api_url, headers=headers, json=payload) as response:
                     if response.status_code != 200:
                         error_text = await response.aread()
                         logger.error(f"{provider.upper()} API error: {response.status_code} - {error_text}")
-                        yield f"[错误] API调用失败: {response.status_code}"
+                        reason = self._extract_upstream_error(error_text)
+                        if reason:
+                            yield f"[错误] API调用失败: {response.status_code} - {reason}"
+                        else:
+                            yield f"[错误] API调用失败: {response.status_code}"
                         return
 
                     full_response = ""
@@ -268,7 +316,7 @@ class AIChatService:
         session_id: str,
         message: str,
         user_id: Optional[str] = None,
-        model: str = "glm-5-flash",
+        model: str = "glm-4.7",
         temperature: float = 0.7,
         max_tokens: int = 2048
     ) -> Dict[str, Any]:
@@ -286,8 +334,10 @@ class AIChatService:
         try:
             import httpx
 
+            resolved_model = self._resolve_model(model)
+
             # Get provider-specific configuration
-            provider, api_key, api_url = self._get_provider_config(model)
+            provider, api_key, api_url = self._get_provider_config(resolved_model)
             
             headers = {
                 "Authorization": f"Bearer {api_key}",
@@ -295,19 +345,21 @@ class AIChatService:
             }
 
             payload = {
-                "model": model,
+                "model": resolved_model,
                 "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
                 "stream": False
             }
 
-            logger.info(f"Using {provider} API with model: {model}")
+            logger.info(f"Using {provider} API with model: {resolved_model}")
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(api_url, headers=headers, json=payload)
 
                 if response.status_code != 200:
+                    reason = self._extract_upstream_error(response.content)
+                    logger.error(f"{provider.upper()} API error: {response.status_code} - {reason or response.text[:240]}")
                     return {
                         "success": False,
                         "error": f"API调用失败: {response.status_code}",
@@ -323,7 +375,7 @@ class AIChatService:
                     return {
                         "success": True,
                         "content": content,
-                        "model": model,
+                        "model": resolved_model,
                         "tokens": data.get("usage", {}).get("total_tokens", 0)
                     }
 

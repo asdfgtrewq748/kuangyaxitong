@@ -28,6 +28,10 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
+defineExpose({
+  getChartInstance: () => chartInstance
+})
+
 const footnote = computed(() => {
   if (!props.data?.length) return ''
   const values = props.data.map(d => d.mean)

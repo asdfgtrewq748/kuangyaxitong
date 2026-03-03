@@ -34,6 +34,11 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
+// 暴露图表实例供导出使用
+defineExpose({
+  getChartInstance: () => chartInstance
+})
+
 const footnote = computed(() => {
   if (!props.data || props.data.length === 0) return ''
   const n = props.data.length

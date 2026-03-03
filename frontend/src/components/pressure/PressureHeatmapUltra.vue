@@ -233,11 +233,42 @@
       <div v-if="showExportDialog" class="export-dialog-overlay" @click.self="showExportDialog = false">
         <div class="export-dialog">
           <div class="dialog-header">
-            <h3>导出图片</h3>
+            <h3>导出热力图</h3>
             <button class="close-btn" @click="showExportDialog = false">×</button>
           </div>
           <div class="dialog-body">
-            <button class="btn-primary" @click="executeExport">导出 PNG</button>
+            <div class="export-options">
+              <div class="export-option-group">
+                <label>格式</label>
+                <div class="format-buttons">
+                  <button 
+                    v-for="fmt in exportFormats" 
+                    :key="fmt.id"
+                    :class="['format-btn', { active: exportFormat === fmt.id }]"
+                    @click="exportFormat = fmt.id"
+                  >
+                    {{ fmt.label }}
+                  </button>
+                </div>
+              </div>
+              <div class="export-option-group">
+                <label>分辨率</label>
+                <div class="dpi-buttons">
+                  <button 
+                    v-for="dpi in dpiOptions" 
+                    :key="dpi.value"
+                    :class="['dpi-btn', { active: exportDpi === dpi.value }]"
+                    @click="exportDpi = dpi.value"
+                  >
+                    {{ dpi.label }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button class="btn-primary" @click="executeExport" :disabled="isExporting">
+              <span v-if="isExporting">导出中...</span>
+              <span v-else>导出 {{ exportFormat.toUpperCase() }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -303,6 +334,21 @@ const dpr = ref(window.devicePixelRatio || 1)
 
 // 导出
 const showExportDialog = ref(false)
+const exportFormat = ref('png')
+const exportDpi = ref(96)
+const isExporting = ref(false)
+
+const exportFormats = [
+  { id: 'png', label: 'PNG' },
+  { id: 'jpg', label: 'JPEG' },
+  { id: 'webp', label: 'WebP' }
+]
+
+const dpiOptions = [
+  { value: 96, label: '96 DPI (屏幕)' },
+  { value: 150, label: '150 DPI' },
+  { value: 300, label: '300 DPI (印刷)' }
+]
 
 // 性能
 const fps = ref(60)
@@ -758,14 +804,72 @@ function zoomOut() {
   render()
 }
 
-function executeExport() {
+async function executeExport() {
   const canvas = canvasRef.value
   if (!canvas) return
-  const link = document.createElement('a')
-  link.download = `heatmap-${Date.now()}.png`
-  link.href = canvas.toDataURL()
-  link.click()
-  showExportDialog.value = false
+  
+  isExporting.value = true
+  
+  try {
+    // 如果 DPI 不是 96，需要创建高分辨率版本
+    let exportCanvas = canvas
+    if (exportDpi.value > 96) {
+      exportCanvas = await createHighResCanvas(canvas, exportDpi.value / 96)
+    }
+    
+    // 根据格式导出
+    const mimeType = getMimeType(exportFormat.value)
+    const quality = exportFormat.value === 'jpg' ? 0.92 : undefined
+    
+    const dataUrl = exportCanvas.toDataURL(mimeType, quality)
+    
+    const link = document.createElement('a')
+    link.download = `heatmap_${formatDate()}_${exportDpi.value}dpi.${exportFormat.value}`
+    link.href = dataUrl
+    link.click()
+    
+    showToast?.('热力图导出成功')
+  } catch (error) {
+    console.error('导出失败:', error)
+    showToast?.('导出失败，请重试')
+  } finally {
+    isExporting.value = false
+    showExportDialog.value = false
+  }
+}
+
+function createHighResCanvas(sourceCanvas, scale) {
+  return new Promise((resolve) => {
+    const newCanvas = document.createElement('canvas')
+    newCanvas.width = sourceCanvas.width * scale
+    newCanvas.height = sourceCanvas.height * scale
+    
+    const ctx = newCanvas.getContext('2d')
+    ctx.scale(scale, scale)
+    ctx.drawImage(sourceCanvas, 0, 0)
+    
+    resolve(newCanvas)
+  })
+}
+
+function getMimeType(format) {
+  const types = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    webp: 'image/webp'
+  }
+  return types[format] || 'image/png'
+}
+
+function formatDate() {
+  const now = new Date()
+  return `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`
+}
+
+// Toast 提示（从父组件注入或独立使用）
+let showToast = null
+function setToastHandler(handler) {
+  showToast = handler
 }
 
 // ============================================================================
@@ -1492,5 +1596,59 @@ canvas {
   color: #ffffff;
   font-weight: 600;
   cursor: pointer;
+}
+
+.btn-primary:disabled {
+  background: #a3a3a3;
+  cursor: not-allowed;
+}
+
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.export-option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-option-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #525252;
+}
+
+.format-buttons,
+.dpi-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.format-btn,
+.dpi-btn {
+  padding: 8px 12px;
+  border: 1px solid #e5e5e5;
+  background: white;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.format-btn:hover,
+.dpi-btn:hover {
+  border-color: #1a1a1a;
+}
+
+.format-btn.active,
+.dpi-btn.active {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: white;
 }
 </style>

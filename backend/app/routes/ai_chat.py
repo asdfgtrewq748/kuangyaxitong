@@ -30,7 +30,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
     user_id: Optional[str] = None
-    model: str = "glm-5-flash"
+    model: str = "glm-4.7"
     temperature: float = 0.7
     max_tokens: int = 2048
     stream: bool = False
@@ -41,7 +41,7 @@ class ChatRequest(BaseModel):
                 "message": "你好，请介绍一下系统功能",
                 "session_id": "optional-session-id",
                 "user_id": "optional-user-id",
-                "model": "glm-5-flash",
+                "model": "glm-4.7",
                 "temperature": 0.7,
                 "max_tokens": 2048,
                 "stream": False
@@ -75,12 +75,17 @@ async def chat(request: ChatRequest) -> ChatResponse:
     Send a chat message and get AI response
 
     - Supports both streaming and non-streaming modes
-    - Supports GLM-5 and Kimi models
+    - Supports GLM and Kimi models
     - Maintains conversation history per session
     
     **Supported Models:**
-    - `glm-5-flash` - GLM-5 Flash (fast, default)
-    - `glm-5` - GLM-5 Standard
+    - `glm-4.7` - GLM-4.7 (default)
+    - `glm-4.7-flash` - GLM-4.7 Flash
+    - `glm-4.6` - GLM-4.6
+    - `glm-4-flash` - GLM-4 Flash
+    - `glm-4.5-flash` - GLM-4.5 Flash
+    - `glm-4.5-air` - GLM-4.5 Air
+    - `glm-5` / `glm-5-flash` - legacy aliases (mapped to glm-4-flash)
     - `kimi-moonshot-v1-8k` - Kimi Moonshot v1 8K
     - `kimi-moonshot-v1-32k` - Kimi Moonshot v1 32K
     - `kimi-moonshot-v1-128k` - Kimi Moonshot v1 128K
@@ -145,7 +150,7 @@ async def chat_stream(request: ChatRequest):
     Send a chat message and stream AI response via Server-Sent Events
 
     - Returns streaming response for real-time chat experience
-    - Supports GLM-5 and Kimi models
+    - Supports GLM and Kimi models
     """
     service = get_ai_chat_service()
 
@@ -232,7 +237,16 @@ async def health_check() -> Dict[str, Any]:
         "providers": {
             "glm5": {
                 "configured": glm5_configured,
-                "available_models": ["glm-5", "glm-5-flash"]
+                "available_models": [
+                    "glm-4.7",
+                    "glm-4.7-flash",
+                    "glm-4.6",
+                    "glm-4-flash",
+                    "glm-4.5-flash",
+                    "glm-4.5-air",
+                    "glm-5",
+                    "glm-5-flash"
+                ]
             },
             "kimi": {
                 "configured": kimi_configured,
@@ -243,7 +257,7 @@ async def health_check() -> Dict[str, Any]:
                 ]
             }
         },
-        "default_model": "glm-5-flash"
+        "default_model": "glm-4.7"
     }
 
 

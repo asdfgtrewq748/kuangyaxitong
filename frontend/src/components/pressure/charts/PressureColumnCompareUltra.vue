@@ -29,6 +29,10 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
+defineExpose({
+  getChartInstance: () => chartInstance
+})
+
 const footnote = computed(() => {
   const frontMean = props.frontData.reduce((a,b) => a + b.finalResistanceValue, 0) / props.frontData.length || 0
   const rearMean = props.rearData.reduce((a,b) => a + b.finalResistanceValue, 0) / props.rearData.length || 0
