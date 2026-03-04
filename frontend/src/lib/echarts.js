@@ -15,6 +15,7 @@ import { install as VisualMapComponent } from 'echarts/lib/component/visualMap/i
 import { install as GraphicComponent } from 'echarts/lib/component/graphic/install.js'
 
 import { install as CanvasRenderer } from 'echarts/lib/renderer/installCanvasRenderer.js'
+import { install as SVGRenderer } from 'echarts/lib/renderer/installSVGRenderer.js'
 
 echarts.use([
   GridComponent,
@@ -30,7 +31,8 @@ echarts.use([
   BarChart,
   ScatterChart,
   HeatmapChart,
-  CanvasRenderer
+  CanvasRenderer,
+  SVGRenderer
 ])
 
 export { echarts }

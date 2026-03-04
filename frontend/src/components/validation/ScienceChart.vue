@@ -14,6 +14,10 @@ const props = defineProps({
   height: {
     type: [String, Number],
     default: 320
+  },
+  renderer: {
+    type: String,
+    default: 'svg'
   }
 })
 const emit = defineEmits(['chart-click'])
@@ -34,6 +38,17 @@ const render = () => {
     lazyUpdate: true,
     silent: true
   })
+}
+
+const createChart = () => {
+  if (!container.value) return
+  chart = echarts.init(container.value, null, {
+    renderer: props.renderer === 'canvas' ? 'canvas' : 'svg',
+    useDirtyRect: true
+  })
+  chart.on('click', onChartClick)
+  render()
+  bindResize()
 }
 
 const onResize = () => {
@@ -76,18 +91,12 @@ onMounted(async () => {
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(() => {
       if (!container.value) return
-      chart = echarts.init(container.value, null, { renderer: 'canvas' })
-      chart.on('click', onChartClick)
-      render()
-      bindResize()
+      createChart()
     }, 100)
     return
   }
   
-  chart = echarts.init(container.value, null, { renderer: 'canvas' })
-  chart.on('click', onChartClick)
-  render()
-  bindResize()
+  createChart()
 })
 
 watch(

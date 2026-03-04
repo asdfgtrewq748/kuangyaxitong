@@ -20,6 +20,7 @@ from app.schemas.geomodel import (
     GeomodelManifest,
 )
 from app.services.csv_loader import read_csv_robust
+from app.services.interpolate import interpolate_from_points
 
 
 def _utc_now_iso() -> str:
@@ -202,17 +203,35 @@ class GeomodelService:
 
         summary = self._build_summary(job, parsed)
         quality = self._build_quality_report(parsed)
+        bounds = self._calculate_bounds(parsed["boreholes"])
+        layer_meshes = self._build_layer_meshes(
+            parsed=parsed,
+            method_hint=job.request.method.value,
+            resolution=float(job.request.resolution),
+            bounds=bounds,
+        )
 
         summary_path = job.output_dir / "summary.json"
         quality_path = job.output_dir / "quality_report.json"
         summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
         quality_path.write_text(json.dumps(quality, ensure_ascii=False, indent=2), encoding="utf-8")
 
+        model_doc = self._build_model_document(
+            job=job,
+            parsed=parsed,
+            summary=summary,
+            quality=quality,
+            bounds=bounds,
+            layer_meshes=layer_meshes,
+        )
+        model_json_path = job.output_dir / "model.json"
+        model_json_path.write_text(json.dumps(model_doc, ensure_ascii=False, indent=2), encoding="utf-8")
+
         requested = {x.lower() for x in job.request.output_formats}
         if "vtk" in requested:
             self._write_model_vtk(job.output_dir / "model.vtk", parsed["boreholes"])
         if "vtp" in requested:
-            self._write_layer_vtps(job.output_dir, parsed)
+            self._write_layer_vtps(job.output_dir, layer_meshes)
 
         artifacts = self._collect_artifacts(job.job_id, job.output_dir)
         manifest = GeomodelManifest(
@@ -226,6 +245,7 @@ class GeomodelService:
                 "pinchout_ratio": float(quality["pinchout_ratio"]),
                 "layer_cv": float(quality["layer_cv"]),
                 "borehole_count": int(summary["borehole_count"]),
+                "layer_count": int(len(layer_meshes)),
             },
             artifacts=artifacts,
         )
@@ -393,11 +413,254 @@ class GeomodelService:
             "generated_at": _utc_now_iso(),
         }
 
+    def _calculate_bounds(self, boreholes: List[Dict[str, Any]]) -> Dict[str, float]:
+        if not boreholes:
+            return {"min_x": 0.0, "max_x": 1.0, "min_y": 0.0, "max_y": 1.0}
+
+        xs = [float(bh.get("x", 0.0)) for bh in boreholes]
+        ys = [float(bh.get("y", 0.0)) for bh in boreholes]
+
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        dx = max(max_x - min_x, 1.0)
+        dy = max(max_y - min_y, 1.0)
+        padding = 0.05
+        return {
+            "min_x": float(min_x - dx * padding),
+            "max_x": float(max_x + dx * padding),
+            "min_y": float(min_y - dy * padding),
+            "max_y": float(max_y + dy * padding),
+        }
+
+    def _method_to_interpolation(self, method_hint: str, n_points: int) -> str:
+        hint = (method_hint or "").strip().lower()
+        if hint == "regression_kriging":
+            return "kriging"
+        if hint in {"hybrid", "smart_pinchout"}:
+            return "linear" if n_points >= 4 else "idw"
+        return "idw"
+
+    def _build_layer_meshes(
+        self,
+        parsed: Dict[str, Any],
+        method_hint: str,
+        resolution: float,
+        bounds: Dict[str, float],
+    ) -> List[Dict[str, Any]]:
+        boreholes = parsed["boreholes"]
+        layer_values = parsed["layer_values"]
+        if not layer_values:
+            return []
+
+        max_range = max(bounds["max_x"] - bounds["min_x"], bounds["max_y"] - bounds["min_y"], 1.0)
+        spacing = max(float(resolution), 1.0)
+        grid_size = int(max(16, min(128, round(max_range / spacing) + 1)))
+
+        layer_names = sorted(layer_values.keys(), key=lambda n: len(layer_values[n]), reverse=True)[:12]
+        layer_meshes: List[Dict[str, Any]] = []
+        depth_cursor = 0.0
+        total_boreholes = max(len(boreholes), 1)
+
+        for order, layer_name in enumerate(layer_names):
+            sample_points: List[List[float]] = []
+            sample_values: List[float] = []
+
+            for bh in boreholes:
+                thickness = _to_float_or_none((bh.get("layers") or {}).get(layer_name))
+                if thickness is None or thickness <= 0:
+                    continue
+                sample_points.append([float(bh["x"]), float(bh["y"])])
+                sample_values.append(float(thickness))
+
+            if not sample_values:
+                continue
+
+            sample_arr = np.asarray(sample_values, dtype=float)
+            appearance_ratio = float(len(sample_values) / total_boreholes)
+            mesh = None
+
+            if len(sample_points) >= 3:
+                grid = self._interpolate_layer_grid(
+                    points=np.asarray(sample_points, dtype=float),
+                    values=sample_arr,
+                    method_hint=method_hint,
+                    grid_size=grid_size,
+                    bounds=bounds,
+                )
+                if grid is not None:
+                    mesh = self._grid_to_mesh(grid, bounds, depth_cursor)
+
+            layer_meshes.append(
+                {
+                    "name": layer_name,
+                    "order": order,
+                    "sample_count": int(sample_arr.size),
+                    "appearance_ratio": round(appearance_ratio, 4),
+                    "mean_thickness": round(float(np.mean(sample_arr)), 4),
+                    "std_thickness": round(float(np.std(sample_arr)), 4),
+                    "sample_points": [
+                        {"x": float(p[0]), "y": float(p[1]), "thickness": float(v)}
+                        for p, v in zip(sample_points, sample_values)
+                    ],
+                    "mesh": mesh,
+                }
+            )
+            depth_cursor += float(np.mean(sample_arr))
+
+        return layer_meshes
+
+    def _interpolate_layer_grid(
+        self,
+        points: np.ndarray,
+        values: np.ndarray,
+        method_hint: str,
+        grid_size: int,
+        bounds: Dict[str, float],
+    ) -> Optional[np.ndarray]:
+        method = self._method_to_interpolation(method_hint, len(points))
+        result = interpolate_from_points(
+            points=points,
+            values=values,
+            method=method,
+            grid_size=grid_size,
+            bounds=bounds,
+        )
+        if "error" in result and method != "idw":
+            result = interpolate_from_points(
+                points=points,
+                values=values,
+                method="idw",
+                grid_size=grid_size,
+                bounds=bounds,
+            )
+        if "error" in result:
+            return None
+
+        grid = np.asarray(result["grid"], dtype=float)
+        finite = np.isfinite(grid)
+        if not np.any(finite):
+            return None
+
+        grid = np.where(finite, grid, float(np.nanmean(values)))
+        grid = np.clip(grid, a_min=0.0, a_max=None)
+
+        hint = (method_hint or "").strip().lower()
+        if hint == "smart_pinchout":
+            # Sparse layers should taper to zero smoothly.
+            q = float(np.quantile(values, 0.15))
+            threshold = max(q * 0.35, 0.05)
+            grid = np.where(grid < threshold, 0.0, grid)
+        elif hint == "hybrid":
+            # Prevent extreme spikes from dominating rendered surfaces.
+            q_low = float(np.quantile(grid, 0.05))
+            q_high = float(np.quantile(grid, 0.95))
+            if q_high > q_low:
+                grid = np.clip(grid, q_low, q_high)
+
+        return grid
+
+    def _grid_to_mesh(
+        self,
+        grid: np.ndarray,
+        bounds: Dict[str, float],
+        depth_cursor: float,
+    ) -> Dict[str, Any]:
+        ny, nx = grid.shape
+        xs = np.linspace(bounds["min_x"], bounds["max_x"], nx)
+        ys = np.linspace(bounds["min_y"], bounds["max_y"], ny)
+
+        vertices: List[List[float]] = []
+        thickness_scalars: List[float] = []
+        for iy, y in enumerate(ys):
+            for ix, x in enumerate(xs):
+                thickness = float(grid[iy, ix])
+                z = -(depth_cursor + thickness * 0.5)
+                vertices.append([float(x), float(y), float(z)])
+                thickness_scalars.append(thickness)
+
+        faces: List[List[int]] = []
+        for iy in range(ny - 1):
+            for ix in range(nx - 1):
+                a = iy * nx + ix
+                b = a + 1
+                c = (iy + 1) * nx + ix
+                d = c + 1
+                faces.append([a, b, d])
+                faces.append([a, d, c])
+
+        return {
+            "vertices": vertices,
+            "faces": faces,
+            "point_scalars": thickness_scalars,
+            "grid_shape": [int(ny), int(nx)],
+        }
+
+    def _build_model_document(
+        self,
+        job: _JobRecord,
+        parsed: Dict[str, Any],
+        summary: Dict[str, Any],
+        quality: Dict[str, Any],
+        bounds: Dict[str, float],
+        layer_meshes: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        boreholes_payload = []
+        for bh in parsed["boreholes"]:
+            layers = [
+                {"name": str(name), "thickness": float(thickness)}
+                for name, thickness in sorted((bh.get("layers") or {}).items(), key=lambda item: item[0])
+            ]
+            boreholes_payload.append(
+                {
+                    "name": str(bh.get("borehole", "")),
+                    "x": float(bh.get("x", 0.0)),
+                    "y": float(bh.get("y", 0.0)),
+                    "total_thickness": float(bh.get("total_thickness", 0.0)),
+                    "layers": layers,
+                }
+            )
+
+        layers_payload = []
+        for layer in layer_meshes:
+            mesh = layer.get("mesh")
+            layers_payload.append(
+                {
+                    "name": layer["name"],
+                    "order": int(layer["order"]),
+                    "sample_count": int(layer["sample_count"]),
+                    "appearance_ratio": float(layer["appearance_ratio"]),
+                    "mean_thickness": float(layer["mean_thickness"]),
+                    "std_thickness": float(layer["std_thickness"]),
+                    "sample_points": layer.get("sample_points", []),
+                    "mesh": mesh,
+                }
+            )
+
+        return {
+            "job_id": job.job_id,
+            "method": job.request.method.value,
+            "seam_name": job.request.seam_name,
+            "resolution": float(job.request.resolution),
+            "generated_at": _utc_now_iso(),
+            "bounds": bounds,
+            "boreholes": boreholes_payload,
+            "layers": layers_payload,
+            "summary": summary,
+            "quality_summary": quality,
+        }
+
     def _write_model_vtk(self, file_path: Path, boreholes: List[Dict[str, Any]]) -> None:
-        points = [(float(bh["x"]), float(bh["y"]), 0.0) for bh in boreholes]
+        points = [
+            (
+                float(bh["x"]),
+                float(bh["y"]),
+                -float(bh.get("total_thickness", 0.0)),
+            )
+            for bh in boreholes
+        ]
         lines = [
             "# vtk DataFile Version 3.0",
-            "Geomodel Point Cloud",
+            "Geomodel Borehole Cloud",
             "ASCII",
             "DATASET POLYDATA",
             f"POINTS {len(points)} float",
@@ -407,50 +670,72 @@ class GeomodelService:
         lines.extend(f"1 {idx}" for idx in range(len(points)))
         file_path.write_text("\n".join(lines), encoding="utf-8")
 
-    def _write_layer_vtps(self, output_dir: Path, parsed: Dict[str, Any]) -> None:
-        boreholes = parsed["boreholes"]
-        layer_values = parsed["layer_values"]
-        if not layer_values:
+    def _write_layer_vtps(
+        self,
+        output_dir: Path,
+        layer_meshes: List[Dict[str, Any]],
+    ) -> None:
+        if not layer_meshes:
             return
 
-        top_layers = sorted(layer_values.keys(), key=lambda n: len(layer_values[n]), reverse=True)[:12]
-        for layer_name in top_layers:
-            points: List[tuple[float, float, float]] = []
-            thickness_values: List[float] = []
-            for bh in boreholes:
-                thickness = _to_float_or_none((bh.get("layers") or {}).get(layer_name))
-                if thickness is None or thickness <= 0:
-                    continue
-                points.append((float(bh["x"]), float(bh["y"]), 0.0))
-                thickness_values.append(float(thickness))
+        for layer in layer_meshes:
+            layer_name = str(layer.get("name") or "layer")
+            mesh = layer.get("mesh") or {}
+            vertices = mesh.get("vertices") or []
+            faces = mesh.get("faces") or []
+            point_scalars = mesh.get("point_scalars") or []
 
-            if not points:
+            if not vertices:
                 continue
 
-            pts_text = " ".join(f"{x:.6f} {y:.6f} {z:.6f}" for x, y, z in points)
-            conn_text = " ".join(str(i) for i in range(len(points)))
-            off_text = " ".join(str(i + 1) for i in range(len(points)))
-            thick_text = " ".join(f"{v:.6f}" for v in thickness_values)
+            pts_text = " ".join(f"{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}" for v in vertices)
+            thick_text = " ".join(f"{float(v):.6f}" for v in point_scalars) if point_scalars else ""
 
-            file_content = (
-                '<?xml version="1.0"?>\n'
-                '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">\n'
-                "  <PolyData>\n"
-                f'    <Piece NumberOfPoints="{len(points)}" NumberOfVerts="{len(points)}" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0">\n'
-                "      <PointData Scalars=\"thickness\">\n"
-                f'        <DataArray type="Float32" Name="thickness" format="ascii">{thick_text}</DataArray>\n'
-                "      </PointData>\n"
-                "      <Points>\n"
-                f'        <DataArray type="Float32" NumberOfComponents="3" format="ascii">{pts_text}</DataArray>\n'
-                "      </Points>\n"
-                "      <Verts>\n"
-                f'        <DataArray type="Int32" Name="connectivity" format="ascii">{conn_text}</DataArray>\n'
-                f'        <DataArray type="Int32" Name="offsets" format="ascii">{off_text}</DataArray>\n'
-                "      </Verts>\n"
-                "    </Piece>\n"
-                "  </PolyData>\n"
-                "</VTKFile>\n"
-            )
+            if faces:
+                conn_text = " ".join(str(int(idx)) for tri in faces for idx in tri)
+                off_text = " ".join(str(3 * (i + 1)) for i in range(len(faces)))
+                file_content = (
+                    '<?xml version="1.0"?>\n'
+                    '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">\n'
+                    "  <PolyData>\n"
+                    f'    <Piece NumberOfPoints="{len(vertices)}" NumberOfVerts="0" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="{len(faces)}">\n'
+                    "      <PointData Scalars=\"thickness\">\n"
+                    f'        <DataArray type="Float32" Name="thickness" format="ascii">{thick_text}</DataArray>\n'
+                    "      </PointData>\n"
+                    "      <Points>\n"
+                    f'        <DataArray type="Float32" NumberOfComponents="3" format="ascii">{pts_text}</DataArray>\n'
+                    "      </Points>\n"
+                    "      <Polys>\n"
+                    f'        <DataArray type="Int32" Name="connectivity" format="ascii">{conn_text}</DataArray>\n'
+                    f'        <DataArray type="Int32" Name="offsets" format="ascii">{off_text}</DataArray>\n'
+                    "      </Polys>\n"
+                    "    </Piece>\n"
+                    "  </PolyData>\n"
+                    "</VTKFile>\n"
+                )
+            else:
+                conn_text = " ".join(str(i) for i in range(len(vertices)))
+                off_text = " ".join(str(i + 1) for i in range(len(vertices)))
+                file_content = (
+                    '<?xml version="1.0"?>\n'
+                    '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">\n'
+                    "  <PolyData>\n"
+                    f'    <Piece NumberOfPoints="{len(vertices)}" NumberOfVerts="{len(vertices)}" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0">\n'
+                    "      <PointData Scalars=\"thickness\">\n"
+                    f'        <DataArray type="Float32" Name="thickness" format="ascii">{thick_text}</DataArray>\n'
+                    "      </PointData>\n"
+                    "      <Points>\n"
+                    f'        <DataArray type="Float32" NumberOfComponents="3" format="ascii">{pts_text}</DataArray>\n'
+                    "      </Points>\n"
+                    "      <Verts>\n"
+                    f'        <DataArray type="Int32" Name="connectivity" format="ascii">{conn_text}</DataArray>\n'
+                    f'        <DataArray type="Int32" Name="offsets" format="ascii">{off_text}</DataArray>\n'
+                    "      </Verts>\n"
+                    "    </Piece>\n"
+                    "  </PolyData>\n"
+                    "</VTKFile>\n"
+                )
+
             file_name = f"layer_{_sanitize_layer_name(layer_name)}.vtp"
             (output_dir / file_name).write_text(file_content, encoding="utf-8")
 

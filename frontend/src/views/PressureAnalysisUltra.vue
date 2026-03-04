@@ -58,6 +58,13 @@
             <path d="M12 20V10M18 20V4M6 20v-4"/>
           </svg>
         </button>
+        <button class="action-btn" @click="openChartCenter" title="图表中心">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="11" width="4" height="10" rx="1"/>
+            <rect x="10" y="7" width="4" height="14" rx="1"/>
+            <rect x="17" y="4" width="4" height="17" rx="1"/>
+          </svg>
+        </button>
         <button class="action-btn primary" @click="toggleFullscreen" title="全屏 (F11)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
@@ -307,8 +314,21 @@
             </div>
           </div>
 
+        <div class="chart-hub-card">
+          <div class="hub-title-row">
+            <h4 class="hub-title">图表中心</h4>
+            <span class="hub-badge">子页面</span>
+          </div>
+          <p class="hub-desc">
+            右侧多图表、Nature 导出和科研工具已迁移到独立子页面，当前页仅保留核心分析与筛选。
+          </p>
+          <div class="hub-actions">
+            <button class="hub-btn" @click="openChartCenter">打开图表中心</button>
+          </div>
+        </div>
+
           <!-- 标签页图表 -->
-        <div class="chart-tabs-container">
+        <div v-if="false" class="chart-tabs-container">
           <div class="tabs-header">
             <button
               v-for="tab in chartTabs"
@@ -496,19 +516,21 @@
 
         <!-- Nature导出面板 -->
         <NatureExportPanel 
+          v-if="false"
           :charts="chartInstances"
           @export-complete="onExportComplete"
         />
 
         <!-- 科研分析面板 -->
         <ResearchPanel 
+          v-if="false"
           :data="researchData"
           @palette-change="onResearchPaletteChange"
           @export-request="onResearchExport"
         />
 
         <!-- 方法论与引用 -->
-        <MethodologyPanel />
+        <MethodologyPanel v-if="false" />
       </aside>
     </main>
 
@@ -629,7 +651,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 
 // 导入优化后的组件
@@ -673,6 +695,8 @@ import {
 
 const router = useRouter()
 const pageRef = ref(null)
+const CHART_CENTER_SNAPSHOT_KEY = 'pressure_analysis_chart_snapshot_v1'
+let chartSnapshotTimer = null
 
 // ============================================================================
 // 状态管理
@@ -885,6 +909,63 @@ const rearColumnData = computed(() =>
 
 function goBack() {
   router.back()
+}
+
+function buildChartSnapshot() {
+  const normalizeDateRows = (rows = []) =>
+    rows.map((row) => ({
+      ...row,
+      date: row?.date ? new Date(row.date).toISOString() : null
+    }))
+
+  return {
+    createdAt: Date.now(),
+    context: {
+      dateRangeText: dateRangeText.value,
+      supportStart: supportStart.value,
+      supportEnd: supportEnd.value,
+      anomalyCount: anomalyCount.value
+    },
+    datasets: {
+      rawData: rawData.value,
+      heatmapMatrix: heatmapMatrix.value,
+      numRows: numRows.value,
+      stats: stats.value,
+      histogramData: histogramData.value,
+      spatialDistData: spatialDistData.value,
+      cycleData: normalizeDateRows(cycleData.value),
+      detectedPeriods: detectedPeriods.value,
+      correlationMatrix: correlationMatrix.value,
+      frontColumnData: frontColumnData.value,
+      rearColumnData: rearColumnData.value,
+      selectedSupportData: normalizeDateRows(selectedSupportData.value)
+    },
+    researchData: researchData.value
+  }
+}
+
+function persistChartSnapshot() {
+  try {
+    const snapshot = buildChartSnapshot()
+    window.sessionStorage?.setItem(CHART_CENTER_SNAPSHOT_KEY, JSON.stringify(snapshot))
+  } catch (error) {
+    console.warn('Failed to persist chart snapshot:', error)
+  }
+}
+
+function schedulePersistChartSnapshot() {
+  if (chartSnapshotTimer) {
+    clearTimeout(chartSnapshotTimer)
+  }
+  chartSnapshotTimer = setTimeout(() => {
+    persistChartSnapshot()
+    chartSnapshotTimer = null
+  }, 120)
+}
+
+function openChartCenter() {
+  persistChartSnapshot()
+  router.push({ name: 'PressureAnalysisCharts' })
 }
 
 function formatNumber(num) {
@@ -1204,6 +1285,7 @@ function onCellSelect(cell) {
   if (cell) {
     selectedSupport.value = cell.supportId
     updateSelectedSupportData()
+    schedulePersistChartSnapshot()
   }
 }
 
@@ -1468,6 +1550,7 @@ function processData() {
     } else if (currentStep >= steps) {
       loading.value = false
       loadingProgress.value = 100
+      schedulePersistChartSnapshot()
       return
     }
     
@@ -1520,6 +1603,7 @@ async function loadData() {
 
 onMounted(() => {
   loadData()
+  schedulePersistChartSnapshot()
   
   // 设置键盘快捷键
   useKeyboardShortcuts({
@@ -1566,6 +1650,33 @@ onMounted(() => {
     requestAnimationFrame(fpsLoop)
   }
   requestAnimationFrame(fpsLoop)
+})
+
+watch(
+  [
+    rawData,
+    heatmapMatrix,
+    stats,
+    anomalies,
+    selectedSupportData,
+    startDate,
+    endDate,
+    supportStart,
+    supportEnd,
+    columnType
+  ],
+  () => {
+    schedulePersistChartSnapshot()
+  },
+  { deep: true, flush: 'post' }
+)
+
+onBeforeUnmount(() => {
+  if (chartSnapshotTimer) {
+    clearTimeout(chartSnapshotTimer)
+    chartSnapshotTimer = null
+  }
+  persistChartSnapshot()
 })
 
 watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
@@ -2097,7 +2208,7 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 
 /* Analysis Sidebar */
 .analysis-sidebar {
-  width: 400px;
+  width: 340px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2177,6 +2288,68 @@ watch([columnType, startDate, endDate, supportStart, supportEnd], () => {
 .kpi-label {
   font-size: 11px;
   color: #737373;
+}
+
+.chart-hub-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.hub-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hub-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.hub-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hub-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #4b5563;
+}
+
+.hub-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.hub-btn {
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #111827;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 14px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.hub-btn:hover {
+  opacity: 0.9;
 }
 
 .chart-tabs-container {
@@ -2575,7 +2748,7 @@ kbd {
   }
   
   .analysis-sidebar {
-    width: 400px;
+    width: 360px;
   }
 }
 
@@ -2587,7 +2760,7 @@ kbd {
   }
   
   .analysis-sidebar {
-    width: 340px;
+    width: 330px;
   }
 }
 
@@ -2599,7 +2772,7 @@ kbd {
   }
   
   .analysis-sidebar {
-    width: 300px;
+    width: 280px;
   }
   
   .kpi-grid {
@@ -2625,7 +2798,7 @@ kbd {
   }
   
   .analysis-sidebar {
-    width: 260px;
+    width: 240px;
   }
   
   .kpi-grid {
@@ -2692,8 +2865,8 @@ kbd {
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .chart-tabs-container {
-    min-height: 300px;
+  .chart-hub-card {
+    padding: 12px;
   }
   
   .tabs-header {

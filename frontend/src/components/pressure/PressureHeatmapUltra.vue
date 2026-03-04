@@ -1,6 +1,6 @@
 <template>
   <div class="pressure-heatmap-ultra" ref="containerRef">
-    <!-- 标题栏 -->
+    <!-- 閺嶅洭顣介弽?-->
     <header class="heatmap-header">
       <div class="header-left">
         <div class="panel-badge">{{ panelLabel }}</div>
@@ -44,13 +44,13 @@
       </div>
     </header>
 
-    <!-- 主Canvas区域 -->
+    <!-- 娑撶眴anvas閸栧搫鐓?-->
     <div class="canvas-wrapper" ref="canvasWrapperRef">
       <div class="canvas-container" ref="canvasContainerRef">
-        <!-- 背景层：采区背景（静态，不随缩放） -->
+        <!-- 閼冲本娅欑仦鍌︾窗闁插洤灏懗灞炬珯閿涘牓娼ら幀渚婄礉娑撳秹娈㈢紓鈺傛杹閿?-->
         <div class="mining-area-bg"></div>
         
-        <!-- 主Canvas：包含工作面边框和数据 -->
+        <!-- 娑撶眴anvas閿涙艾瀵橀崥顐紣娴ｆ粓娼版潏瑙勵攱閸滃本鏆熼幑?-->
         <canvas
           ref="canvasRef"
           :width="internalWidth"
@@ -64,7 +64,7 @@
           @mousedown="onMouseDown"
         ></canvas>
 
-        <!-- 坐标轴 -->
+        <!-- 閸ф劖鐖ｆ潪?-->
         <div class="axis axis-y">
           <div class="axis-title">支架编号</div>
           <div class="axis-ticks">
@@ -95,27 +95,27 @@
           </div>
         </div>
 
-        <!-- 缩放控制 -->
+        <!-- 缂傗晜鏂侀幒褍鍩?-->
         <div class="zoom-controls">
           <button class="zoom-btn" @click="zoomIn">+</button>
           <div class="zoom-level">{{ Math.round(scale * 100) }}%</div>
-          <button class="zoom-btn" @click="zoomOut">−</button>
+          <button class="zoom-btn" @click="zoomOut">-</button>
         </div>
         
-        <!-- 性能指示器 -->
+        <!-- 閹嗗厴閹稿洨銇氶崳?-->
         <div v-if="showPerformanceMetrics" class="performance-indicator">
           <span>FPS: {{ fps }}</span>
           <span>渲染: {{ renderTime.toFixed(1) }}ms</span>
         </div>
 
-        <!-- 十字准星 -->
+        <!-- 閸椾礁鐡ч崙鍡樻Е -->
         <div v-if="crosshair.visible" class="crosshair" :style="crosshairStyle">
           <div class="crosshair-line crosshair-h"></div>
           <div class="crosshair-line crosshair-v"></div>
           <div class="crosshair-point"></div>
         </div>
         
-        <!-- 图例 -->
+        <!-- 閸ュ彞绶?-->
         <div class="region-legend">
           <div class="legend-item">
             <span class="legend-color workface"></span>
@@ -128,8 +128,8 @@
         </div>
       </div>
 
-      <!-- 骨架屏加载状态 -->
-      <div v-if="loading" class="skeleton-overlay">
+      <!-- 妤犮劍鐏︾仦蹇撳鏉炵晫濮搁幀?-->
+      <div v-if="props.loading" class="skeleton-overlay">
         <div class="skeleton-container">
           <div class="skeleton-header">
             <div class="skeleton-badge"></div>
@@ -146,13 +146,13 @@
             </div>
           </div>
         </div>
-        <p class="loading-text">{{ loadingText || '数据加载中...' }}</p>
-        <div class="loading-progress-bar" v-if="loadingProgress > 0">
-          <div class="progress-fill" :style="{ width: loadingProgress + '%' }"></div>
+        <p class="loading-text">{{ props.loadingText || '数据加载中...' }}</p>
+        <div class="loading-progress-bar" v-if="props.loadingProgress > 0">
+          <div class="progress-fill" :style="{ width: props.loadingProgress + '%' }"></div>
         </div>
       </div>
 
-      <!-- 空状态 -->
+      <!-- 缁岃櫣濮搁幀?-->
       <div v-else-if="!hasData" class="empty-state">
         <div class="empty-icon">
           <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
@@ -166,9 +166,9 @@
       </div>
     </div>
 
-    <!-- 底部控制栏 -->
+    <!-- 鎼存洟鍎撮幒褍鍩楅弽?-->
     <div class="heatmap-footer">
-      <!-- 颜色图例 -->
+      <!-- 妫版粏澹婇崶鍙ョ伐 -->
       <div class="legend-section">
         <div class="legend-header">
           <span class="legend-title">矿压强度 (MPa)</span>
@@ -195,7 +195,7 @@
         </div>
       </div>
 
-      <!-- 统计信息 -->
+      <!-- 缂佺喕顓告穱鈩冧紖 -->
       <div class="stats-section" v-if="stats">
         <div class="stat-group">
           <div class="stat-item">
@@ -208,14 +208,14 @@
             <span class="stat-value">{{ formatValue(stats.min) }} ~ {{ formatValue(stats.max) }}</span>
           </div>
           <div class="stat-item highlight" v-if="stats.outliers">
-            <span class="stat-label">异常</span>
+            <span class="stat-label">寮傚父</span>
             <span class="stat-value">{{ stats.outliers }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 悬浮提示框 -->
+    <!-- 閹剚璇為幓鎰仛濡?-->
     <Transition name="tooltip-scale">
       <div
         v-if="hoveredCell && showTooltip"
@@ -249,7 +249,7 @@
       </div>
     </Transition>
 
-    <!-- 导出对话框 -->
+    <!-- 鐎电厧鍤€电鐦藉?-->
     <Transition name="dialog-fade">
       <div v-if="showExportDialog" class="export-dialog-overlay" @click.self="showExportDialog = false">
         <div class="export-dialog">
@@ -288,7 +288,7 @@
             </div>
             <button class="btn-primary" @click="executeExport" :disabled="isExporting">
               <span v-if="isExporting">导出中...</span>
-              <span v-else>导出 {{ exportFormat.toUpperCase() }}</span>
+              <span v-else>瀵煎嚭 {{ exportFormat.toUpperCase() }}</span>
             </button>
           </div>
         </div>
@@ -316,15 +316,15 @@ const props = defineProps({
   matrix: { type: Array, default: () => [] },
   cells: { type: Array, default: () => [] },
   stats: { type: Object, default: null },
-  numRows: { type: Number, default: 0 },  // 支架数
-  numCols: { type: Number, default: 0 },  // 推进天数
+  numRows: { type: Number, default: 0 },  // 閺€顖涚仸閺?
+  numCols: { type: Number, default: 0 },  // 閹恒劏绻樻径鈺傛殶
   loading: { type: Boolean, default: false },
+  loadingProgress: { type: Number, default: 0 },
   loadingText: String,
   emptyText: String,
   showTooltip: { type: Boolean, default: true },
   showPerformanceMetrics: { type: Boolean, default: false }
 })
-
 const emit = defineEmits(['cell-select', 'cell-hover'])
 
 // ============================================================================
@@ -341,19 +341,19 @@ const currentColorScheme = ref('diverging')
 const hoveredCell = ref(null)
 const showGrid = ref(false)
 
-// 缩放和平移
+// 缂傗晜鏂侀崪灞介挬缁?
 const scale = ref(1)
 const offsetX = ref(0)
 const offsetY = ref(0)
 const isDragging = ref(false)
 
-// 十字准星
+// 閸椾礁鐡ч崙鍡樻Е
 const crosshair = ref({ visible: false, x: 0, y: 0 })
 
 // DPR
 const dpr = ref(window.devicePixelRatio || 1)
 
-// 导出
+// 鐎电厧鍤?
 const showExportDialog = ref(false)
 const exportFormat = ref('png')
 const exportDpi = ref(96)
@@ -371,18 +371,18 @@ const dpiOptions = [
   { value: 300, label: '300 DPI (印刷)' }
 ]
 
-// 性能
+// 閹嗗厴
 const fps = ref(60)
 const renderTime = ref(0)
 let frameCount = 0
 let lastFrameTime = 0
 
-// 渲染控制
+// 濞撳弶鐓嬮幒褍鍩?
 let animationFrameId = null
 let renderPending = false
 let lastHoverTime = 0
 
-// 颜色查找表
+// 妫版粏澹婇弻銉﹀鐞?
 let colorLookupTable = null
 
 // ============================================================================
@@ -390,8 +390,8 @@ let colorLookupTable = null
 // ============================================================================
 
 const viewModes = [
-  { id: 'heatmap', label: '热力图', icon: '▦' },
-  { id: 'contour', label: '等值线', icon: '◎' },
+  { id: 'heatmap', label: '热力图', icon: 'H' },
+  { id: 'contour', label: '等值线', icon: 'C' }
 ]
 
 const colorSchemes = Object.entries(COLORS).map(([id, config]) => ({
@@ -400,10 +400,10 @@ const colorSchemes = Object.entries(COLORS).map(([id, config]) => ({
   preview: `linear-gradient(to right, ${config.colors[0]}, ${config.colors[Math.floor(config.colors.length / 2)]}, ${config.colors[config.colors.length - 1]})`
 }))
 
-// 区域颜色
+// 閸栧搫鐓欐０婊嗗
 const REGION_COLORS = {
-  mining_area: '#F5F5F5',   // 采区背景色
-  workface_border: '#666666' // 工作面边框
+  mining_area: '#F5F5F5',   // 闁插洤灏懗灞炬珯閼?
+  workface_border: '#666666' // 瀹搞儰缍旈棃銏ｇ珶濡?
 }
 
 // ============================================================================
@@ -454,7 +454,7 @@ const legendPoints = computed(() => {
   }))
 })
 
-// Y轴刻度：支架编号（反转，1在底部）
+// Y鏉炴潙鍩㈡惔锔肩窗閺€顖涚仸缂傛牕褰块敍鍫濆冀鏉烆剨绱?閸︺劌绨抽柈顭掔礆
 const yAxisTicks = computed(() => {
   if (!hasData.value) return []
   const ticks = []
@@ -470,7 +470,7 @@ const yAxisTicks = computed(() => {
   return ticks
 })
 
-// X轴刻度：推进距离
+// X鏉炴潙鍩㈡惔锔肩窗閹恒劏绻樼捄婵堫瀲
 const xAxisTicks = computed(() => {
   if (!hasData.value) return []
   const ticks = []
@@ -529,7 +529,7 @@ function getCellColor(value) {
 }
 
 /**
- * 核心渲染：包含工作面边框和数据，一起缩放平移
+ * 閺嶇绺惧〒鍙夌厠閿涙艾瀵橀崥顐紣娴ｆ粓娼版潏瑙勵攱閸滃本鏆熼幑顕嗙礉娑撯偓鐠ч缂夐弨鎯ч挬缁?
  */
 function render() {
   if (renderPending) return
@@ -563,39 +563,39 @@ function drawHeatmap() {
   const displayWidth = width / dpr.value
   const displayHeight = height / dpr.value
 
-  // 清空画布
+  // 濞撳懐鈹栭悽璇茬
   ctx.clearRect(0, 0, width, height)
   ctx.save()
   ctx.scale(dpr.value, dpr.value)
 
-  // 应用缩放和平移
+  // 鎼存梻鏁ょ紓鈺傛杹閸滃苯閽╃粔?
   ctx.translate(offsetX.value, offsetY.value)
   ctx.scale(scale.value, scale.value)
 
-  // 计算数据区域尺寸
+  // 鐠侊紕鐣婚弫鐗堝祦閸栧搫鐓欑亸鍝勵嚟
   const numSupports = props.numRows
   const numDays = props.numCols
   
   if (numSupports > 0 && numDays > 0) {
-    // 计算单元格大小
+    // 鐠侊紕鐣婚崡鏇炲帗閺嶇厧銇囩亸?
     const cellWidth = displayWidth / numDays
     const cellHeight = displayHeight / numSupports
     
-    // 数据区域总尺寸
+    // 閺佺増宓侀崠鍝勭厵閹鏄傜€?
     const dataWidth = numDays * cellWidth
     const dataHeight = numSupports * cellHeight
     
-    // 绘制工作面边框（跟随缩放平移）
+    // 缂佹ê鍩楀銉ょ稊闂堛垼绔熷鍡礄鐠虹喖娈㈢紓鈺傛杹楠炲磭些閿?
     ctx.strokeStyle = REGION_COLORS.workface_border
     ctx.lineWidth = 3 / scale.value
     ctx.strokeRect(0, 0, dataWidth, dataHeight)
     
-    // 绘制工作面标签
+    // 缂佹ê鍩楀銉ょ稊闂堛垺鐖ｇ粵?
     ctx.fillStyle = REGION_COLORS.workface_border
     ctx.font = `${12 / scale.value}px Arial`
     ctx.fillText('工作面边界', 5 / scale.value, -8 / scale.value)
     
-    // 绘制热力图数据
+    // 缂佹ê鍩楅悜顓炲閸ョ偓鏆熼幑?
     if (hasData.value) {
       drawHeatmapData(ctx, cellWidth, cellHeight, numSupports, numDays)
     }
@@ -605,13 +605,13 @@ function drawHeatmap() {
 }
 
 function drawHeatmapData(ctx, cellWidth, cellHeight, numSupports, numDays) {
-  // 只渲染可见区域
+  // 閸欘亝瑕嗛弻鎾冲讲鐟欎礁灏崺?
   const visibleStartCol = Math.max(0, Math.floor(-offsetX.value / scale.value / cellWidth))
   const visibleEndCol = Math.min(numDays, Math.ceil((-offsetX.value + ctx.canvas.width / dpr.value) / scale.value / cellWidth))
   const visibleStartRow = Math.max(0, Math.floor(-offsetY.value / scale.value / cellHeight))
   const visibleEndRow = Math.min(numSupports, Math.ceil((-offsetY.value + ctx.canvas.height / dpr.value) / scale.value / cellHeight))
 
-  // 批量绘制
+  // 閹靛綊鍣虹紒妯哄煑
   const batchSize = 500
   let batch = []
   
@@ -620,7 +620,7 @@ function drawHeatmapData(ctx, cellWidth, cellHeight, numSupports, numDays) {
       const value = props.matrix[row]?.[col]
       if (!Number.isFinite(value)) continue
       
-      // Y轴反转：row 0 在矩阵顶部，画布上支架1在底部
+      // Y鏉炴潙寮芥潪顒婄窗row 0 閸︺劎鐓╅梼鐢搞€婇柈顭掔礉閻㈣绔锋稉濠冩暜閺?閸︺劌绨抽柈?
       const y = (numSupports - 1 - row) * cellHeight
       const x = col * cellWidth
       
@@ -643,12 +643,12 @@ function drawHeatmapData(ctx, cellWidth, cellHeight, numSupports, numDays) {
     drawBatch(ctx, batch)
   }
 
-  // 网格线
+  // 缂冩垶鐗哥痪?
   if (showGrid.value) {
     drawGrid(ctx, numDays, numSupports, cellWidth, cellHeight)
   }
   
-  // 高亮悬停单元格
+  // 妤傛ü瀵掗幃顒€浠犻崡鏇炲帗閺?
   if (hoveredCell.value) {
     drawHighlight(ctx, hoveredCell.value, numSupports, cellWidth, cellHeight)
   }
@@ -672,13 +672,13 @@ function drawGrid(ctx, cols, rows, cellWidth, cellHeight) {
   ctx.lineWidth = 0.5 / scale.value
   ctx.beginPath()
   
-  // 纵向网格（每10天）
+  // 缁鹃潧鎮滅純鎴炵壐閿涘牊鐦?0婢垛晪绱?
   for (let i = 0; i <= cols; i += 10) {
     const x = i * cellWidth
     ctx.moveTo(x, 0)
     ctx.lineTo(x, rows * cellHeight)
   }
-  // 横向网格（每10个支架）
+  // 濡亜鎮滅純鎴炵壐閿涘牊鐦?0娑擃亝鏁弸璁圭礆
   for (let i = 0; i <= rows; i += 10) {
     const y = i * cellHeight
     ctx.moveTo(0, y)
@@ -688,7 +688,7 @@ function drawGrid(ctx, cols, rows, cellWidth, cellHeight) {
 }
 
 function drawHighlight(ctx, cell, numSupports, cellWidth, cellHeight) {
-  // Y轴反转
+  // Y鏉炴潙寮芥潪?
   const y = (numSupports - 1 - cell.row) * cellHeight
   const x = cell.col * cellWidth
   
@@ -718,7 +718,7 @@ function getCellAtEvent(event) {
   const cellHeight = rect.height / numSupports
 
   const col = Math.floor(x / cellWidth)
-  // Y轴反转
+  // Y鏉炴潙寮芥潪?
   const row = numSupports - 1 - Math.floor(y / cellHeight)
 
   if (col >= 0 && col < numDays && row >= 0 && row < numSupports) {
@@ -832,13 +832,13 @@ async function executeExport() {
   isExporting.value = true
   
   try {
-    // 如果 DPI 不是 96，需要创建高分辨率版本
+    // 婵″倹鐏?DPI 娑撳秵妲?96閿涘矂娓剁憰浣稿灡瀵ゆ椽鐝崚鍡氶哺閻滃洨澧楅張?
     let exportCanvas = canvas
     if (exportDpi.value > 96) {
       exportCanvas = await createHighResCanvas(canvas, exportDpi.value / 96)
     }
     
-    // 根据格式导出
+    // 閺嶈宓侀弽鐓庣础鐎电厧鍤?
     const mimeType = getMimeType(exportFormat.value)
     const quality = exportFormat.value === 'jpg' ? 0.92 : undefined
     
@@ -887,7 +887,7 @@ function formatDate() {
   return `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`
 }
 
-// Toast 提示（从父组件注入或独立使用）
+// Toast 閹绘劗銇氶敍鍫滅矤閻栧墎绮嶆禒鑸垫暈閸忋儲鍨ㄩ悪顒傜彌娴ｈ法鏁ら敍?
 let showToast = null
 function setToastHandler(handler) {
   showToast = handler
@@ -1064,7 +1064,7 @@ watch(() => props.matrix, () => {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #F5F5F5; /* 采区背景色 */
+  background: #F5F5F5; /* 闁插洤灏懗灞炬珯閼?*/
 }
 
 .canvas-container {

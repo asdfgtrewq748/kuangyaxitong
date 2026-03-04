@@ -25,8 +25,8 @@
         <button class="tool-btn" type="button" :class="{ active: showGeoPanel }" @click="showGeoPanel = !showGeoPanel">{{ av('geologyCompare') }}</button>
         <button class="tool-btn" type="button" :class="{ active: showEvalPanel }" @click="showEvalPanel = !showEvalPanel">{{ av('evaluation') }}</button>
         <button class="tool-btn" type="button" @click="exportCurrentFigure">{{ av('exportHd') }}</button>
-        <button class="tool-btn" type="button" :disabled="exportingPack || !hasSpatialData" @click="exportSciencePackage">{{ exportingPack ? av('packing') : av('exportPack') }}</button>
-        <button class="tool-btn" type="button" :disabled="!hasSpatialData" @click="goReport">{{ av('nextReport') }}</button>
+        <button class="tool-btn" type="button" :disabled="!hasSpatialData" @click="goScienceFigures">{{ av('openSciencePage') }}</button>
+        <button class="tool-btn" type="button" :disabled="!hasSpatialData" @click="goPressureAnalysis">{{ av('nextReport') }}</button>
         <button class="tool-btn" type="button" @click="toggleFullscreen">{{ av('fullscreen') }}</button>
       </div>
     </nav>
@@ -175,6 +175,9 @@
         <button class="tool-btn small geo-run-btn" type="button" :disabled="geoCompareLoading || !seamName" @click="runGeoCompare">
           {{ geoCompareLoading ? av('computing') : av('runCompare') }}
         </button>
+        <button class="tool-btn small geo-run-btn fusion-run-btn" type="button" :disabled="fusionLoading || !hasSpatialData" @click="loadFusionPreview">
+          {{ fusionLoading ? av('fusionLoadingAction') : av('loadFusion') }}
+        </button>
         <p v-if="geoCompareError" class="geo-error">{{ geoCompareError }}</p>
         <div v-if="geoCompareResult" class="geo-result-grid">
           <div class="geo-cell"><span>{{ av('geoMode') }}</span><strong>{{ geoCompareResult.algorithm_mode }}</strong></div>
@@ -234,21 +237,49 @@
       </section>
     </transition>
 
-    <section v-if="hasSpatialData" class="science-section">
+    <section v-if="hasSpatialData" class="science-entry">
       <header>
         <h3>{{ av('scienceTitle') }}</h3>
         <p>{{ av('scienceDesc') }}</p>
-        <p class="data-note">{{ av('scienceNoteModelDerivation') }}</p>
-        <p class="data-note">
-          {{ av('scienceNoteMatrixLink') }}
-          <template v-if="matrixSelection !== 'all'">{{ av('scienceNoteEsc') }}</template>
-          <template v-if="!matrixLinkable">{{ av('scienceNoteUnavailable') }}</template>
-        </p>
-        <p class="data-note">{{ av('scienceNoteExport') }}</p>
-        <button v-if="matrixSelection !== 'all'" type="button" class="tool-btn small" @click="clearMatrixSelection">{{ av('clearLink') }}</button>
-        <p v-if="exportNote" class="export-note">{{ exportNote }}</p>
+        <p class="data-note">{{ av('scienceSubpageHint') }}</p>
+        <button type="button" class="tool-btn small" @click="goScienceFigures">{{ av('openSciencePage') }}</button>
       </header>
-      <ValidationScienceFigures :result="scienceResult" :evaluation="evalData" @matrix-select="onMatrixSelect" />
+    </section>
+
+    <section v-if="hasSpatialData" class="fusion-section">
+      <header>
+        <h3>{{ av('fusionTitle') }}</h3>
+        <p>{{ av('fusionDesc') }}</p>
+        <p class="data-note">{{ av('fusionJobTip') }}</p>
+        <div class="fusion-controls">
+          <label class="fusion-focus-select">
+            <span>{{ av('fusionProfileFocus') }}</span>
+            <select v-model="fusionProfileFocus" :disabled="fusionLoading || !fusionJobId">
+              <option value="balanced">{{ av('fusionFocusBalanced') }}</option>
+              <option value="shallow">{{ av('fusionFocusShallow') }}</option>
+              <option value="deep">{{ av('fusionFocusDeep') }}</option>
+            </select>
+          </label>
+        </div>
+        <p class="data-note">{{ av('fusionProfileHint') }}</p>
+        <p v-if="fusionJobId" class="fusion-job-label">{{ av('fusionJobLabel', { jobId: fusionJobId }) }}</p>
+      </header>
+      <GeoMpiFusion3D
+        ref="fusionViewerRef"
+        :title="av('fusionViewerTitle')"
+        :subtitle="av('fusionViewerSubtitle', { seam: seamName || av('targetSeam'), metric: metricLabel(activeMetric) })"
+        :geomodel="fusionGeomodel"
+        :stress-profile="fusionStressProfile"
+        :mpi-grid="activeMetricGrid"
+        :mpi-bounds="spatialData?.bounds || null"
+        :metric="activeMetric"
+        :metric-stats="currentMetricStats"
+        :loading="fusionLoading"
+        :loading-text="av('fusionLoadingText')"
+        :empty-text="av('fusionEmpty')"
+        :error-text="fusionError"
+        @refresh="loadFusionPreview"
+      />
     </section>
 
     <div v-if="hoverInfo && hasSpatialData" class="hover-tooltip" :style="{ left: `${hoverPos.x + 14}px`, top: `${hoverPos.y + 14}px` }">
@@ -268,13 +299,23 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCoalSeams, getRockParams, getSeamOverburden, mpiCalculateGeo, validationEvaluate, validationSpatialOverview } from '../api'
+import {
+  getCoalSeams,
+  getGeomodelIntegrationJobs,
+  getGeomodelStressProfile,
+  getGeomodelIntegrationVisualization,
+  getRockParams,
+  getSeamOverburden,
+  mpiCalculateGeo,
+  validationEvaluate,
+  validationSpatialOverview
+} from '../api'
 import { useViewport } from '../composables/useViewport'
 import { useIndicatorCanvas } from '../composables/useIndicatorCanvas'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import { useI18n } from '../composables/useI18n'
 import { LRUCache } from '../lib/lruCache'
-import ValidationScienceFigures from '../components/validation/ValidationScienceFigures.vue'
+import GeoMpiFusion3D from '../components/GeoMpiFusion3D.vue'
 import { SkeletonPanel } from '../components/library'
 
 const route = useRoute()
@@ -319,8 +360,6 @@ const spatialData = shallowRef(null)
 const evalData = ref(null)
 const evalLoading = ref(false)
 const evalMessage = ref('')
-const exportingPack = ref(false)
-const exportNote = ref('')
 const hoverInfo = ref(null)
 const hoverPos = reactive({ x: 0, y: 0 })
 const thumbHover = reactive({ visible: false, metric: '', x: 0, y: 0 })
@@ -330,6 +369,7 @@ const matrixSelection = ref('all')
 const activePointerId = ref(null)
 const exportStaticMode = ref(false)
 const thumbCanvasRefs = {}
+const fusionViewerRef = ref(null)
 const spatialCache = new LRUCache(200)
 const layerParamsCache = new LRUCache(120)
 const SPATIAL_CACHE_MODEL_REV = 'advanced_v2_asi_calibrated_v1'
@@ -337,15 +377,14 @@ const geoModelJobId = ref('')
 const geoCompareLoading = ref(false)
 const geoCompareError = ref('')
 const geoCompareResult = ref(null)
-let jsZipCtor = null
-
-const getJSZipCtor = async () => {
-  if (jsZipCtor) return jsZipCtor
-  const mod = await import('jszip')
-  jsZipCtor = mod?.default || mod?.JSZip || window.JSZip || null
-  if (!jsZipCtor) throw new Error(av('jszipLoadFailed'))
-  return jsZipCtor
-}
+const fusionGeomodel = shallowRef(null)
+const fusionStressProfile = shallowRef(null)
+const fusionProfileFocus = ref('balanced')
+const fusionLoading = ref(false)
+const fusionError = ref('')
+const fusionJobId = ref('')
+const SCIENCE_SNAPSHOT_KEY = 'algorithm_validation_science_snapshot_v1'
+let scienceSnapshotPersistTimer = null
 
 const { viewport, worldToScreen, screenToWorld, fitToBounds, startDrag, dragTo, endDrag, zoomAt } = useViewport()
 const { getLegendGradient, drawGrid, drawBoreholes, pickNearestBorehole, sampleGridValue, drawMiniHeatmap } = useIndicatorCanvas()
@@ -387,6 +426,7 @@ const showLowContrastHint = computed(() => (
 const currentMpiMean = computed(() => Number(spatialData.value?.statistics?.mpi?.mean || 0))
 const baselineMpi = computed(() => Math.max(0, currentMpiMean.value - 4.5))
 const currentHighRiskCount = computed(() => highRiskCount(activeMetric.value))
+const activeMetricGrid = computed(() => spatialData.value?.grids?.[activeMetric.value] || [])
 const evalSourceLabel = computed(() => {
   if (evalSourceType.value === 'real_label_stream') return av('evalSource.realLabelStream')
   if (evalSourceType.value === 'pseudo_threshold') return av('evalSource.pseudoThreshold')
@@ -948,46 +988,29 @@ const onThumbLeave = () => {
   thumbHover.visible = false
 }
 
-const safeFilename = (name) => String(name || 'figure').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_')
+const NATURE_EXPORT_PROFILE = Object.freeze({
+  targetLongEdgePx: 4200,
+  rasterScaleMin: 1.25,
+  rasterScaleMax: 6
+})
 
-const canvasToBlob = (canvas, type = 'image/png', quality = 1) => (
-  new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob)
-      else reject(new Error(av('errorCanvasExportFailed')))
-    }, type, quality)
-  })
-)
-
-const serializeSvg = (svgEl) => {
-  const clone = svgEl.cloneNode(true)
-  if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-  if (!clone.getAttribute('xmlns:xlink')) clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
-  return new XMLSerializer().serializeToString(clone)
-}
-
-const svgStringToPngBlob = async (svgText, width, height, scale = 3) => {
-  const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image()
-      i.onload = () => resolve(i)
-      i.onerror = () => reject(new Error(av('errorSvgToPngFailed')))
-      i.src = url
-    })
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.max(1, Math.round(width * scale))
-    canvas.height = Math.max(1, Math.round(height * scale))
-    const ctx = canvas.getContext('2d')
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-    return await canvasToBlob(canvas, 'image/png', 1)
-  } finally {
-    URL.revokeObjectURL(url)
+const resolveRasterExport = (width, height, options = {}) => {
+  const sourceWidth = Math.max(1, Math.round(Number(width) || 1))
+  const sourceHeight = Math.max(1, Math.round(Number(height) || 1))
+  const targetLongEdge = Math.max(1200, Number(options.targetLongEdge) || NATURE_EXPORT_PROFILE.targetLongEdgePx)
+  const minScale = Math.max(1, Number(options.minScale) || 1)
+  const maxScale = Math.max(minScale, Number(options.maxScale) || 6)
+  const baseScale = targetLongEdge / Math.max(sourceWidth, sourceHeight)
+  const scale = clamp(baseScale, minScale, maxScale)
+  return {
+    sourceWidth,
+    sourceHeight,
+    scale,
+    pixelWidth: Math.max(1, Math.round(sourceWidth * scale)),
+    pixelHeight: Math.max(1, Math.round(sourceHeight * scale))
   }
 }
+
 
 const waitNextFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve))
 const runWithStaticOverlay = async (job) => {
@@ -1007,14 +1030,18 @@ const runWithStaticOverlay = async (job) => {
 const exportCurrentFigure = async () => {
   if (!heatmapCanvas.value || !overlayCanvas.value) return
   await runWithStaticOverlay(async () => {
-    const scale = 3
     const sourceW = heatmapCanvas.value.width
     const sourceH = heatmapCanvas.value.height
+    const raster = resolveRasterExport(sourceW, sourceH, {
+      targetLongEdge: NATURE_EXPORT_PROFILE.targetLongEdgePx,
+      minScale: NATURE_EXPORT_PROFILE.rasterScaleMin,
+      maxScale: NATURE_EXPORT_PROFILE.rasterScaleMax
+    })
     const merged = document.createElement('canvas')
-    merged.width = Math.round(sourceW * scale)
-    merged.height = Math.round(sourceH * scale)
+    merged.width = raster.pixelWidth
+    merged.height = raster.pixelHeight
     const ctx = merged.getContext('2d')
-    ctx.scale(scale, scale)
+    ctx.scale(raster.scale, raster.scale)
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, sourceW, sourceH)
     ctx.drawImage(heatmapCanvas.value, 0, 0)
@@ -1027,80 +1054,6 @@ const exportCurrentFigure = async () => {
     link.download = `algorithm_validation_${seamName.value || 'seam'}_${activeMetric.value}_hd.png`
     link.click()
   })
-}
-
-const exportSciencePackage = async () => {
-  if (!pageRoot.value || !hasSpatialData.value || exportingPack.value) return
-  exportingPack.value = true
-  exportNote.value = ''
-  try {
-    await runWithStaticOverlay(async () => {
-      const JSZip = await getJSZipCtor()
-      const zip = new JSZip()
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-
-      const mainCanvas = document.createElement('canvas')
-      const scale = 3
-      const sourceW = heatmapCanvas.value.width
-      const sourceH = heatmapCanvas.value.height
-      mainCanvas.width = Math.round(sourceW * scale)
-      mainCanvas.height = Math.round(sourceH * scale)
-      const ctx = mainCanvas.getContext('2d')
-      ctx.scale(scale, scale)
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, sourceW, sourceH)
-      ctx.drawImage(heatmapCanvas.value, 0, 0)
-      ctx.drawImage(overlayCanvas.value, 0, 0)
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'
-      ctx.font = "14px 'Times New Roman', 'Noto Serif SC', serif"
-      ctx.fillText(av('exportCaption', { seam: seamName.value || '--', metric: metricLabel(activeMetric.value), resolution: resolution.value }), 16, 26)
-      zip.file('figures/main_heatmap_hd.png', await canvasToBlob(mainCanvas, 'image/png', 1))
-
-      const cards = pageRoot.value.querySelectorAll('.science-section .figure-card')
-      let cardIndex = 0
-      for (const card of cards) {
-        cardIndex += 1
-        const title = card.querySelector('h4')?.textContent?.trim() || av('figureFallbackTitle', { index: cardIndex })
-        const svg = card.querySelector('.science-chart svg')
-        if (!svg) continue
-        const rect = svg.getBoundingClientRect()
-        const viewBox = svg.viewBox?.baseVal
-        const width = viewBox?.width || rect.width || 960
-        const height = viewBox?.height || rect.height || 540
-        const svgText = serializeSvg(svg)
-        const base = safeFilename(`${String(cardIndex).padStart(2, '0')}_${title}`)
-        zip.file(`figures/${base}.svg`, svgText)
-        zip.file(`figures/${base}.png`, await svgStringToPngBlob(svgText, width, height, 3))
-      }
-
-      zip.file('data/spatial_statistics.json', JSON.stringify(metricStats.value, null, 2))
-      zip.file('data/evaluation.json', JSON.stringify(evalData.value || {}, null, 2))
-      zip.file('data/science_result.json', JSON.stringify(scienceResult.value || {}, null, 2))
-      zip.file('README.txt', [
-        av('readme.title'),
-        av('readme.time', { value: new Date().toLocaleString() }),
-        av('readme.seam', { seam: seamName.value || '--' }),
-        av('readme.mainMetric', { metric: metricLabel(activeMetric.value) }),
-        '',
-        av('readme.content'),
-        av('readme.figures'),
-        av('readme.data')
-      ].join('\n'))
-
-      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${safeFilename(av('exportPackageNamePrefix'))}_${safeFilename(seamName.value || 'seam')}_${timestamp}.zip`
-      link.click()
-      URL.revokeObjectURL(url)
-    })
-    exportNote.value = av('exportPackDone')
-  } catch (error) {
-    exportNote.value = error?.message || av('exportPackFailed')
-  } finally {
-    exportingPack.value = false
-  }
 }
 
 const exportSpatialJson = () => {
@@ -1125,9 +1078,16 @@ const normalizeQuerySeam = (value) => {
   return typeof value === 'string' ? value : ''
 }
 
-const goReport = () => {
+const goPressureAnalysis = () => {
   router.push({
-    name: 'Report',
+    name: 'PressureAnalysis',
+    query: seamName.value ? { seam: seamName.value } : undefined
+  })
+}
+
+const goScienceFigures = () => {
+  router.push({
+    name: 'AlgorithmValidationFigures',
     query: seamName.value ? { seam: seamName.value } : undefined
   })
 }
@@ -1202,6 +1162,75 @@ const buildGeoComparePoint = async () => {
   }
 }
 
+const toUnixTs = (raw) => {
+  const ts = Date.parse(String(raw || ''))
+  return Number.isFinite(ts) ? ts : 0
+}
+
+const resolveGeomodelJobId = async () => {
+  const manual = String(geoModelJobId.value || '').trim()
+  if (manual) return manual
+
+  const { data } = await getGeomodelIntegrationJobs()
+  const jobs = Array.isArray(data) ? data : []
+  const completed = jobs
+    .filter((item) => String(item?.status || '').toLowerCase() === 'completed')
+    .sort((a, b) => toUnixTs(b?.created_at) - toUnixTs(a?.created_at))
+  return completed[0]?.job_id || ''
+}
+
+const loadFusionPreview = async () => {
+  fusionError.value = ''
+  if (!hasSpatialData.value) {
+    fusionError.value = av('errorFusionNeedSpatial')
+    return
+  }
+
+  fusionLoading.value = true
+  try {
+    const jobId = await resolveGeomodelJobId()
+    if (!jobId) {
+      fusionGeomodel.value = null
+      fusionStressProfile.value = null
+      fusionJobId.value = ''
+      fusionError.value = av('errorNoGeomodelJob')
+      return
+    }
+    const { data } = await getGeomodelIntegrationVisualization(jobId, { include_mesh: true })
+    fusionGeomodel.value = data || null
+    await loadFusionStressProfile(jobId, { silent: true })
+    fusionJobId.value = jobId
+    if (!geoModelJobId.value) geoModelJobId.value = jobId
+  } catch (error) {
+    fusionStressProfile.value = null
+    fusionError.value = error?.response?.data?.detail || error?.message || av('errorFusionLoadFailed')
+  } finally {
+    fusionLoading.value = false
+  }
+}
+
+const loadFusionStressProfile = async (jobId, options = {}) => {
+  const { silent = false } = options
+  if (!jobId) {
+    fusionStressProfile.value = null
+    return false
+  }
+  try {
+    const { data } = await getGeomodelStressProfile(jobId, {
+      samples: 96,
+      focus: fusionProfileFocus.value
+    })
+    fusionStressProfile.value = data || null
+    return true
+  } catch (error) {
+    fusionStressProfile.value = null
+    if (!silent) {
+      fusionError.value = error?.response?.data?.detail || error?.message || av('errorFusionLoadFailed')
+    }
+    return false
+  }
+}
+
 const runGeoCompare = async () => {
   geoCompareError.value = ''
   geoCompareResult.value = null
@@ -1234,8 +1263,44 @@ watch(seamName, () => {
   setSelectedSeam(seamName.value || '')
   geoCompareError.value = ''
   geoCompareResult.value = null
+  fusionGeomodel.value = null
+  fusionStressProfile.value = null
+  fusionError.value = ''
+  fusionJobId.value = ''
   if (hasInitialized.value) fetchSpatial({ force: false })
 })
+watch(fusionProfileFocus, async () => {
+  if (!fusionJobId.value || !fusionGeomodel.value || fusionLoading.value) return
+  await loadFusionStressProfile(fusionJobId.value, { silent: true })
+})
+
+const persistScienceSnapshot = () => {
+  if (!hasSpatialData.value || !scienceResult.value) return
+  try {
+    const payload = {
+      seam: seamName.value || '',
+      updated_at: new Date().toISOString(),
+      result: scienceResult.value,
+      evaluation: evalData.value || null
+    }
+    window.sessionStorage?.setItem?.(SCIENCE_SNAPSHOT_KEY, JSON.stringify(payload))
+  } catch {
+    // ignore persistence errors
+  }
+}
+
+const scheduleScienceSnapshotPersist = () => {
+  window.clearTimeout(scienceSnapshotPersistTimer)
+  scienceSnapshotPersistTimer = window.setTimeout(() => {
+    scienceSnapshotPersistTimer = null
+    persistScienceSnapshot()
+  }, 120)
+}
+
+watch([scienceResult, evalData, seamName, hasSpatialData], () => {
+  scheduleScienceSnapshotPersist()
+}, { flush: 'post' })
+
 watch(matrixLinkable, (ok) => {
   if (!ok && matrixSelection.value !== 'all') {
     matrixSelection.value = 'all'
@@ -1260,6 +1325,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.clearTimeout(weightDebounceTimer)
   window.clearTimeout(resizeTimer)
+  window.clearTimeout(scienceSnapshotPersistTimer)
   if (renderRaf) window.cancelAnimationFrame(renderRaf)
   if (thumbRaf) window.cancelAnimationFrame(thumbRaf)
   if (stageContainer.value && activePointerId.value !== null && stageContainer.value.hasPointerCapture?.(activePointerId.value)) {
@@ -1362,6 +1428,7 @@ onBeforeUnmount(() => {
 .geo-row input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
 .geo-row input:focus-visible { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(15,118,110,.2); }
 .geo-run-btn { width: 100%; justify-content: center; margin-bottom: 8px; color: #111827; border-color: #d8e6e3; background: #f8fafc; }
+.fusion-run-btn { margin-top: -2px; }
 .geo-error { margin: 0 0 8px; color: #b91c1c; font-size: 12px; }
 .geo-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .geo-cell { border: 1px solid #d8e6e3; border-radius: 8px; background: #f8fafc; padding: 7px 8px; }
@@ -1387,12 +1454,22 @@ onBeforeUnmount(() => {
 .cm-cell span { display: block; font-size: 11px; color: #475569; }
 .cm-cell b { font-size: 20px; color: #111827; }
 .baseline-svg { width: 100%; height: auto; font-family: 'Times New Roman', serif; font-size: 12px; }
-.science-section { border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: var(--bg-elevated); box-shadow: var(--shadow-sm); padding: 12px; }
-.science-section header { margin-bottom: 10px; }
-.science-section h3 { margin: 0; font-size: 16px; font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif; color: #111827; }
-.science-section p { margin: 5px 0 0; font-size: 12px; color: #475569; }
-.science-section .data-note { color: #92400e; }
-.science-section .export-note { color: #065f46; font-weight: 600; }
+.science-entry { border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: var(--bg-elevated); box-shadow: var(--shadow-sm); padding: 12px; }
+.science-entry header { margin-bottom: 4px; display: grid; gap: 6px; }
+.science-entry h3 { margin: 0; font-size: 16px; font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif; color: #111827; }
+.science-entry p { margin: 0; font-size: 12px; color: #475569; }
+.science-entry .data-note { color: #92400e; }
+.science-entry .export-note { color: #065f46; font-weight: 600; }
+.fusion-section { border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: var(--bg-elevated); box-shadow: var(--shadow-sm); padding: 12px; }
+.fusion-section header { margin-bottom: 10px; }
+.fusion-section h3 { margin: 0; font-size: 16px; font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif; color: #111827; }
+.fusion-section p { margin: 5px 0 0; font-size: 12px; color: #475569; }
+.fusion-controls { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+.fusion-focus-select { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #334155; }
+.fusion-focus-select select { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #0f172a; padding: 4px 8px; font-size: 12px; }
+.fusion-focus-select select:focus-visible { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(15,118,110,.18); }
+.fusion-section .data-note { color: #92400e; }
+.fusion-job-label { color: #0f766e; font-weight: 600; }
 .hover-tooltip { position: absolute; z-index: 30; pointer-events: none; min-width: 200px; border: 1px solid rgba(15,23,42,.2); border-radius: 10px; background: rgba(255,255,255,.95); box-shadow: 0 12px 24px rgba(15,23,42,.15); padding: 8px 10px; font-size: 12px; color: #1f2937; }
 .hover-tooltip p { margin: 2px 0; }
 .hover-tooltip .risk { font-weight: 600; color: #991b1b; }

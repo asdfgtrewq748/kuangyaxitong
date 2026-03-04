@@ -1,9 +1,9 @@
-import { computed, reactive, watch } from 'vue'
+﻿import { computed, reactive, watch } from 'vue'
 
 const STORAGE_KEY = 'kuangya_workspace_flow_v1'
 const PERSIST_DEBOUNCE_MS = 120
 
-const flowOrder = ['DataImport', 'Interpolation', 'AcademicAlgorithm', 'AlgorithmValidation', 'Report']
+const flowOrder = ['DataImport', 'Interpolation', 'AcademicAlgorithm', 'AlgorithmValidation', 'PressureAnalysis']
 
 const defaultState = () => ({
   selectedSeam: '',
@@ -12,29 +12,48 @@ const defaultState = () => ({
     DataImport: false,
     Interpolation: false,
     AcademicAlgorithm: false,
-    MpiAlgorithm: false,
-    PressureIndex: false,
     AlgorithmValidation: false,
-    Report: false
+    PressureAnalysis: false
   },
   metrics: {
     boreholes: 0,
     interpolationPoints: 0,
-    pressureReady: false,
     validationReady: false,
-    reportGeneratedAt: ''
+    pressureAnalysisVisited: false
   }
 })
 
 const workspaceState = reactive(defaultState())
 let persistTimer = null
 
+const pickKnownKeys = (safeObj, sourceObj) => {
+  const input = sourceObj && typeof sourceObj === 'object' ? sourceObj : {}
+  const result = {}
+  for (const key of Object.keys(safeObj)) {
+    result[key] = key in input ? input[key] : safeObj[key]
+  }
+  return result
+}
+
 const applyState = (source = {}) => {
   const safe = defaultState()
   workspaceState.selectedSeam = typeof source.selectedSeam === 'string' ? source.selectedSeam : safe.selectedSeam
   workspaceState.updatedAt = typeof source.updatedAt === 'string' ? source.updatedAt : safe.updatedAt
-  workspaceState.steps = { ...safe.steps, ...(source.steps || {}) }
-  workspaceState.metrics = { ...safe.metrics, ...(source.metrics || {}) }
+
+  const nextSteps = pickKnownKeys(safe.steps, source.steps)
+  for (const key of Object.keys(nextSteps)) {
+    nextSteps[key] = Boolean(nextSteps[key])
+  }
+  workspaceState.steps = nextSteps
+
+  const nextMetrics = pickKnownKeys(safe.metrics, source.metrics)
+  workspaceState.metrics = {
+    ...nextMetrics,
+    boreholes: Number(nextMetrics.boreholes) || 0,
+    interpolationPoints: Number(nextMetrics.interpolationPoints) || 0,
+    validationReady: Boolean(nextMetrics.validationReady),
+    pressureAnalysisVisited: Boolean(nextMetrics.pressureAnalysisVisited)
+  }
 }
 
 const loadState = () => {

@@ -3,7 +3,7 @@
 const routes = [
   {
     path: '/',
-    redirect: '/algorithm-validation'
+    redirect: '/data'
   },
   {
     path: '/data',
@@ -18,13 +18,6 @@ const routes = [
     meta: { title: '插值分析', titleKey: 'nav.interpolation', icon: 'chart', navOrder: 20, flowOrder: 20 }
   },
   {
-    path: '/mpi-heatmap-pro',
-    alias: ['/mpi-heatmap'],
-    name: 'MpiHeatmapPro',
-    component: () => import('../views/MpiHeatmapPro.vue'),
-    meta: { title: 'MPI 数值模拟', titleKey: 'nav.mpiHeatmapPro', icon: 'bolt', navOrder: 40 }
-  },
-  {
     path: '/academic-algorithm',
     alias: ['/mpi-algorithm'],
     name: 'AcademicAlgorithm',
@@ -36,50 +29,32 @@ const routes = [
     alias: ['/pressure'],
     name: 'AlgorithmValidation',
     component: () => import('../views/AlgorithmValidation.vue'),
-    meta: { title: '新算法实证', titleKey: 'nav.algorithmValidation', icon: 'flask', navOrder: 35, flowOrder: 40 }
+    meta: { title: '新算法实证', titleKey: 'nav.algorithmValidation', icon: 'flask', navOrder: 40, flowOrder: 40 }
   },
   {
-    path: '/research-workbench',
-    alias: ['/research-portal'],
-    name: 'ResearchWorkbench',
-    component: () => import('../views/ResearchWorkbench.vue'),
-    meta: { title: '科研工作台', titleKey: 'nav.researchWorkbench', icon: 'book', navOrder: 55 }
+    path: '/algorithm-validation/figures',
+    name: 'AlgorithmValidationFigures',
+    component: () => import('../views/AlgorithmValidationFigures.vue'),
+    meta: { title: '科研图子页面', nav: false, workflow: false }
   },
   {
-    path: '/geo-mpi-studio',
-    name: 'GeoMpiStudio',
-    component: () => import('../views/GeoMpiStudio.vue'),
-    meta: { title: '空间实验室', titleKey: 'nav.geoMpiStudio', icon: 'chart', navOrder: 56, workflow: false }
-  },
-  {
-    path: '/steps',
-    name: 'Steps',
-    component: () => import('../views/Steps.vue'),
-    meta: { title: '来压步距', titleKey: 'nav.steps', icon: 'grid', navOrder: 60 }
-  },
-  {
-    path: '/report',
-    name: 'Report',
-    component: () => import('../views/Report.vue'),
-    meta: { title: '结果报告', titleKey: 'nav.report', icon: 'report', navOrder: 70, flowOrder: 50 }
-  },
-  {
-    path: '/geomodel-viz',
-    name: 'GeomodelVisualization',
-    component: () => import('../views/GeomodelVisualization.vue'),
-    meta: { title: '地质建模可视化', titleKey: 'nav.geomodelVisualization', icon: 'chart', navOrder: 57 }
-  },
-  {
-    path: '/scene3d',
-    name: 'Scene3D',
-    component: () => import('../views/Scene3DPage.vue'),
-    meta: { title: '三维指标可视化', titleKey: 'nav.scene3d', icon: 'chart', navOrder: 58 }
+    path: '/fusion-preview',
+    alias: ['/geomodel-fusion'],
+    name: 'FusionPreview',
+    component: () => import('../views/FusionPreview.vue'),
+    meta: { title: '三维融合预览', titleKey: 'nav.fusionPreview', icon: 'cube', navOrder: 45, workflow: false }
   },
   {
     path: '/pressure-analysis',
     name: 'PressureAnalysis',
     component: () => import('../views/PressureAnalysisUltra.vue'),
-    meta: { title: '矿压数据分析', titleKey: 'nav.pressureAnalysis', icon: 'chart', navOrder: 59 }
+    meta: { title: '矿压数据分析', titleKey: 'nav.pressureAnalysis', icon: 'chart', navOrder: 50, flowOrder: 50 }
+  },
+  {
+    path: '/pressure-analysis/charts',
+    name: 'PressureAnalysisCharts',
+    component: () => import('../views/PressureAnalysisCharts.vue'),
+    meta: { title: '矿压图表中心', nav: false, workflow: false }
   }
 ]
 

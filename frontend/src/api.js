@@ -267,8 +267,10 @@ export const downloadGeomodelArtifact = (jobId, artifactName) =>
   api.get(`/api/geomodel/jobs/${jobId}/artifacts/${encodeURIComponent(artifactName)}`, { responseType: 'blob' })
 export const getGeomodelIntegrationJobs = () =>
   api.get('/api/geomodel-integration/jobs')
-export const getGeomodelIntegrationVisualization = (jobId) =>
-  api.get(`/api/geomodel-integration/visualization/${jobId}`)
+export const getGeomodelIntegrationVisualization = (jobId, params = {}) =>
+  api.get(`/api/geomodel-integration/visualization/${jobId}`, { params })
+export const getGeomodelStressProfile = (jobId, params = {}) =>
+  api.get(`/api/geomodel-integration/stress-profile/${jobId}`, { params })
 export const runGeomodelIntegrationMpi = (payload) =>
   api.post('/api/geomodel-integration/mpi-with-geomodel', payload)
 

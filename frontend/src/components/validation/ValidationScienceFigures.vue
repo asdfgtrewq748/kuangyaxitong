@@ -1,5 +1,5 @@
 ﻿<template>
-  <section class="science-gallery">
+  <section class="science-gallery" :class="[densityClass, columnsClass]" :style="galleryStyle">
     <header class="gallery-head">
       <div class="head-title">
         <h4>SCI 配图增强版（图2-图11）</h4>
@@ -16,70 +16,70 @@
 
     <article class="figure-card">
       <h4>图2 | RSI 机制剖面图（稳定度-损伤-置信带）</h4>
-      <ScienceChart :option="fig2Option" :height="336" />
+      <ScienceChart :option="fig2Option" :height="figureChartHeight" />
       <p class="caption">怎么看：稳定度实线越高越好，误差带越窄代表层位响应更稳定，损伤柱越低越好。</p>
       <p class="caption meta">{{ fig2Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图3 | BRI 微震能量释放、事件频次与累计风险</h4>
-      <ScienceChart :option="fig3Option" :height="336" />
+      <ScienceChart :option="fig3Option" :height="figureChartHeight" />
       <p class="caption">怎么看：能量柱与事件频次线共同识别冲击窗口，累计风险线反映风险积聚过程。</p>
       <p class="caption meta">{{ fig3Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图4 | ASI 径向/切向应力与应力集中系数 Kt</h4>
-      <ScienceChart :option="fig4Option" :height="336" />
+      <ScienceChart :option="fig4Option" :height="figureChartHeight" />
       <p class="caption">怎么看：切向应力峰值与 Kt&gt;2 区段对应高风险圈带，径向应力反映卸压后衰减。</p>
       <p class="caption meta">{{ fig4Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图5 | DBN 后验概率时序（95% CI + 预警阈值）</h4>
-      <ScienceChart :option="fig5Option" :height="336" />
+      <ScienceChart :option="fig5Option" :height="figureChartHeight" />
       <p class="caption">怎么看：后验概率曲线跨过 0.6 报警阈值时需触发强化巡检，CI 带越窄越可信。</p>
       <p class="caption meta">{{ fig5Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图6 | 新旧算法多指标对比（分数 + 增益）</h4>
-      <ScienceChart :option="fig6Option" :height="336" />
+      <ScienceChart :option="fig6Option" :height="figureChartHeight" />
       <p class="caption">怎么看：柱形给出绝对分数，增益折线给出替代旧算法的实际收益幅度。</p>
       <p class="caption meta">{{ fig6Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图7 | 消融实验（模块贡献与性能下降）</h4>
-      <ScienceChart :option="fig7Option" :height="336" />
+      <ScienceChart :option="fig7Option" :height="figureChartHeight" />
       <p class="caption">怎么看：去除模块后的性能下降越大，说明该模块对总体性能贡献越关键。</p>
       <p class="caption meta">{{ fig7Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图8 | 校准曲线（含样本直方图与置信区间）</h4>
-      <ScienceChart :option="fig8Option" :height="336" />
+      <ScienceChart :option="fig8Option" :height="figureChartHeight" />
       <p class="caption">怎么看：曲线贴近对角线且 ECE 越低，模型概率输出越可直接用于阈值决策。</p>
       <p class="caption meta">{{ fig8Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图9 | ROC 曲线（最优阈值点与 AUC）</h4>
-      <ScienceChart :option="fig9Option" :height="336" />
+      <ScienceChart :option="fig9Option" :height="figureChartHeight" />
       <p class="caption">怎么看：曲线越靠左上角越好；灰色阴影带为 bootstrap 95%CI，上下虚线为CI边界，红点为 Youden 最优阈值。</p>
       <p class="caption meta">{{ fig9Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图10 | PR 曲线（基线、F1 等值线与最优点）</h4>
-      <ScienceChart :option="fig10Option" :height="336" />
+      <ScienceChart :option="fig10Option" :height="figureChartHeight" />
       <p class="caption">怎么看：PR 曲线整体越高越好；灰色阴影带为 bootstrap 95%CI，上下虚线为CI边界，绿点为最佳F1运行点。</p>
       <p class="caption meta">{{ fig10Insight }}</p>
     </article>
 
     <article class="figure-card">
       <h4>图11 | 混淆矩阵热图（计数 + 占比 + 诊断指标）</h4>
-      <ScienceChart :option="fig11Option" :height="336" @chart-click="onFig11Click" />
+      <ScienceChart :option="fig11Option" :height="figureChartHeight" @chart-click="onFig11Click" />
       <p class="caption">怎么看：对角线高、非对角低为理想状态；右侧指标用于误报/漏报成本权衡。</p>
       <p class="caption meta">{{ fig11Insight }}</p>
     </article>
@@ -98,6 +98,18 @@ const props = defineProps({
   evaluation: {
     type: Object,
     default: null
+  },
+  columns: {
+    type: [String, Number],
+    default: 'auto'
+  },
+  density: {
+    type: String,
+    default: 'balanced'
+  },
+  chartScale: {
+    type: Number,
+    default: 100
   }
 })
 const emit = defineEmits(['matrix-select'])
@@ -114,6 +126,7 @@ const palette = {
 
 const fontFamily = "'Times New Roman', 'Noto Serif SC', 'Source Han Serif SC', serif"
 const baseGrid = { left: 66, right: 26, top: 46, bottom: 62 }
+const exportPixelRatio = 5
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 const toNum = (v, fallback = 0) => {
@@ -123,6 +136,30 @@ const toNum = (v, fallback = 0) => {
 const pct = (v) => `${(clamp(toNum(v, 0), 0, 1) * 100).toFixed(1)}%`
 const round = (v, d = 3) => Number(toNum(v, 0).toFixed(d))
 const safeDivide = (a, b, fallback = 0) => (b > 0 ? a / b : fallback)
+
+const normalizedColumns = computed(() => ([1, 2].includes(props.columns) ? props.columns : 'auto'))
+const normalizedDensity = computed(() => (['compact', 'balanced', 'focus'].includes(props.density) ? props.density : 'balanced'))
+const normalizedScale = computed(() => clamp(toNum(props.chartScale, 100), 85, 130))
+
+const densityConfig = computed(() => {
+  if (normalizedDensity.value === 'compact') {
+    return { cardMin: 320, gap: 10, cardPadding: 10, headPadding: 10, baseHeight: 300 }
+  }
+  if (normalizedDensity.value === 'focus') {
+    return { cardMin: 440, gap: 16, cardPadding: 14, headPadding: 14, baseHeight: 380 }
+  }
+  return { cardMin: 360, gap: 14, cardPadding: 12, headPadding: 12, baseHeight: 336 }
+})
+
+const figureChartHeight = computed(() => Math.round((densityConfig.value.baseHeight * normalizedScale.value) / 100))
+const densityClass = computed(() => `density-${normalizedDensity.value}`)
+const columnsClass = computed(() => `columns-${normalizedColumns.value}`)
+const galleryStyle = computed(() => ({
+  '--science-card-min': `${densityConfig.value.cardMin}px`,
+  '--science-gap': `${densityConfig.value.gap}px`,
+  '--science-card-padding': `${densityConfig.value.cardPadding}px`,
+  '--science-head-padding': `${densityConfig.value.headPadding}px`
+}))
 
 const axisBase = (name, isValue = true) => ({
   type: isValue ? 'value' : 'category',
@@ -152,7 +189,7 @@ const commonToolbox = {
       title: { zoom: '框选缩放', back: '还原缩放' }
     },
     restore: { title: '重置视图' },
-    saveAsImage: { title: '导出PNG', type: 'png', pixelRatio: 3, backgroundColor: '#ffffff' }
+    saveAsImage: { title: '导出PNG', type: 'png', pixelRatio: exportPixelRatio, backgroundColor: '#ffffff' }
   }
 }
 
@@ -1002,7 +1039,7 @@ const fig11Option = computed(() => {
       ...commonToolbox,
       feature: {
         restore: { title: '重置视图' },
-        saveAsImage: { title: '导出PNG', type: 'png', pixelRatio: 3, backgroundColor: '#ffffff' }
+        saveAsImage: { title: '导出PNG', type: 'png', pixelRatio: exportPixelRatio, backgroundColor: '#ffffff' }
       }
     },
     tooltip: { trigger: 'item', formatter: ({ data: item }) => `${item.label}：${item.value[2]} (${(item.value[3] * 100).toFixed(1)}%)` },
@@ -1047,8 +1084,16 @@ const fig11Option = computed(() => {
 <style scoped>
 .science-gallery {
   display: grid;
-  grid-template-columns: repeat(2, minmax(340px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(var(--science-card-min, 360px), 1fr));
+  gap: var(--science-gap, 14px);
+}
+
+.science-gallery.columns-1 {
+  grid-template-columns: 1fr;
+}
+
+.science-gallery.columns-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .gallery-head {
@@ -1056,7 +1101,7 @@ const fig11Option = computed(() => {
   border: 1px solid #d9e0e8;
   border-radius: 12px;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 65%, #e2e8f0 100%);
-  padding: 12px 14px;
+  padding: var(--science-head-padding, 12px) 14px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -1103,7 +1148,7 @@ const fig11Option = computed(() => {
   border: 1px solid #d9e0e8;
   border-radius: 12px;
   background: #ffffff;
-  padding: 12px;
+  padding: var(--science-card-padding, 12px);
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
 }
 
@@ -1127,9 +1172,9 @@ const fig11Option = computed(() => {
   font-weight: 600;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 980px) {
   .science-gallery {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 
   .gallery-head {
