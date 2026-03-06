@@ -111,6 +111,8 @@
 
     <GeoMpiFusion3D
       ref="fusionViewerRef"
+      panel-label="Fig. 1"
+      :context-meta="fusionContextMeta"
       :title="fp('viewerTitle')"
       :subtitle="fp('viewerSubtitle', { seam: seamName || '--', metric: metric.toUpperCase() })"
       :geomodel="fusionGeomodel"
@@ -191,6 +193,15 @@ const focusLabel = computed(() => {
   if (profileFocus.value === 'deep') return fp('focusDeep')
   return fp('focusBalanced')
 })
+
+const fusionContextMeta = computed(() => ({
+  seam: seamName.value || '',
+  method: method.value || '',
+  resolution: resolution.value || 0,
+  focus: profileFocus.value || '',
+  mode: figureMode.value || '',
+  jobId: fusionJobId.value || ''
+}))
 
 const fmt = (value, digits = 3) => {
   const num = Number(value)

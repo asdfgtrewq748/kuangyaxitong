@@ -9,7 +9,8 @@
     academicAlgorithm: 'Algorithm Theory',
     algorithmValidation: 'Algorithm Validation',
     fusionPreview: 'Fusion Preview',
-    pressureAnalysis: 'Pressure Analysis'
+    pressureAnalysis: 'Pressure Analysis',
+    uncertaintyAnalysis: 'Uncertainty Analysis'
   },
   layout: {
     mainNavigation: 'Main navigation',

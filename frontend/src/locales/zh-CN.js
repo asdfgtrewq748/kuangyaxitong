@@ -9,7 +9,8 @@
     academicAlgorithm: '新算法原理',
     algorithmValidation: '新算法实证',
     fusionPreview: '三维融合预览',
-    pressureAnalysis: '矿压数据分析'
+    pressureAnalysis: '矿压数据分析',
+    uncertaintyAnalysis: '不确定性分析'
   },
   layout: {
     mainNavigation: '主导航',

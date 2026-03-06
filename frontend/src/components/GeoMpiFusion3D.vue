@@ -8,6 +8,8 @@
       <div class="toolbar">
         <label class="toggle"><input v-model="showLayers" type="checkbox">Layers</label>
         <label class="toggle"><input v-model="showMpiSurface" type="checkbox">MPI Surface</label>
+        <label class="toggle"><input v-model="showMpiContours" type="checkbox">Contours</label>
+        <label class="toggle"><input v-model="showHotspots" type="checkbox">Hotspots</label>
         <label class="toggle"><input v-model="showStressCloud" type="checkbox">Stress Cloud</label>
         <label class="toggle"><input v-model="showStressAnchors" type="checkbox" :disabled="!hasStressAnchors">Anchors</label>
         <label class="toggle"><input v-model="showBoreholes" type="checkbox">Boreholes</label>
@@ -63,39 +65,165 @@
 
       <canvas v-show="!loading && hasRenderableData && !errorText" ref="canvasRef" class="fusion-canvas"></canvas>
 
+      <div v-if="!loading && hasRenderableData && !errorText" class="figure-overlay">
+        <div class="figure-topline">
+          <span class="panel-tag">{{ panelLabel }}</span>
+          <span class="figure-topic">{{ metricLabel }}-Geology Coupled View</span>
+        </div>
+        <h4 class="figure-headline">Integrated Multi-source Structure-Stress Interpretation</h4>
+        <p class="figure-meta">
+          Seam {{ contextMeta?.seam || '--' }} | Grid {{ gridShapeText }} | Method {{ String(contextMeta?.method || '--').toUpperCase() }}
+        </p>
+        <div class="figure-kpis">
+          <span>Layers {{ layerCount }}</span>
+          <span>Boreholes {{ boreholeCount }}</span>
+          <span>Anchors {{ stressAnchorItems.length }}</span>
+          <span>Focus {{ stressFocusLabel }}</span>
+        </div>
+        <div class="content-metrics">
+          <p>Mean {{ formatValue(mpiSummary.mean) }} MPa</p>
+          <p>CV {{ formatValue(mpiSummary.cv) }}</p>
+          <p>P90 cover {{ formatPercent(mpiSummary.p90Cover) }}</p>
+          <p>IQR {{ formatValue(mpiSummary.iqr) }}</p>
+          <p>Entropy {{ formatValue(mpiSummary.entropyNorm) }}</p>
+          <p>Skew {{ formatValue(mpiSummary.skewness) }}</p>
+        </div>
+        <p class="figure-note">Nature-style content panel: structure + statistics + depth coupling.</p>
+      </div>
+
       <div v-if="!loading && hasRenderableData && !errorText" class="legend-overlay">
-        <div class="legend-title">{{ metricLabel }} Scale</div>
-        <div class="legend-bar"></div>
+        <div class="legend-title">{{ metricLabel }} (MPa)</div>
+        <div class="legend-bar">
+          <span class="legend-tick"></span>
+          <span class="legend-tick"></span>
+          <span class="legend-tick"></span>
+        </div>
         <div class="legend-range">
           <span>{{ formatValue(metricStats?.min) }}</span>
           <span>{{ formatValue(metricStats?.mean) }}</span>
           <span>{{ formatValue(metricStats?.max) }}</span>
         </div>
+        <p class="section-hint">
+          Depth span {{ formatValue(dataBounds.min_z) }} to {{ formatValue(dataBounds.max_z) }}
+        </p>
         <p v-if="sectionEnabled" class="section-hint">
           Section {{ sectionAxis.toUpperCase() }} = {{ formatValue(sectionThreshold) }}
         </p>
         <p v-if="showStressCloud" class="section-hint cloud-hint">
           Stress cloud = MPI field x depth transfer ({{ stressProfileLabel }})
         </p>
+        <div v-if="profileCurvePoints" class="profile-curve-wrap">
+          <p class="profile-title">Depth transfer profile</p>
+          <svg class="profile-curve" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
+            <line x1="0" y1="35" x2="100" y2="35" class="profile-axis" />
+            <line x1="0" y1="1" x2="0" y2="35" class="profile-axis" />
+            <polyline :points="profileCurvePoints" class="profile-line" />
+          </svg>
+        </div>
         <div v-if="showStressCloud && showStressAnchors && stressAnchorItems.length" class="anchor-list">
           <p class="anchor-title">Depth anchors</p>
           <p v-for="item in stressAnchorItems.slice(0, 4)" :key="`anchor-${item.name}-${item.zNorm}`" class="anchor-item">
             <span class="anchor-name">{{ item.name }}</span>
-            <span class="anchor-meta">z={{ formatValue(item.zWorld) }} · w={{ formatValue(item.importance) }}</span>
+            <span class="anchor-meta">z={{ formatValue(item.zWorld) }} | w={{ formatValue(item.importance) }}</span>
           </p>
         </div>
+      </div>
+
+      <div v-if="!loading && hasRenderableData && !errorText" class="orientation-overlay">
+        <div class="north-block">
+          <span class="north-label">N</span>
+          <span class="north-arrow">^</span>
+        </div>
+        <div class="scale-block">
+          <div class="scale-bar-line"></div>
+          <p>{{ scaleBarLabel }}</p>
+        </div>
+        <p class="orientation-meta">X-east / Y-north</p>
+      </div>
+
+      <div v-if="!loading && hasRenderableData && !errorText" class="analysis-overlay">
+        <p class="analysis-title">Quantitative Highlights</p>
+        <div class="inset-map-wrap">
+          <p class="inset-title">Plan-view MPI inset</p>
+          <svg class="inset-map" :viewBox="insetViewBox" preserveAspectRatio="none" aria-hidden="true">
+            <rect
+              v-for="cell in insetHeatmapCells"
+              :key="`cell-${cell.id}`"
+              :x="cell.x"
+              :y="cell.y"
+              :width="cell.w"
+              :height="cell.h"
+              :fill="cell.color"
+            />
+            <line
+              v-if="insetSectionLine"
+              :x1="insetSectionLine.x1"
+              :y1="insetSectionLine.y1"
+              :x2="insetSectionLine.x2"
+              :y2="insetSectionLine.y2"
+              class="inset-section-line"
+            />
+            <circle
+              v-for="spot in insetHotspotPoints"
+              :key="`spot-${spot.id}`"
+              :cx="spot.x"
+              :cy="spot.y"
+              :r="spot.r"
+              class="inset-hotspot"
+            />
+          </svg>
+          <p class="inset-caption">Line = section, circles = hotspots</p>
+        </div>
+        <div class="dist-wrap">
+          <p class="dist-title">MPI distribution</p>
+          <svg class="dist-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
+            <rect
+              v-for="bar in histogramBars"
+              :key="`bar-${bar.id}`"
+              :x="bar.x"
+              :y="bar.y"
+              :width="bar.w"
+              :height="bar.h"
+              class="dist-bar"
+            />
+            <line
+              v-for="line in histogramQuantileLines"
+              :key="`qline-${line.id}`"
+              :x1="line.x"
+              y1="1"
+              :x2="line.x"
+              y2="37"
+              class="dist-qline"
+            />
+          </svg>
+          <p class="dist-caption">Q1/Q2/Q3 markers</p>
+        </div>
+        <p>Section retained: {{ formatPercent(sectionRetainedRatio) }}</p>
+        <p>Hotspots (P90+): {{ hotspotCandidates.length }}</p>
+        <p>Q1/Q2/Q3: {{ formatValue(mpiSummary.p25) }} / {{ formatValue(mpiSummary.p50) }} / {{ formatValue(mpiSummary.p75) }}</p>
+        <p v-for="item in hotspotTopList.slice(0, 3)" :key="`hline-${item}`" class="hotspot-line">{{ item }}</p>
+      </div>
+
+      <div v-if="!loading && hasRenderableData && !errorText" class="caption-overlay">
+        <p class="caption-title">Figure interpretation</p>
+        <p class="caption-text">{{ figureNarrative }}</p>
+        <p class="caption-meta">
+          Heterogeneity {{ formatValue(heterogeneityScore) }} | Borehole density {{ formatValue(boreholeDensityKm2) }} km^-2 | N {{ mpiSummary.count || 0 }}
+        </p>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import AsyncState from './AsyncState.vue'
 
 const props = defineProps({
   title: { type: String, default: '3D Geology-MPI Fusion Preview' },
   subtitle: { type: String, default: '' },
+  panelLabel: { type: String, default: 'Fig. 1' },
+  contextMeta: { type: Object, default: () => ({}) },
   geomodel: { type: Object, default: null },
   stressProfile: { type: Object, default: null },
   mpiGrid: { type: Array, default: () => [] },
@@ -116,6 +244,8 @@ const canvasRef = ref(null)
 
 const showLayers = ref(true)
 const showMpiSurface = ref(true)
+const showMpiContours = ref(true)
+const showHotspots = ref(true)
 const showStressCloud = ref(true)
 const showStressAnchors = ref(true)
 const showBoreholes = ref(true)
@@ -160,6 +290,16 @@ const hasRenderableData = computed(() => {
   return layers.length > 0 || boreholes.length > 0 || (Array.isArray(grid) && grid.length > 1)
 })
 
+const layerCount = computed(() => (props.geomodel?.layers || []).length)
+const boreholeCount = computed(() => (props.geomodel?.boreholes || []).length)
+const gridShapeText = computed(() => {
+  const grid = props.mpiGrid
+  const rows = Array.isArray(grid) ? grid.length : 0
+  const cols = Array.isArray(grid?.[0]) ? grid[0].length : 0
+  if (rows <= 0 || cols <= 0) return '--'
+  return `${rows}x${cols}`
+})
+
 const stressAnchorItems = computed(() => {
   const raw = Array.isArray(props.stressProfile?.anchors) ? props.stressProfile.anchors : []
   if (!raw.length) return []
@@ -191,10 +331,191 @@ const formatValue = (val) => {
   return Number.isFinite(num) ? num.toFixed(2) : '--'
 }
 
+const formatPercent = (ratio) => {
+  const num = Number(ratio)
+  return Number.isFinite(num) ? `${(num * 100).toFixed(1)}%` : '--'
+}
+
 const toFinite = (value, fallback = 0) => {
   const num = Number(value)
   return Number.isFinite(num) ? num : fallback
 }
+
+const quantileFromSorted = (sortedValues, q) => {
+  if (!Array.isArray(sortedValues) || !sortedValues.length) return 0
+  const ratio = Math.max(0, Math.min(1, toFinite(q, 0)))
+  if (sortedValues.length === 1) return sortedValues[0]
+  const index = (sortedValues.length - 1) * ratio
+  const lower = Math.floor(index)
+  const upper = Math.min(sortedValues.length - 1, Math.ceil(index))
+  const weight = index - lower
+  return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight
+}
+
+const extractGridValues = (grid) => {
+  if (!Array.isArray(grid)) return []
+  const values = []
+  for (const row of grid) {
+    if (!Array.isArray(row)) continue
+    for (const raw of row) {
+      const value = Number(raw)
+      if (Number.isFinite(value)) values.push(value)
+    }
+  }
+  return values
+}
+
+const buildMpiSummary = (grid) => {
+  const values = extractGridValues(grid)
+  if (!values.length) {
+    return {
+      count: 0,
+      mean: NaN,
+      std: NaN,
+      cv: NaN,
+      skewness: NaN,
+      entropyNorm: NaN,
+      p10: NaN,
+      p25: NaN,
+      p50: NaN,
+      p75: NaN,
+      p90: NaN,
+      iqr: NaN,
+      p75Cover: NaN,
+      p90Cover: NaN,
+      minValue: NaN,
+      maxValue: NaN,
+      histogram: [],
+    }
+  }
+  values.sort((a, b) => a - b)
+  const minValue = values[0]
+  const maxValue = values[values.length - 1]
+  const sum = values.reduce((acc, value) => acc + value, 0)
+  const mean = sum / values.length
+  const variance = values.reduce((acc, value) => acc + (value - mean) ** 2, 0) / values.length
+  const std = Math.sqrt(Math.max(variance, 0))
+  const thirdMoment = values.reduce((acc, value) => acc + (value - mean) ** 3, 0) / values.length
+  const skewness = std > 1e-9 ? thirdMoment / (std ** 3) : NaN
+  const p10 = quantileFromSorted(values, 0.1)
+  const p25 = quantileFromSorted(values, 0.25)
+  const p50 = quantileFromSorted(values, 0.5)
+  const p75 = quantileFromSorted(values, 0.75)
+  const p90 = quantileFromSorted(values, 0.9)
+  const iqr = p75 - p25
+  const p75Cover = values.filter((value) => value >= p75).length / values.length
+  const p90Cover = values.filter((value) => value >= p90).length / values.length
+  const histogramBins = 12
+  const histogram = new Array(histogramBins).fill(0)
+  const span = Math.max(maxValue - minValue, 1e-9)
+  for (const value of values) {
+    const ratio = Math.max(0, Math.min(0.999999, (value - minValue) / span))
+    const index = Math.min(histogramBins - 1, Math.floor(ratio * histogramBins))
+    histogram[index] += 1
+  }
+  const entropy = histogram.reduce((acc, count) => {
+    if (count <= 0) return acc
+    const p = count / values.length
+    return acc - p * Math.log2(p)
+  }, 0)
+  const entropyNorm = entropy / Math.log2(histogramBins)
+  return {
+    count: values.length,
+    mean,
+    std,
+    cv: Math.abs(mean) > 1e-6 ? std / Math.abs(mean) : NaN,
+    skewness,
+    entropyNorm,
+    p10,
+    p25,
+    p50,
+    p75,
+    p90,
+    iqr,
+    p75Cover,
+    p90Cover,
+    minValue,
+    maxValue,
+    histogram,
+  }
+}
+
+const detectHotspots = (grid, threshold, limit = 12) => {
+  if (!Array.isArray(grid) || !Array.isArray(grid[0])) return []
+  const rows = grid.length
+  const cols = grid[0].length
+  if (rows < 3 || cols < 3) return []
+  const t = Number.isFinite(threshold) ? threshold : Number.POSITIVE_INFINITY
+  const picks = []
+  for (let r = 1; r < rows - 1; r += 1) {
+    for (let c = 1; c < cols - 1; c += 1) {
+      const center = toFinite(grid[r]?.[c], NaN)
+      if (!Number.isFinite(center) || center < t) continue
+      let isPeak = true
+      for (let dr = -1; dr <= 1 && isPeak; dr += 1) {
+        for (let dc = -1; dc <= 1; dc += 1) {
+          if (dr === 0 && dc === 0) continue
+          const neighbor = toFinite(grid[r + dr]?.[c + dc], Number.NEGATIVE_INFINITY)
+          if (neighbor > center) {
+            isPeak = false
+            break
+          }
+        }
+      }
+      if (isPeak) picks.push({ row: r, col: c, value: center })
+    }
+  }
+  picks.sort((a, b) => b.value - a.value)
+  return picks.slice(0, Math.max(1, Math.floor(limit)))
+}
+
+const mpiSummary = computed(() => buildMpiSummary(props.mpiGrid))
+const sectionRetainedRatio = computed(() => (sectionEnabled.value ? Math.max(0.05, Math.min(0.95, toFinite(sectionRatio.value, 0.58))) : 1))
+const hotspotCandidates = computed(() => detectHotspots(props.mpiGrid, mpiSummary.value.p90, 14))
+const hotspotTopList = computed(() => {
+  return hotspotCandidates.value.slice(0, 3).map((item, index) => {
+    return `#${index + 1} r${item.row}, c${item.col}, ${formatValue(item.value)} MPa`
+  })
+})
+const boreholeDensityKm2 = computed(() => {
+  const b = dataBounds.value
+  const spanX = Math.max(toFinite(b.max_x - b.min_x, 0), 1e-6)
+  const spanY = Math.max(toFinite(b.max_y - b.min_y, 0), 1e-6)
+  const area = spanX * spanY
+  if (!Number.isFinite(area) || area <= 0) return NaN
+  return boreholeCount.value / (area / 1_000_000)
+})
+const heterogeneityScore = computed(() => {
+  const cv = Math.abs(toFinite(mpiSummary.value.cv, NaN))
+  const skew = Math.abs(toFinite(mpiSummary.value.skewness, NaN))
+  const entropy = toFinite(mpiSummary.value.entropyNorm, NaN)
+  const cvNorm = Number.isFinite(cv) ? Math.max(0, Math.min(1, cv / 1.5)) : 0
+  const skewNorm = Number.isFinite(skew) ? Math.max(0, Math.min(1, skew / 2.5)) : 0
+  const entropyNorm = Number.isFinite(entropy) ? Math.max(0, Math.min(1, entropy)) : 0
+  return 0.45 * cvNorm + 0.25 * skewNorm + 0.3 * entropyNorm
+})
+const figureNarrative = computed(() => {
+  if (!mpiSummary.value.count) return 'Metric distribution is unavailable for current selection.'
+  const hotspotText = hotspotTopList.value.length ? hotspotTopList.value[0] : 'No dominant hotspot'
+  const skew = toFinite(mpiSummary.value.skewness, 0)
+  const skewDesc = skew > 0.3 ? 'right-tailed stress amplification' : skew < -0.3 ? 'left-tailed attenuation' : 'near-symmetric distribution'
+  return `${metricLabel.value} shows ${skewDesc}; strongest anomaly at ${hotspotText}. Section keeps ${formatPercent(sectionRetainedRatio.value)} of the volume.`
+})
+const profileCurvePoints = computed(() => {
+  const bins = Array.isArray(props.stressProfile?.bins) ? props.stressProfile.bins : []
+  const weights = Array.isArray(props.stressProfile?.weights) ? props.stressProfile.weights : []
+  if (bins.length < 2 || bins.length !== weights.length) return ''
+  const pairs = []
+  for (let i = 0; i < bins.length; i += 1) {
+    const x = toFinite(bins[i], NaN)
+    const y = toFinite(weights[i], NaN)
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+    pairs.push([Math.max(0, Math.min(1, x)), Math.max(0, Math.min(1, y))])
+  }
+  if (pairs.length < 2) return ''
+  pairs.sort((a, b) => a[0] - b[0])
+  return pairs.map((pair) => `${(pair[0] * 100).toFixed(2)},${(35 - pair[1] * 34).toFixed(2)}`).join(' ')
+})
 
 const normalizeBounds = (candidate, fallbackCandidate) => {
   const b = candidate || fallbackCandidate || {}
@@ -208,12 +529,6 @@ const normalizeBounds = (candidate, fallbackCandidate) => {
   return { min_x: minX, max_x: maxX, min_y: minY, max_y: maxY }
 }
 
-const axisValue = (x, y, z, axis) => {
-  if (axis === 'x') return x
-  if (axis === 'y') return y
-  return z
-}
-
 const getSectionThreshold = () => {
   const bounds = dataBounds.value
   const ratio = Math.max(0.05, Math.min(0.95, toFinite(sectionRatio.value, 0.58)))
@@ -224,11 +539,152 @@ const getSectionThreshold = () => {
 
 const sectionThreshold = computed(() => getSectionThreshold())
 const sectionDisplay = computed(() => `${sectionAxis.value.toUpperCase()} ${formatValue(sectionThreshold.value)}`)
+const insetViewBox = '0 0 100 100'
 
-const passesSection = (x, y, z) => {
-  if (!sectionEnabled.value) return true
-  return axisValue(x, y, z, sectionAxis.value) <= sectionThreshold.value
+const chooseNiceScaleLength = (span) => {
+  const safeSpan = Math.max(1, toFinite(span, 1))
+  const target = safeSpan * 0.25
+  const exponent = Math.floor(Math.log10(target))
+  const base = 10 ** exponent
+  const candidates = [1, 2, 5, 10].map((v) => v * base)
+  let best = candidates[0]
+  let minDiff = Math.abs(target - best)
+  for (const item of candidates) {
+    const diff = Math.abs(target - item)
+    if (diff < minDiff) {
+      minDiff = diff
+      best = item
+    }
+  }
+  return Math.max(1, best)
 }
+
+const scaleBarLabel = computed(() => {
+  const b = dataBounds.value
+  const spanX = Math.max(toFinite(b.max_x - b.min_x, 0), 1)
+  const length = chooseNiceScaleLength(spanX)
+  return `${formatValue(length)} m`
+})
+
+const colorToHex = ([r, g, b]) => {
+  const rr = Math.max(0, Math.min(255, Math.round(r * 255)))
+  const gg = Math.max(0, Math.min(255, Math.round(g * 255)))
+  const bb = Math.max(0, Math.min(255, Math.round(b * 255)))
+  return `#${rr.toString(16).padStart(2, '0')}${gg.toString(16).padStart(2, '0')}${bb.toString(16).padStart(2, '0')}`
+}
+
+const toHeatmapColor = (ratio) => colorToHex(getColorByRatio(ratio))
+
+const resolveMetricRange = () => {
+  const summary = mpiSummary.value
+  const min = Number.isFinite(props.metricStats?.min) ? Number(props.metricStats.min) : summary.p10
+  const max = Number.isFinite(props.metricStats?.max) ? Number(props.metricStats.max) : summary.p90
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return null
+  return { min, max }
+}
+
+const insetHeatmapCells = computed(() => {
+  const grid = props.mpiGrid
+  if (!Array.isArray(grid) || !Array.isArray(grid[0])) return []
+  const rows = grid.length
+  const cols = grid[0].length
+  if (rows < 2 || cols < 2) return []
+  const metricRange = resolveMetricRange()
+  if (!metricRange) return []
+
+  const maxCells = 26
+  const stepR = Math.max(1, Math.ceil(rows / maxCells))
+  const stepC = Math.max(1, Math.ceil(cols / maxCells))
+  const sampledRows = Math.ceil(rows / stepR)
+  const sampledCols = Math.ceil(cols / stepC)
+  const cellW = 100 / Math.max(sampledCols, 1)
+  const cellH = 100 / Math.max(sampledRows, 1)
+  const cells = []
+
+  for (let rr = 0, sr = 0; rr < rows; rr += stepR, sr += 1) {
+    for (let cc = 0, sc = 0; cc < cols; cc += stepC, sc += 1) {
+      const value = toFinite(grid[rr]?.[cc], metricRange.min)
+      const ratio = Math.max(0, Math.min(1, (value - metricRange.min) / (metricRange.max - metricRange.min)))
+      cells.push({
+        id: `${rr}-${cc}`,
+        x: (sc * cellW).toFixed(3),
+        y: (sr * cellH).toFixed(3),
+        w: cellW.toFixed(3),
+        h: cellH.toFixed(3),
+        color: toHeatmapColor(ratio),
+      })
+    }
+  }
+  return cells
+})
+
+const insetSectionLine = computed(() => {
+  if (!sectionEnabled.value) return null
+  if (sectionAxis.value === 'x') {
+    const x = Math.max(0, Math.min(100, sectionRetainedRatio.value * 100))
+    return { x1: x.toFixed(3), y1: 0, x2: x.toFixed(3), y2: 100 }
+  }
+  if (sectionAxis.value === 'y') {
+    const y = Math.max(0, Math.min(100, (1 - sectionRetainedRatio.value) * 100))
+    return { x1: 0, y1: y.toFixed(3), x2: 100, y2: y.toFixed(3) }
+  }
+  return null
+})
+
+const insetHotspotPoints = computed(() => {
+  const grid = props.mpiGrid
+  if (!Array.isArray(grid) || !Array.isArray(grid[0])) return []
+  const rows = grid.length
+  const cols = grid[0].length
+  if (rows < 2 || cols < 2) return []
+  return hotspotCandidates.value.slice(0, 8).map((spot, index) => {
+    const x = (spot.col / Math.max(cols - 1, 1)) * 100
+    const y = (spot.row / Math.max(rows - 1, 1)) * 100
+    return {
+      id: `${index}-${spot.row}-${spot.col}`,
+      x: x.toFixed(3),
+      y: y.toFixed(3),
+      r: (3.2 - index * 0.22).toFixed(2),
+    }
+  })
+})
+
+const histogramBars = computed(() => {
+  const histogram = Array.isArray(mpiSummary.value.histogram) ? mpiSummary.value.histogram : []
+  if (!histogram.length) return []
+  const maxCount = Math.max(...histogram, 1)
+  const gap = 0.8
+  const barW = (100 - gap * (histogram.length + 1)) / histogram.length
+  return histogram.map((count, index) => {
+    const h = (count / maxCount) * 34
+    const x = gap + index * (barW + gap)
+    const y = 36 - h
+    return {
+      id: index,
+      x: x.toFixed(3),
+      y: y.toFixed(3),
+      w: barW.toFixed(3),
+      h: h.toFixed(3),
+    }
+  })
+})
+
+const histogramQuantileLines = computed(() => {
+  const min = mpiSummary.value.minValue
+  const max = mpiSummary.value.maxValue
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return []
+  const quantiles = [
+    { id: 'q25', value: mpiSummary.value.p25 },
+    { id: 'q50', value: mpiSummary.value.p50 },
+    { id: 'q75', value: mpiSummary.value.p75 },
+  ]
+  return quantiles
+    .filter((item) => Number.isFinite(item.value))
+    .map((item) => {
+      const ratio = Math.max(0, Math.min(1, (item.value - min) / (max - min)))
+      return { id: item.id, x: (ratio * 100).toFixed(3) }
+    })
+})
 
 const getColorByRatio = (ratio) => {
   const t = Math.max(0, Math.min(1, ratio))
@@ -256,20 +712,50 @@ let rootGroup = null
 let layerGroup = null
 let boreholeGroup = null
 let mpiMesh = null
+let mpiContourLines = null
 let stressCloudPoints = null
 let stressAnchorGroup = null
+let stressHotspotGroup = null
 let sectionPlaneGroup = null
+let activeSectionClipPlane = null
 let frameId = null
 let resizeObserver = null
 let buildVersion = 0
 let isComponentAlive = false
+const dirtyFlags = reactive({
+  geometry: false,
+  material: false,
+  section: false,
+})
+
+const disposeMaterialTextures = (material) => {
+  if (!material) return
+  const textureKeys = [
+    'map',
+    'alphaMap',
+    'aoMap',
+    'bumpMap',
+    'normalMap',
+    'roughnessMap',
+    'metalnessMap',
+    'emissiveMap',
+    'specularMap',
+  ]
+  textureKeys.forEach((key) => {
+    material[key]?.dispose?.()
+  })
+}
 
 const disposeMaterial = (material) => {
   if (!material) return
   if (Array.isArray(material)) {
-    material.forEach((item) => item?.dispose?.())
+    material.forEach((item) => {
+      disposeMaterialTextures(item)
+      item?.dispose?.()
+    })
     return
   }
+  disposeMaterialTextures(material)
   material.dispose?.()
 }
 
@@ -309,9 +795,15 @@ const clearThree = () => {
   layerGroup = null
   boreholeGroup = null
   mpiMesh = null
+  mpiContourLines = null
   stressCloudPoints = null
   stressAnchorGroup = null
+  stressHotspotGroup = null
   sectionPlaneGroup = null
+  activeSectionClipPlane = null
+  dirtyFlags.geometry = false
+  dirtyFlags.material = false
+  dirtyFlags.section = false
 }
 
 const ensureThree = async () => {
@@ -320,6 +812,33 @@ const ensureThree = async () => {
     const controlsModule = await import('three/addons/controls/OrbitControls.js')
     OrbitControlsCtor = controlsModule.OrbitControls
   }
+}
+
+const createSectionClipPlane = () => {
+  if (!sectionEnabled.value || !three) return null
+  const threshold = sectionThreshold.value
+  if (sectionAxis.value === 'x') return new three.Plane(new three.Vector3(-1, 0, 0), threshold)
+  if (sectionAxis.value === 'y') return new three.Plane(new three.Vector3(0, -1, 0), threshold)
+  return new three.Plane(new three.Vector3(0, 0, -1), threshold)
+}
+
+const applySectionClipping = () => {
+  if (!renderer || !rootGroup) return
+  activeSectionClipPlane = createSectionClipPlane()
+  renderer.localClippingEnabled = Boolean(activeSectionClipPlane)
+
+  rootGroup.traverse((child) => {
+    if (child?.userData?.skipSectionClip) return
+    if (!child.material) return
+
+    const materials = Array.isArray(child.material) ? child.material : [child.material]
+    materials.forEach((material) => {
+      if (!material) return
+      material.clippingPlanes = activeSectionClipPlane ? [activeSectionClipPlane] : []
+      material.clipShadows = Boolean(activeSectionClipPlane)
+      material.needsUpdate = true
+    })
+  })
 }
 
 const updateDataBounds = () => {
@@ -387,14 +906,6 @@ const buildLayerMeshes = () => {
       const ib = Math.max(0, Math.floor(toFinite(f[1], 0)))
       const ic = Math.max(0, Math.floor(toFinite(f[2], 0)))
       if (ia >= vertices.length || ib >= vertices.length || ic >= vertices.length) continue
-
-      const va = vertices[ia] || []
-      const vb = vertices[ib] || []
-      const vc = vertices[ic] || []
-      const avgX = (toFinite(va[0]) + toFinite(vb[0]) + toFinite(vc[0])) / 3
-      const avgY = (toFinite(va[1]) + toFinite(vb[1]) + toFinite(vc[1])) / 3
-      const avgZ = (toFinite(va[2]) + toFinite(vb[2]) + toFinite(vc[2])) / 3
-      if (!passesSection(avgX, avgY, avgZ)) continue
       indices.push(ia, ib, ic)
     }
     if (indices.length < 3) return
@@ -482,11 +993,9 @@ const buildMpiSurface = () => {
 
   const positions = new Float32Array(rows * cols * 3)
   const colors = new Float32Array(rows * cols * 3)
-  const axisArr = new Float32Array(rows * cols)
 
   let ptr = 0
   let cptr = 0
-  let aptr = 0
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < cols; c += 1) {
       const value = toFinite(grid[r][c], minVal)
@@ -499,9 +1008,6 @@ const buildMpiSurface = () => {
       positions[ptr + 2] = z
       ptr += 3
 
-      axisArr[aptr] = axisValue(x, y, z, sectionAxis.value)
-      aptr += 1
-
       const [cr, cg, cb] = getColorByRatio(ratio)
       colors[cptr] = cr
       colors[cptr + 1] = cg
@@ -510,7 +1016,6 @@ const buildMpiSurface = () => {
     }
   }
 
-  const threshold = sectionThreshold.value
   const indices = []
   for (let r = 0; r < rows - 1; r += 1) {
     for (let c = 0; c < cols - 1; c += 1) {
@@ -519,12 +1024,8 @@ const buildMpiSurface = () => {
       const d = (r + 1) * cols + c
       const e = d + 1
 
-      const tri1 = [a, b, e]
-      const tri2 = [a, e, d]
-      const passTri1 = !sectionEnabled.value || tri1.every((id) => axisArr[id] <= threshold)
-      const passTri2 = !sectionEnabled.value || tri2.every((id) => axisArr[id] <= threshold)
-      if (passTri1) indices.push(a, b, e)
-      if (passTri2) indices.push(a, e, d)
+      indices.push(a, b, e)
+      indices.push(a, e, d)
     }
   }
   if (indices.length < 3) return
@@ -546,6 +1047,16 @@ const buildMpiSurface = () => {
   mpiMesh = new three.Mesh(geometry, material)
   mpiMesh.name = 'mpi-surface'
   rootGroup.add(mpiMesh)
+
+  const contourGeometry = new three.WireframeGeometry(geometry)
+  const contourMaterial = new three.LineBasicMaterial({
+    color: '#0f172a',
+    transparent: true,
+    opacity: 0.18,
+  })
+  mpiContourLines = new three.LineSegments(contourGeometry, contourMaterial)
+  mpiContourLines.name = 'mpi-contours'
+  rootGroup.add(mpiContourLines)
 }
 
 const getCloudColor = (ratio) => {
@@ -657,7 +1168,6 @@ const buildStressCloud = () => {
         const noise = 0.9 + 0.1 * Math.sin(x * 0.04 + y * 0.03 + z * 0.08)
         const stressNorm = Math.max(0, Math.min(1, baseNorm * (0.5 + 0.5 * depthProfile) * noise))
         if (stressNorm < cutoff) continue
-        if (!passesSection(x, y, z)) continue
 
         positions.push(x, y, z)
         const [cr, cg, cb] = getCloudColor(stressNorm)
@@ -702,7 +1212,6 @@ const buildStressAnchors = () => {
   for (const anchor of stressAnchorItems.value.slice(0, 6)) {
     const z = toFinite(anchor.zWorld, NaN)
     if (!Number.isFinite(z)) continue
-    if (sectionEnabled.value && sectionAxis.value === 'z' && z > sectionThreshold.value) continue
 
     const importance = Math.max(0, Math.min(1, toFinite(anchor.importance, 0)))
     const color = new three.Color().setHSL(0.58 - importance * 0.28, 0.78, 0.52)
@@ -740,12 +1249,129 @@ const buildStressAnchors = () => {
   }
 }
 
+const createHotspotLabelSprite = (index, radius) => {
+  if (!three || typeof document === 'undefined') return null
+  const canvas = document.createElement('canvas')
+  canvas.width = 128
+  canvas.height = 128
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  const center = 64
+  const baseR = 48
+  ctx.clearRect(0, 0, 128, 128)
+  ctx.beginPath()
+  ctx.arc(center, center, baseR, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(255,255,255,0.95)'
+  ctx.fill()
+  ctx.lineWidth = 7
+  ctx.strokeStyle = 'rgba(15,23,42,0.84)'
+  ctx.stroke()
+  ctx.fillStyle = '#0f172a'
+  ctx.font = '700 56px "Segoe UI", sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(String(index), center, center + 2)
+  const texture = new three.CanvasTexture(canvas)
+  texture.colorSpace = three.SRGBColorSpace || texture.colorSpace
+  const material = new three.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+  })
+  const sprite = new three.Sprite(material)
+  const scale = Math.max(radius * 3.8, 1.8)
+  sprite.scale.set(scale, scale, 1)
+  sprite.renderOrder = 9
+  return sprite
+}
+
+const buildStressHotspots = () => {
+  if (!rootGroup) return
+  const grid = props.mpiGrid
+  if (!Array.isArray(grid) || !Array.isArray(grid[0])) return
+
+  const rows = grid.length
+  const cols = grid[0].length
+  if (rows < 2 || cols < 2) return
+
+  const bounds = normalizeBounds(props.mpiBounds, props.geomodel?.bounds)
+  const spanX = Math.max(bounds.max_x - bounds.min_x, 1)
+  const spanY = Math.max(bounds.max_y - bounds.min_y, 1)
+  const topZ = computeLayerTopZ()
+  const zBase = topZ + 5.6
+  const zAmp = 9.4
+  const summary = mpiSummary.value
+  const minVal = Number.isFinite(props.metricStats?.min) ? Number(props.metricStats.min) : summary.p10
+  const maxVal = Number.isFinite(props.metricStats?.max) ? Number(props.metricStats.max) : summary.p90
+  if (!Number.isFinite(minVal) || !Number.isFinite(maxVal) || maxVal <= minVal) return
+  if (!hotspotCandidates.value.length) return
+
+  stressHotspotGroup = new three.Group()
+  stressHotspotGroup.name = 'stress-hotspots'
+
+  const radius = Math.max(Math.max(spanX, spanY) / 185, 0.38)
+  const stemBottom = dataBounds.value.min_z - 1
+
+  hotspotCandidates.value.slice(0, 10).forEach((candidate, index) => {
+    const value = toFinite(candidate.value, NaN)
+    if (!Number.isFinite(value)) return
+    const ratio = Math.max(0, Math.min(1, (value - minVal) / (maxVal - minVal)))
+    const x = bounds.min_x + (candidate.col / (cols - 1)) * spanX
+    const y = bounds.max_y - (candidate.row / (rows - 1)) * spanY
+    const z = zBase + ratio * zAmp
+    const color = new three.Color().setHSL(0.1 - ratio * 0.1, 0.82, 0.5)
+
+    const marker = new three.Mesh(
+      new three.SphereGeometry(radius, 20, 14),
+      new three.MeshStandardMaterial({
+        color,
+        transparent: true,
+        opacity: 0.92,
+        emissive: color.clone().multiplyScalar(0.2),
+        roughness: 0.35,
+        metalness: 0.18,
+      }),
+    )
+    marker.position.set(x, y, z)
+    stressHotspotGroup.add(marker)
+
+    const label = createHotspotLabelSprite(index + 1, radius)
+    if (label) {
+      label.position.set(x, y, z + radius * 2.25)
+      stressHotspotGroup.add(label)
+    }
+
+    const lineGeometry = new three.BufferGeometry().setFromPoints([
+      new three.Vector3(x, y, stemBottom),
+      new three.Vector3(x, y, z - radius * 1.1),
+    ])
+    const line = new three.Line(
+      lineGeometry,
+      new three.LineDashedMaterial({
+        color,
+        transparent: true,
+        opacity: 0.52,
+        dashSize: Math.max((z - stemBottom) * 0.05, 0.5),
+        gapSize: 0.28,
+      }),
+    )
+    line.computeLineDistances()
+    stressHotspotGroup.add(line)
+  })
+
+  if (stressHotspotGroup.children.length > 0) {
+    rootGroup.add(stressHotspotGroup)
+  } else {
+    stressHotspotGroup = null
+  }
+}
+
 const buildBoreholes = () => {
   const boreholes = props.geomodel?.boreholes || []
   const bounds = normalizeBounds(props.geomodel?.bounds, props.mpiBounds)
   const span = Math.max(bounds.max_x - bounds.min_x, bounds.max_y - bounds.min_y, 1)
   const radius = Math.max(span * 0.0055, 0.32)
-  const threshold = sectionThreshold.value
 
   boreholes.forEach((item) => {
     const x = toFinite(item.x)
@@ -754,15 +1380,7 @@ const buildBoreholes = () => {
     const zTop = 0.5
     const zBottom = -thickness
 
-    if (sectionEnabled.value && sectionAxis.value !== 'z') {
-      if (!passesSection(x, y, zTop)) return
-    }
-
-    let visibleTop = zTop
-    if (sectionEnabled.value && sectionAxis.value === 'z') {
-      visibleTop = Math.min(zTop, threshold)
-    }
-    const height = Math.max(0, visibleTop - zBottom)
+    const height = Math.max(0, zTop - zBottom)
     if (height <= 0.12) return
 
     const column = new three.Mesh(
@@ -782,12 +1400,20 @@ const buildBoreholes = () => {
       new three.SphereGeometry(radius * 1.14, 16, 12),
       new three.MeshStandardMaterial({ color: '#d97706', roughness: 0.45, metalness: 0.05 }),
     )
-    marker.position.set(x, y, visibleTop + radius * 0.72)
+    marker.position.set(x, y, zTop + radius * 0.72)
     boreholeGroup.add(marker)
   })
 }
 
+const clearSectionPlane = () => {
+  if (!sectionPlaneGroup) return
+  if (rootGroup) rootGroup.remove(sectionPlaneGroup)
+  disposeObject3D(sectionPlaneGroup)
+  sectionPlaneGroup = null
+}
+
 const buildSectionPlane = () => {
+  clearSectionPlane()
   if (!sectionEnabled.value || !rootGroup) return
   const b = dataBounds.value
   const spanX = Math.max(b.max_x - b.min_x, 1)
@@ -825,9 +1451,19 @@ const buildSectionPlane = () => {
   edge.position.copy(plane.position)
   edge.rotation.copy(plane.rotation)
 
+  plane.userData.skipSectionClip = true
+  edge.userData.skipSectionClip = true
   sectionPlaneGroup.add(plane)
   sectionPlaneGroup.add(edge)
   rootGroup.add(sectionPlaneGroup)
+}
+
+const updateSectionState = () => {
+  if (!renderer || !rootGroup) return
+  dirtyFlags.section = true
+  applySectionClipping()
+  buildSectionPlane()
+  dirtyFlags.section = false
 }
 
 const fitCamera = () => {
@@ -884,9 +1520,11 @@ const drawExportOverlay = (ctx, width, height) => {
   const pad = Math.round(48 * scale)
   const panelWidth = Math.min(width * 0.64, Math.round(1080 * scale))
   const includeAnchorRows = showStressCloud.value && showStressAnchors.value && exportAnchorRows.value.length > 0
-  const panelHeight = includeAnchorRows
-    ? Math.round((212 + exportAnchorRows.value.length * 28) * scale)
-    : Math.round(170 * scale)
+  const includeHotspotRows = showHotspots.value && hotspotTopList.value.length > 0
+  const hotspotRowCount = includeHotspotRows ? Math.min(2, hotspotTopList.value.length) : 0
+  const panelHeight = Math.round(
+    (382 + (includeAnchorRows ? 40 + exportAnchorRows.value.length * 28 : 0) + (includeHotspotRows ? 34 + hotspotRowCount * 24 : 0)) * scale,
+  )
   ctx.fillStyle = 'rgba(255,255,255,0.9)'
   ctx.fillRect(pad, pad, panelWidth, panelHeight)
   ctx.strokeStyle = 'rgba(15,23,42,0.16)'
@@ -894,34 +1532,155 @@ const drawExportOverlay = (ctx, width, height) => {
   ctx.strokeRect(pad, pad, panelWidth, panelHeight)
 
   ctx.fillStyle = '#0f172a'
+  ctx.font = `700 ${Math.round(24 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText(String(props.panelLabel || 'Fig. 1'), pad + Math.round(22 * scale), pad + Math.round(38 * scale))
+
+  ctx.fillStyle = '#0f172a'
   ctx.font = `600 ${Math.round(42 * scale)}px "Times New Roman", "Noto Serif SC", serif`
-  ctx.fillText(props.title || '3D Geology-MPI Fusion', pad + Math.round(22 * scale), pad + Math.round(52 * scale))
+  ctx.fillText(props.title || '3D Geology-MPI Fusion', pad + Math.round(22 * scale), pad + Math.round(78 * scale))
 
   const subtitle = props.subtitle || 'Preview'
   ctx.fillStyle = '#334155'
   ctx.font = `500 ${Math.round(28 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(subtitle, pad + Math.round(22 * scale), pad + Math.round(90 * scale))
+  ctx.fillText(subtitle, pad + Math.round(22 * scale), pad + Math.round(116 * scale))
 
   const metricLine = `${metricLabel.value}  min ${formatValue(props.metricStats?.min)}   mean ${formatValue(props.metricStats?.mean)}   max ${formatValue(props.metricStats?.max)}`
   ctx.fillStyle = '#475569'
   ctx.font = `500 ${Math.round(24 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(metricLine, pad + Math.round(22 * scale), pad + Math.round(122 * scale))
+  ctx.fillText(metricLine, pad + Math.round(22 * scale), pad + Math.round(150 * scale))
 
   const profileLine = `Profile source: ${stressProfileLabel.value}  |  focus: ${stressFocusLabel.value}`
   ctx.fillStyle = '#1f2937'
   ctx.font = `600 ${Math.round(22 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(profileLine, pad + Math.round(22 * scale), pad + Math.round(156 * scale))
+  ctx.fillText(profileLine, pad + Math.round(22 * scale), pad + Math.round(184 * scale))
+
+  const metaLine = `Seam ${String(props.contextMeta?.seam || '--')} | Grid ${gridShapeText.value} | Method ${String(props.contextMeta?.method || '--').toUpperCase()} | Resolution ${formatValue(props.contextMeta?.resolution)}`
+  ctx.fillStyle = '#334155'
+  ctx.font = `500 ${Math.round(20 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText(metaLine, pad + Math.round(22 * scale), pad + Math.round(214 * scale))
+
+  const structureLine = `Layers ${layerCount.value}  Boreholes ${boreholeCount.value}  Anchors ${stressAnchorItems.value.length}`
+  ctx.fillStyle = '#334155'
+  ctx.font = `500 ${Math.round(20 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText(structureLine, pad + Math.round(22 * scale), pad + Math.round(242 * scale))
+
+  const quantLine = `Q1/Q2/Q3 ${formatValue(mpiSummary.value.p25)} / ${formatValue(mpiSummary.value.p50)} / ${formatValue(mpiSummary.value.p75)}  |  CV ${formatValue(mpiSummary.value.cv)}`
+  ctx.fillText(quantLine, pad + Math.round(22 * scale), pad + Math.round(268 * scale))
+  const coverLine = `P75 cover ${formatPercent(mpiSummary.value.p75Cover)}  |  P90 cover ${formatPercent(mpiSummary.value.p90Cover)}  |  Section retained ${formatPercent(sectionRetainedRatio.value)}`
+  ctx.fillText(coverLine, pad + Math.round(22 * scale), pad + Math.round(294 * scale))
+  const distLine = `Entropy ${formatValue(mpiSummary.value.entropyNorm)}  |  Skew ${formatValue(mpiSummary.value.skewness)}  |  N ${mpiSummary.value.count || 0}`
+  ctx.fillText(distLine, pad + Math.round(22 * scale), pad + Math.round(320 * scale))
+  const methodsLine = `Data fusion: mesh layers + boreholes + ${gridShapeText.value} metric grid`
+  ctx.fillText(methodsLine, pad + Math.round(22 * scale), pad + Math.round(346 * scale))
+  const narrativeLine = figureNarrative.value.length > 118 ? `${figureNarrative.value.slice(0, 118)}...` : figureNarrative.value
+  ctx.fillText(narrativeLine, pad + Math.round(22 * scale), pad + Math.round(372 * scale))
+
+  let offsetY = 398
+  if (includeHotspotRows) {
+    ctx.fillStyle = '#0f172a'
+    ctx.font = `600 ${Math.round(21 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+    ctx.fillText('Hotspot summary', pad + Math.round(22 * scale), pad + Math.round(offsetY * scale))
+    ctx.fillStyle = '#334155'
+    ctx.font = `500 ${Math.round(20 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+    hotspotTopList.value.slice(0, hotspotRowCount).forEach((line, index) => {
+      ctx.fillText(line, pad + Math.round(38 * scale), pad + Math.round((offsetY + 26 + index * 24) * scale))
+    })
+    offsetY += 34 + hotspotRowCount * 24
+  }
 
   if (includeAnchorRows) {
     ctx.fillStyle = '#0f172a'
     ctx.font = `600 ${Math.round(21 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-    ctx.fillText('Top depth anchors', pad + Math.round(22 * scale), pad + Math.round(188 * scale))
+    ctx.fillText('Top depth anchors', pad + Math.round(22 * scale), pad + Math.round(offsetY * scale))
     ctx.fillStyle = '#334155'
     ctx.font = `500 ${Math.round(20 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
     exportAnchorRows.value.forEach((line, index) => {
-      ctx.fillText(line, pad + Math.round(38 * scale), pad + Math.round((216 + index * 26) * scale))
+      ctx.fillText(line, pad + Math.round(38 * scale), pad + Math.round((offsetY + 28 + index * 26) * scale))
     })
   }
+
+  const orientWidth = Math.round(212 * scale)
+  const orientHeight = Math.round(116 * scale)
+  const orientX = width - pad - orientWidth
+  const orientY = pad
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'
+  ctx.fillRect(orientX, orientY, orientWidth, orientHeight)
+  ctx.strokeStyle = 'rgba(15,23,42,0.16)'
+  ctx.lineWidth = Math.max(2, 2 * scale)
+  ctx.strokeRect(orientX, orientY, orientWidth, orientHeight)
+  ctx.fillStyle = '#0f172a'
+  ctx.font = `700 ${Math.round(24 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText('N', orientX + Math.round(18 * scale), orientY + Math.round(32 * scale))
+  ctx.fillStyle = '#0f766e'
+  ctx.font = `700 ${Math.round(30 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText('^', orientX + Math.round(42 * scale), orientY + Math.round(36 * scale))
+
+  const barX = orientX + Math.round(18 * scale)
+  const barY = orientY + Math.round(54 * scale)
+  const barW = Math.round(98 * scale)
+  const barH = Math.round(10 * scale)
+  ctx.fillStyle = '#0f172a'
+  ctx.fillRect(barX, barY, Math.round(barW / 2), barH)
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(barX + Math.round(barW / 2), barY, Math.round(barW / 2), barH)
+  ctx.strokeStyle = '#0f172a'
+  ctx.strokeRect(barX, barY, barW, barH)
+  ctx.fillStyle = '#334155'
+  ctx.font = `600 ${Math.round(18 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText(scaleBarLabel.value, barX, orientY + Math.round(82 * scale))
+  ctx.fillStyle = '#64748b'
+  ctx.font = `500 ${Math.round(16 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText('X-east / Y-north', barX, orientY + Math.round(102 * scale))
+
+  const histPanelW = Math.round(324 * scale)
+  const histPanelH = Math.round(206 * scale)
+  const histX = width - pad - histPanelW
+  const histY = height - pad - histPanelH
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'
+  ctx.fillRect(histX, histY, histPanelW, histPanelH)
+  ctx.strokeStyle = 'rgba(15,23,42,0.16)'
+  ctx.lineWidth = Math.max(2, 2 * scale)
+  ctx.strokeRect(histX, histY, histPanelW, histPanelH)
+  ctx.fillStyle = '#0f172a'
+  ctx.font = `700 ${Math.round(21 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText(`${metricLabel.value} distribution`, histX + Math.round(16 * scale), histY + Math.round(30 * scale))
+
+  const chartX = histX + Math.round(16 * scale)
+  const chartY = histY + Math.round(42 * scale)
+  const chartW = histPanelW - Math.round(32 * scale)
+  const chartH = Math.round(112 * scale)
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(chartX, chartY, chartW, chartH)
+  ctx.strokeStyle = 'rgba(100,116,139,0.36)'
+  ctx.lineWidth = Math.max(1, 1 * scale)
+  ctx.strokeRect(chartX, chartY, chartW, chartH)
+
+  const bars = histogramBars.value
+  bars.forEach((bar) => {
+    const x = chartX + (Number(bar.x) / 100) * chartW
+    const y = chartY + (Number(bar.y) / 38) * chartH
+    const w = Math.max(1, (Number(bar.w) / 100) * chartW)
+    const h = Math.max(1, (Number(bar.h) / 38) * chartH)
+    ctx.fillStyle = 'rgba(15,118,110,0.72)'
+    ctx.fillRect(x, y, w, h)
+  })
+
+  ctx.setLineDash([Math.max(2, 2 * scale), Math.max(2, 2 * scale)])
+  histogramQuantileLines.value.forEach((line) => {
+    const x = chartX + (Number(line.x) / 100) * chartW
+    ctx.strokeStyle = 'rgba(127,29,29,0.86)'
+    ctx.beginPath()
+    ctx.moveTo(x, chartY)
+    ctx.lineTo(x, chartY + chartH)
+    ctx.stroke()
+    ctx.fillStyle = 'rgba(127,29,29,0.92)'
+    ctx.font = `700 ${Math.round(12 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+    ctx.fillText(String(line.id || '').toUpperCase(), x + Math.round(2 * scale), chartY + Math.round(12 * scale))
+  })
+  ctx.setLineDash([])
+  ctx.fillStyle = '#334155'
+  ctx.font = `600 ${Math.round(16 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
+  ctx.fillText(`Entropy ${formatValue(mpiSummary.value.entropyNorm)}  |  Skew ${formatValue(mpiSummary.value.skewness)}`, chartX, histY + histPanelH - Math.round(18 * scale))
 }
 
 const canvasToBlob = (canvas, type = 'image/png') => new Promise((resolve, reject) => {
@@ -1052,6 +1811,8 @@ const applyVisibility = () => {
   if (layerGroup) layerGroup.visible = showLayers.value
   if (boreholeGroup) boreholeGroup.visible = showBoreholes.value
   if (mpiMesh) mpiMesh.visible = showMpiSurface.value
+  if (mpiContourLines) mpiContourLines.visible = showMpiSurface.value && showMpiContours.value
+  if (stressHotspotGroup) stressHotspotGroup.visible = showMpiSurface.value && showHotspots.value
   if (stressCloudPoints) stressCloudPoints.visible = showStressCloud.value
   if (stressAnchorGroup) stressAnchorGroup.visible = showStressCloud.value && showStressAnchors.value
 }
@@ -1089,6 +1850,7 @@ const buildScene = async () => {
     || !canvasRef.value
     || !hostRef.value
   ) return
+  dirtyFlags.geometry = true
   updateDataBounds()
 
   scene = new three.Scene()
@@ -1135,9 +1897,10 @@ const buildScene = async () => {
   buildMpiSurface()
   buildStressCloud()
   buildStressAnchors()
+  buildStressHotspots()
   buildBoreholes()
-  buildSectionPlane()
   applyVisibility()
+  updateSectionState()
 
   const bounds = normalizeBounds(props.geomodel?.bounds, props.mpiBounds)
   const gridHelper = new three.GridHelper(
@@ -1162,6 +1925,7 @@ const buildScene = async () => {
     window.addEventListener('resize', onResize)
   }
   if (!isComponentAlive || currentBuild !== buildVersion) return
+  dirtyFlags.geometry = false
   renderLoop()
 }
 
@@ -1174,9 +1938,18 @@ const rebuildSceneSafe = async () => {
   }
 }
 
-watch([showLayers, showMpiSurface, showStressCloud, showStressAnchors, showBoreholes], () => applyVisibility())
+watch([showLayers, showMpiSurface, showMpiContours, showHotspots, showStressCloud, showStressAnchors, showBoreholes], () => {
+  dirtyFlags.material = true
+  applyVisibility()
+  dirtyFlags.material = false
+})
 
-watch([sectionEnabled, sectionAxis, sectionRatio, cloudDensity], async () => {
+watch([sectionEnabled, sectionAxis, sectionRatio], async () => {
+  await nextTick()
+  updateSectionState()
+})
+
+watch(cloudDensity, async () => {
   await rebuildSceneSafe()
 })
 
@@ -1355,6 +2128,96 @@ onBeforeUnmount(() => {
   display: block;
 }
 
+.figure-overlay {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  max-width: 560px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+  padding: 10px 12px;
+  pointer-events: none;
+}
+
+.figure-topline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 22px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.figure-topic {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: #334155;
+}
+
+.figure-headline {
+  margin: 7px 0 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #0f172a;
+  font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
+}
+
+.figure-meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #475569;
+}
+
+.figure-kpis {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.figure-kpis span {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #1e293b;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.content-metrics {
+  margin-top: 7px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 8px;
+}
+
+.content-metrics p {
+  margin: 0;
+  font-size: 10px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.figure-note {
+  margin: 7px 0 0;
+  font-size: 10px;
+  color: #64748b;
+}
+
 .legend-overlay {
   position: absolute;
   left: 12px;
@@ -1375,10 +2238,32 @@ onBeforeUnmount(() => {
 }
 
 .legend-bar {
+  position: relative;
   margin-top: 6px;
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(90deg, #31a354 0%, #f4b340 56%, #bf4a3d 100%);
+}
+
+.legend-tick {
+  position: absolute;
+  top: -2px;
+  width: 1px;
+  height: 14px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.legend-tick:nth-child(1) {
+  left: 0;
+}
+
+.legend-tick:nth-child(2) {
+  left: 50%;
+  transform: translateX(-0.5px);
+}
+
+.legend-tick:nth-child(3) {
+  right: 0;
 }
 
 .legend-range {
@@ -1398,6 +2283,39 @@ onBeforeUnmount(() => {
 
 .section-hint.cloud-hint {
   color: #7c2d12;
+}
+
+.profile-curve-wrap {
+  margin-top: 7px;
+  border-top: 1px dashed rgba(100, 116, 139, 0.32);
+  padding-top: 6px;
+}
+
+.profile-title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.profile-curve {
+  margin-top: 4px;
+  display: block;
+  width: 100%;
+  height: 44px;
+}
+
+.profile-axis {
+  stroke: rgba(71, 85, 105, 0.55);
+  stroke-width: 1;
+}
+
+.profile-line {
+  fill: none;
+  stroke: #0f766e;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .anchor-list {
@@ -1434,9 +2352,231 @@ onBeforeUnmount(() => {
   color: #64748b;
 }
 
+.orientation-overlay {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  padding: 8px 10px;
+  min-width: 138px;
+  pointer-events: none;
+}
+
+.north-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.north-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.north-arrow {
+  font-size: 16px;
+  line-height: 1;
+  color: #0f766e;
+}
+
+.scale-block {
+  margin-top: 6px;
+}
+
+.scale-bar-line {
+  width: 72px;
+  height: 6px;
+  border: 1px solid #0f172a;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #0f172a 50%, #ffffff 50%);
+  background-size: 16px 6px;
+}
+
+.scale-block p {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.orientation-meta {
+  margin: 6px 0 0;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.analysis-overlay {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  min-width: 224px;
+  max-width: 340px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  padding: 10px 12px;
+  pointer-events: none;
+}
+
+.analysis-overlay p {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: #334155;
+}
+
+.analysis-overlay p:first-child {
+  margin-top: 0;
+}
+
+.analysis-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.hotspot-line {
+  font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
+}
+
+.caption-overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(58%, 760px);
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  padding: 8px 12px;
+  pointer-events: none;
+}
+
+.caption-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.01em;
+}
+
+.caption-text {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #1e293b;
+  font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
+}
+
+.caption-meta {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.inset-map-wrap {
+  margin-top: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+  padding: 6px;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.inset-title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.inset-map {
+  margin-top: 5px;
+  width: 100%;
+  height: 92px;
+  display: block;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.inset-section-line {
+  stroke: #0f172a;
+  stroke-width: 1.4;
+  stroke-dasharray: 3 2;
+}
+
+.inset-hotspot {
+  fill: rgba(185, 28, 28, 0.82);
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 0.9;
+}
+
+.inset-caption {
+  margin: 4px 0 0;
+  font-size: 9px;
+  color: #64748b;
+}
+
+.dist-wrap {
+  margin-top: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+  padding: 6px;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.dist-title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dist-chart {
+  margin-top: 5px;
+  width: 100%;
+  height: 62px;
+  display: block;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.dist-bar {
+  fill: rgba(15, 118, 110, 0.72);
+}
+
+.dist-qline {
+  stroke: rgba(127, 29, 29, 0.9);
+  stroke-width: 1.1;
+  stroke-dasharray: 2 2;
+}
+
+.dist-caption {
+  margin: 4px 0 0;
+  font-size: 9px;
+  color: #64748b;
+}
+
 @media (max-width: 980px) {
   .viewer-body {
     height: 440px;
+  }
+  .figure-overlay {
+    max-width: 420px;
+  }
+  .analysis-overlay {
+    max-width: 290px;
+  }
+  .orientation-overlay {
+    min-width: 128px;
+  }
+  .caption-overlay {
+    width: min(72%, 620px);
   }
 }
 
@@ -1447,5 +2587,55 @@ onBeforeUnmount(() => {
   .slider input {
     width: 84px;
   }
+  .figure-overlay {
+    max-width: 90%;
+    padding: 8px 9px;
+  }
+  .figure-headline {
+    font-size: 12px;
+  }
+  .figure-kpis {
+    gap: 6px;
+  }
+  .content-metrics {
+    grid-template-columns: 1fr;
+  }
+  .analysis-overlay {
+    min-width: 180px;
+    max-width: 60%;
+    padding: 8px 9px;
+  }
+  .caption-overlay {
+    width: min(84%, 520px);
+    padding: 7px 9px;
+  }
+  .caption-title {
+    font-size: 10px;
+  }
+  .caption-text {
+    font-size: 10px;
+  }
+  .caption-meta {
+    font-size: 9px;
+  }
+  .orientation-overlay {
+    min-width: 112px;
+    padding: 7px 8px;
+  }
+  .scale-bar-line {
+    width: 58px;
+  }
+  .inset-map {
+    height: 78px;
+  }
+  .dist-chart {
+    height: 52px;
+  }
+  .analysis-overlay p {
+    font-size: 10px;
+  }
 }
 </style>
+
+
+

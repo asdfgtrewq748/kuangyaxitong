@@ -51,6 +51,12 @@ const routes = [
     meta: { title: '矿压数据分析', titleKey: 'nav.pressureAnalysis', icon: 'chart', navOrder: 50, flowOrder: 50 }
   },
   {
+    path: '/uncertainty-analysis',
+    name: 'UncertaintyAnalysis',
+    component: () => import('../views/UncertaintyAnalysis.vue'),
+    meta: { title: '不确定性分析', titleKey: 'nav.uncertaintyAnalysis', icon: 'report', navOrder: 55, workflow: false }
+  },
+  {
     path: '/pressure-analysis/charts',
     name: 'PressureAnalysisCharts',
     component: () => import('../views/PressureAnalysisCharts.vue'),

@@ -912,39 +912,47 @@ function goBack() {
 }
 
 function buildChartSnapshot() {
-  const normalizeDateRows = (rows = []) =>
-    rows.map((row) => ({
-      ...row,
-      date: row?.date ? new Date(row.date).toISOString() : null
-    }))
+  const compactRawRows = (rows = []) =>
+    rows.map((row) => ([
+      Number(row?.supportId ?? 0),
+      Number(row?.finalResistanceValue ?? row?.value ?? 0),
+      row?.cycleStartTime ? new Date(row.cycleStartTime).toISOString() : (row?.date ? new Date(row.date).toISOString() : null),
+      String(row?.columnType || '')
+    ]))
+
+  const compactSeriesRows = (rows = []) =>
+    rows.map((row) => ([
+      row?.date ? new Date(row.date).toISOString() : null,
+      Number(row?.value ?? row?.finalResistanceValue ?? 0),
+      Number(row?.std ?? 0)
+    ]))
 
   return {
+    version: 2,
     createdAt: Date.now(),
     context: {
       dateRangeText: dateRangeText.value,
+      startDateIso: startDate.value ? new Date(startDate.value).toISOString() : null,
+      endDateIso: endDate.value ? new Date(endDate.value).toISOString() : null,
       supportStart: supportStart.value,
       supportEnd: supportEnd.value,
+      selectedSupport: selectedSupport.value,
       anomalyCount: anomalyCount.value
     },
     datasets: {
-      rawData: rawData.value,
+      rawData: compactRawRows(rawData.value),
       heatmapMatrix: heatmapMatrix.value,
       numRows: numRows.value,
       stats: stats.value,
-      histogramData: histogramData.value,
-      spatialDistData: spatialDistData.value,
-      cycleData: normalizeDateRows(cycleData.value),
       detectedPeriods: detectedPeriods.value,
       correlationMatrix: correlationMatrix.value,
-      frontColumnData: frontColumnData.value,
-      rearColumnData: rearColumnData.value,
-      selectedSupportData: normalizeDateRows(selectedSupportData.value)
-    },
-    researchData: researchData.value
+      selectedSupportData: compactSeriesRows(selectedSupportData.value)
+    }
   }
 }
 
 function persistChartSnapshot() {
+  if (!rawData.value.length || !heatmapMatrix.value.length) return
   try {
     const snapshot = buildChartSnapshot()
     window.sessionStorage?.setItem(CHART_CENTER_SNAPSHOT_KEY, JSON.stringify(snapshot))

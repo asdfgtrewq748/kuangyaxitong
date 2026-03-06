@@ -201,26 +201,157 @@ const chartTabs = [
   { id: 'contour', label: '等值线' }
 ]
 
+function toDateOrNull(raw) {
+  if (!raw) return null
+  const date = new Date(raw)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function toFiniteNumber(raw, fallback = 0) {
+  const num = Number(raw)
+  return Number.isFinite(num) ? num : fallback
+}
+
+function decodeRawRows(rows = []) {
+  return rows
+    .map((row) => {
+      if (Array.isArray(row)) {
+        const [supportId, value, dateIso, columnType] = row
+        const date = toDateOrNull(dateIso)
+        const finalResistanceValue = toFiniteNumber(value, Number.NaN)
+        return {
+          supportId: toFiniteNumber(supportId, 0),
+          finalResistanceValue,
+          value: finalResistanceValue,
+          cycleStartTime: date,
+          date,
+          columnType: String(columnType || '')
+        }
+      }
+
+      const date = toDateOrNull(row?.cycleStartTime || row?.date)
+      const finalResistanceValue = toFiniteNumber(row?.finalResistanceValue ?? row?.value, Number.NaN)
+      return {
+        ...row,
+        supportId: toFiniteNumber(row?.supportId, 0),
+        finalResistanceValue,
+        value: finalResistanceValue,
+        cycleStartTime: date,
+        date,
+        columnType: String(row?.columnType || '')
+      }
+    })
+    .filter((row) => Number.isFinite(row.finalResistanceValue))
+}
+
+function decodeSeriesRows(rows = []) {
+  return rows
+    .map((row) => {
+      if (Array.isArray(row)) {
+        const [dateIso, value, std] = row
+        return {
+          date: toDateOrNull(dateIso),
+          value: toFiniteNumber(value, Number.NaN),
+          std: toFiniteNumber(std, 0)
+        }
+      }
+      return {
+        ...row,
+        date: toDateOrNull(row?.date),
+        value: toFiniteNumber(row?.value ?? row?.finalResistanceValue, Number.NaN),
+        std: toFiniteNumber(row?.std, 0)
+      }
+    })
+    .filter((row) => Number.isFinite(row.value))
+}
+
 const context = computed(() => snapshot.value?.context || {})
 const datasets = computed(() => snapshot.value?.datasets || {})
 
-const rawData = computed(() => datasets.value.rawData || [])
+const rawData = computed(() => decodeRawRows(datasets.value.rawData || []))
 const heatmapMatrix = computed(() => datasets.value.heatmapMatrix || [])
 const numRows = computed(() => Number(datasets.value.numRows || 0))
 const stats = computed(() => datasets.value.stats || null)
-const histogramData = computed(() => datasets.value.histogramData || [])
-const spatialDistData = computed(() => datasets.value.spatialDistData || [])
+const histogramData = computed(() => {
+  if (Array.isArray(datasets.value.histogramData) && datasets.value.histogramData.length) {
+    return datasets.value.histogramData
+  }
+  return heatmapMatrix.value.flat().filter(Number.isFinite)
+})
+const spatialDistData = computed(() => {
+  if (Array.isArray(datasets.value.spatialDistData) && datasets.value.spatialDistData.length) {
+    return datasets.value.spatialDistData
+  }
+  if (!rawData.value.length) return []
+
+  const start = Number(context.value.supportStart || 1)
+  const end = Number(context.value.supportEnd || 125)
+  const grouped = new Map()
+
+  for (const row of rawData.value) {
+    const id = Number(row.supportId)
+    if (!Number.isFinite(id) || id < start || id > end) continue
+    if (!grouped.has(id)) grouped.set(id, [])
+    grouped.get(id).push(Number(row.finalResistanceValue))
+  }
+
+  return Array.from(grouped.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([supportId, values]) => ({
+      supportId,
+      mean: values.reduce((sum, value) => sum + value, 0) / values.length,
+      count: values.length
+    }))
+})
 const cycleData = computed(() => {
   const rows = datasets.value.cycleData || []
-  return rows.map((item) => ({ ...item, date: item?.date ? new Date(item.date) : null }))
+  if (rows.length) {
+    return rows.map((item) => ({
+      ...item,
+      date: toDateOrNull(item?.date)
+    }))
+  }
+
+  if (!heatmapMatrix.value.length) return []
+  const firstRow = heatmapMatrix.value[0] || []
+  if (!firstRow.length) return []
+
+  const midCol = Math.floor(firstRow.length / 2)
+  const start = toDateOrNull(context.value.startDateIso)
+
+  return heatmapMatrix.value.map((row, index) => ({
+    date: start ? new Date(start.getTime() + index * 24 * 60 * 60 * 1000) : null,
+    value: Number(row[midCol])
+  }))
 })
 const detectedPeriods = computed(() => datasets.value.detectedPeriods || null)
 const correlationMatrix = computed(() => datasets.value.correlationMatrix || null)
-const frontColumnData = computed(() => datasets.value.frontColumnData || [])
-const rearColumnData = computed(() => datasets.value.rearColumnData || [])
+const frontColumnData = computed(() => {
+  if (Array.isArray(datasets.value.frontColumnData) && datasets.value.frontColumnData.length) {
+    return datasets.value.frontColumnData
+  }
+  return rawData.value.filter((row) => /前|front/i.test(row.columnType || ''))
+})
+const rearColumnData = computed(() => {
+  if (Array.isArray(datasets.value.rearColumnData) && datasets.value.rearColumnData.length) {
+    return datasets.value.rearColumnData
+  }
+  return rawData.value.filter((row) => /后|rear/i.test(row.columnType || ''))
+})
 const selectedSupportData = computed(() => {
   const rows = datasets.value.selectedSupportData || []
-  return rows.map((item) => ({ ...item, date: item?.date ? new Date(item.date) : null }))
+  if (rows.length) return decodeSeriesRows(rows)
+
+  const selectedSupport = Number(context.value.selectedSupport || 0)
+  if (!selectedSupport) return []
+  return rawData.value
+    .filter((row) => Number(row.supportId) === selectedSupport)
+    .sort((a, b) => (a.date?.getTime?.() || 0) - (b.date?.getTime?.() || 0))
+    .map((row) => ({
+      date: row.date || null,
+      value: Number(row.finalResistanceValue),
+      std: 0
+    }))
 })
 
 const researchData = computed(() => snapshot.value?.researchData || {
