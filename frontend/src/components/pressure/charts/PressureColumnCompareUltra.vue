@@ -15,13 +15,13 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_ECHARTS_THEME, NATURE_COLORS } from '@/utils/natureFigureConfig'
 import { exportECharts } from '@/utils/figureExport'
 
 const props = defineProps({
-  title: { type: String, default: '前后柱对比' },
+  title: { type: String, default: 'Column Comparison' },
   frontData: { type: Array, default: () => [] },
   rearData: { type: Array, default: () => [] }
 })
@@ -49,10 +49,10 @@ const COLORS = {
 function initChart() {
   if (!chartRef.value) return
 
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
-    // 延迟初始化，等待容器有尺寸
+    // 寤惰繜鍒濆鍖栵紝绛夊緟瀹瑰櫒鏈夊昂瀵?
     setTimeout(initChart, 100)
     return
   }
@@ -68,7 +68,7 @@ function initChart() {
 function updateChart() {
   if (!chartInstance) return
 
-  // 按日期聚合
+  // 鎸夋棩鏈熻仛鍚?
   const aggregateByDate = (data) => {
     const map = new Map()
     data.forEach(d => {
@@ -85,7 +85,7 @@ function updateChart() {
   const frontAgg = aggregateByDate(props.frontData)
   const rearAgg = aggregateByDate(props.rearData)
   
-  // 合并日期
+  // 鍚堝苟鏃ユ湡
   const allDates = [...new Set([...frontAgg.map(d => d.date), ...rearAgg.map(d => d.date)])].sort()
   
   const frontSeries = allDates.map(d => {
@@ -199,12 +199,12 @@ function updateChart() {
         return `<div style="font-weight: 600; margin-bottom: 4px;">${params[0].axisValue}</div>
                 ${front ? `<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                   <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${COLORS.front};"></span>
-                  <span style="color: #525252;">前柱:</span>
+                  <span style="color: #525252;">鍓嶆煴:</span>
                   <span style="font-weight: 600;">${front.value?.toFixed(2) || '--'}</span>
                 </div>` : ''}
                 ${rear ? `<div style="display: flex; align-items: center; gap: 8px;">
                   <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${COLORS.rear};"></span>
-                  <span style="color: #525252;">后柱:</span>
+                  <span style="color: #525252;">鍚庢煴:</span>
                   <span style="font-weight: 600;">${rear.value?.toFixed(2) || '--'}</span>
                 </div>` : ''}`
       }
@@ -221,7 +221,7 @@ function handleResize() {
   chartInstance?.resize()
 }
 
-// Nature标准导出
+// Nature鏍囧噯瀵煎嚭
 function exportFigure(format = 'svg') {
   if (!chartInstance) return
   const dataUrl = exportECharts(chartInstance, { type: format })
@@ -251,3 +251,4 @@ watch(() => [props.frontData, props.rearData], updateChart, { deep: true })
   min-height: 160px;
 }
 </style>
+

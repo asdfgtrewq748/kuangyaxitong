@@ -5,9 +5,26 @@
         <h1>{{ copy.title }}</h1>
         <p>{{ copy.subtitle }}</p>
       </div>
-      <button class="tool-btn" type="button" :disabled="loading" @click="reloadAll">
-        {{ loading ? copy.loading : copy.refresh }}
-      </button>
+      <div class="header-actions">
+        <button class="tool-btn" type="button" :disabled="loading" @click="reloadAll">
+          {{ loading ? copy.loading : copy.refresh }}
+        </button>
+        <PaperExportMenu
+          trigger-label="论文导出"
+          :main-label="copy.exportMain"
+          :pack-label="copy.exportPack"
+          :loading-main-label="copy.exportingMain"
+          :loading-pack-label="copy.exportingPack"
+          main-hint="Fig.1 主图（PNG）"
+          pack-hint="Fig.S* + captions + manifest"
+          :disabled-main="loading || !hasSpatialData"
+          :disabled-pack="loading || !hasSpatialData"
+          :loading-main="exportingMain"
+          :loading-pack="exportingPack"
+          @export-main="exportMainAtlas"
+          @export-pack="exportSupplementPackage"
+        />
+      </div>
     </header>
 
     <section class="control-panel">
@@ -54,6 +71,7 @@
     </section>
 
     <p v-if="error" class="error-text">{{ error }}</p>
+    <p v-if="exportNote" class="export-note">{{ exportNote }}</p>
 
     <section v-if="hasSpatialData" class="kpi-grid">
       <article class="kpi-card">
@@ -88,7 +106,7 @@
           <h3>{{ copy.mapTitle }} ({{ metric.toUpperCase() }})</h3>
           <p>{{ copy.mapDesc }}</p>
         </header>
-        <ScienceChart :option="uncertaintyHeatmapOption" :height="420" renderer="canvas" />
+        <ScienceChart ref="heatmapChartRef" :option="uncertaintyHeatmapOption" :height="420" renderer="canvas" />
       </article>
 
       <article class="chart-card compare-card">
@@ -96,7 +114,7 @@
           <h3>{{ copy.methodTitle }}</h3>
           <p>{{ copy.methodDesc }}</p>
         </header>
-        <ScienceChart :option="methodComparisonOption" :height="300" renderer="svg" />
+        <ScienceChart ref="methodChartRef" :option="methodComparisonOption" :height="300" renderer="svg" />
       </article>
 
       <article class="chart-card profile-card">
@@ -104,7 +122,7 @@
           <h3>{{ copy.profileTitle }}</h3>
           <p>{{ copy.profileDesc }}</p>
         </header>
-        <ScienceChart :option="profileOption" :height="300" renderer="svg" />
+        <ScienceChart ref="profileChartRef" :option="profileOption" :height="300" renderer="svg" />
       </article>
 
       <article class="chart-card scatter-card">
@@ -112,7 +130,7 @@
           <h3>{{ copy.scatterTitle }}</h3>
           <p>{{ copy.scatterDesc }}</p>
         </header>
-        <ScienceChart :option="scatterOption" :height="320" renderer="canvas" />
+        <ScienceChart ref="scatterChartRef" :option="scatterOption" :height="320" renderer="canvas" />
       </article>
     </section>
 
@@ -125,7 +143,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   getApiErrorMessage,
@@ -137,7 +155,10 @@ import {
 import { useI18n } from '../composables/useI18n'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import ScienceChart from '../components/validation/ScienceChart.vue'
+import PaperExportMenu from '../components/common/PaperExportMenu.vue'
 import { NATURE_COLORS } from '../utils/natureFigureConfig'
+import { exportECharts } from '../utils/figureExport'
+import { buildCaptionsMarkdown, buildPaperFigure, buildPaperManifest } from '../utils/paperExportSchema'
 
 const METHOD_LIST = ['idw', 'linear', 'nearest', 'kriging']
 
@@ -170,6 +191,14 @@ const zh = {
   profileDesc: '基于 Geomodel 深度权重曲线，显示应力传递置信度及关键锚点。',
   scatterTitle: '值-不确定性相图',
   scatterDesc: '散点与趋势线展示指标值和局部不确定性的耦合关系。',
+  exportMain: '导出主图',
+  exportPack: '导出补充图包',
+  exportingMain: '主图导出中...',
+  exportingPack: '打包中...',
+  exportDoneMain: '主图已导出：{name}',
+  exportDonePack: '补充图包已导出：{name}',
+  exportNoChart: '图表尚未就绪，请稍后重试。',
+  exportFailed: '导出失败，请稍后重试。',
   emptyTitle: '暂无可用空间数据',
   emptyDesc: '请先选择煤层并刷新分析。',
   profileFallback: '未获取到地质任务，使用默认剖面。'
@@ -204,6 +233,14 @@ const en = {
   profileDesc: 'Geomodel-derived depth weights with anchor points for stress transfer confidence.',
   scatterTitle: 'Value-uncertainty phase plot',
   scatterDesc: 'Scatter and trendline showing coupling between indicator value and local uncertainty.',
+  exportMain: 'Export Main Figure',
+  exportPack: 'Export Supplement Pack',
+  exportingMain: 'Exporting main...',
+  exportingPack: 'Packing...',
+  exportDoneMain: 'Main figure exported: {name}',
+  exportDonePack: 'Supplement package exported: {name}',
+  exportNoChart: 'Charts are not ready yet.',
+  exportFailed: 'Export failed. Please retry.',
   emptyTitle: 'No spatial data',
   emptyDesc: 'Select a seam and refresh analysis first.',
   profileFallback: 'No geomodel job found. Fallback profile is used.'
@@ -224,9 +261,17 @@ const manualJobId = ref('')
 
 const loading = ref(false)
 const error = ref('')
+const exportNote = ref('')
 const spatialData = ref(null)
 const methodComparisonData = ref([])
 const stressProfile = ref(null)
+const exportingMain = ref(false)
+const exportingPack = ref(false)
+const heatmapChartRef = ref(null)
+const methodChartRef = ref(null)
+const profileChartRef = ref(null)
+const scatterChartRef = ref(null)
+let jsZipCtor = null
 
 const fmt = (value, digits = 3) => {
   const num = Number(value)
@@ -678,6 +723,297 @@ const scatterOption = computed(() => {
   }
 })
 
+const resolveChartInstance = (chartRef) => chartRef?.getChartInstance?.() || null
+
+const getChartEntries = () => ([
+  {
+    id: 'A',
+    slug: 'local-uncertainty-heatmap',
+    title: copy.value.mapTitle,
+    desc: copy.value.mapDesc,
+    chart: resolveChartInstance(heatmapChartRef.value),
+  },
+  {
+    id: 'B',
+    slug: 'cross-method-comparison',
+    title: copy.value.methodTitle,
+    desc: copy.value.methodDesc,
+    chart: resolveChartInstance(methodChartRef.value),
+  },
+  {
+    id: 'C',
+    slug: 'depth-transfer-confidence',
+    title: copy.value.profileTitle,
+    desc: copy.value.profileDesc,
+    chart: resolveChartInstance(profileChartRef.value),
+  },
+  {
+    id: 'D',
+    slug: 'value-uncertainty-phase',
+    title: copy.value.scatterTitle,
+    desc: copy.value.scatterDesc,
+    chart: resolveChartInstance(scatterChartRef.value),
+  }
+])
+
+const buildTimestampTag = () => new Date().toISOString().replace(/[:.]/g, '-')
+
+const dataUrlToBlob = async (dataUrl) => {
+  const response = await fetch(dataUrl)
+  return response.blob()
+}
+
+const dataUrlToImage = (dataUrl) => new Promise((resolve, reject) => {
+  const image = new Image()
+  image.onload = () => resolve(image)
+  image.onerror = reject
+  image.src = dataUrl
+})
+
+const triggerDownload = (blob, filename) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+const getJSZipCtor = async () => {
+  if (jsZipCtor) return jsZipCtor
+  const mod = await import('jszip')
+  jsZipCtor = mod?.default || mod?.JSZip || null
+  if (!jsZipCtor) {
+    throw new Error('JSZip unavailable')
+  }
+  return jsZipCtor
+}
+
+const buildMainAtlasCanvas = async (entries) => {
+  const urls = entries.map((entry) => exportECharts(entry.chart, {
+    type: 'png',
+    pixelRatio: 3.2,
+    backgroundColor: '#FFFFFF'
+  }))
+  const images = await Promise.all(urls.map((url) => dataUrlToImage(url)))
+
+  const width = 4200
+  const height = 3000
+  const margin = 170
+  const topOffset = 300
+  const colGap = 110
+  const rowGap = 120
+  const panelWidth = Math.floor((width - margin * 2 - colGap) / 2)
+  const panelHeight = Math.floor((height - topOffset - margin - rowGap) / 2)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d', { alpha: false })
+  if (!ctx) return null
+
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillRect(0, 0, width, height)
+
+  ctx.fillStyle = '#0f172a'
+  ctx.font = '700 56px "Times New Roman", "Noto Serif SC", serif'
+  ctx.fillText('Integrated Uncertainty Atlas', margin, 108)
+
+  ctx.fillStyle = '#334155'
+  ctx.font = '400 28px Arial, Helvetica, sans-serif'
+  const metaText = `Seam ${seamName.value || '--'} | Metric ${metric.value.toUpperCase()} | Method ${method.value.toUpperCase()} | Grid ${resolution.value}`
+  ctx.fillText(metaText, margin, 152)
+
+  const baseY = topOffset
+  entries.forEach((entry, index) => {
+    const col = index % 2
+    const row = Math.floor(index / 2)
+    const x = margin + col * (panelWidth + colGap)
+    const y = baseY + row * (panelHeight + rowGap)
+
+    ctx.strokeStyle = '#94a3b8'
+    ctx.lineWidth = 2
+    ctx.strokeRect(x, y, panelWidth, panelHeight)
+    ctx.drawImage(images[index], x, y, panelWidth, panelHeight)
+
+    ctx.fillStyle = '#111827'
+    ctx.font = '700 36px Arial, Helvetica, sans-serif'
+    ctx.fillText(entry.id, x + 18, y + 42)
+    ctx.font = '600 26px Arial, Helvetica, sans-serif'
+    ctx.fillText(entry.title, x + 62, y + 42)
+  })
+
+  ctx.fillStyle = '#475569'
+  ctx.font = '400 24px Arial, Helvetica, sans-serif'
+  const summaryText = `N=${statSummary.value.count || 0}, mean=${fmt(statSummary.value.mean)}, std=${fmt(statSummary.value.std)}, CV=${fmt(statSummary.value.cv, 4)}, entropy=${fmt(statSummary.value.entropyNorm, 4)}`
+  ctx.fillText(summaryText, margin, height - 72)
+  return canvas
+}
+
+const buildCaptionMarkdown = () => {
+  const figures = [
+    buildPaperFigure({ id: 'Fig.1', title: 'Uncertainty Atlas', caption: `Integrated 2x2 atlas for seam ${seamName.value || '--'} under ${method.value.toUpperCase()} interpolation (resolution ${resolution.value}).` }),
+    buildPaperFigure({ id: 'Fig.S1', title: copy.value.mapTitle, caption: copy.value.mapDesc }),
+    buildPaperFigure({ id: 'Fig.S2', title: copy.value.methodTitle, caption: copy.value.methodDesc }),
+    buildPaperFigure({ id: 'Fig.S3', title: copy.value.profileTitle, caption: copy.value.profileDesc }),
+    buildPaperFigure({ id: 'Fig.S4', title: copy.value.scatterTitle, caption: copy.value.scatterDesc })
+  ]
+  return buildCaptionsMarkdown({
+    title: 'Figure Captions',
+    intro: `Seam ${seamName.value || '--'}, metric ${metric.value.toUpperCase()}, method ${method.value.toUpperCase()}, resolution ${resolution.value}.`,
+    figures
+  })
+}
+
+const buildMethodComparisonCsv = () => {
+  const header = 'method,mean,cv,confidence_score'
+  const rows = methodComparisonData.value.map((item) => {
+    return `${item.method},${Number(item.mean).toFixed(6)},${Number(item.cv).toFixed(6)},${Number(item.confidenceScore).toFixed(6)}`
+  })
+  return [header, ...rows].join('\n')
+}
+
+const exportMainAtlas = async () => {
+  if (exportingMain.value) return
+  exportingMain.value = true
+  exportNote.value = ''
+  try {
+    await nextTick()
+    const entries = getChartEntries()
+    if (entries.some((entry) => !entry.chart)) {
+      exportNote.value = copy.value.exportNoChart
+      return
+    }
+    const atlasCanvas = await buildMainAtlasCanvas(entries)
+    if (!atlasCanvas) {
+      throw new Error(copy.value.exportFailed)
+    }
+    const blob = await new Promise((resolve, reject) => {
+      atlasCanvas.toBlob((output) => {
+        if (!output) reject(new Error('main atlas blob is empty'))
+        else resolve(output)
+      }, 'image/png')
+    })
+    const filename = `Fig1_Uncertainty_Atlas_${buildTimestampTag()}.png`
+    triggerDownload(blob, filename)
+    exportNote.value = copy.value.exportDoneMain.replace('{name}', filename)
+  } catch (err) {
+    exportNote.value = getApiErrorMessage(err, copy.value.exportFailed)
+  } finally {
+    exportingMain.value = false
+  }
+}
+
+const exportSupplementPackage = async () => {
+  if (exportingPack.value) return
+  exportingPack.value = true
+  exportNote.value = ''
+  try {
+    await nextTick()
+    const entries = getChartEntries()
+    if (entries.some((entry) => !entry.chart)) {
+      exportNote.value = copy.value.exportNoChart
+      return
+    }
+
+    const JSZip = await getJSZipCtor()
+    const zip = new JSZip()
+
+    const atlasCanvas = await buildMainAtlasCanvas(entries)
+    if (atlasCanvas) {
+      const atlasBlob = await new Promise((resolve, reject) => {
+        atlasCanvas.toBlob((output) => {
+          if (!output) reject(new Error('atlas blob is empty'))
+          else resolve(output)
+        }, 'image/png')
+      })
+      zip.file('figures/Fig1_Uncertainty_Atlas.png', atlasBlob)
+    }
+
+    const manifestFigures = []
+
+    for (let i = 0; i < entries.length; i += 1) {
+      const entry = entries[i]
+      const figName = `FigS${i + 1}_${entry.slug}`
+      const figureFiles = []
+
+      const pngDataUrl = exportECharts(entry.chart, {
+        type: 'png',
+        pixelRatio: 3.2,
+        backgroundColor: '#FFFFFF'
+      })
+      const pngBlob = await dataUrlToBlob(pngDataUrl)
+      zip.file(`figures/${figName}.png`, pngBlob)
+      figureFiles.push(`figures/${figName}.png`)
+
+      try {
+        const svgDataUrl = exportECharts(entry.chart, {
+          type: 'svg',
+          pixelRatio: 2,
+          backgroundColor: '#FFFFFF'
+        })
+        const svgBlob = await dataUrlToBlob(svgDataUrl)
+        zip.file(`figures/${figName}.svg`, svgBlob)
+        figureFiles.push(`figures/${figName}.svg`)
+      } catch {
+        // skip svg if renderer does not support current mode
+      }
+
+      manifestFigures.push(buildPaperFigure({
+        id: figName,
+        panel: entry.id,
+        title: entry.title,
+        caption: entry.desc,
+        files: figureFiles,
+        tags: ['uncertainty', metric.value, method.value],
+        meta: {
+          seam: seamName.value || '',
+          metric: metric.value,
+          method: method.value,
+          resolution: resolution.value
+        }
+      }))
+    }
+
+    zip.file('captions.md', buildCaptionMarkdown())
+    zip.file('tables/method_comparison.csv', buildMethodComparisonCsv())
+    zip.file('tables/metric_summary.csv', [
+      'metric,seam,method,resolution,count,mean,std,cv,entropy_norm,high_risk_ratio,confidence_score',
+      `${metric.value},${seamName.value || ''},${method.value},${resolution.value},${statSummary.value.count || 0},${fmt(statSummary.value.mean, 6)},${fmt(statSummary.value.std, 6)},${fmt(statSummary.value.cv, 6)},${fmt(statSummary.value.entropyNorm, 6)},${fmt(statSummary.value.highRiskRatio, 6)},${fmt(statSummary.value.confidenceScore, 6)}`
+    ].join('\n'))
+    const manifest = buildPaperManifest({
+      sourcePage: 'uncertainty-analysis',
+      title: 'Uncertainty Supplement Export',
+      locale: locale.value,
+      context: {
+        seam: seamName.value || '',
+        metric: metric.value,
+        method: method.value,
+        resolution: resolution.value,
+        profile_focus: profileFocus.value,
+        geomodel_job_id: stressProfile.value?.job_id || manualJobId.value || ''
+      },
+      figures: manifestFigures,
+      tables: [
+        { name: 'method_comparison', path: 'tables/method_comparison.csv' },
+        { name: 'metric_summary', path: 'tables/metric_summary.csv' }
+      ],
+      artifacts: [{ name: 'main_atlas', path: 'figures/Fig1_Uncertainty_Atlas.png' }],
+      notes: ['Supplement includes both figure files and tabular summary outputs.']
+    })
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2))
+
+    const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
+    const zipName = `Uncertainty_Supplement_${buildTimestampTag()}.zip`
+    triggerDownload(zipBlob, zipName)
+    exportNote.value = copy.value.exportDonePack.replace('{name}', zipName)
+  } catch (err) {
+    exportNote.value = getApiErrorMessage(err, copy.value.exportFailed)
+  } finally {
+    exportingPack.value = false
+  }
+}
+
 const normalizeQuerySeam = (value) => {
   if (Array.isArray(value)) return value[0] || ''
   return typeof value === 'string' ? value : ''
@@ -840,6 +1176,12 @@ onMounted(async () => {
   max-width: 900px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .tool-btn {
   border: 1px solid #0f766e;
   border-radius: 8px;
@@ -848,6 +1190,17 @@ onMounted(async () => {
   padding: 8px 12px;
   font-size: 12px;
   cursor: pointer;
+}
+
+.tool-btn.secondary {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.tool-btn.secondary:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f1f5f9;
 }
 
 .tool-btn:disabled {
@@ -899,6 +1252,16 @@ onMounted(async () => {
   border-radius: 10px;
   background: #fef2f2;
   color: #991b1b;
+  font-size: 12px;
+  padding: 10px 12px;
+}
+
+.export-note {
+  margin: 0;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #166534;
   font-size: 12px;
   padding: 10px 12px;
 }
@@ -1018,6 +1381,10 @@ onMounted(async () => {
 @media (max-width: 760px) {
   .page-header {
     flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
   }
 
   .control-panel {

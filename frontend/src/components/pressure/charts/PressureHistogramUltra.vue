@@ -15,13 +15,13 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_ECHARTS_THEME, NATURE_COLORS } from '@/utils/natureFigureConfig'
 import { exportECharts } from '@/utils/figureExport'
 
 const props = defineProps({
-  title: { type: String, default: '阻力分布' },
+  title: { type: String, default: '闃诲姏鍒嗗竷' },
   data: { type: Array, default: () => [] },
   bins: { type: Number, default: 30 }
 })
@@ -105,10 +105,10 @@ function calculateKDE(data, points = 100) {
 function initChart() {
   if (!chartRef.value) return
 
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
-    // 延迟初始化，等待容器有尺寸
+    // 寤惰繜鍒濆鍖栵紝绛夊緟瀹瑰櫒鏈夊昂瀵?
     setTimeout(initChart, 100)
     return
   }
@@ -183,7 +183,7 @@ function updateChart() {
     },
 
     series: [
-      // KDE曲线
+      // KDE鏇茬嚎
       {
         name: 'KDE',
         type: 'line',
@@ -198,7 +198,7 @@ function updateChart() {
         z: 2
       },
       
-      // 直方图
+      // 鐩存柟鍥?
       {
         name: 'Frequency',
         type: 'bar',
@@ -251,7 +251,7 @@ function updateChart() {
             position: 'end',
             fontSize: 9,
             color: COLORS.accent,
-            formatter: 'μ'
+            formatter: '渭'
           },
           data: [
             { xAxis: xData.findIndex(x => parseFloat(x) >= stats.mean) }
@@ -275,7 +275,7 @@ function updateChart() {
         return `<div style="font-weight: 600; margin-bottom: 4px;">${barData.axisValue} MPa</div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: ${COLORS.primary};"></span>
-                  <span style="color: #525252;">频数:</span>
+                  <span style="color: #525252;">棰戞暟:</span>
                   <span style="font-weight: 700; color: ${COLORS.primary};">${barData.value}</span>
                 </div>`
       }
@@ -314,3 +314,4 @@ watch(() => props.data, updateChart, { deep: true })
   min-height: 160px;
 }
 </style>
+

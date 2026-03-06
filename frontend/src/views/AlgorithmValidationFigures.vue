@@ -18,6 +18,20 @@
     </section>
 
     <section v-else class="figures-panel">
+      <section class="publication-frame">
+        <div class="figure-heading-band">
+          <span class="figure-kicker">{{ paperFrame.heading }}</span>
+          <h2>{{ paperFrame.title }}</h2>
+          <p>{{ paperFrame.summary }}</p>
+        </div>
+        <div class="publication-summary-grid">
+          <article v-for="item in paperFrame.cards" :key="item.label" class="publication-summary-card">
+            <span class="label">{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+          </article>
+        </div>
+        <p class="methods-footer">{{ paperFrame.methodsFooter }}</p>
+      </section>
       <div class="meta-line">
         <span>{{ avf('seam') }} {{ snapshot?.seam || '--' }}</span>
         <span>{{ avf('updatedAt') }} {{ snapshotUpdatedLabel }}</span>
@@ -113,6 +127,22 @@ const snapshotUpdatedLabel = computed(() => {
   const ts = Date.parse(String(raw))
   if (!Number.isFinite(ts)) return '--'
   return new Date(ts).toLocaleString()
+})
+const paperFrame = computed(() => {
+  const auc = Number(snapshot.value?.evaluation?.auc ?? snapshot.value?.result?.kpi?.auc)
+  const prAuc = Number(snapshot.value?.evaluation?.pr_auc)
+  const thresholdMode = String(snapshot.value?.result?.evaluation_inputs?.mode || snapshot.value?.result?.evaluation_inputs?.source || '--')
+  return {
+    heading: 'Figure Set | Algorithm validation',
+    title: 'Validation science plates for fusion-model assessment',
+    summary: `A figure-ready validation set for seam ${snapshot.value?.seam || '--'}, aligning ROC, PR, calibration, and mechanistic evidence into a single publication workspace.`,
+    cards: [
+      { label: 'Seam', value: String(snapshot.value?.seam || '--') },
+      { label: 'ROC AUC', value: Number.isFinite(auc) ? auc.toFixed(3) : '--' },
+      { label: 'PR AUC', value: Number.isFinite(prAuc) ? prAuc.toFixed(3) : '--' },
+    ],
+    methodsFooter: `Methods footer: figures are assembled from the cached validation snapshot, with threshold mode ${thresholdMode}, local layout controls, and publication-oriented multi-panel rendering.`,
+  }
 })
 
 const normalizeQuerySeam = (value) => {
@@ -247,6 +277,77 @@ onMounted(() => {
   color: #475569;
 }
 
+.publication-frame {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid #dbe4ea;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbfc 0%, #ffffff 100%);
+}
+
+.figure-heading-band {
+  display: grid;
+  gap: 4px;
+}
+
+.figure-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.figure-heading-band h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+  color: #0f172a;
+  font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
+}
+
+.figure-heading-band p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #475569;
+  max-width: 980px;
+}
+
+.publication-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.publication-summary-card {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #dbe4ea;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.publication-summary-card .label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.publication-summary-card strong {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.methods-footer {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #526071;
+}
+
 .figures-panel {
   border-radius: 12px;
   border: 1px solid #d8e6e3;
@@ -363,6 +464,10 @@ onMounted(() => {
 
   .scale-slider {
     width: 110px;
+  }
+
+  .publication-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -3,8 +3,8 @@
     :panel-label="panelLabel"
     :title="title"
     :subtitle="subtitle"
-    x-axis-label="周期 (天)"
-    y-axis-label="功率谱密度"
+    x-axis-label="Period (days)"
+    y-axis-label="Power Spectral Density"
     :footnote="footnote"
     width="full"
     height="260px"
@@ -15,12 +15,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_COLORS } from '@/utils/natureFigureConfig'
 
 const props = defineProps({
-  title: { type: String, default: '频谱分析' },
+  title: { type: String, default: '棰戣氨鍒嗘瀽' },
   subtitle: { type: String, default: 'Spectral Analysis (FFT)' },
   panelLabel: { type: String, default: 'E' },
   data: { type: Array, default: () => [] }
@@ -32,9 +32,9 @@ let chartInstance = null
 const footnote = computed(() => {
   if (!props.data.length) return ''
   const dominantPeriod = calculateDominantPeriod()
-  return dominantPeriod 
-    ? `主导周期: ${dominantPeriod.toFixed(1)} 天`
-    : '傅里叶变换分析周期性'
+  return dominantPeriod
+    ? `Dominant period: ${dominantPeriod.toFixed(1)} days`
+    : 'Frequency-domain periodicity analysis'
 })
 
 const COLORS = {
@@ -90,7 +90,7 @@ function calculateDominantPeriod() {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -163,7 +163,7 @@ function updateChart() {
         fontFamily: 'Arial, Helvetica, sans-serif'
       },
       splitLine: { show: false },
-      name: '周期 (天)',
+      name: '鍛ㄦ湡 (澶?',
       nameLocation: 'middle',
       nameGap: 25,
       nameTextStyle: {
@@ -267,10 +267,10 @@ function updateChart() {
         const period = params[0].data[0]
         const power = params[0].data[1]
         return `
-          <div style="font-weight: 600; margin-bottom: 4px;">周期分析</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">鍛ㄦ湡鍒嗘瀽</div>
           <div style="font-size: 11px;">
-            周期: <span style="font-weight: 600;">${period.toFixed(1)} 天</span><br>
-            相对功率: <span style="font-weight: 600; color: ${COLORS.spectrum};">${(power * 100).toFixed(1)}%</span>
+            鍛ㄦ湡: <span style="font-weight: 600;">${period.toFixed(1)} 澶?/span><br>
+            鐩稿鍔熺巼: <span style="font-weight: 600; color: ${COLORS.spectrum};">${(power * 100).toFixed(1)}%</span>
           </div>
         `
       }
@@ -312,3 +312,4 @@ defineExpose({
   min-height: 200px;
 }
 </style>
+

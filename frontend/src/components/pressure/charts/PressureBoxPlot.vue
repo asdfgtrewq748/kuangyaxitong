@@ -3,8 +3,8 @@
     :panel-label="panelLabel"
     :title="title"
     :subtitle="subtitle"
-    x-axis-label="时间段"
-    y-axis-label="末阻力 (MPa)"
+    x-axis-label="Time Window"
+    y-axis-label="Resistance (MPa)"
     :footnote="footnote"
     width="full"
     height="280px"
@@ -15,12 +15,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_COLORS } from '@/utils/natureFigureConfig'
 
 const props = defineProps({
-  title: { type: String, default: '压力分布箱线图' },
+  title: { type: String, default: 'Pressure Box Plot' },
   subtitle: { type: String, default: 'Box Plot Analysis' },
   panelLabel: { type: String, default: 'C' },
   data: { type: Array, default: () => [] },
@@ -33,10 +33,10 @@ let chartInstance = null
 const footnote = computed(() => {
   if (!props.data.length) return ''
   const groups = groupDataByTime()
-  return `n = ${groups.length} 个时间段，展示中位数、四分位数和异常值`
+  return `n = ${groups.length} grouped windows with quartile and outlier summaries`
 })
 
-// Nature 配色
+// Nature 閰嶈壊
 const COLORS = {
   box: NATURE_COLORS.primary,
   median: NATURE_COLORS.secondary,
@@ -65,10 +65,10 @@ function groupDataByTime() {
     grouped.get(key).push(item.finalResistanceValue || item.value)
   })
   
-  // 按时间排序
+  // 鎸夋椂闂存帓搴?
   return Array.from(grouped.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .slice(-20) // 最多显示20个时间段
+    .slice(-20) // 鏈€澶氭樉绀?0涓椂闂存
 }
 
 function calculateBoxStats(values) {
@@ -96,7 +96,7 @@ function calculateBoxStats(values) {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -236,18 +236,18 @@ function updateChart() {
           return `
             <div style="font-weight: 600; margin-bottom: 8px;">${param.name}</div>
             <div style="display: grid; grid-template-columns: auto auto; gap: 4px 12px; font-size: 11px;">
-              <span>最大值:</span><span style="font-weight: 600;">${max.toFixed(2)} MPa</span>
+              <span>鏈€澶у€?</span><span style="font-weight: 600;">${max.toFixed(2)} MPa</span>
               <span>Q3:</span><span style="font-weight: 600;">${q3.toFixed(2)} MPa</span>
-              <span>中位数:</span><span style="font-weight: 600; color: ${COLORS.median};">${median.toFixed(2)} MPa</span>
+              <span>涓綅鏁?</span><span style="font-weight: 600; color: ${COLORS.median};">${median.toFixed(2)} MPa</span>
               <span>Q1:</span><span style="font-weight: 600;">${q1.toFixed(2)} MPa</span>
-              <span>最小值:</span><span style="font-weight: 600;">${min.toFixed(2)} MPa</span>
+              <span>鏈€灏忓€?</span><span style="font-weight: 600;">${min.toFixed(2)} MPa</span>
             </div>
           `
         } else {
           return `
-            <div style="font-weight: 600; margin-bottom: 4px;">异常值</div>
+            <div style="font-weight: 600; margin-bottom: 4px;">寮傚父鍊?/div>
             <div style="font-size: 11px;">
-              数值: <span style="font-weight: 600; color: ${COLORS.outlier};">${param.data[1].toFixed(2)} MPa</span>
+              鏁板€? <span style="font-weight: 600; color: ${COLORS.outlier};">${param.data[1].toFixed(2)} MPa</span>
             </div>
           `
         }
@@ -291,3 +291,4 @@ defineExpose({
   min-height: 200px;
 }
 </style>
+

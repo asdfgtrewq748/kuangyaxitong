@@ -3,8 +3,8 @@
     :panel-label="panelLabel"
     :title="title"
     :subtitle="subtitle"
-    x-axis-label="推进距离 (m)"
-    y-axis-label="支架编号"
+    x-axis-label="鎺ㄨ繘璺濈 (m)"
+    y-axis-label="鏀灦缂栧彿"
     :footnote="footnote"
     width="full"
     height="300px"
@@ -15,12 +15,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_COLORS } from '@/utils/natureFigureConfig'
 
 const props = defineProps({
-  title: { type: String, default: '压力等值线图' },
+  title: { type: String, default: 'Pressure Contour Map' },
   subtitle: { type: String, default: 'Contour Map' },
   panelLabel: { type: String, default: 'J' },
   matrix: { type: Array, default: () => [] },
@@ -32,7 +32,7 @@ const chartRef = ref(null)
 let chartInstance = null
 
 const footnote = computed(() => {
-  return `${props.levels} 条等值线，展示压力场分布`
+  return `${props.levels} 鏉＄瓑鍊肩嚎锛屽睍绀哄帇鍔涘満鍒嗗竷`
 })
 
 const COLORS = {
@@ -126,7 +126,7 @@ function generateContours(matrix, numLevels) {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -303,11 +303,11 @@ function updateChart() {
       formatter: function (params) {
         if (params.seriesName === 'Background') {
           return `
-            <div style="font-weight: 600; margin-bottom: 4px;">压力值</div>
+            <div style="font-weight: 600; margin-bottom: 4px;">鍘嬪姏鍊?/div>
             <div style="font-size: 11px;">
-              推进: ${params.data[0].toFixed(1)} m<br>
-              支架: #${Math.floor(params.data[1])}<br>
-              压力: <span style="font-weight: 600; color: ${NATURE_COLORS.primary};">${params.data[2].toFixed(2)} MPa</span>
+              鎺ㄨ繘: ${params.data[0].toFixed(1)} m<br>
+              鏀灦: #${Math.floor(params.data[1])}<br>
+              鍘嬪姏: <span style="font-weight: 600; color: ${NATURE_COLORS.primary};">${params.data[2].toFixed(2)} MPa</span>
             </div>
           `
         }
@@ -377,3 +377,4 @@ defineExpose({
   min-height: 200px;
 }
 </style>
+

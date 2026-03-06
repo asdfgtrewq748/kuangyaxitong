@@ -3,8 +3,8 @@
     panel-label="B"
     :title="title"
     subtitle="Resistance Time Series"
-    x-axis-label="时间"
-    y-axis-label="末阻力 (MPa)"
+    x-axis-label="鏃堕棿"
+    y-axis-label="鏈樆鍔?(MPa)"
     :footnote="footnote"
     width="full"
     height="260px"
@@ -15,13 +15,13 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_ECHARTS_THEME, NATURE_COLORS } from '@/utils/natureFigureConfig'
 import { exportECharts } from '@/utils/figureExport'
 
 const props = defineProps({
-  title: { type: String, default: '支架阻力时序变化' },
+  title: { type: String, default: '鏀灦闃诲姏鏃跺簭鍙樺寲' },
   data: { type: Array, default: () => [] },
   supportId: { type: Number, default: null },
   showErrorBar: { type: Boolean, default: true },
@@ -34,7 +34,7 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
-// 暴露图表实例供导出使用
+// 鏆撮湶鍥捐〃瀹炰緥渚涘鍑轰娇鐢?
 defineExpose({
   getChartInstance: () => chartInstance
 })
@@ -44,15 +44,15 @@ const footnote = computed(() => {
   const n = props.data.length
   const mean = props.data.reduce((a, b) => a + b.value, 0) / n
   const std = Math.sqrt(props.data.reduce((a, b) => a + Math.pow(b.value - mean, 2), 0) / n)
-  return `均值 ${mean.toFixed(2)} ± ${std.toFixed(2)} MPa, n = ${n}`
+  return `鍧囧€?${mean.toFixed(2)} 卤 ${std.toFixed(2)} MPa, n = ${n}`
 })
 
-// Nature期刊配色 - 色盲友好
+// Nature鏈熷垔閰嶈壊 - 鑹茬洸鍙嬪ソ
 const COLORS = {
-  primary: '#0072B2',      // 深蓝色
-  secondary: '#D55E00',    // 橙红色
-  accent: '#CC79A7',       // 粉紫色
-  success: '#009E73',      // 绿色
+  primary: '#0072B2',      // 娣辫摑鑹?
+  secondary: '#D55E00',    // 姗欑孩鑹?
+  accent: '#CC79A7',       // 绮夌传鑹?
+  success: '#009E73',      // 缁胯壊
   grid: '#E8E8E8',
   text: '#171717',
   textSecondary: '#525252'
@@ -61,10 +61,10 @@ const COLORS = {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
-    // 延迟初始化，等待容器有尺寸
+    // 寤惰繜鍒濆鍖栵紝绛夊緟瀹瑰櫒鏈夊昂瀵?
     setTimeout(initChart, 100)
     return
   }
@@ -190,7 +190,7 @@ function updateChart() {
     },
 
     series: [
-      // 置信区间填充
+      // 缃俊鍖洪棿濉厖
       ...(props.showBands && bands.upper.length > 0 ? [{
         name: 'Confidence',
         type: 'line',
@@ -207,7 +207,7 @@ function updateChart() {
         z: 1
       }] : []),
 
-      // 趋势线
+      // 瓒嬪娍绾?
       ...(props.showTrend && trendData.length > 0 ? [{
         name: 'Trend',
         type: 'line',
@@ -224,7 +224,7 @@ function updateChart() {
         z: 2
       }] : []),
 
-      // 误差棒
+      // 璇樊妫?
       ...(props.showErrorBar ? [{
         name: 'Error',
         type: 'custom',
@@ -262,7 +262,7 @@ function updateChart() {
         z: 3
       }] : []),
 
-      // 主折线
+      // 涓绘姌绾?
       {
         name: 'Resistance',
         type: 'line',
@@ -291,7 +291,7 @@ function updateChart() {
         z: 4
       },
 
-      // 峰值标记
+      // 宄板€兼爣璁?
       ...(props.showPeaks && props.peaks.length > 0 ? [{
         name: 'Peaks',
         type: 'scatter',
@@ -335,11 +335,11 @@ function updateChart() {
         const d = new Date(date)
         
         let html = `<div style="font-weight: 600; margin-bottom: 8px; font-size: 13px;">
-                      ${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日
+                      ${d.getFullYear()}骞?{d.getMonth() + 1}鏈?{d.getDate()}鏃?
                     </div>`
         html += `<div style="display: flex; align-items: center; gap: 8px;">
                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${COLORS.primary};"></span>
-                   <span style="color: #525252;">末阻力:</span>
+                   <span style="color: #525252;">鏈樆鍔?</span>
                    <span style="font-weight: 700; color: ${COLORS.primary}; font-size: 14px;">${value}</span>
                    <span style="color: #a3a3a3; font-size: 11px;">MPa</span>
                  </div>`
@@ -348,7 +348,7 @@ function updateChart() {
         if (trendData) {
           html += `<div style="margin-top: 6px; display: flex; align-items: center; gap: 8px;">
                      <span style="display: inline-block; width: 12px; height: 2px; background: ${COLORS.secondary};"></span>
-                     <span style="color: #525252; font-size: 11px;">趋势:</span>
+                     <span style="color: #525252; font-size: 11px;">瓒嬪娍:</span>
                      <span style="font-weight: 600; color: ${COLORS.secondary};">${trendData.value.toFixed(2)}</span>
                    </div>`
         }
@@ -392,3 +392,4 @@ watch(() => props.showTrend, updateChart)
   min-height: 200px;
 }
 </style>
+

@@ -1,10 +1,10 @@
-﻿<template>
+<template>
   <div ref="container" class="science-chart" :style="{ height: normalizedHeight }"></div>
 </template>
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { echarts } from '../../lib/echarts'
+import { echarts } from '../../lib/echarts-science'
 
 const props = defineProps({
   option: {
@@ -81,6 +81,14 @@ const unbindResize = () => {
     window.removeEventListener('resize', onResize)
   }
 }
+
+const getChartInstance = () => chart
+const getContainer = () => container.value
+
+defineExpose({
+  getChartInstance,
+  getContainer
+})
 
 onMounted(async () => {
   await nextTick()

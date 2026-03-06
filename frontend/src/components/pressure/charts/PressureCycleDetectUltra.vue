@@ -15,13 +15,13 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_ECHARTS_THEME, NATURE_COLORS } from '@/utils/natureFigureConfig'
 import { exportECharts } from '@/utils/figureExport'
 
 const props = defineProps({
-  title: { type: String, default: '周期检测' },
+  title: { type: String, default: 'Periodicity Detection' },
   data: { type: Array, default: () => [] },
   periods: { type: Object, default: null }
 })
@@ -48,10 +48,10 @@ const COLORS = {
 function initChart() {
   if (!chartRef.value) return
 
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
-    // 延迟初始化，等待容器有尺寸
+    // 寤惰繜鍒濆鍖栵紝绛夊緟瀹瑰櫒鏈夊昂瀵?
     setTimeout(initChart, 100)
     return
   }
@@ -70,7 +70,7 @@ function updateChart() {
   const dates = props.data.map(d => d.date)
   const values = props.data.map(d => d.value)
   
-  // 计算移动平均
+  // 璁＄畻绉诲姩骞冲潎
   const maWindow = 7
   const maData = values.map((_, i) => {
     const start = Math.max(0, i - maWindow + 1)
@@ -129,7 +129,7 @@ function updateChart() {
     },
 
     series: [
-      // 原始数据
+      // 鍘熷鏁版嵁
       {
         name: 'Signal',
         type: 'line',
@@ -149,7 +149,7 @@ function updateChart() {
         z: 1
       },
       
-      // 移动平均
+      // 绉诲姩骞冲潎
       {
         name: 'Trend',
         type: 'line',
@@ -163,7 +163,7 @@ function updateChart() {
         z: 2
       },
 
-      // 峰值标记
+      // 宄板€兼爣璁?
       ...(props.periods?.peakIndices?.length ? [{
         name: 'Peaks',
         type: 'scatter',
@@ -193,12 +193,12 @@ function updateChart() {
         return `<div style="font-weight: 600; margin-bottom: 4px;">${d.toLocaleDateString('zh-CN')}</div>
                 ${signal ? `<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                   <span style="display: inline-block; width: 8px; height: 2px; background: ${COLORS.primary};"></span>
-                  <span style="color: #525252;">原始:</span>
+                  <span style="color: #525252;">鍘熷:</span>
                   <span style="font-weight: 600;">${signal.value?.toFixed(2) || '--'}</span>
                 </div>` : ''}
                 ${trend ? `<div style="display: flex; align-items: center; gap: 8px;">
                   <span style="display: inline-block; width: 8px; height: 2px; background: ${COLORS.secondary};"></span>
-                  <span style="color: #525252;">趋势:</span>
+                  <span style="color: #525252;">瓒嬪娍:</span>
                   <span style="font-weight: 600;">${trend.value?.toFixed(2) || '--'}</span>
                 </div>` : ''}`
       }
@@ -216,7 +216,7 @@ function handleResize() {
   chartInstance?.resize()
 }
 
-// Nature标准导出
+// Nature鏍囧噯瀵煎嚭
 function exportFigure(format = 'svg') {
   if (!chartInstance) return
   const dataUrl = exportECharts(chartInstance, { type: format })
@@ -246,3 +246,4 @@ watch(() => [props.data, props.periods], updateChart, { deep: true })
   min-height: 160px;
 }
 </style>
+

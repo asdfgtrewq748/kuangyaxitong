@@ -4,15 +4,15 @@
     <div class="legend">
       <div class="legend-item">
         <span class="legend-color" style="background: #333;"></span>
-        <span>均值</span>
+        <span>Mean</span>
       </div>
       <div class="legend-item">
         <span class="legend-line"></span>
-        <span>95% 置信区间</span>
+        <span>95% CI</span>
       </div>
       <div class="legend-item">
         <span class="legend-error"></span>
-        <span>标准差</span>
+        <span>Std Dev</span>
       </div>
     </div>
   </div>
@@ -20,21 +20,21 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 
 const props = defineProps({
-  // 数据: { x: number, mean: number, std: number, ci95: [min, max], n: number }[]
+  // 鏁版嵁: { x: number, mean: number, std: number, ci95: [min, max], n: number }[]
   data: {
     type: Array,
     required: true
   },
   xLabel: {
     type: String,
-    default: '推进距离 (m)'
+    default: 'Distance (m)'
   },
   yLabel: {
     type: String,
-    default: '支架压力 (MPa)'
+    default: 'Support Pressure (MPa)'
   },
   showConfidenceInterval: {
     type: Boolean,
@@ -60,7 +60,7 @@ let chart = null
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -84,9 +84,9 @@ function updateChart() {
   
   const series = []
   
-  // 主数据线（均值）
+  // 涓绘暟鎹嚎锛堝潎鍊硷級
   series.push({
-    name: '均值',
+    name: 'Mean',
     type: 'line',
     data: meanData,
     smooth: true,
@@ -102,7 +102,7 @@ function updateChart() {
     }
   })
   
-  // 95% 置信区间（填充区域）
+  // 95% 缃俊鍖洪棿锛堝～鍏呭尯鍩燂級
   if (props.showConfidenceInterval) {
     const upperCI = props.data.map(d => d.ci95?.[1] ?? d.mean + 1.96 * (d.std || 0) / Math.sqrt(d.n || 1))
     const lowerCI = props.data.map(d => d.ci95?.[0] ?? d.mean - 1.96 * (d.std || 0) / Math.sqrt(d.n || 1))
@@ -134,7 +134,7 @@ function updateChart() {
     })
   }
   
-  // 误差条（标准差）
+  // 璇樊鏉★紙鏍囧噯宸級
   if (props.showErrorBars) {
     const errorData = props.data.map(d => {
       const std = d.std || 0
@@ -142,7 +142,7 @@ function updateChart() {
     })
     
     series.push({
-      name: '标准差',
+      name: 'Std Dev',
       type: 'custom',
       renderItem: (params, api) => {
         const x = api.coord([api.value(0), 0])[0]
@@ -177,7 +177,7 @@ function updateChart() {
   
   const option = {
     title: {
-      text: '带不确定性估计的压力趋势',
+      text: 'Pressure Trend with Uncertainty',
       left: 'center',
       textStyle: { fontSize: 14, fontWeight: 'normal' }
     },
@@ -189,16 +189,16 @@ function updateChart() {
         if (!d) return ''
         
         let html = `<strong>${props.xLabel}: ${d.x}</strong><br/>`
-        html += `均值: ${d.mean.toFixed(3)} MPa<br/>`
-        if (d.std) html += `标准差: ${d.std.toFixed(3)}<br/>`
-        if (d.n) html += `样本数: ${d.n}<br/>`
+        html += `Mean: ${d.mean.toFixed(3)} MPa<br/>`
+        if (d.std) html += `Std Dev: ${d.std.toFixed(3)}<br/>`
+        if (d.n) html += `Samples: ${d.n}<br/>`
         if (d.ci95) html += `95% CI: [${d.ci95[0].toFixed(3)}, ${d.ci95[1].toFixed(3)}]`
         
         return html
       }
     },
     legend: {
-      data: ['均值'],
+      data: ['Mean'],
       bottom: 0
     },
     grid: {
@@ -292,3 +292,4 @@ watch(() => [props.showConfidenceInterval, props.showErrorBars], updateChart)
 .legend-error::before { top: 0; }
 .legend-error::after { bottom: 0; }
 </style>
+

@@ -680,6 +680,7 @@ import PressureContour from '@/components/pressure/charts/PressureContour.vue'
 // 科研分析组件
 import ResearchPanel from '@/components/pressure/ResearchPanel.vue'
 import MethodologyPanel from '@/components/pressure/MethodologyPanel.vue'
+import { exportECharts } from '@/utils/figureExport'
 
 // 导入数据处理函数
 import {
@@ -792,6 +793,60 @@ function collectChartInstances() {
   
   chartInstances.value = instances
 }
+
+const resolveChartRefByTab = (tabId) => {
+  const refMap = {
+    hist: histogramRef.value,
+    spatial: spatialRef.value,
+    cycle: cycleRef.value,
+    corr: correlationRef.value,
+    compare: compareRef.value,
+    boxplot: boxplotRef.value,
+    cdf: cdfRef.value,
+    spectral: spectralRef.value,
+    scatter: scatterRef.value,
+    anomaly: anomalyRef.value,
+    radar: radarRef.value,
+    density: densityRef.value,
+    contour: contourRef.value
+  }
+  return refMap[tabId] || null
+}
+
+const resolveChartInstanceByTab = (tabId) => resolveChartRefByTab(tabId)?.getChartInstance?.() || null
+const resolveActiveChartInstance = () => resolveChartInstanceByTab(activeTab.value)
+const buildTimestampTag = () => new Date().toISOString().replace(/[:.]/g, '-')
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
+const dataUrlToBlob = async (dataUrl) => {
+  const resp = await fetch(dataUrl)
+  return resp.blob()
+}
+
+const triggerDownload = (blob, filename) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+const normalizeResearchPaletteColors = (palette) => {
+  const colors = Array.isArray(palette?.colors) ? palette.colors : []
+  return colors
+    .map((item) => {
+      if (typeof item === 'string' && item.trim()) return item.trim()
+      if (Array.isArray(item) && item.length >= 3) {
+        const [r, g, b] = item
+        const toHex = (channel) => clamp(Math.round(Number(channel) || 0), 0, 255).toString(16).padStart(2, '0')
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+      }
+      return ''
+    })
+    .filter(Boolean)
+}
+
 
 // 监听标签页切换，收集当前可见图表
 watch(activeTab, () => {
@@ -1320,23 +1375,57 @@ const researchData = computed(() => ({
 }))
 
 function onResearchPaletteChange(palette) {
-  // 更新热力图配色方案
-  colorScheme.value = palette.name.toLowerCase()
-  showToast(`已切换到配色方案: ${palette.name}`)
+  colorScheme.value = String(palette?.name || '').toLowerCase()
+  const colors = normalizeResearchPaletteColors(palette)
+  const uniqueCharts = new Set([
+    ...chartInstances.value,
+    resolveActiveChartInstance()
+  ].filter(Boolean))
+
+  if (colors.length && uniqueCharts.size > 0) {
+    uniqueCharts.forEach((chart) => {
+      chart.setOption({ color: colors }, false, true)
+    })
+    showToast(`Palette applied: ${palette?.name || 'default'} (${uniqueCharts.size} charts)`)
+    return
+  }
+
+  showToast(`Palette switched: ${palette?.name || 'default'}`)
 }
 
-function onResearchExport(config) {
-  // 触发图表导出
-  showToast(`正在导出 ${config.format.toUpperCase()} 格式 (DPI: ${config.dpi})...`)
-  
-  // 调用NatureExportPanel的导出功能
-  // 这里可以扩展为支持更多导出选项
-  setTimeout(() => {
-    showToast('导出完成')
-  }, 1000)
+async function onResearchExport(config) {
+  const chart = resolveActiveChartInstance()
+  if (!chart) {
+    showToast('Chart is not ready')
+    return
+  }
+
+  const requestedFormat = String(config?.format || 'png').toLowerCase()
+  const exportType = requestedFormat === 'svg' ? 'svg' : 'png'
+  const dpi = clamp(Number(config?.dpi || 300), 72, 1200)
+  const pixelRatio = clamp(dpi / 96, 1, 8)
+
+  try {
+    const dataUrl = exportECharts(chart, {
+      type: exportType,
+      pixelRatio,
+      backgroundColor: '#FFFFFF'
+    })
+    const blob = await dataUrlToBlob(dataUrl)
+    const ext = exportType === 'svg' ? 'svg' : 'png'
+    const filename = `Pressure_Research_${activeTab.value}_${buildTimestampTag()}.${ext}`
+    triggerDownload(blob, filename)
+
+    if (requestedFormat !== exportType) {
+      showToast(`Exported as ${ext.toUpperCase()} (fallback from ${requestedFormat.toUpperCase()})`)
+      return
+    }
+    showToast(`Exported: ${filename}`)
+  } catch (error) {
+    showToast(error?.message || 'Research export failed')
+  }
 }
 
-// 执行智能分析工具
 async function executeTool(toolId) {
   if (toolLoading.value) return
   
@@ -1371,7 +1460,6 @@ async function runAnomalyDetection() {
   showAnomalies.value = true
   
   const values = rawData.value.map(r => r.finalResistanceValue)
-  const { detectAnomalies } = await import('@/utils/pressureDataProcessor')
   const result = detectAnomalies(values, 2)
   
   analysisResults.value.anomaly = {

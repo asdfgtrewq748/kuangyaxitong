@@ -77,12 +77,21 @@
         <button class="tool-btn" type="button" :disabled="loadingFusion || !seamName" @click="loadFusionPreview">
           {{ loadingFusion ? fp('loadingFusion') : fp('loadFusion') }}
         </button>
-        <button class="tool-btn secondary" type="button" :disabled="exportingMain || !fusionReady" @click="exportMainFigure">
-          {{ exportingMain ? fp('exportingMain') : fp('exportMain') }}
-        </button>
-        <button class="tool-btn secondary" type="button" :disabled="exportingPack || !fusionReady" @click="exportSupplementPackage">
-          {{ exportingPack ? fp('exportingPack') : fp('exportSupplement') }}
-        </button>
+        <PaperExportMenu
+          trigger-label="论文导出"
+          :main-label="fp('exportMain')"
+          :pack-label="fp('exportSupplement')"
+          :loading-main-label="fp('exportingMain')"
+          :loading-pack-label="fp('exportingPack')"
+          main-hint="Fig.1 主图（PNG）"
+          pack-hint="Fig.S* 补充图（ZIP）"
+          :disabled-main="!fusionReady"
+          :disabled-pack="!fusionReady"
+          :loading-main="exportingMain"
+          :loading-pack="exportingPack"
+          @export-main="exportMainFigure"
+          @export-pack="exportSupplementPackage"
+        />
       </div>
 
       <p v-if="pageError" class="error">{{ pageError }}</p>
@@ -109,7 +118,17 @@
       </article>
     </section>
 
+    <div v-if="!fusionSceneRequested" class="fusion-lazy-card">
+      <div class="fusion-lazy-copy">
+        <h2>{{ fp('viewerTitle') }}</h2>
+        <p>3D fusion preview is deferred until you request it, so the page can finish loading spatial analysis first.</p>
+      </div>
+      <button class="tool-btn" type="button" :disabled="loadingSpatial || loadingFusion || !seamName" @click="activateFusionScene()">
+        {{ loadingFusion ? fp('loadingFusion') : fp('loadFusion') }}
+      </button>
+    </div>
     <GeoMpiFusion3D
+      v-else
       ref="fusionViewerRef"
       panel-label="Fig. 1"
       :context-meta="fusionContextMeta"
@@ -132,7 +151,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getApiErrorMessage,
@@ -142,13 +161,17 @@ import {
   getGeomodelStressProfile,
   validationSpatialOverview
 } from '../api'
-import GeoMpiFusion3D from '../components/GeoMpiFusion3D.vue'
+import PaperExportMenu from '../components/common/PaperExportMenu.vue'
 import { useI18n } from '../composables/useI18n'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
+import { buildCaptionsMarkdown, buildPaperFigure, buildPaperManifest } from '../utils/paperExportSchema'
+
+const loadGeoMpiFusion3D = () => import('../components/GeoMpiFusion3D.vue')
+const GeoMpiFusion3D = defineAsyncComponent(loadGeoMpiFusion3D)
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { workspaceState, setSelectedSeam } = useWorkspaceFlow()
 
 const fp = (key, params) => t(`fusionPreview.${key}`, params)
@@ -171,12 +194,15 @@ const exportNote = ref('')
 const exportingMain = ref(false)
 const exportingPack = ref(false)
 const isSwitchingProfile = ref(false)
+const fusionSceneRequested = ref(false)
 
 const spatialData = shallowRef(null)
 const fusionGeomodel = shallowRef(null)
 const fusionStressProfile = shallowRef(null)
 const fusionViewerRef = ref(null)
 let jsZipCtor = null
+let fusionWarmupTimer = null
+let fusionWarmupIdleId = null
 
 const FIGURE_EXPORT_PROFILE = Object.freeze({
   standard: { main: { width: 3200, height: 2000 }, supplement: { width: 2800, height: 1800 } },
@@ -303,9 +329,57 @@ const loadFusionPreview = async () => {
   }
 }
 
+const activateFusionScene = async ({ preload = false } = {}) => {
+  fusionSceneRequested.value = true
+  if (loadingFusion.value || fusionReady.value || !seamName.value) return
+  if (!spatialData.value && !loadingSpatial.value) {
+    await loadSpatial()
+  }
+  if (!spatialData.value) return
+  await loadFusionPreview()
+  if (!preload) exportNote.value = ''
+}
+
+const cancelFusionWarmup = () => {
+  if (fusionWarmupTimer) {
+    window.clearTimeout(fusionWarmupTimer)
+    fusionWarmupTimer = null
+  }
+  if (fusionWarmupIdleId !== null && typeof window.cancelIdleCallback === 'function') {
+    window.cancelIdleCallback(fusionWarmupIdleId)
+    fusionWarmupIdleId = null
+  }
+}
+
+const prefetchFusionScene = async () => {
+  try {
+    await loadGeoMpiFusion3D()
+  } catch {
+    // Keep the route responsive if prefetch fails.
+  }
+}
+
+const scheduleFusionWarmup = () => {
+  cancelFusionWarmup()
+  if (!seamName.value || fusionSceneRequested.value) return
+
+  const warmup = () => {
+    fusionWarmupTimer = null
+    fusionWarmupIdleId = null
+    prefetchFusionScene().catch(() => {})
+  }
+
+  if (typeof window.requestIdleCallback === 'function') {
+    fusionWarmupIdleId = window.requestIdleCallback(warmup, { timeout: 1500 })
+    return
+  }
+
+  fusionWarmupTimer = window.setTimeout(warmup, 900)
+}
+
 const reloadAll = async () => {
   await loadSpatial()
-  await loadFusionPreview()
+  await activateFusionScene()
 }
 
 const waitNextFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve))
@@ -336,9 +410,7 @@ const getExportPreset = () => {
 }
 
 const ensureFusionReadyForExport = async () => {
-  if (!fusionReady.value) {
-    await loadFusionPreview()
-  }
+  if (!fusionReady.value) await activateFusionScene()
   if (!fusionReady.value || !fusionViewerRef.value?.exportFigureBlob) {
     throw new Error(fp('errorFusionUnavailable'))
   }
@@ -380,7 +452,7 @@ const exportSupplementPackage = async () => {
     const zip = new JSZip()
     const preset = getExportPreset()
     const focuses = ['balanced', 'shallow', 'deep']
-    const manifest = []
+    const figureRecords = []
 
     for (let index = 0; index < focuses.length; index += 1) {
       const focus = focuses[index]
@@ -397,27 +469,54 @@ const exportSupplementPackage = async () => {
       const tag = `FigS${index + 1}`
       const filename = `${tag}_Fusion_${focus}.png`
       zip.file(`figures/${filename}`, payload.blob)
-      manifest.push({
-        figure: tag,
-        focus,
-        metric: metric.value,
-        seam: seamName.value,
-        size: {
+      figureRecords.push(buildPaperFigure({
+        id: tag,
+        panel: String.fromCharCode(65 + index),
+        title: `Fusion ${focus}`,
+        caption: `Geomodel-MPI fusion render under ${focus} focus mode.`,
+        files: [`figures/${filename}`],
+        tags: ['fusion', 'geomodel', focus],
+        meta: {
+          focus,
+          metric: metric.value,
+          seam: seamName.value,
           width: payload.width || preset.supplement.width,
           height: payload.height || preset.supplement.height
         }
-      })
+      }))
     }
 
-    zip.file('data/manifest.json', JSON.stringify({
-      mode: figureMode.value,
-      job_id: fusionJobId.value,
-      generated_at: new Date().toISOString(),
-      figures: manifest
-    }, null, 2))
+    zip.file('captions.md', buildCaptionsMarkdown({
+      title: 'Fusion Figure Captions',
+      intro: `Seam ${seamName.value || '--'}, metric ${metric.value.toUpperCase()}, method ${method.value.toUpperCase()}.`,
+      figures: figureRecords
+    }))
+
+    const manifest = buildPaperManifest({
+      sourcePage: 'fusion-preview',
+      title: 'Fusion Supplement Export',
+      locale: locale.value,
+      context: {
+        seam: seamName.value || '',
+        metric: metric.value,
+        method: method.value,
+        resolution: resolution.value,
+        figure_mode: figureMode.value,
+        geomodel_job_id: fusionJobId.value || '',
+        focus: profileFocus.value
+      },
+      figures: figureRecords,
+      notes: [
+        'All figures are exported from fusion preview in publication mode.',
+        'Supplement includes three focus configurations.'
+      ]
+    })
+
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2))
+    zip.file('data/manifest.json', JSON.stringify(manifest, null, 2))
     const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
     triggerDownload(zipBlob, `Fusion_Supplement_${figureMode.value}_${getTimestampTag()}.zip`)
-    exportNote.value = fp('exportPackDone', { count: manifest.length })
+    exportNote.value = fp('exportPackDone', { count: figureRecords.length })
   } catch (error) {
     exportNote.value = getApiErrorMessage(error, fp('errorExportPack'))
   } finally {
@@ -445,10 +544,12 @@ const goValidation = () => {
 watch(seamName, (value) => {
   setSelectedSeam(value || '')
   spatialData.value = null
+  fusionSceneRequested.value = false
   fusionGeomodel.value = null
   fusionStressProfile.value = null
   fusionError.value = ''
   fusionJobId.value = ''
+  cancelFusionWarmup()
 })
 
 watch(profileFocus, async () => {
@@ -465,7 +566,11 @@ onMounted(async () => {
   await loadSeams()
   if (!seamName.value) return
   await loadSpatial()
-  await loadFusionPreview()
+  scheduleFusionWarmup()
+})
+
+onBeforeUnmount(() => {
+  cancelFusionWarmup()
 })
 </script>
 
@@ -616,6 +721,31 @@ onMounted(async () => {
   color: #475569;
 }
 
+.fusion-lazy-card {
+  border: 1px dashed #94a3b8;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef6f4 100%);
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fusion-lazy-copy h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+  font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
+}
+
+.fusion-lazy-copy p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #475569;
+  max-width: 560px;
+}
+
 @media (max-width: 1080px) {
   .control-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -641,6 +771,11 @@ onMounted(async () => {
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .fusion-lazy-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

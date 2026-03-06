@@ -88,6 +88,24 @@
           <p>Entropy {{ formatValue(mpiSummary.entropyNorm) }}</p>
           <p>Skew {{ formatValue(mpiSummary.skewness) }}</p>
         </div>
+        <div class="diagnostic-badges">
+          <span
+            v-for="badge in diagnosticBadges"
+            :key="`${badge.label}-${badge.value}`"
+            class="diagnostic-badge"
+            :class="`tone-${badge.tone}`"
+          >
+            <strong>{{ badge.label }}</strong>
+            <em>{{ badge.value }}</em>
+          </span>
+        </div>
+        <div class="methods-panel">
+          <p class="methods-title">Methods and provenance</p>
+          <p v-for="row in methodProvenanceRows" :key="row.label" class="methods-row">
+            <span class="methods-key">{{ row.label }}</span>
+            <span class="methods-value">{{ row.value }}</span>
+          </p>
+        </div>
         <p class="figure-note">Nature-style content panel: structure + statistics + depth coupling.</p>
       </div>
 
@@ -127,6 +145,39 @@
             <span class="anchor-meta">z={{ formatValue(item.zWorld) }} | w={{ formatValue(item.importance) }}</span>
           </p>
         </div>
+        <div class="depth-strip-wrap">
+          <span class="subfigure-label">d</span>
+          <p class="depth-strip-title">Stratigraphic depth guide</p>
+          <div class="depth-strip-layout">
+            <svg class="depth-strip" viewBox="0 0 88 220" preserveAspectRatio="none" aria-hidden="true">
+              <rect x="28" y="8" width="18" height="204" rx="9" class="depth-strip-bg" />
+              <rect
+                v-if="depthFocusBand"
+                :x="depthFocusBand.x"
+                :y="depthFocusBand.y"
+                :width="depthFocusBand.w"
+                :height="depthFocusBand.h"
+                rx="8"
+                class="depth-focus-band"
+              />
+              <line x1="37" y1="8" x2="37" y2="212" class="depth-axis-line" />
+              <g v-for="tick in depthAxisTicks" :key="`tick-${tick.id}`">
+                <line x1="24" :y1="tick.y" x2="50" :y2="tick.y" class="depth-tick-line" />
+                <text x="4" :y="tick.y + 3" class="depth-tick-label">{{ tick.label }}</text>
+              </g>
+              <g v-for="item in depthAnchorTrack" :key="`track-${item.name}-${item.zNorm}`">
+                <line x1="46" :y1="item.y" x2="58" :y2="item.y" class="depth-anchor-line" />
+                <circle cx="37" :cy="item.y" :r="item.r" class="depth-anchor-dot" />
+                <text x="61" :y="item.y + 3" class="depth-anchor-label">{{ item.shortLabel }}</text>
+              </g>
+            </svg>
+            <div class="depth-strip-notes">
+              <p>Focus band: {{ stressFocusLabel }}</p>
+              <p>Anchors ranked by transfer weight.</p>
+              <p>Depth frame: {{ formatValue(dataBounds.max_z) }} to {{ formatValue(dataBounds.min_z) }} m.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-if="!loading && hasRenderableData && !errorText" class="orientation-overlay">
@@ -144,6 +195,7 @@
       <div v-if="!loading && hasRenderableData && !errorText" class="analysis-overlay">
         <p class="analysis-title">Quantitative Highlights</p>
         <div class="inset-map-wrap">
+          <span class="subfigure-label">a</span>
           <p class="inset-title">Plan-view MPI inset</p>
           <svg class="inset-map" :viewBox="insetViewBox" preserveAspectRatio="none" aria-hidden="true">
             <rect
@@ -175,6 +227,7 @@
           <p class="inset-caption">Line = section, circles = hotspots</p>
         </div>
         <div class="dist-wrap">
+          <span class="subfigure-label">b</span>
           <p class="dist-title">MPI distribution</p>
           <svg class="dist-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
             <rect
@@ -198,6 +251,37 @@
           </svg>
           <p class="dist-caption">Q1/Q2/Q3 markers</p>
         </div>
+        <div class="section-profile-wrap">
+          <span class="subfigure-label">c</span>
+          <p class="section-profile-title">{{ sectionProfileModeLabel }}</p>
+          <svg class="section-profile-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
+            <line x1="0" y1="37" x2="100" y2="37" class="section-axis-line" />
+            <line x1="0" y1="1" x2="0" y2="37" class="section-axis-line" />
+            <line
+              v-if="sectionProfileGuideX !== null"
+              :x1="sectionProfileGuideX"
+              y1="1"
+              :x2="sectionProfileGuideX"
+              y2="37"
+              class="section-guide-line"
+            />
+            <path
+              v-if="sectionUncertaintyBandPath"
+              :d="sectionUncertaintyBandPath"
+              class="section-band-path"
+            />
+            <path
+              v-if="sectionProfilePath"
+              :d="sectionProfilePath"
+              class="section-profile-path"
+            />
+          </svg>
+          <div class="section-profile-meta">
+            <span>{{ sectionProfileRangeLabel }}</span>
+            <span>{{ sectionProfilePeakLabel }}</span>
+          </div>
+          <p class="section-profile-note">{{ sectionProfileSpreadLabel }}</p>
+        </div>
         <p>Section retained: {{ formatPercent(sectionRetainedRatio) }}</p>
         <p>Hotspots (P90+): {{ hotspotCandidates.length }}</p>
         <p>Q1/Q2/Q3: {{ formatValue(mpiSummary.p25) }} / {{ formatValue(mpiSummary.p50) }} / {{ formatValue(mpiSummary.p75) }}</p>
@@ -205,11 +289,22 @@
       </div>
 
       <div v-if="!loading && hasRenderableData && !errorText" class="caption-overlay">
-        <p class="caption-title">Figure interpretation</p>
-        <p class="caption-text">{{ figureNarrative }}</p>
-        <p class="caption-meta">
-          Heterogeneity {{ formatValue(heterogeneityScore) }} | Borehole density {{ formatValue(boreholeDensityKm2) }} km^-2 | N {{ mpiSummary.count || 0 }}
-        </p>
+        <div class="caption-grid">
+          <div class="caption-block">
+            <p class="caption-title">Figure caption</p>
+            <p v-for="row in publicationCaptionRows" :key="row.label" class="caption-row">
+              <span class="caption-key">{{ row.label }}</span>
+              <span class="caption-value">{{ row.value }}</span>
+            </p>
+          </div>
+          <div class="caption-block caption-block-notes">
+            <p class="caption-title">Notes and abbreviations</p>
+            <p v-for="row in publicationNoteRows" :key="row.label" class="caption-row">
+              <span class="caption-key">{{ row.label }}</span>
+              <span class="caption-value">{{ row.value }}</span>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -217,6 +312,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { loadOrbitControls, three } from '@/lib/three-fusion'
 import AsyncState from './AsyncState.vue'
 
 const props = defineProps({
@@ -494,12 +590,125 @@ const heterogeneityScore = computed(() => {
   const entropyNorm = Number.isFinite(entropy) ? Math.max(0, Math.min(1, entropy)) : 0
   return 0.45 * cvNorm + 0.25 * skewNorm + 0.3 * entropyNorm
 })
+const heterogeneityClass = computed(() => {
+  const score = heterogeneityScore.value
+  if (!Number.isFinite(score)) return 'undetermined'
+  if (score >= 0.72) return 'strongly heterogeneous'
+  if (score >= 0.48) return 'moderately heterogeneous'
+  if (score >= 0.24) return 'weakly heterogeneous'
+  return 'internally uniform'
+})
+const hotspotRegime = computed(() => {
+  const count = hotspotCandidates.value.length
+  const coverage = toFinite(mpiSummary.value.p90Cover, NaN)
+  if (!count) return 'no resolved hotspot'
+  if (count >= 6 || coverage >= 0.18) return 'multi-core hotspot field'
+  if (count >= 3 || coverage >= 0.11) return 'clustered hotspot belt'
+  return 'isolated hotspot core'
+})
+const samplingClass = computed(() => {
+  const density = toFinite(boreholeDensityKm2.value, NaN)
+  const anchors = stressAnchorItems.value.length
+  if (Number.isFinite(density) && density >= 4 && anchors >= 3) return 'dense control'
+  if (Number.isFinite(density) && density >= 1.5 && anchors >= 2) return 'moderate control'
+  if (anchors >= 1) return 'anchor-limited control'
+  return 'low control'
+})
+const diagnosticBadges = computed(() => ([
+  {
+    label: 'Fabric',
+    value: heterogeneityClass.value,
+    tone: heterogeneityScore.value >= 0.48 ? 'warn' : 'calm',
+  },
+  {
+    label: 'Hotspot',
+    value: hotspotRegime.value,
+    tone: hotspotCandidates.value.length >= 3 ? 'risk' : 'calm',
+  },
+  {
+    label: 'Sampling',
+    value: samplingClass.value,
+    tone: samplingClass.value === 'low control' ? 'risk' : samplingClass.value === 'anchor-limited control' ? 'warn' : 'calm',
+  },
+]))
+const methodProvenanceRows = computed(() => {
+  const resolution = Number(props.contextMeta?.resolution)
+  const method = String(props.contextMeta?.method || '').trim().toUpperCase() || 'UNSPECIFIED'
+  const source = stressProfileLabel.value
+  const seam = String(props.contextMeta?.seam || '--')
+  const anchorCount = stressAnchorItems.value.length
+  const sectionMode = sectionEnabled.value
+    ? `${sectionAxis.value.toUpperCase()} @ ${formatValue(sectionThreshold.value)}`
+    : 'not applied'
+
+  return [
+    { label: 'Seam', value: seam },
+    { label: 'Fusion', value: `${method} on ${gridShapeText.value} grid` },
+    { label: 'Resolution', value: Number.isFinite(resolution) ? `${formatValue(resolution)} m` : 'not reported' },
+    { label: 'Stress prior', value: `${source} | focus ${stressFocusLabel.value}` },
+    { label: 'Section', value: sectionMode },
+    { label: 'Control', value: `${boreholeCount.value} boreholes, ${anchorCount} anchors` },
+  ]
+})
+const paperNotation = computed(() => {
+  const rawPanelLabel = String(props.panelLabel || 'Fig. 1').trim()
+  const normalizedFigureLabel = rawPanelLabel
+    ? rawPanelLabel.replace(/^fig\.?\s*/i, 'Figure ').replace(/^figure\s*/i, 'Figure ')
+    : 'Figure 1'
+  const figureTitle = props.title || '3D geology-stress fusion figure'
+
+  return {
+    metricUnit: 'MPa',
+    depthUnit: 'm',
+    densityUnit: 'boreholes km^-2',
+    spatialFrameLabel: 'X east / Y north',
+    sampleSizeLabel: `n = ${mpiSummary.value.count || 0}`,
+    figureHeading: `${normalizedFigureLabel} | Geological-stress fusion diagnostics`,
+    captionTitle: `${normalizedFigureLabel}. ${figureTitle}`,
+    summaryLead: `${figureNarrative.value} ${metricLabel.value} evidence spans ${formatValue(props.metricStats?.min)} to ${formatValue(props.metricStats?.max)} ${'MPa'} with ${`n = ${mpiSummary.value.count || 0}`}.`,
+    metricLine: `${metricLabel.value} (${metricLabel.value.includes('index') ? 'index' : 'proxy'})  min ${formatValue(props.metricStats?.min)}   mean ${formatValue(props.metricStats?.mean)}   max ${formatValue(props.metricStats?.max)}`,
+    quantileLine: `Q1 / Q2 / Q3 ${formatValue(mpiSummary.value.p25)} / ${formatValue(mpiSummary.value.p50)} / ${formatValue(mpiSummary.value.p75)} ${'MPa'}  |  CV ${formatValue(mpiSummary.value.cv)}`,
+    coverLine: `Q3 cover ${formatPercent(mpiSummary.value.p75Cover)}  |  P90 cover ${formatPercent(mpiSummary.value.p90Cover)}  |  Section retained ${formatPercent(sectionRetainedRatio.value)}`,
+    distributionLine: `Entropy ${formatValue(mpiSummary.value.entropyNorm)}  |  Skewness ${formatValue(mpiSummary.value.skewness)}  |  n = ${mpiSummary.value.count || 0}`,
+    supportLine: `Heterogeneity ${formatValue(heterogeneityScore.value)} | Borehole density ${formatValue(boreholeDensityKm2.value)} boreholes km^-2 | n = ${mpiSummary.value.count || 0}`,
+    methodsFooter: `Methods footer: ${String(props.contextMeta?.method || '--').toUpperCase()} fusion on ${gridShapeText.value}; resolution ${formatValue(props.contextMeta?.resolution)} ${'m'}; frame ${'X east / Y north'}; scale ${scaleBarLabel.value}.`,
+    abbreviationsLine: 'MPI, mining pressure index; CV, coefficient of variation; IQR, interquartile range; Q1/Q2/Q3, 25th/50th/75th percentiles; P90, 90th percentile.',
+  }
+})
+const publicationCaptionRows = computed(() => ([
+  {
+    label: 'Title',
+    value: paperNotation.value.captionTitle,
+  },
+  {
+    label: 'Finding',
+    value: figureNarrative.value,
+  },
+  {
+    label: 'Support',
+    value: paperNotation.value.supportLine,
+  },
+]))
+const publicationNoteRows = computed(() => ([
+  {
+    label: 'Data',
+    value: `${layerCount.value} layers + ${boreholeCount.value} boreholes + ${gridShapeText.value} metric grid`,
+  },
+  {
+    label: 'Frame',
+    value: `${paperNotation.value.spatialFrameLabel}; depth ${formatValue(dataBounds.value.max_z)} to ${formatValue(dataBounds.value.min_z)} ${paperNotation.value.depthUnit}; scale ${scaleBarLabel.value}`,
+  },
+  {
+    label: 'Abbrev.',
+    value: paperNotation.value.abbreviationsLine,
+  },
+]))
 const figureNarrative = computed(() => {
   if (!mpiSummary.value.count) return 'Metric distribution is unavailable for current selection.'
   const hotspotText = hotspotTopList.value.length ? hotspotTopList.value[0] : 'No dominant hotspot'
   const skew = toFinite(mpiSummary.value.skewness, 0)
   const skewDesc = skew > 0.3 ? 'right-tailed stress amplification' : skew < -0.3 ? 'left-tailed attenuation' : 'near-symmetric distribution'
-  return `${metricLabel.value} shows ${skewDesc}; strongest anomaly at ${hotspotText}. Section keeps ${formatPercent(sectionRetainedRatio.value)} of the volume.`
+  return `${metricLabel.value} shows ${skewDesc}; strongest anomaly at ${hotspotText}. Section keeps ${formatPercent(sectionRetainedRatio.value)} of the volume, with ${heterogeneityClass.value} fabric under ${samplingClass.value}.`
 })
 const profileCurvePoints = computed(() => {
   const bins = Array.isArray(props.stressProfile?.bins) ? props.stressProfile.bins : []
@@ -540,6 +749,32 @@ const getSectionThreshold = () => {
 const sectionThreshold = computed(() => getSectionThreshold())
 const sectionDisplay = computed(() => `${sectionAxis.value.toUpperCase()} ${formatValue(sectionThreshold.value)}`)
 const insetViewBox = '0 0 100 100'
+const depthAxisTicks = computed(() => {
+  const b = dataBounds.value
+  const min = toFinite(b.min_z, NaN)
+  const max = toFinite(b.max_z, NaN)
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return []
+  const ratios = [0, 0.25, 0.5, 0.75, 1]
+  return ratios.map((ratio, index) => ({
+    id: index,
+    y: (8 + ratio * 204).toFixed(2),
+    label: formatValue(max - (max - min) * ratio),
+  }))
+})
+const depthFocusBand = computed(() => {
+  const focus = stressFocusLabel.value
+  if (focus === 'shallow') return { x: 28, y: 10, w: 18, h: 52 }
+  if (focus === 'deep') return { x: 28, y: 158, w: 18, h: 52 }
+  return { x: 28, y: 78, w: 18, h: 64 }
+})
+const depthAnchorTrack = computed(() => {
+  return stressAnchorItems.value.slice(0, 5).map((item, index) => ({
+    ...item,
+    y: (8 + item.zNorm * 204).toFixed(2),
+    r: Math.max(2.3, 4.8 - index * 0.45).toFixed(2),
+    shortLabel: item.name.length > 14 ? `${item.name.slice(0, 12)}..` : item.name,
+  }))
+})
 
 const chooseNiceScaleLength = (span) => {
   const safeSpan = Math.max(1, toFinite(span, 1))
@@ -686,6 +921,153 @@ const histogramQuantileLines = computed(() => {
     })
 })
 
+const sectionProfileDiagnostics = computed(() => {
+  const grid = props.mpiGrid
+  if (!Array.isArray(grid) || !Array.isArray(grid[0])) {
+    return {
+      path: '',
+      bandPath: '',
+      guideX: null,
+      modeLabel: 'Section transect',
+      peakLabel: 'Peak --',
+      spreadLabel: 'Band = local interquartile envelope.',
+      rangeLabel: '-- to -- MPa',
+    }
+  }
+
+  const rows = grid.length
+  const cols = grid[0].length
+  if (rows < 2 || cols < 2) {
+    return {
+      path: '',
+      bandPath: '',
+      guideX: null,
+      modeLabel: 'Section transect',
+      peakLabel: 'Peak --',
+      spreadLabel: 'Band = local interquartile envelope.',
+      rangeLabel: '-- to -- MPa',
+    }
+  }
+
+  const samples = []
+  let guideX = null
+  let modeLabel = 'Section transect'
+  let axisDescriptor = 'track'
+
+  if (sectionAxis.value === 'x') {
+    const focusCol = Math.max(0, Math.min(cols - 1, Math.round(sectionRetainedRatio.value * (cols - 1))))
+    guideX = ((focusCol / Math.max(cols - 1, 1)) * 100).toFixed(3)
+    modeLabel = 'Y-direction section transect'
+    axisDescriptor = 'Y'
+    for (let r = 0; r < rows; r += 1) {
+      const local = []
+      for (let dc = -1; dc <= 1; dc += 1) {
+        const value = Number(grid[r]?.[focusCol + dc])
+        if (Number.isFinite(value)) local.push(value)
+      }
+      if (!local.length) continue
+      local.sort((a, b) => a - b)
+      samples.push({
+        index: r,
+        pos: rows > 1 ? r / (rows - 1) : 0,
+        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
+        low: quantileFromSorted(local, 0.25),
+        high: quantileFromSorted(local, 0.75),
+      })
+    }
+  } else if (sectionAxis.value === 'y') {
+    const focusRow = Math.max(0, Math.min(rows - 1, Math.round(sectionRetainedRatio.value * (rows - 1))))
+    guideX = ((focusRow / Math.max(rows - 1, 1)) * 100).toFixed(3)
+    modeLabel = 'X-direction section transect'
+    axisDescriptor = 'X'
+    for (let c = 0; c < cols; c += 1) {
+      const local = []
+      for (let dr = -1; dr <= 1; dr += 1) {
+        const value = Number(grid[focusRow + dr]?.[c])
+        if (Number.isFinite(value)) local.push(value)
+      }
+      if (!local.length) continue
+      local.sort((a, b) => a - b)
+      samples.push({
+        index: c,
+        pos: cols > 1 ? c / (cols - 1) : 0,
+        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
+        low: quantileFromSorted(local, 0.25),
+        high: quantileFromSorted(local, 0.75),
+      })
+    }
+  } else {
+    modeLabel = 'Representative lateral transect'
+    axisDescriptor = 'X'
+    for (let c = 0; c < cols; c += 1) {
+      const local = []
+      for (let r = 0; r < rows; r += 1) {
+        const value = Number(grid[r]?.[c])
+        if (Number.isFinite(value)) local.push(value)
+      }
+      if (!local.length) continue
+      local.sort((a, b) => a - b)
+      samples.push({
+        index: c,
+        pos: cols > 1 ? c / (cols - 1) : 0,
+        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
+        low: quantileFromSorted(local, 0.25),
+        high: quantileFromSorted(local, 0.75),
+      })
+    }
+  }
+
+  if (samples.length < 2) {
+    return {
+      path: '',
+      bandPath: '',
+      guideX,
+      modeLabel,
+      peakLabel: 'Peak --',
+      spreadLabel: 'Band = local interquartile envelope.',
+      rangeLabel: '-- to -- MPa',
+    }
+  }
+
+  let minValue = Number.POSITIVE_INFINITY
+  let maxValue = Number.NEGATIVE_INFINITY
+  samples.forEach((sample) => {
+    minValue = Math.min(minValue, sample.low, sample.mean)
+    maxValue = Math.max(maxValue, sample.high, sample.mean)
+  })
+  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || maxValue <= minValue) {
+    minValue = 0
+    maxValue = 1
+  }
+  const span = Math.max(maxValue - minValue, 1e-6)
+  const scaleY = (value) => (35 - ((value - minValue) / span) * 32).toFixed(3)
+  const scaleX = (pos) => (pos * 100).toFixed(3)
+
+  const upper = samples.map((sample) => `${scaleX(sample.pos)},${scaleY(sample.high)}`)
+  const lower = [...samples].reverse().map((sample) => `${scaleX(sample.pos)},${scaleY(sample.low)}`)
+  const meanLine = samples.map((sample) => `${scaleX(sample.pos)},${scaleY(sample.mean)}`)
+
+  const peak = samples.reduce((best, sample) => (sample.mean > best.mean ? sample : best), samples[0])
+  const averageBandWidth = samples.reduce((acc, sample) => acc + Math.max(0, sample.high - sample.low), 0) / samples.length
+
+  return {
+    path: `M ${meanLine.join(' L ')}`,
+    bandPath: `M ${upper.join(' L ')} L ${lower.join(' L ')} Z`,
+    guideX,
+    modeLabel,
+    peakLabel: `Peak ${axisDescriptor}${peak.index + 1} | ${formatValue(peak.mean)} MPa`,
+    spreadLabel: `Band = local interquartile envelope, mean width ${formatValue(averageBandWidth)} MPa.`,
+    rangeLabel: `${formatValue(minValue)} to ${formatValue(maxValue)} MPa`,
+  }
+})
+const sectionProfilePath = computed(() => sectionProfileDiagnostics.value.path)
+const sectionUncertaintyBandPath = computed(() => sectionProfileDiagnostics.value.bandPath)
+const sectionProfileGuideX = computed(() => sectionProfileDiagnostics.value.guideX)
+const sectionProfileModeLabel = computed(() => sectionProfileDiagnostics.value.modeLabel)
+const sectionProfilePeakLabel = computed(() => sectionProfileDiagnostics.value.peakLabel)
+const sectionProfileSpreadLabel = computed(() => sectionProfileDiagnostics.value.spreadLabel)
+const sectionProfileRangeLabel = computed(() => sectionProfileDiagnostics.value.rangeLabel)
+
 const getColorByRatio = (ratio) => {
   const t = Math.max(0, Math.min(1, ratio))
   if (t < 0.5) {
@@ -702,7 +1084,6 @@ const getColorByRatio = (ratio) => {
   return [r / 255, g / 255, b / 255]
 }
 
-let three = null
 let OrbitControlsCtor = null
 let scene = null
 let camera = null
@@ -720,8 +1101,13 @@ let sectionPlaneGroup = null
 let activeSectionClipPlane = null
 let frameId = null
 let resizeObserver = null
+let visibilityObserver = null
 let buildVersion = 0
 let isComponentAlive = false
+let isDocumentVisible = true
+let isHostVisible = true
+let pendingRender = false
+let interactionRenderFrames = 0
 const dirtyFlags = reactive({
   geometry: false,
   material: false,
@@ -773,9 +1159,14 @@ const clearThree = () => {
     frameId = null
   }
   window.removeEventListener('resize', onResize)
+  document.removeEventListener('visibilitychange', onDocumentVisibilityChange)
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
+  }
+  if (visibilityObserver) {
+    visibilityObserver.disconnect()
+    visibilityObserver = null
   }
   if (controls) {
     controls.dispose()
@@ -801,16 +1192,18 @@ const clearThree = () => {
   stressHotspotGroup = null
   sectionPlaneGroup = null
   activeSectionClipPlane = null
+  isDocumentVisible = true
+  isHostVisible = true
+  pendingRender = false
+  interactionRenderFrames = 0
   dirtyFlags.geometry = false
   dirtyFlags.material = false
   dirtyFlags.section = false
 }
 
 const ensureThree = async () => {
-  if (!three) three = await import('three')
   if (!OrbitControlsCtor) {
-    const controlsModule = await import('three/addons/controls/OrbitControls.js')
-    OrbitControlsCtor = controlsModule.OrbitControls
+    OrbitControlsCtor = await loadOrbitControls()
   }
 }
 
@@ -1464,6 +1857,7 @@ const updateSectionState = () => {
   applySectionClipping()
   buildSectionPlane()
   dirtyFlags.section = false
+  markSceneDirty(2)
 }
 
 const fitCamera = () => {
@@ -1482,6 +1876,7 @@ const fitCamera = () => {
   camera.updateProjectionMatrix()
   controls.target.copy(center)
   controls.update()
+  markSceneDirty(12)
 }
 
 const resetView = () => {
@@ -1513,279 +1908,85 @@ const applyPaperViewPose = () => {
   camera.updateProjectionMatrix()
   controls.target.copy(center)
   controls.update()
+  markSceneDirty(12)
 }
 
-const drawExportOverlay = (ctx, width, height) => {
-  const scale = Math.max(0.8, width / 2400)
-  const pad = Math.round(48 * scale)
-  const panelWidth = Math.min(width * 0.64, Math.round(1080 * scale))
-  const includeAnchorRows = showStressCloud.value && showStressAnchors.value && exportAnchorRows.value.length > 0
-  const includeHotspotRows = showHotspots.value && hotspotTopList.value.length > 0
-  const hotspotRowCount = includeHotspotRows ? Math.min(2, hotspotTopList.value.length) : 0
-  const panelHeight = Math.round(
-    (382 + (includeAnchorRows ? 40 + exportAnchorRows.value.length * 28 : 0) + (includeHotspotRows ? 34 + hotspotRowCount * 24 : 0)) * scale,
-  )
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'
-  ctx.fillRect(pad, pad, panelWidth, panelHeight)
-  ctx.strokeStyle = 'rgba(15,23,42,0.16)'
-  ctx.lineWidth = Math.max(2, 2 * scale)
-  ctx.strokeRect(pad, pad, panelWidth, panelHeight)
+let geoFusionExportPromise = null
 
-  ctx.fillStyle = '#0f172a'
-  ctx.font = `700 ${Math.round(24 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(String(props.panelLabel || 'Fig. 1'), pad + Math.round(22 * scale), pad + Math.round(38 * scale))
+const loadGeoFusionExport = async () => {
+  if (!geoFusionExportPromise) {
+    geoFusionExportPromise = import('../utils/geoFusionExport.js')
+  }
+  return geoFusionExportPromise
+}
 
-  ctx.fillStyle = '#0f172a'
-  ctx.font = `600 ${Math.round(42 * scale)}px "Times New Roman", "Noto Serif SC", serif`
-  ctx.fillText(props.title || '3D Geology-MPI Fusion', pad + Math.round(22 * scale), pad + Math.round(78 * scale))
-
-  const subtitle = props.subtitle || 'Preview'
-  ctx.fillStyle = '#334155'
-  ctx.font = `500 ${Math.round(28 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(subtitle, pad + Math.round(22 * scale), pad + Math.round(116 * scale))
-
-  const metricLine = `${metricLabel.value}  min ${formatValue(props.metricStats?.min)}   mean ${formatValue(props.metricStats?.mean)}   max ${formatValue(props.metricStats?.max)}`
-  ctx.fillStyle = '#475569'
-  ctx.font = `500 ${Math.round(24 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(metricLine, pad + Math.round(22 * scale), pad + Math.round(150 * scale))
-
-  const profileLine = `Profile source: ${stressProfileLabel.value}  |  focus: ${stressFocusLabel.value}`
-  ctx.fillStyle = '#1f2937'
-  ctx.font = `600 ${Math.round(22 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(profileLine, pad + Math.round(22 * scale), pad + Math.round(184 * scale))
-
-  const metaLine = `Seam ${String(props.contextMeta?.seam || '--')} | Grid ${gridShapeText.value} | Method ${String(props.contextMeta?.method || '--').toUpperCase()} | Resolution ${formatValue(props.contextMeta?.resolution)}`
-  ctx.fillStyle = '#334155'
-  ctx.font = `500 ${Math.round(20 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(metaLine, pad + Math.round(22 * scale), pad + Math.round(214 * scale))
-
-  const structureLine = `Layers ${layerCount.value}  Boreholes ${boreholeCount.value}  Anchors ${stressAnchorItems.value.length}`
-  ctx.fillStyle = '#334155'
-  ctx.font = `500 ${Math.round(20 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(structureLine, pad + Math.round(22 * scale), pad + Math.round(242 * scale))
-
-  const quantLine = `Q1/Q2/Q3 ${formatValue(mpiSummary.value.p25)} / ${formatValue(mpiSummary.value.p50)} / ${formatValue(mpiSummary.value.p75)}  |  CV ${formatValue(mpiSummary.value.cv)}`
-  ctx.fillText(quantLine, pad + Math.round(22 * scale), pad + Math.round(268 * scale))
-  const coverLine = `P75 cover ${formatPercent(mpiSummary.value.p75Cover)}  |  P90 cover ${formatPercent(mpiSummary.value.p90Cover)}  |  Section retained ${formatPercent(sectionRetainedRatio.value)}`
-  ctx.fillText(coverLine, pad + Math.round(22 * scale), pad + Math.round(294 * scale))
-  const distLine = `Entropy ${formatValue(mpiSummary.value.entropyNorm)}  |  Skew ${formatValue(mpiSummary.value.skewness)}  |  N ${mpiSummary.value.count || 0}`
-  ctx.fillText(distLine, pad + Math.round(22 * scale), pad + Math.round(320 * scale))
-  const methodsLine = `Data fusion: mesh layers + boreholes + ${gridShapeText.value} metric grid`
-  ctx.fillText(methodsLine, pad + Math.round(22 * scale), pad + Math.round(346 * scale))
+const buildExportSnapshot = () => {
   const narrativeLine = figureNarrative.value.length > 118 ? `${figureNarrative.value.slice(0, 118)}...` : figureNarrative.value
-  ctx.fillText(narrativeLine, pad + Math.round(22 * scale), pad + Math.round(372 * scale))
 
-  let offsetY = 398
-  if (includeHotspotRows) {
-    ctx.fillStyle = '#0f172a'
-    ctx.font = `600 ${Math.round(21 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-    ctx.fillText('Hotspot summary', pad + Math.round(22 * scale), pad + Math.round(offsetY * scale))
-    ctx.fillStyle = '#334155'
-    ctx.font = `500 ${Math.round(20 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-    hotspotTopList.value.slice(0, hotspotRowCount).forEach((line, index) => {
-      ctx.fillText(line, pad + Math.round(38 * scale), pad + Math.round((offsetY + 26 + index * 24) * scale))
-    })
-    offsetY += 34 + hotspotRowCount * 24
-  }
-
-  if (includeAnchorRows) {
-    ctx.fillStyle = '#0f172a'
-    ctx.font = `600 ${Math.round(21 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-    ctx.fillText('Top depth anchors', pad + Math.round(22 * scale), pad + Math.round(offsetY * scale))
-    ctx.fillStyle = '#334155'
-    ctx.font = `500 ${Math.round(20 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-    exportAnchorRows.value.forEach((line, index) => {
-      ctx.fillText(line, pad + Math.round(38 * scale), pad + Math.round((offsetY + 28 + index * 26) * scale))
-    })
-  }
-
-  const orientWidth = Math.round(212 * scale)
-  const orientHeight = Math.round(116 * scale)
-  const orientX = width - pad - orientWidth
-  const orientY = pad
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'
-  ctx.fillRect(orientX, orientY, orientWidth, orientHeight)
-  ctx.strokeStyle = 'rgba(15,23,42,0.16)'
-  ctx.lineWidth = Math.max(2, 2 * scale)
-  ctx.strokeRect(orientX, orientY, orientWidth, orientHeight)
-  ctx.fillStyle = '#0f172a'
-  ctx.font = `700 ${Math.round(24 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText('N', orientX + Math.round(18 * scale), orientY + Math.round(32 * scale))
-  ctx.fillStyle = '#0f766e'
-  ctx.font = `700 ${Math.round(30 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText('^', orientX + Math.round(42 * scale), orientY + Math.round(36 * scale))
-
-  const barX = orientX + Math.round(18 * scale)
-  const barY = orientY + Math.round(54 * scale)
-  const barW = Math.round(98 * scale)
-  const barH = Math.round(10 * scale)
-  ctx.fillStyle = '#0f172a'
-  ctx.fillRect(barX, barY, Math.round(barW / 2), barH)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(barX + Math.round(barW / 2), barY, Math.round(barW / 2), barH)
-  ctx.strokeStyle = '#0f172a'
-  ctx.strokeRect(barX, barY, barW, barH)
-  ctx.fillStyle = '#334155'
-  ctx.font = `600 ${Math.round(18 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(scaleBarLabel.value, barX, orientY + Math.round(82 * scale))
-  ctx.fillStyle = '#64748b'
-  ctx.font = `500 ${Math.round(16 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText('X-east / Y-north', barX, orientY + Math.round(102 * scale))
-
-  const histPanelW = Math.round(324 * scale)
-  const histPanelH = Math.round(206 * scale)
-  const histX = width - pad - histPanelW
-  const histY = height - pad - histPanelH
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'
-  ctx.fillRect(histX, histY, histPanelW, histPanelH)
-  ctx.strokeStyle = 'rgba(15,23,42,0.16)'
-  ctx.lineWidth = Math.max(2, 2 * scale)
-  ctx.strokeRect(histX, histY, histPanelW, histPanelH)
-  ctx.fillStyle = '#0f172a'
-  ctx.font = `700 ${Math.round(21 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(`${metricLabel.value} distribution`, histX + Math.round(16 * scale), histY + Math.round(30 * scale))
-
-  const chartX = histX + Math.round(16 * scale)
-  const chartY = histY + Math.round(42 * scale)
-  const chartW = histPanelW - Math.round(32 * scale)
-  const chartH = Math.round(112 * scale)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(chartX, chartY, chartW, chartH)
-  ctx.strokeStyle = 'rgba(100,116,139,0.36)'
-  ctx.lineWidth = Math.max(1, 1 * scale)
-  ctx.strokeRect(chartX, chartY, chartW, chartH)
-
-  const bars = histogramBars.value
-  bars.forEach((bar) => {
-    const x = chartX + (Number(bar.x) / 100) * chartW
-    const y = chartY + (Number(bar.y) / 38) * chartH
-    const w = Math.max(1, (Number(bar.w) / 100) * chartW)
-    const h = Math.max(1, (Number(bar.h) / 38) * chartH)
-    ctx.fillStyle = 'rgba(15,118,110,0.72)'
-    ctx.fillRect(x, y, w, h)
-  })
-
-  ctx.setLineDash([Math.max(2, 2 * scale), Math.max(2, 2 * scale)])
-  histogramQuantileLines.value.forEach((line) => {
-    const x = chartX + (Number(line.x) / 100) * chartW
-    ctx.strokeStyle = 'rgba(127,29,29,0.86)'
-    ctx.beginPath()
-    ctx.moveTo(x, chartY)
-    ctx.lineTo(x, chartY + chartH)
-    ctx.stroke()
-    ctx.fillStyle = 'rgba(127,29,29,0.92)'
-    ctx.font = `700 ${Math.round(12 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-    ctx.fillText(String(line.id || '').toUpperCase(), x + Math.round(2 * scale), chartY + Math.round(12 * scale))
-  })
-  ctx.setLineDash([])
-  ctx.fillStyle = '#334155'
-  ctx.font = `600 ${Math.round(16 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText(`Entropy ${formatValue(mpiSummary.value.entropyNorm)}  |  Skew ${formatValue(mpiSummary.value.skewness)}`, chartX, histY + histPanelH - Math.round(18 * scale))
-}
-
-const canvasToBlob = (canvas, type = 'image/png') => new Promise((resolve, reject) => {
-  if (canvas.toBlob) {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob)
-      else reject(new Error('canvas toBlob failed'))
-    }, type)
-    return
-  }
-  try {
-    const dataUrl = canvas.toDataURL(type)
-    fetch(dataUrl).then((resp) => resp.blob()).then(resolve).catch(reject)
-  } catch (error) {
-    reject(error)
-  }
-})
-
-const buildExportName = () => {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  const h = String(now.getHours()).padStart(2, '0')
-  const mi = String(now.getMinutes()).padStart(2, '0')
-  const s = String(now.getSeconds()).padStart(2, '0')
-  return `fusion_figure_${String(props.metric || 'mpi').toLowerCase()}_${y}${m}${d}_${h}${mi}${s}.png`
-}
-
-const getExportSize = (options = {}) => {
-  const width = Math.max(1600, Math.round(Number(options?.width) || 3840))
-  const height = Math.max(1000, Math.round(Number(options?.height) || 2400))
-  return { width, height }
-}
-
-const renderExportCanvas = (options = {}) => {
-  if (!renderer || !scene || !camera || !controls || !rootGroup || !three) return null
-  const oldAutoRotate = autoRotate.value
-  const oldRootRotation = rootGroup.rotation.clone()
-  const oldCameraPosition = camera.position.clone()
-  const oldCameraQuaternion = camera.quaternion.clone()
-  const oldTarget = controls.target.clone()
-  const oldNear = camera.near
-  const oldFar = camera.far
-  const oldAspect = camera.aspect
-  const oldPixelRatio = renderer.getPixelRatio()
-  const oldSize = renderer.getSize(new three.Vector2())
-
-  const { width: exportWidth, height: exportHeight } = getExportSize(options)
-
-  try {
-    autoRotate.value = false
-    rootGroup.rotation.set(0, 0, 0)
-    applyPaperViewPose()
-
-    renderer.setPixelRatio(1)
-    renderer.setSize(exportWidth, exportHeight, false)
-    camera.aspect = exportWidth / exportHeight
-    camera.updateProjectionMatrix()
-    controls.update()
-    renderer.render(scene, camera)
-
-    const output = document.createElement('canvas')
-    output.width = exportWidth
-    output.height = exportHeight
-    const ctx = output.getContext('2d')
-    if (!ctx) throw new Error('2D context unavailable')
-
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, exportWidth, exportHeight)
-    ctx.drawImage(renderer.domElement, 0, 0, exportWidth, exportHeight)
-    drawExportOverlay(ctx, exportWidth, exportHeight)
-    return output
-  } catch (error) {
-    console.error('Export fusion figure failed:', error)
-    return null
-  } finally {
-    renderer.setPixelRatio(oldPixelRatio)
-    renderer.setSize(oldSize.x, oldSize.y, false)
-
-    camera.aspect = oldAspect
-    camera.near = oldNear
-    camera.far = oldFar
-    camera.position.copy(oldCameraPosition)
-    camera.quaternion.copy(oldCameraQuaternion)
-    camera.updateProjectionMatrix()
-
-    controls.target.copy(oldTarget)
-    controls.update()
-    rootGroup.rotation.copy(oldRootRotation)
-    autoRotate.value = oldAutoRotate
-    renderer.render(scene, camera)
+  return {
+    metric: String(props.metric || 'mpi').toLowerCase(),
+    panelLabel: String(props.panelLabel || 'Fig. 1'),
+    title: props.title || '3D Geology-MPI Fusion',
+    subtitle: props.subtitle || 'Preview',
+    figureHeading: paperNotation.value.figureHeading,
+    captionTitle: paperNotation.value.captionTitle,
+    summaryLead: paperNotation.value.summaryLead,
+    metricLine: paperNotation.value.metricLine,
+    profileLine: `Profile source: ${stressProfileLabel.value}  |  focus: ${stressFocusLabel.value}`,
+    metaLine: `Seam ${String(props.contextMeta?.seam || '--')} | Grid ${gridShapeText.value} | Method ${String(props.contextMeta?.method || '--').toUpperCase()} | Resolution ${formatValue(props.contextMeta?.resolution)}`,
+    structureLine: `Layers ${layerCount.value}  Boreholes ${boreholeCount.value}  Anchors ${stressAnchorItems.value.length}`,
+    quantLine: paperNotation.value.quantileLine,
+    coverLine: paperNotation.value.coverLine,
+    distLine: paperNotation.value.distributionLine,
+    methodsLine: `Data fusion: mesh layers + boreholes + ${gridShapeText.value} metric grid`,
+    narrativeLine,
+    hotspotRows: showHotspots.value ? hotspotTopList.value.slice(0, 2) : [],
+    anchorRows: showStressCloud.value && showStressAnchors.value ? exportAnchorRows.value : [],
+    methodProvenanceRows: methodProvenanceRows.value,
+    publicationCaptionRows: publicationCaptionRows.value,
+    publicationNoteRows: publicationNoteRows.value,
+    insetHeatmapCells: insetHeatmapCells.value,
+    insetSectionLine: insetSectionLine.value,
+    insetHotspotPoints: insetHotspotPoints.value,
+    sectionProfile: sectionProfileDiagnostics.value,
+    depthGuide: {
+      axisTicks: depthAxisTicks.value,
+      focusBand: depthFocusBand.value,
+      anchorTrack: depthAnchorTrack.value,
+      notes: [
+        `Focus band: ${stressFocusLabel.value}`,
+        'Anchors ranked by transfer weight.',
+        `Depth frame: ${formatValue(dataBounds.value.max_z)} to ${formatValue(dataBounds.value.min_z)} m.`,
+      ],
+    },
+    subfigureLabels: {
+      inset: 'a',
+      distribution: 'b',
+      section: 'c',
+      depth: 'd',
+    },
+    methodsFooter: paperNotation.value.methodsFooter,
+    scaleBarLabel: scaleBarLabel.value,
+    distributionTitle: `${metricLabel.value} distribution`,
+    histogramBars: histogramBars.value,
+    histogramQuantileLines: histogramQuantileLines.value,
+    histogramFooter: paperNotation.value.distributionLine
   }
 }
 
 const exportFigureBlob = async (options = {}) => {
-  const canvas = renderExportCanvas(options)
-  if (!canvas) return null
-  const blob = await canvasToBlob(canvas, 'image/png')
-  return {
-    blob,
-    filename: buildExportName(),
-    width: canvas.width,
-    height: canvas.height,
-  }
+  const { exportGeoFusionFigureBlob } = await loadGeoFusionExport()
+  return exportGeoFusionFigureBlob({
+    renderer,
+    scene,
+    camera,
+    controls,
+    rootGroup,
+    three,
+    autoRotateRef: autoRotate,
+    applyPaperViewPose,
+    snapshot: buildExportSnapshot()
+  }, options)
 }
 
 const exportFigure = async () => {
@@ -1797,7 +1998,7 @@ const exportFigure = async () => {
     const url = URL.createObjectURL(payload.blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = payload.filename || buildExportName()
+    link.download = payload.filename || 'fusion_figure.png'
     link.click()
     URL.revokeObjectURL(url)
   } catch (error) {
@@ -1817,12 +2018,75 @@ const applyVisibility = () => {
   if (stressAnchorGroup) stressAnchorGroup.visible = showStressCloud.value && showStressAnchors.value
 }
 
+const canRenderScene = () => {
+  return Boolean(renderer && scene && camera && isComponentAlive && isDocumentVisible && isHostVisible)
+}
+
+const markSceneDirty = (frames = 1) => {
+  pendingRender = true
+  interactionRenderFrames = Math.max(interactionRenderFrames, Math.max(0, frames))
+  if (!isComponentAlive) return
+  updateRenderLoopState()
+}
+
+const stopRenderLoop = () => {
+  if (frameId) {
+    cancelAnimationFrame(frameId)
+    frameId = null
+  }
+}
+
 const renderLoop = () => {
-  if (!renderer || !scene || !camera) return
-  frameId = requestAnimationFrame(renderLoop)
+  if (!canRenderScene()) {
+    frameId = null
+    return
+  }
+  frameId = null
   if (autoRotate.value && rootGroup) rootGroup.rotation.z += 0.001
-  controls?.update()
+  const controlsChanged = Boolean(controls?.update?.())
   renderer.render(scene, camera)
+  pendingRender = false
+  if (!autoRotate.value && interactionRenderFrames > 0) {
+    interactionRenderFrames -= 1
+  }
+  if (autoRotate.value || interactionRenderFrames > 0 || controlsChanged) {
+    startRenderLoop()
+  }
+}
+
+const startRenderLoop = () => {
+  if (frameId || !canRenderScene()) return
+  if (!pendingRender && !autoRotate.value && interactionRenderFrames < 1) return
+  frameId = requestAnimationFrame(renderLoop)
+}
+
+const updateRenderLoopState = () => {
+  if (!canRenderScene()) {
+    stopRenderLoop()
+    return
+  }
+  if (pendingRender || autoRotate.value || interactionRenderFrames > 0) {
+    startRenderLoop()
+    return
+  }
+  stopRenderLoop()
+}
+
+const onDocumentVisibilityChange = () => {
+  isDocumentVisible = document.visibilityState !== 'hidden'
+  if (isDocumentVisible) pendingRender = true
+  updateRenderLoopState()
+}
+
+const observeHostVisibility = () => {
+  if (typeof IntersectionObserver === 'undefined' || !hostRef.value) return
+  visibilityObserver = new IntersectionObserver((entries) => {
+    const entry = entries[0]
+    isHostVisible = Boolean(entry?.isIntersecting)
+    if (isHostVisible) pendingRender = true
+    updateRenderLoopState()
+  }, { threshold: 0.05 })
+  visibilityObserver.observe(hostRef.value)
 }
 
 const onResize = () => {
@@ -1832,6 +2096,7 @@ const onResize = () => {
   renderer.setSize(width, height, false)
   camera.aspect = width / Math.max(height, 1)
   camera.updateProjectionMatrix()
+  markSceneDirty(2)
 }
 
 const buildScene = async () => {
@@ -1877,6 +2142,9 @@ const buildScene = async () => {
   controls.enableDamping = true
   controls.dampingFactor = 0.06
   controls.maxPolarAngle = Math.PI * 0.49
+  controls.addEventListener('start', () => markSceneDirty(18))
+  controls.addEventListener('change', () => markSceneDirty(12))
+  controls.addEventListener('end', () => markSceneDirty(24))
 
   scene.add(new three.AmbientLight(0xffffff, props.paperMode ? 0.72 : 0.66))
   const keyLight = new three.DirectionalLight(0xffffff, 0.9)
@@ -1925,8 +2193,12 @@ const buildScene = async () => {
     window.addEventListener('resize', onResize)
   }
   if (!isComponentAlive || currentBuild !== buildVersion) return
+  isDocumentVisible = document.visibilityState !== 'hidden'
+  isHostVisible = true
+  document.addEventListener('visibilitychange', onDocumentVisibilityChange)
+  observeHostVisibility()
   dirtyFlags.geometry = false
-  renderLoop()
+  markSceneDirty(10)
 }
 
 const rebuildSceneSafe = async () => {
@@ -1942,6 +2214,7 @@ watch([showLayers, showMpiSurface, showMpiContours, showHotspots, showStressClou
   dirtyFlags.material = true
   applyVisibility()
   dirtyFlags.material = false
+  markSceneDirty(1)
 })
 
 watch([sectionEnabled, sectionAxis, sectionRatio], async () => {
@@ -1951,6 +2224,10 @@ watch([sectionEnabled, sectionAxis, sectionRatio], async () => {
 
 watch(cloudDensity, async () => {
   await rebuildSceneSafe()
+})
+
+watch(autoRotate, (enabled) => {
+  markSceneDirty(enabled ? 1 : 18)
 })
 
 watch(
@@ -2212,6 +2489,88 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
+.diagnostic-badges {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.methods-panel {
+  margin-top: 8px;
+  border-top: 1px dashed rgba(100, 116, 139, 0.34);
+  padding-top: 7px;
+  display: grid;
+  gap: 4px;
+}
+
+.methods-title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.methods-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 10px;
+  color: #334155;
+}
+
+.methods-key {
+  font-weight: 700;
+  color: #475569;
+}
+
+.methods-value {
+  color: #1e293b;
+}
+
+.diagnostic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+  line-height: 1;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(248, 250, 252, 0.94);
+  color: #1e293b;
+}
+
+.diagnostic-badge strong {
+  font-weight: 700;
+}
+
+.diagnostic-badge em {
+  font-style: normal;
+  opacity: 0.9;
+}
+
+.diagnostic-badge.tone-calm {
+  border-color: rgba(15, 118, 110, 0.3);
+  background: rgba(240, 253, 250, 0.98);
+  color: #115e59;
+}
+
+.diagnostic-badge.tone-warn {
+  border-color: rgba(202, 138, 4, 0.34);
+  background: rgba(254, 252, 232, 0.98);
+  color: #854d0e;
+}
+
+.diagnostic-badge.tone-risk {
+  border-color: rgba(185, 28, 28, 0.24);
+  background: rgba(254, 242, 242, 0.98);
+  color: #991b1b;
+}
+
 .figure-note {
   margin: 7px 0 0;
   font-size: 10px;
@@ -2352,6 +2711,112 @@ onBeforeUnmount(() => {
   color: #64748b;
 }
 
+.depth-strip-wrap {
+  margin-top: 8px;
+  border-top: 1px dashed rgba(100, 116, 139, 0.38);
+  padding-top: 7px;
+  position: relative;
+}
+
+.depth-strip-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.depth-strip-layout {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.depth-strip {
+  width: 88px;
+  height: 220px;
+  display: block;
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.98) 100%);
+}
+
+.depth-strip-bg {
+  fill: rgba(226, 232, 240, 0.95);
+  stroke: rgba(100, 116, 139, 0.38);
+  stroke-width: 1;
+}
+
+.depth-focus-band {
+  fill: rgba(15, 118, 110, 0.18);
+  stroke: rgba(15, 118, 110, 0.55);
+  stroke-width: 1;
+}
+
+.depth-axis-line {
+  stroke: rgba(15, 23, 42, 0.58);
+  stroke-width: 1.1;
+}
+
+.depth-tick-line {
+  stroke: rgba(100, 116, 139, 0.7);
+  stroke-width: 1;
+}
+
+.depth-tick-label {
+  fill: #475569;
+  font-size: 8px;
+  font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
+}
+
+.depth-anchor-line {
+  stroke: rgba(185, 28, 28, 0.7);
+  stroke-width: 1.1;
+}
+
+.depth-anchor-dot {
+  fill: rgba(185, 28, 28, 0.82);
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 0.8;
+}
+
+.depth-anchor-label {
+  fill: #7f1d1d;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.depth-strip-notes {
+  display: grid;
+  gap: 4px;
+}
+
+.depth-strip-notes p {
+  margin: 0;
+  font-size: 10px;
+  color: #475569;
+  line-height: 1.35;
+}
+
+.subfigure-label {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
+  text-transform: lowercase;
+}
+
 .orientation-overlay {
   position: absolute;
   right: 12px;
@@ -2456,26 +2921,50 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+.caption-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.caption-block {
+  display: grid;
+  gap: 4px;
+}
+
+.caption-block-notes {
+  border-left: 1px solid rgba(148, 163, 184, 0.34);
+  padding-left: 12px;
+}
+
 .caption-title {
   margin: 0;
   font-size: 11px;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
-.caption-text {
-  margin: 4px 0 0;
-  font-size: 11px;
+.caption-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.caption-key {
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.caption-value {
+  font-size: 10px;
   line-height: 1.4;
   color: #1e293b;
   font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
-}
-
-.caption-meta {
-  margin: 4px 0 0;
-  font-size: 10px;
-  color: #64748b;
 }
 
 .inset-map-wrap {
@@ -2484,6 +2973,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   padding: 6px;
   background: rgba(248, 250, 252, 0.9);
+  position: relative;
 }
 
 .inset-title {
@@ -2527,6 +3017,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   padding: 6px;
   background: rgba(248, 250, 252, 0.9);
+  position: relative;
 }
 
 .dist-title {
@@ -2557,6 +3048,71 @@ onBeforeUnmount(() => {
 }
 
 .dist-caption {
+  margin: 4px 0 0;
+  font-size: 9px;
+  color: #64748b;
+}
+
+.section-profile-wrap {
+  margin-top: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+  padding: 6px;
+  background: rgba(248, 250, 252, 0.9);
+  position: relative;
+}
+
+.section-profile-title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.section-profile-chart {
+  margin-top: 5px;
+  width: 100%;
+  height: 62px;
+  display: block;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.section-axis-line {
+  stroke: rgba(71, 85, 105, 0.58);
+  stroke-width: 1;
+}
+
+.section-guide-line {
+  stroke: rgba(185, 28, 28, 0.62);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.section-band-path {
+  fill: rgba(15, 118, 110, 0.16);
+  stroke: none;
+}
+
+.section-profile-path {
+  fill: none;
+  stroke: #0f766e;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.section-profile-meta {
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 9px;
+  color: #475569;
+}
+
+.section-profile-note {
   margin: 4px 0 0;
   font-size: 9px;
   color: #64748b;
@@ -2600,6 +3156,13 @@ onBeforeUnmount(() => {
   .content-metrics {
     grid-template-columns: 1fr;
   }
+  .diagnostic-badges {
+    gap: 5px;
+  }
+  .diagnostic-badge {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
   .analysis-overlay {
     min-width: 180px;
     max-width: 60%;
@@ -2609,13 +3172,23 @@ onBeforeUnmount(() => {
     width: min(84%, 520px);
     padding: 7px 9px;
   }
+  .caption-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .caption-block-notes {
+    border-left: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.34);
+    padding-left: 0;
+    padding-top: 8px;
+  }
   .caption-title {
     font-size: 10px;
   }
-  .caption-text {
+  .caption-value {
     font-size: 10px;
   }
-  .caption-meta {
+  .caption-key {
     font-size: 9px;
   }
   .orientation-overlay {
@@ -2631,8 +3204,18 @@ onBeforeUnmount(() => {
   .dist-chart {
     height: 52px;
   }
+  .section-profile-chart {
+    height: 52px;
+  }
   .analysis-overlay p {
     font-size: 10px;
+  }
+  .depth-strip-layout {
+    grid-template-columns: 1fr;
+  }
+  .depth-strip {
+    width: 100%;
+    max-width: 88px;
   }
 }
 </style>

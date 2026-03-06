@@ -15,12 +15,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_COLORS } from '@/utils/natureFigureConfig'
 
 const props = defineProps({
-  title: { type: String, default: '压力特征雷达图' },
+  title: { type: String, default: 'Pressure Feature Radar' },
   subtitle: { type: String, default: 'Multi-dimensional Analysis' },
   panelLabel: { type: String, default: 'H' },
   data: { type: Array, default: () => [] },
@@ -31,7 +31,7 @@ const chartRef = ref(null)
 let chartInstance = null
 
 const footnote = computed(() => {
-  return '展示压力数据的多维统计特征'
+  return 'Multi-dimensional statistics of pressure data'
 })
 
 const COLORS = {
@@ -104,7 +104,7 @@ function calculateAutocorrelation(values, lag) {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -126,12 +126,12 @@ function updateChart() {
   if (!features) return
   
   const indicator = [
-    { name: '平均压力', max: 100 },
-    { name: '变异系数', max: 100 },
-    { name: '稳定性', max: 100 },
-    { name: '峰值比例', max: 100 },
-    { name: '趋势强度', max: 100 },
-    { name: '偏度', max: 100 }
+    { name: 'Mean', max: 100 },
+    { name: 'Variation', max: 100 },
+    { name: 'Stability', max: 100 },
+    { name: 'Peak Ratio', max: 100 },
+    { name: 'Trend', max: 100 },
+    { name: 'Skewness', max: 100 }
   ]
   
   const seriesData = [{
@@ -143,7 +143,7 @@ function updateChart() {
       features.trend,
       features.skewness
     ],
-    name: '当前数据'
+    name: '褰撳墠鏁版嵁'
   }]
   
   // Add comparison if provided
@@ -159,7 +159,7 @@ function updateChart() {
           compareFeatures.trend,
           compareFeatures.skewness
         ],
-        name: '对比数据'
+        name: '瀵规瘮鏁版嵁'
       })
     }
   }
@@ -246,7 +246,7 @@ function updateChart() {
       },
       extraCssText: 'box-shadow: 0 8px 24px rgba(0,0,0,0.12); border-radius: 8px;',
       formatter: function (params) {
-        const indicators = ['平均压力', '变异系数', '稳定性', '峰值比例', '趋势强度', '偏度']
+        const indicators = ['Mean', 'Variation', 'Stability', 'Peak Ratio', 'Trend', 'Skewness']
         const values = params.value
         
         let html = `<div style="font-weight: 600; margin-bottom: 8px;">${params.name}</div>`
@@ -297,3 +297,4 @@ defineExpose({
   min-height: 200px;
 }
 </style>
+

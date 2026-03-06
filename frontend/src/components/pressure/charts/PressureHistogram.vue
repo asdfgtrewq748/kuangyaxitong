@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="D"
     :title="title"
-    x-axis-label="末阻力"
-    y-axis-label="频数"
+    x-axis-label="Final Resistance (MPa)"
+    y-axis-label="Frequency"
     :footnote="footnote"
     width="full"
     height="180px"
@@ -14,11 +14,11 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: '阻力分布' },
+  title: { type: String, default: '闃诲姏鍒嗗竷' },
   data: { type: Array, default: () => [] },
   bins: { type: Number, default: 30 },
   showKDE: { type: Boolean, default: false }
@@ -33,7 +33,7 @@ const footnote = computed(() => {
   return `n = ${n}`
 })
 
-// Nature 配色
+// Nature 閰嶈壊
 const COLORS = {
   primary: '#0072B2',
   kde: '#D55E00',
@@ -68,7 +68,7 @@ function calculateHistogram(data, bins) {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -84,13 +84,13 @@ function updateChart() {
 
   const { values, edges } = calculateHistogram(props.data, props.bins)
 
-  // 柱状图的 x 轴数据（区间中点）
+  // 鏌辩姸鍥剧殑 x 杞存暟鎹紙鍖洪棿涓偣锛?
   const xData = []
   for (let i = 0; i < values.length; i++) {
     xData.push(((edges[i] + edges[i + 1]) / 2).toFixed(1))
   }
 
-  // 计算统计信息
+  // 璁＄畻缁熻淇℃伅
   const maxCount = Math.max(...values)
   const maxIdx = values.indexOf(maxCount)
 
@@ -166,7 +166,7 @@ function updateChart() {
             shadowColor: 'rgba(0, 0, 0, 0.15)'
           }
         },
-        // 高亮峰值柱
+        // 楂樹寒宄板€兼煴
         markPoint: {
           symbol: 'pin',
           symbolSize: 30,
@@ -186,7 +186,7 @@ function updateChart() {
       }
     ],
 
-    // 提示框
+    // 鎻愮ず妗?
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -206,7 +206,7 @@ function updateChart() {
         const data = params[0]
         if (!data) return ''
         return `<div style="font-weight:600;margin-bottom:4px;">${data.axisValue} MPa</div>
-                <div>频数: <span style="color:${COLORS.primary};font-weight:600;">${data.value}</span></div>`
+                <div>棰戞暟: <span style="color:${COLORS.primary};font-weight:600;">${data.value}</span></div>`
       }
     },
 
@@ -253,3 +253,4 @@ watch(() => props.data, updateChart, { deep: true })
   }
 }
 </style>
+

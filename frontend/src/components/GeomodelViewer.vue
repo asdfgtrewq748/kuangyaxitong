@@ -105,6 +105,16 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  Color,
+  DoubleSide,
+  Mesh,
+  MeshBasicMaterial,
+  PerspectiveCamera,
+  PlaneGeometry,
+  Scene,
+  WebGLRenderer
+} from '@/lib/three-basic'
 import AsyncState from './AsyncState.vue'
 
 const props = defineProps({
@@ -245,8 +255,6 @@ let animationId = null
 
 const initThree = async () => {
   if (!hasData.value || props.loading || props.errorText || !threeCanvasRef.value || !contentRef.value) return
-
-  const { Scene, PerspectiveCamera, WebGLRenderer, Color, Mesh, PlaneGeometry, MeshBasicMaterial, DoubleSide } = await import('three')
 
   const width = contentRef.value.clientWidth || 800
   const height = contentRef.value.clientHeight || 500

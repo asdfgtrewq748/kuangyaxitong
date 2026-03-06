@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "audit:ui": "node scripts/audit-ui-clicks.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -13,7 +13,7 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_ECHARTS_THEME, NATURE_COLORS } from '@/utils/natureFigureConfig'
 import { exportECharts } from '@/utils/figureExport'
@@ -26,7 +26,7 @@ const COLORS = {
 }
 
 const props = defineProps({
-  title: { type: String, default: '相关性矩阵' },
+  title: { type: String, default: 'Correlation Matrix' },
   matrix: { type: Array, default: null }
 })
 
@@ -54,10 +54,10 @@ const footnote = computed(() => {
 function initChart() {
   if (!chartRef.value) return
 
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
-    // 延迟初始化，等待容器有尺寸
+    // 寤惰繜鍒濆鍖栵紝绛夊緟瀹瑰櫒鏈夊昂瀵?
     setTimeout(initChart, 100)
     return
   }
@@ -82,7 +82,7 @@ function updateChart() {
     }
   }
 
-  // 选择采样点作为标签
+  // 閫夋嫨閲囨牱鐐逛綔涓烘爣绛?
   const labels = []
   const step = Math.max(1, Math.floor(n / 8))
   for (let i = 0; i < n; i += step) {
@@ -164,9 +164,9 @@ function updateChart() {
       padding: [10, 14],
       textStyle: { color: '#171717', fontSize: 11 },
       formatter: (params) => {
-        return `<div style="font-weight: 600; margin-bottom: 4px;">支架 ${params.value[0]+1} ↔ ${params.value[1]+1}</div>
+        return `<div style="font-weight: 600; margin-bottom: 4px;">鏀灦 ${params.value[0]+1} 鈫?${params.value[1]+1}</div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="color: #525252;">相关系数:</span>
+                  <span style="color: #525252;">鐩稿叧绯绘暟:</span>
                   <span style="font-weight: 700; font-size: 13px;">${params.value[2].toFixed(3)}</span>
                 </div>`
       }
@@ -183,7 +183,7 @@ function handleResize() {
   chartInstance?.resize()
 }
 
-// Nature标准导出
+// Nature鏍囧噯瀵煎嚭
 function exportFigure(format = 'svg') {
   if (!chartInstance) return
   const dataUrl = exportECharts(chartInstance, { type: format })
@@ -213,3 +213,4 @@ watch(() => props.matrix, updateChart, { deep: true })
   min-height: 160px;
 }
 </style>
+

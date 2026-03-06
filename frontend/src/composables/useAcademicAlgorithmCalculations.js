@@ -1,5 +1,5 @@
 import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
-import { echarts } from '../lib/echarts'
+import { echarts } from '../lib/echarts-science'
 import {
   defaultEvidence,
   defaultIndicators,

@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="C"
     :title="title"
-    x-axis-label="支架编号"
-    y-axis-label="末阻力"
+    x-axis-label="鏀灦缂栧彿"
+    y-axis-label="Final Resistance (MPa)"
     :footnote="footnote"
     width="full"
     height="180px"
@@ -14,11 +14,11 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: '支架空间分布' },
+  title: { type: String, default: '鏀灦绌洪棿鍒嗗竷' },
   data: { type: Array, default: () => [] } // [{ supportId, mean, count }]
 })
 
@@ -33,13 +33,13 @@ const COLORS = {
 
 const footnote = computed(() => {
   if (!props.data || props.data.length === 0) return ''
-  return `n = ${props.data.length} 个支架`
+  return `n = ${props.data.length} supports`
 })
 
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -56,7 +56,7 @@ function updateChart() {
   const xData = props.data.map(d => d.supportId)
   const yData = props.data.map(d => d.mean)
 
-  // 计算统计值用于颜色映射
+  // 璁＄畻缁熻鍊肩敤浜庨鑹叉槧灏?
   const mean = yData.reduce((a, b) => a + b, 0) / yData.length
   const max = Math.max(...yData)
   const min = Math.min(...yData)
@@ -135,7 +135,7 @@ function updateChart() {
             shadowColor: 'rgba(0, 0, 0, 0.15)'
           }
         },
-        // 均值线
+        // 鍧囧€肩嚎
         markLine: {
           silent: true,
           symbol: 'none',
@@ -147,7 +147,7 @@ function updateChart() {
           label: {
             fontSize: 7,
             color: '#737373',
-            formatter: `均值: {c}`
+            formatter: `鍧囧€? {c}`
           },
           data: [
             { yAxis: mean.toFixed(1) }
@@ -157,7 +157,7 @@ function updateChart() {
       }
     ],
 
-    // 提示框
+    // 鎻愮ず妗?
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -177,9 +177,9 @@ function updateChart() {
         const data = params[0]
         if (!data) return ''
         const originalData = props.data[data.dataIndex]
-        return `<div style="font-weight:600;margin-bottom:4px;">支架 #${data.axisValue}</div>
-                <div>平均阻力: <span style="color:${COLORS.primary};font-weight:600;">${data.value}</span> MPa</div>
-                <div>数据点数: ${originalData?.count || '-'}</div>`
+        return `<div style="font-weight:600;margin-bottom:4px;">鏀灦 #${data.axisValue}</div>
+                <div>骞冲潎闃诲姏: <span style="color:${COLORS.primary};font-weight:600;">${data.value}</span> MPa</div>
+                <div>鏁版嵁鐐规暟: ${originalData?.count || '-'}</div>`
       }
     },
 
@@ -226,3 +226,4 @@ watch(() => props.data, updateChart, { deep: true })
   }
 }
 </style>
+

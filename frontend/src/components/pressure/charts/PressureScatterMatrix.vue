@@ -15,12 +15,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_COLORS } from '@/utils/natureFigureConfig'
 
 const props = defineProps({
-  title: { type: String, default: '多支架相关性矩阵' },
+  title: { type: String, default: 'Scatter Matrix' },
   subtitle: { type: String, default: 'Scatter Plot Matrix' },
   panelLabel: { type: String, default: 'F' },
   data: { type: Array, default: () => [] },
@@ -32,7 +32,7 @@ let chartInstance = null
 
 const footnote = computed(() => {
   const n = props.supportIds.length
-  return `${n}×${n} 矩阵，展示支架间压力相关性`
+  return `${n}x${n} matrix showing pairwise pressure relationships`
 })
 
 const COLORS = {
@@ -102,7 +102,7 @@ function calculateRegression(x, y) {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -323,3 +323,4 @@ defineExpose({
   min-height: 200px;
 }
 </style>
+

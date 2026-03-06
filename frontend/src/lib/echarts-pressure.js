@@ -11,8 +11,6 @@ import { install as GridComponent } from 'echarts/lib/component/grid/install.js'
 import { install as TitleComponent } from 'echarts/lib/component/title/install.js'
 import { install as TooltipComponent } from 'echarts/lib/component/tooltip/install.js'
 import { install as LegendComponent } from 'echarts/lib/component/legend/installLegendPlain.js'
-import { install as ToolboxComponent } from 'echarts/lib/component/toolbox/install.js'
-import { install as DataZoomComponent } from 'echarts/lib/component/dataZoom/installDataZoomInside.js'
 import { install as MarkPointComponent } from 'echarts/lib/component/marker/installMarkPoint.js'
 import { install as MarkLineComponent } from 'echarts/lib/component/marker/installMarkLine.js'
 import { install as VisualMapComponent } from 'echarts/lib/component/visualMap/installVisualMapContinuous.js'
@@ -20,15 +18,12 @@ import { install as GraphicComponent } from 'echarts/lib/component/graphic/insta
 import { install as RadarComponent } from 'echarts/lib/component/radar/install.js'
 
 import { install as CanvasRenderer } from 'echarts/lib/renderer/installCanvasRenderer.js'
-import { install as SVGRenderer } from 'echarts/lib/renderer/installSVGRenderer.js'
 
 echarts.use([
   TitleComponent,
   GridComponent,
   TooltipComponent,
   LegendComponent,
-  ToolboxComponent,
-  DataZoomComponent,
   MarkPointComponent,
   MarkLineComponent,
   VisualMapComponent,
@@ -41,8 +36,7 @@ echarts.use([
   RadarChart,
   BoxplotChart,
   CustomChart,
-  CanvasRenderer,
-  SVGRenderer
+  CanvasRenderer
 ])
 
 export { echarts }

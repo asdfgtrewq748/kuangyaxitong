@@ -3,8 +3,8 @@
     :panel-label="panelLabel"
     :title="title"
     :subtitle="subtitle"
-    x-axis-label="推进距离 (m)"
-    y-axis-label="支架编号"
+    x-axis-label="鎺ㄨ繘璺濈 (m)"
+    y-axis-label="鏀灦缂栧彿"
     :footnote="footnote"
     width="full"
     height="280px"
@@ -15,12 +15,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_COLORS } from '@/utils/natureFigureConfig'
 
 const props = defineProps({
-  title: { type: String, default: '异常分布热力图' },
+  title: { type: String, default: 'Anomaly Heatmap' },
   subtitle: { type: String, default: 'Anomaly Detection Map' },
   panelLabel: { type: String, default: 'G' },
   matrix: { type: Array, default: () => [] },
@@ -33,7 +33,7 @@ let chartInstance = null
 
 const footnote = computed(() => {
   const anomalies = countAnomalies()
-  return `使用 ${props.threshold}σ 准则检测，发现 ${anomalies} 个异常点`
+  return `浣跨敤 ${props.threshold}蟽 鍑嗗垯妫€娴嬶紝鍙戠幇 ${anomalies} 涓紓甯哥偣`
 })
 
 const COLORS = {
@@ -89,7 +89,7 @@ function detectAnomalies() {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -260,14 +260,14 @@ function updateChart() {
         if (param.seriesName === 'Background') return null
         
         const zScore = param.data[2]
-        const type = param.seriesName === 'High Anomaly' ? '高压异常' : '低压异常'
+        const type = param.seriesName === 'High Anomaly' ? '楂樺帇寮傚父' : '浣庡帇寮傚父'
         const color = param.seriesName === 'High Anomaly' ? NATURE_COLORS.secondary : NATURE_COLORS.sky
         
         return `
           <div style="font-weight: 600; margin-bottom: 4px; color: ${color};">${type}</div>
           <div style="font-size: 11px;">
-            位置: 支架 #${Math.floor(param.data[1] + 1)}, 第${param.data[0]}天<br>
-            Z-Score: <span style="font-weight: 600;">${zScore.toFixed(2)}σ</span>
+            浣嶇疆: 鏀灦 #${Math.floor(param.data[1] + 1)}, 绗?{param.data[0]}澶?br>
+            Z-Score: <span style="font-weight: 600;">${zScore.toFixed(2)}蟽</span>
           </div>
         `
       }
@@ -309,3 +309,4 @@ defineExpose({
   min-height: 200px;
 }
 </style>
+

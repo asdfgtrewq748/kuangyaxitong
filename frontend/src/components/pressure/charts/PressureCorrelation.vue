@@ -23,11 +23,11 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: '支架相关性矩阵' },
+  title: { type: String, default: 'Correlation Matrix' },
   matrix: { type: Array, default: () => [] } // 2D correlation matrix
 })
 
@@ -36,13 +36,13 @@ let chartInstance = null
 
 const footnote = computed(() => {
   if (!props.matrix || props.matrix.length === 0) return ''
-  return '皮尔逊相关系数'
+  return 'Pearson correlation coefficient'
 })
 
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -58,7 +58,7 @@ function updateChart() {
 
   const n = props.matrix.length
 
-  // 转换为 ECharts 热力图数据格式
+  // 杞崲涓?ECharts 鐑姏鍥炬暟鎹牸寮?
   const heatmapData = []
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
@@ -66,7 +66,7 @@ function updateChart() {
     }
   }
 
-  // 下采样显示（如果数据量太大）
+  // 涓嬮噰鏍锋樉绀猴紙濡傛灉鏁版嵁閲忓お澶э級
   const displayStep = n > 50 ? Math.floor(n / 50) : 1
   const displayData = heatmapData.filter((_, idx) => {
     const i = Math.floor(idx / n)
@@ -126,7 +126,7 @@ function updateChart() {
       }
     ],
 
-    // 提示框
+    // 鎻愮ず妗?
     tooltip: {
       position: 'top',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -140,7 +140,7 @@ function updateChart() {
         const [x, y, value] = params.value
         const i = n - 1 - Math.round(y)
         const j = Math.round(x)
-        return `<div style="font-weight:600;margin-bottom:4px;">支架 ${i} vs ${j}</div>
+        return `<div style="font-weight:600;margin-bottom:4px;">鏀灦 ${i} vs ${j}</div>
                 <div>r = <span style="font-weight:600;">${value.toFixed(3)}</span></div>`
       }
     },
@@ -217,3 +217,4 @@ watch(() => props.matrix, updateChart, { deep: true })
   font-style: italic;
 }
 </style>
+

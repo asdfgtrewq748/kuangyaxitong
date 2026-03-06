@@ -3,8 +3,8 @@
     :panel-label="panelLabel"
     :title="title"
     :subtitle="subtitle"
-    x-axis-label="末阻力 (MPa)"
-    y-axis-label="概率密度"
+    x-axis-label="鏈樆鍔?(MPa)"
+    y-axis-label="姒傜巼瀵嗗害"
     :footnote="footnote"
     width="full"
     height="260px"
@@ -15,12 +15,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_COLORS } from '@/utils/natureFigureConfig'
 
 const props = defineProps({
-  title: { type: String, default: '核密度估计' },
+  title: { type: String, default: 'Kernel Density Estimate' },
   subtitle: { type: String, default: 'Kernel Density Estimation' },
   panelLabel: { type: String, default: 'I' },
   data: { type: Array, default: () => [] },
@@ -33,7 +33,7 @@ let chartInstance = null
 const footnote = computed(() => {
   if (!props.data.length) return ''
   const bw = calculateBandwidth()
-  return `带宽 h = ${bw.toFixed(3)}，高斯核函数`
+  return `甯﹀ h = ${bw.toFixed(3)}锛岄珮鏂牳鍑芥暟`
 })
 
 const COLORS = {
@@ -88,7 +88,7 @@ function calculateKDE(values, xValues, bandwidth) {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -218,7 +218,7 @@ function updateChart() {
           label: {
             position: 'end',
             fontSize: 8,
-            formatter: 'μ'
+            formatter: '渭'
           },
           data: [
             { xAxis: mean }
@@ -263,10 +263,10 @@ function updateChart() {
         const x = params[0].data[0]
         const density = params[0].data[1]
         return `
-          <div style="font-weight: 600; margin-bottom: 4px;">核密度估计</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">鏍稿瘑搴︿及璁?/div>
           <div style="font-size: 11px;">
-            压力: <span style="font-weight: 600;">${x.toFixed(2)} MPa</span><br>
-            密度: <span style="font-weight: 600; color: ${COLORS.density};">${density.toFixed(4)}</span>
+            鍘嬪姏: <span style="font-weight: 600;">${x.toFixed(2)} MPa</span><br>
+            瀵嗗害: <span style="font-weight: 600; color: ${COLORS.density};">${density.toFixed(4)}</span>
           </div>
         `
       }
@@ -308,3 +308,4 @@ defineExpose({
   min-height: 200px;
 }
 </style>
+

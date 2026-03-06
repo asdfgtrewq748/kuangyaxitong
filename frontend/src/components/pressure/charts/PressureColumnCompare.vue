@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="I"
     :title="title"
-    x-axis-label="前柱阻力"
-    y-axis-label="后柱阻力"
+    x-axis-label="鍓嶆煴闃诲姏"
+    y-axis-label="鍚庢煴闃诲姏"
     :footnote="footnote"
     width="full"
     height="200px"
@@ -14,12 +14,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 import { mean, std } from '@/utils/pressureDataProcessor'
 
 const props = defineProps({
-  title: { type: String, default: '前后柱阻力对比' },
+  title: { type: String, default: 'Column Comparison' },
   frontData: { type: Array, default: () => [] },
   rearData: { type: Array, default: () => [] }
 })
@@ -27,7 +27,7 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
-// Nature 配色
+// Nature 閰嶈壊
 const COLORS = {
   primary: '#0072B2',
   secondary: '#D55E00',
@@ -45,7 +45,7 @@ const footnote = computed(() => {
 function prepareScatterData() {
   if (!props.frontData || !props.rearData) return []
 
-  // 按支架号和日期配对前后柱数据
+  // 鎸夋敮鏋跺彿鍜屾棩鏈熼厤瀵瑰墠鍚庢煴鏁版嵁
   const frontBySupport = new Map()
   const rearBySupport = new Map()
 
@@ -89,7 +89,7 @@ function calculateRegression(data) {
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
   const intercept = (sumY - slope * sumX) / n
 
-  // R²
+  // R虏
   const meanY = sumY / n
   let ssTotal = 0, ssRes = 0
   data.forEach(([x, y]) => {
@@ -106,7 +106,7 @@ function calculateRegression(data) {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -129,19 +129,19 @@ function updateChart() {
 
   const { slope, intercept, r2 } = calculateRegression(scatterData)
 
-  // 找出数据范围
+  // 鎵惧嚭鏁版嵁鑼冨洿
   const xValues = scatterData.map(d => d[0])
   const yValues = scatterData.map(d => d[1])
   const maxVal = Math.max(...xValues, ...yValues)
   const minVal = Math.min(...xValues, ...yValues)
 
-  // 回归线数据
+  // 鍥炲綊绾挎暟鎹?
   const lineData = [
     [minVal, slope * minVal + intercept],
     [maxVal, slope * maxVal + intercept]
   ]
 
-  // y=x 参考线
+  // y=x 鍙傝€冪嚎
   const refLineData = [
     [minVal, minVal],
     [maxVal, maxVal]
@@ -199,7 +199,7 @@ function updateChart() {
     },
 
     series: [
-      // y=x 参考线
+      // y=x 鍙傝€冪嚎
       {
         name: 'y=x',
         type: 'line',
@@ -212,7 +212,7 @@ function updateChart() {
         },
         z: 1
       },
-      // 散点
+      // 鏁ｇ偣
       {
         name: 'Data',
         type: 'scatter',
@@ -234,7 +234,7 @@ function updateChart() {
         },
         z: 2
       },
-      // 回归线
+      // 鍥炲綊绾?
       {
         name: 'Regression',
         type: 'line',
@@ -248,7 +248,7 @@ function updateChart() {
       }
     ],
 
-    // 提示框
+    // 鎻愮ず妗?
     tooltip: {
       trigger: 'item',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -260,15 +260,15 @@ function updateChart() {
       },
       formatter: (params) => {
         if (params.seriesName === 'Data') {
-          return `<div style="font-weight:600;margin-bottom:4px;">数据点</div>
-                  <div>前柱: <span style="color:${COLORS.primary};font-weight:600;">${params.value[0]}</span> MPa</div>
-                  <div>后柱: <span style="color:${COLORS.primary};font-weight:600;">${params.value[1]}</span> MPa</div>`
+          return `<div style="font-weight:600;margin-bottom:4px;">鏁版嵁鐐?/div>
+                  <div>鍓嶆煴: <span style="color:${COLORS.primary};font-weight:600;">${params.value[0]}</span> MPa</div>
+                  <div>鍚庢煴: <span style="color:${COLORS.primary};font-weight:600;">${params.value[1]}</span> MPa</div>`
         }
         return ''
       }
     },
 
-    // 图形标注
+    // 鍥惧舰鏍囨敞
     graphic: [
       {
         type: 'text',
@@ -285,7 +285,7 @@ function updateChart() {
         right: 25,
         top: 55,
         style: {
-          text: `R² = ${r2.toFixed(3)}`,
+          text: `R虏 = ${r2.toFixed(3)}`,
           font: '7pt PingFang SC, Arial',
           fill: '#737373'
         }
@@ -334,3 +334,4 @@ watch(() => [props.frontData, props.rearData], updateChart, { deep: true })
   }
 }
 </style>
+

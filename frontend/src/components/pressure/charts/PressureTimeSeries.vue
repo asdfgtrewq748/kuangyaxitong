@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="B"
     :title="title"
-    x-axis-label="时间 (月)"
-    y-axis-label="末阻力"
+    x-axis-label="Time"
+    y-axis-label="Final Resistance (MPa)"
     :footnote="footnote"
     width="full"
     height="200px"
@@ -14,16 +14,16 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: '支架阻力时序变化' },
+  title: { type: String, default: '鏀灦闃诲姏鏃跺簭鍙樺寲' },
   data: { type: Array, default: () => [] }, // [{ date, value, std }]
   supportId: { type: Number, default: null },
   showErrorBar: { type: Boolean, default: true },
   showPeaks: { type: Boolean, default: false },
-  peaks: { type: Array, default: () => [] } // 峰值索引
+  peaks: { type: Array, default: () => [] } // 宄板€肩储寮?
 })
 
 const chartRef = ref(null)
@@ -32,10 +32,10 @@ let chartInstance = null
 const footnote = computed(() => {
   if (!props.data || props.data.length === 0) return ''
   const n = props.data.length
-  return `均值 ± 标准差, n = ${n}`
+  return `鍧囧€?卤 鏍囧噯宸? n = ${n}`
 })
 
-// Nature 配色
+// Nature 閰嶈壊
 const COLORS = {
   primary: '#0072B2',
   secondary: '#D55E00',
@@ -46,7 +46,7 @@ const COLORS = {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -68,10 +68,10 @@ function updateChart() {
   const stds = props.data.map(d => d.std || 0)
 
   const option = {
-    // 隐藏默认标题
+    // 闅愯棌榛樿鏍囬
     title: { show: false },
 
-    // 网格
+    // 缃戞牸
     grid: {
       left: 45,
       right: 15,
@@ -79,7 +79,7 @@ function updateChart() {
       bottom: 30
     },
 
-    // X轴
+    // X杞?
     xAxis: {
       type: 'category',
       data: dates,
@@ -102,7 +102,7 @@ function updateChart() {
       splitLine: { show: false }
     },
 
-    // Y轴
+    // Y杞?
     yAxis: {
       type: 'value',
       min: 0,
@@ -124,9 +124,9 @@ function updateChart() {
       }
     },
 
-    // 系列
+    // 绯诲垪
     series: [
-      // 误差棒（如果显示）
+      // 璇樊妫掞紙濡傛灉鏄剧ず锛?
       ...(props.showErrorBar ? [{
         name: 'Error',
         type: 'custom',
@@ -142,7 +142,7 @@ function updateChart() {
           return {
             type: 'group',
             children: [
-              // 上竖线
+              // 涓婄珫绾?
               {
                 type: 'line',
                 shape: {
@@ -153,7 +153,7 @@ function updateChart() {
                 },
                 style: { stroke: COLORS.primary, lineWidth: 0.5 }
               },
-              // 下竖线
+              // 涓嬬珫绾?
               {
                 type: 'line',
                 shape: {
@@ -171,7 +171,7 @@ function updateChart() {
         z: 1
       }] : []),
 
-      // 主折线
+      // 涓绘姌绾?
       {
         name: 'Resistance',
         type: 'line',
@@ -200,7 +200,7 @@ function updateChart() {
         z: 2
       },
 
-      // 峰值标记（如果显示）
+      // 宄板€兼爣璁帮紙濡傛灉鏄剧ず锛?
       ...(props.showPeaks && props.peaks.length > 0 ? [{
         name: 'Peaks',
         type: 'scatter',
@@ -223,7 +223,7 @@ function updateChart() {
       }] : [])
     ],
 
-    // 提示框
+    // 鎻愮ず妗?
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -238,11 +238,11 @@ function updateChart() {
         const value = params.find(p => p.seriesName === 'Resistance')?.value || '-'
         const d = new Date(date)
         return `<div style="font-weight:600;margin-bottom:4px;">${d.toLocaleDateString('zh-CN')}</div>
-                <div>末阻力: <span style="color:${COLORS.primary};font-weight:600;">${value}</span> MPa</div>`
+                <div>鏈樆鍔? <span style="color:${COLORS.primary};font-weight:600;">${value}</span> MPa</div>`
       }
     },
 
-    // 动画
+    // 鍔ㄧ敾
     animation: true,
     animationDuration: 800,
     animationEasing: 'cubicOut'
@@ -286,3 +286,4 @@ watch(() => props.showPeaks, updateChart)
   }
 }
 </style>
+

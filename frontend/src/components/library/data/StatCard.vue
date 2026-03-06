@@ -24,13 +24,13 @@
         </slot>
       </div>
       <h3 class="stat-title">{{ title }}</h3>
-      <button v-if="tooltip" class="stat-tooltip" :title="tooltip">
+      <span v-if="tooltip" class="stat-tooltip" :title="tooltip" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/>
           <path d="M12 16v-4"/>
           <path d="M12 8h.01"/>
         </svg>
-      </button>
+      </span>
     </div>
 
     <!-- 数值区域 -->

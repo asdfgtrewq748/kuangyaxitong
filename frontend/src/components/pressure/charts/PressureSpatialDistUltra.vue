@@ -15,13 +15,13 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_ECHARTS_THEME, NATURE_COLORS } from '@/utils/natureFigureConfig'
 import { exportECharts } from '@/utils/figureExport'
 
 const props = defineProps({
-  title: { type: String, default: '空间分布' },
+  title: { type: String, default: '绌洪棿鍒嗗竷' },
   data: { type: Array, default: () => [] }
 })
 
@@ -36,7 +36,7 @@ const footnote = computed(() => {
   if (!props.data?.length) return ''
   const values = props.data.map(d => d.mean)
   const trend = calculateTrend(values)
-  return `Trend: ${trend > 0 ? '↑' : '↓'} ${Math.abs(trend * 100).toFixed(1)}%, n = ${props.data.length}`
+  return `Trend: ${trend > 0 ? 'up' : 'down'} ${Math.abs(trend * 100).toFixed(1)}%, n = ${props.data.length}`
 })
 
 const COLORS = {
@@ -58,10 +58,10 @@ function calculateTrend(values) {
 function initChart() {
   if (!chartRef.value) return
 
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
-    // 延迟初始化，等待容器有尺寸
+    // 寤惰繜鍒濆鍖栵紝绛夊緟瀹瑰櫒鏈夊昂瀵?
     setTimeout(initChart, 100)
     return
   }
@@ -80,7 +80,7 @@ function updateChart() {
   const xData = props.data.map(d => d.supportId)
   const yData = props.data.map(d => d.mean)
   
-  // 计算移动平均线
+  // 璁＄畻绉诲姩骞冲潎绾?
   const maWindow = 5
   const maData = yData.map((_, i) => {
     const start = Math.max(0, i - maWindow + 1)
@@ -135,7 +135,7 @@ function updateChart() {
     },
 
     series: [
-      // 移动平均线
+      // 绉诲姩骞冲潎绾?
       {
         name: 'MA',
         type: 'line',
@@ -149,7 +149,7 @@ function updateChart() {
         z: 1
       },
       
-      // 散点
+      // 鏁ｇ偣
       {
         name: 'Resistance',
         type: 'scatter',
@@ -185,14 +185,14 @@ function updateChart() {
         const scatter = params.find(p => p.seriesName === 'Resistance')
         const idx = params[0].dataIndex
         const d = props.data[idx]
-        return `<div style="font-weight: 600; margin-bottom: 4px;">支架 #${d.supportId}</div>
+        return `<div style="font-weight: 600; margin-bottom: 4px;">鏀灦 #${d.supportId}</div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${COLORS.primary};"></span>
-                  <span style="color: #525252;">均值:</span>
+                  <span style="color: #525252;">鍧囧€?</span>
                   <span style="font-weight: 700; color: ${COLORS.primary};">${d.mean.toFixed(2)}</span>
                   <span style="color: #a3a3a3; font-size: 11px;">MPa</span>
                 </div>
-                <div style="margin-top: 4px; font-size: 11px; color: #737373;">样本数: ${d.count}</div>`
+                <div style="margin-top: 4px; font-size: 11px; color: #737373;">鏍锋湰鏁? ${d.count}</div>`
       }
     },
 
@@ -208,7 +208,7 @@ function handleResize() {
   chartInstance?.resize()
 }
 
-// Nature标准导出
+// Nature鏍囧噯瀵煎嚭
 function exportFigure(format = 'svg') {
   if (!chartInstance) return
   const dataUrl = exportECharts(chartInstance, { type: format })
@@ -238,3 +238,4 @@ watch(() => props.data, updateChart, { deep: true })
   min-height: 160px;
 }
 </style>
+

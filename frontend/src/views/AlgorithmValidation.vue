@@ -175,7 +175,7 @@
         <button class="tool-btn small geo-run-btn" type="button" :disabled="geoCompareLoading || !seamName" @click="runGeoCompare">
           {{ geoCompareLoading ? av('computing') : av('runCompare') }}
         </button>
-        <button class="tool-btn small geo-run-btn fusion-run-btn" type="button" :disabled="fusionLoading || !hasSpatialData" @click="loadFusionPreview">
+        <button class="tool-btn small geo-run-btn fusion-run-btn" type="button" :disabled="fusionLoading || !hasSpatialData" @click="activateFusionScene()">
           {{ fusionLoading ? av('fusionLoadingAction') : av('loadFusion') }}
         </button>
         <p v-if="geoCompareError" class="geo-error">{{ geoCompareError }}</p>
@@ -264,7 +264,17 @@
         <p class="data-note">{{ av('fusionProfileHint') }}</p>
         <p v-if="fusionJobId" class="fusion-job-label">{{ av('fusionJobLabel', { jobId: fusionJobId }) }}</p>
       </header>
+      <div v-if="!fusionSceneRequested" class="fusion-placeholder">
+        <div>
+          <h4>{{ av('fusionViewerTitle') }}</h4>
+          <p>{{ av('fusionDesc') }}</p>
+        </div>
+        <button class="tool-btn small" type="button" :disabled="fusionLoading || !hasSpatialData" @click="activateFusionScene()">
+          {{ fusionLoading ? av('fusionLoadingAction') : av('loadFusion') }}
+        </button>
+      </div>
       <GeoMpiFusion3D
+        v-else
         ref="fusionViewerRef"
         :title="av('fusionViewerTitle')"
         :subtitle="av('fusionViewerSubtitle', { seam: seamName || av('targetSeam'), metric: metricLabel(activeMetric) })"
@@ -297,7 +307,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getCoalSeams,
@@ -315,8 +325,9 @@ import { useIndicatorCanvas } from '../composables/useIndicatorCanvas'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import { useI18n } from '../composables/useI18n'
 import { LRUCache } from '../lib/lruCache'
-import GeoMpiFusion3D from '../components/GeoMpiFusion3D.vue'
 import { SkeletonPanel } from '../components/library'
+
+const GeoMpiFusion3D = defineAsyncComponent(() => import('../components/GeoMpiFusion3D.vue'))
 
 const route = useRoute()
 const router = useRouter()
@@ -383,6 +394,7 @@ const fusionProfileFocus = ref('balanced')
 const fusionLoading = ref(false)
 const fusionError = ref('')
 const fusionJobId = ref('')
+const fusionSceneRequested = ref(false)
 const SCIENCE_SNAPSHOT_KEY = 'algorithm_validation_science_snapshot_v1'
 let scienceSnapshotPersistTimer = null
 
@@ -1180,6 +1192,7 @@ const resolveGeomodelJobId = async () => {
 }
 
 const loadFusionPreview = async () => {
+  fusionSceneRequested.value = true
   fusionError.value = ''
   if (!hasSpatialData.value) {
     fusionError.value = av('errorFusionNeedSpatial')
@@ -1207,6 +1220,12 @@ const loadFusionPreview = async () => {
   } finally {
     fusionLoading.value = false
   }
+}
+
+const activateFusionScene = async () => {
+  fusionSceneRequested.value = true
+  if (fusionLoading.value || !hasSpatialData.value) return
+  await loadFusionPreview()
 }
 
 const loadFusionStressProfile = async (jobId, options = {}) => {
@@ -1263,6 +1282,7 @@ watch(seamName, () => {
   setSelectedSeam(seamName.value || '')
   geoCompareError.value = ''
   geoCompareResult.value = null
+  fusionSceneRequested.value = false
   fusionGeomodel.value = null
   fusionStressProfile.value = null
   fusionError.value = ''
@@ -1464,6 +1484,9 @@ onBeforeUnmount(() => {
 .fusion-section header { margin-bottom: 10px; }
 .fusion-section h3 { margin: 0; font-size: 16px; font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif; color: #111827; }
 .fusion-section p { margin: 5px 0 0; font-size: 12px; color: #475569; }
+.fusion-placeholder { border: 1px dashed #94a3b8; border-radius: 10px; background: linear-gradient(135deg, #f8fafc 0%, #eef6f4 100%); padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fusion-placeholder h4 { margin: 0; font-size: 15px; color: #111827; }
+.fusion-placeholder p { margin: 6px 0 0; max-width: 560px; }
 .fusion-controls { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
 .fusion-focus-select { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #334155; }
 .fusion-focus-select select { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #0f172a; padding: 4px 8px; font-size: 12px; }
@@ -1478,5 +1501,5 @@ onBeforeUnmount(() => {
 .drawer-up-enter-from, .drawer-up-leave-to { opacity: 0; transform: translateY(20px); }
 @media (max-width: 1400px) { .main-layout { grid-template-columns: 1fr; } .thumb-list { flex-direction: row; overflow-x: auto; } .thumb-item { min-width: 220px; } }
 @media (max-width: 1080px) { .validation-page { height: auto; min-height: calc(100vh - 18px); } .metric-dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thumb-panel { display: none; } .floating-panel { position: fixed; left: 12px; right: 12px; top: 88px; width: auto; } .geo-panel { top: 88px; } .eval-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .eval-content { grid-template-columns: 1fr; } }
-@media (max-width: 760px) { .top-nav { flex-direction: column; align-items: flex-start; } .nav-right { width: 100%; flex-wrap: wrap; } .stage { min-height: 320px; } }
+@media (max-width: 760px) { .top-nav { flex-direction: column; align-items: flex-start; } .nav-right { width: 100%; flex-wrap: wrap; } .stage { min-height: 320px; } .fusion-placeholder { flex-direction: column; align-items: flex-start; } }
 </style>

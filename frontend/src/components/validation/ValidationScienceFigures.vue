@@ -14,74 +14,31 @@
       </div>
     </header>
 
-    <article class="figure-card">
-      <h4>图2 | RSI 机制剖面图（稳定度-损伤-置信带）</h4>
-      <ScienceChart :option="fig2Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：稳定度实线越高越好，误差带越窄代表层位响应更稳定，损伤柱越低越好。</p>
-      <p class="caption meta">{{ fig2Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图3 | BRI 微震能量释放、事件频次与累计风险</h4>
-      <ScienceChart :option="fig3Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：能量柱与事件频次线共同识别冲击窗口，累计风险线反映风险积聚过程。</p>
-      <p class="caption meta">{{ fig3Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图4 | ASI 径向/切向应力与应力集中系数 Kt</h4>
-      <ScienceChart :option="fig4Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：切向应力峰值与 Kt&gt;2 区段对应高风险圈带，径向应力反映卸压后衰减。</p>
-      <p class="caption meta">{{ fig4Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图5 | DBN 后验概率时序（95% CI + 预警阈值）</h4>
-      <ScienceChart :option="fig5Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：后验概率曲线跨过 0.6 报警阈值时需触发强化巡检，CI 带越窄越可信。</p>
-      <p class="caption meta">{{ fig5Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图6 | 新旧算法多指标对比（分数 + 增益）</h4>
-      <ScienceChart :option="fig6Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：柱形给出绝对分数，增益折线给出替代旧算法的实际收益幅度。</p>
-      <p class="caption meta">{{ fig6Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图7 | 消融实验（模块贡献与性能下降）</h4>
-      <ScienceChart :option="fig7Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：去除模块后的性能下降越大，说明该模块对总体性能贡献越关键。</p>
-      <p class="caption meta">{{ fig7Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图8 | 校准曲线（含样本直方图与置信区间）</h4>
-      <ScienceChart :option="fig8Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：曲线贴近对角线且 ECE 越低，模型概率输出越可直接用于阈值决策。</p>
-      <p class="caption meta">{{ fig8Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图9 | ROC 曲线（最优阈值点与 AUC）</h4>
-      <ScienceChart :option="fig9Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：曲线越靠左上角越好；灰色阴影带为 bootstrap 95%CI，上下虚线为CI边界，红点为 Youden 最优阈值。</p>
-      <p class="caption meta">{{ fig9Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图10 | PR 曲线（基线、F1 等值线与最优点）</h4>
-      <ScienceChart :option="fig10Option" :height="figureChartHeight" />
-      <p class="caption">怎么看：PR 曲线整体越高越好；灰色阴影带为 bootstrap 95%CI，上下虚线为CI边界，绿点为最佳F1运行点。</p>
-      <p class="caption meta">{{ fig10Insight }}</p>
-    </article>
-
-    <article class="figure-card">
-      <h4>图11 | 混淆矩阵热图（计数 + 占比 + 诊断指标）</h4>
-      <ScienceChart :option="fig11Option" :height="figureChartHeight" @chart-click="onFig11Click" />
-      <p class="caption">怎么看：对角线高、非对角低为理想状态；右侧指标用于误报/漏报成本权衡。</p>
-      <p class="caption meta">{{ fig11Insight }}</p>
+    <article v-for="card in figureCards" :key="card.id" class="figure-card">
+      <h4>{{ card.title }}</h4>
+      <ScienceChart
+        :option="card.option"
+        :height="figureChartHeight"
+        @chart-click="handleCardChartClick(card, $event)"
+      />
+      <div class="figure-caption-block">
+        <p class="caption">
+          <span class="caption-label">Interpretation</span>
+          <span>{{ card.interpretation }}</span>
+        </p>
+        <p class="caption meta">
+          <span class="caption-label">Result</span>
+          <span>{{ card.result }}</span>
+        </p>
+        <p class="caption caption-note-row">
+          <span class="caption-label">Notes</span>
+          <span>{{ card.notes }}</span>
+        </p>
+        <p class="caption caption-note-row">
+          <span class="caption-label">Abbrev.</span>
+          <span>{{ card.abbreviations }}</span>
+        </p>
+      </div>
     </article>
   </section>
 </template>
@@ -727,12 +684,123 @@ const fig11Insight = computed(() => {
   return `关键结论：Accuracy=${(m.accuracy * 100).toFixed(1)}%，Precision=${(m.precision * 100).toFixed(1)}%，Recall=${(m.recall * 100).toFixed(1)}%。`
 })
 
+const validationNotation = computed(() => ({
+  ciLabel: '95% CI',
+  aucLabel: 'AUC',
+  prAucLabel: 'PR-AUC',
+  eceLabel: 'ECE',
+  stressUnit: 'MPa',
+  distanceUnit: 'm',
+  percentageUnit: '%',
+  sampleLabel: `n = ${sampleSize.value}`,
+  bootstrapLabel: bootstrapBands.value ? `bootstrap ${bootstrapBands.value.iterations}` : 'bootstrap unavailable',
+  abbreviations: 'RSI, roof stability index; BRI, burst risk index; ASI, abutment stress index; DBN, dynamic Bayesian network; CI, confidence interval; ECE, expected calibration error.'
+}))
+
 const onFig11Click = (params) => {
   const raw = String(params?.data?.label || params?.name || '').toUpperCase()
   if (raw === 'TP' || raw === 'TN' || raw === 'FP' || raw === 'FN') {
     emit('matrix-select', raw.toLowerCase())
   }
 }
+
+const handleCardChartClick = (card, params) => {
+  card?.onChartClick?.(params)
+}
+
+const figureCards = computed(() => ([
+  {
+    id: 'fig2',
+    title: 'Figure 2 | RSI stratigraphic stability profile',
+    option: fig2Option.value,
+    interpretation: 'A higher stability trace and a narrower uncertainty ribbon indicate a more coherent roof response, while the damage bars highlight weakened layers.',
+    result: fig2Insight.value,
+    notes: `Stability, damage, and uncertainty are reported in ${validationNotation.value.percentageUnit}. Ribbon denotes ${validationNotation.value.ciLabel}.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig3',
+    title: 'Figure 3 | BRI microseismic release and cumulative risk',
+    option: fig3Option.value,
+    interpretation: 'Energy bars and event-frequency lines identify burst windows, and the cumulative-risk trajectory shows whether hazard is accelerating through time.',
+    result: fig3Insight.value,
+    notes: `Event energy is plotted in relative units and interpreted together with cumulative risk; use ${validationNotation.value.sampleLabel} only as evaluation context, not as a temporal count.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig4',
+    title: 'Figure 4 | ASI radial-tangential stress transect',
+    option: fig4Option.value,
+    interpretation: `Tangential stress peaks and Kt > 2 zones indicate the dominant concentration ring, while radial stress tracks post-relief decay with distance in ${validationNotation.value.distanceUnit}.`,
+    result: fig4Insight.value,
+    notes: `Stress is expressed in ${validationNotation.value.stressUnit}; distance is reported in ${validationNotation.value.distanceUnit}. The high-risk ring is interpreted where Kt remains above 2.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig5',
+    title: 'Figure 5 | DBN posterior probability sequence',
+    option: fig5Option.value,
+    interpretation: 'When the posterior trace crosses the alarm threshold, the forecast should trigger intensified inspection; narrower ribbons support stronger confidence in the warning.',
+    result: fig5Insight.value,
+    notes: `Posterior probability is unitless and accompanied by ${validationNotation.value.ciLabel}. Threshold decisions should be read together with the declared evaluation mode ${evalModeLabel.value}.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig6',
+    title: 'Figure 6 | Multi-metric comparison against the baseline model',
+    option: fig6Option.value,
+    interpretation: 'Bars report absolute model scores, whereas the gain line shows the net benefit of replacing the legacy workflow with the fusion model.',
+    result: fig6Insight.value,
+    notes: `MPI, ${validationNotation.value.aucLabel}, and ${validationNotation.value.prAucLabel} are shown on a comparable 0-100 scale for plate-level comparison; Brier is reported as (1 - Brier) × 100.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig7',
+    title: 'Figure 7 | Ablation study of module contribution',
+    option: fig7Option.value,
+    interpretation: 'A larger score drop after removing one module indicates a stronger contribution of that module to the full-model validation performance.',
+    result: fig7Insight.value,
+    notes: `Contribution and score-drop diagnostics are derived from dynamic module weights and summarized against the full-model reference score.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig8',
+    title: 'Figure 8 | Probability calibration with histogram support',
+    option: fig8Option.value,
+    interpretation: `Calibration improves as the response approaches the diagonal and ${validationNotation.value.eceLabel} decreases, indicating that predicted probabilities can be used more directly for threshold decisions.`,
+    result: fig8Insight.value,
+    notes: `Bars show bin support, the ribbon denotes ${validationNotation.value.ciLabel}, and calibration quality is summarized by ${validationNotation.value.eceLabel}.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig9',
+    title: 'Figure 9 | ROC curve with Youden operating point',
+    option: fig9Option.value,
+    interpretation: `Curves closer to the upper-left corner indicate better discrimination; the highlighted operating point marks the Youden-optimal threshold with ${validationNotation.value.ciLabel} context.`,
+    result: fig9Insight.value,
+    notes: `${validationNotation.value.aucLabel} is reported together with ${validationNotation.value.bootstrapLabel}; the operating point is defined on the empirical threshold grid.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig10',
+    title: 'Figure 10 | PR curve with F1 iso-lines and best-F1 point',
+    option: fig10Option.value,
+    interpretation: 'Higher PR trajectories indicate better positive-case retrieval, and the highlighted point marks the best F1 operating point under the current label stream.',
+    result: fig10Insight.value,
+    notes: `${validationNotation.value.prAucLabel} is reported with ${validationNotation.value.ciLabel}; the baseline line corresponds to the positive-class prevalence.`,
+    abbreviations: validationNotation.value.abbreviations
+  },
+  {
+    id: 'fig11',
+    title: 'Figure 11 | Confusion-matrix heatmap with diagnostic metrics',
+    option: fig11Option.value,
+    interpretation: 'High diagonal cells and suppressed off-diagonal cells indicate a better operating point; the side metrics support false-alarm versus miss-cost tradeoffs.',
+    result: fig11Insight.value,
+    notes: `Cells report count and share simultaneously. Click TP, TN, FP, or FN cells to drill into the corresponding validation subset when available.`,
+    abbreviations: validationNotation.value.abbreviations,
+    onChartClick: onFig11Click
+  }
+]))
 
 const fig2Option = computed(() => {
   const d = fig2Data.value
@@ -1165,11 +1233,38 @@ const fig11Option = computed(() => {
   font-size: 12px;
   line-height: 1.5;
   color: #334155;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
 }
 
 .caption.meta {
   color: #0f172a;
   font-weight: 600;
+}
+
+.figure-caption-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  display: grid;
+  gap: 2px;
+}
+
+.caption-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-family: 'Source Han Sans SC', 'Noto Sans SC', 'Segoe UI', sans-serif;
+}
+
+.caption-note-row {
+  color: #475569;
 }
 
 @media (max-width: 980px) {
@@ -1179,6 +1274,11 @@ const fig11Option = computed(() => {
 
   .gallery-head {
     flex-direction: column;
+  }
+
+  .caption {
+    grid-template-columns: 1fr;
+    gap: 2px;
   }
 }
 </style>

@@ -3,8 +3,8 @@
     :panel-label="panelLabel"
     :title="title"
     :subtitle="subtitle"
-    x-axis-label="末阻力 (MPa)"
-    y-axis-label="累积概率"
+    x-axis-label="鏈樆鍔?(MPa)"
+    y-axis-label="绱Н姒傜巼"
     :footnote="footnote"
     width="full"
     height="260px"
@@ -15,12 +15,12 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
 import { NATURE_COLORS } from '@/utils/natureFigureConfig'
 
 const props = defineProps({
-  title: { type: String, default: '累积分布函数' },
+  title: { type: String, default: '绱Н鍒嗗竷鍑芥暟' },
   subtitle: { type: String, default: 'Cumulative Distribution Function' },
   panelLabel: { type: String, default: 'D' },
   data: { type: Array, default: () => [] },
@@ -35,7 +35,7 @@ const footnote = computed(() => {
   const values = props.data.map(d => d.finalResistanceValue || d.value).filter(Number.isFinite)
   const sorted = [...values].sort((a, b) => a - b)
   const median = sorted[Math.floor(sorted.length / 2)]
-  return `中位数: ${median.toFixed(2)} MPa，样本量 n = ${values.length}`
+  return `涓綅鏁? ${median.toFixed(2)} MPa锛屾牱鏈噺 n = ${values.length}`
 })
 
 const COLORS = {
@@ -58,7 +58,7 @@ function calculateCDF(values) {
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -223,10 +223,10 @@ function updateChart() {
         const val = params[0].data[0]
         const prob = params[0].data[1]
         return `
-          <div style="font-weight: 600; margin-bottom: 4px;">累积分布</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">绱Н鍒嗗竷</div>
           <div style="font-size: 11px;">
-            压力: <span style="font-weight: 600;">${val.toFixed(2)} MPa</span><br>
-            累积概率: <span style="font-weight: 600; color: ${COLORS.cdf};">${(prob * 100).toFixed(1)}%</span>
+            鍘嬪姏: <span style="font-weight: 600;">${val.toFixed(2)} MPa</span><br>
+            绱Н姒傜巼: <span style="font-weight: 600; color: ${COLORS.cdf};">${(prob * 100).toFixed(1)}%</span>
           </div>
         `
       }
@@ -268,3 +268,4 @@ defineExpose({
   min-height: 200px;
 }
 </style>
+

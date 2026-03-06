@@ -2,8 +2,8 @@
   <NatureChartContainer
     panel-label="E"
     :title="title"
-    x-axis-label="推进距离"
-    y-axis-label="末阻力"
+    x-axis-label="鎺ㄨ繘璺濈"
+    y-axis-label="Final Resistance (MPa)"
     :footnote="footnote"
     width="full"
     height="180px"
@@ -14,11 +14,11 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/lib/echarts-pressure'
 import NatureChartContainer from '../shared/NatureChartContainer.vue'
 
 const props = defineProps({
-  title: { type: String, default: '周期来压检测' },
+  title: { type: String, default: 'Cyclic Pressure Detection' },
   data: { type: Array, default: () => [] }, // [{ date, value }]
   periods: { type: Object, default: null } // { meanPeriod, stdPeriod, numCycles }
 })
@@ -26,7 +26,7 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
-// Nature 配色
+// Nature 閰嶈壊
 const COLORS = {
   primary: '#0072B2',
   peak: '#CC79A7',
@@ -37,13 +37,13 @@ const COLORS = {
 const footnote = computed(() => {
   if (!props.periods || props.periods.numCycles === 0) return ''
   const { meanPeriod, stdPeriod, numCycles } = props.periods
-  return `周期: ${meanPeriod.toFixed(1)} ± ${stdPeriod.toFixed(1)} m (n=${numCycles})`
+  return `鍛ㄦ湡: ${meanPeriod.toFixed(1)} 卤 ${stdPeriod.toFixed(1)} m (n=${numCycles})`
 })
 
 function initChart() {
   if (!chartRef.value) return
   
-  // 检查容器尺寸，避免 ECharts 报错
+  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
   if (clientWidth === 0 || clientHeight === 0) {
     setTimeout(initChart, 100)
@@ -57,11 +57,11 @@ function initChart() {
 function updateChart() {
   if (!chartInstance || !props.data || props.data.length === 0) return
 
-  // X轴数据：推进距离
-  const xData = props.data.map((d, i) => i * 10) // 10m/天
+  // X杞存暟鎹細鎺ㄨ繘璺濈
+  const xData = props.data.map((d, i) => i * 10) // 10m/澶?
   const values = props.data.map(d => d.value)
 
-  // 找出峰值索引
+  // 鎵惧嚭宄板€肩储寮?
   const peakIndices = []
   const threshold = (Math.max(...values) + Math.min(...values)) / 2
 
@@ -69,17 +69,17 @@ function updateChart() {
     if (values[i] > threshold &&
         values[i] > values[i - 1] &&
         values[i] > values[i + 1]) {
-      // 检查与上一个峰的距离
+      // 妫€鏌ヤ笌涓婁竴涓嘲鐨勮窛绂?
       if (peakIndices.length === 0 || i - peakIndices[peakIndices.length - 1] >= 5) {
         peakIndices.push(i)
       }
     }
   }
 
-  // 峰值数据
+  // 宄板€兼暟鎹?
   const peakData = peakIndices.map(i => [xData[i], values[i]])
 
-  // 计算均值用于参考线
+  // 璁＄畻鍧囧€肩敤浜庡弬鑰冪嚎
   const meanValue = values.reduce((a, b) => a + b, 0) / values.length
 
   const option = {
@@ -132,7 +132,7 @@ function updateChart() {
     },
 
     series: [
-      // 主折线
+      // 涓绘姌绾?
       {
         name: 'Resistance',
         type: 'line',
@@ -151,7 +151,7 @@ function updateChart() {
         },
         z: 1
       },
-      // 峰值标记
+      // 宄板€兼爣璁?
       {
         name: 'Peaks',
         type: 'scatter',
@@ -174,7 +174,7 @@ function updateChart() {
       }
     ],
 
-    // 参考线
+    // 鍙傝€冪嚎
     visualMap: {
       show: false,
       pieces: [
@@ -182,7 +182,7 @@ function updateChart() {
       ]
     },
 
-    // 提示框
+    // 鎻愮ず妗?
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -196,7 +196,7 @@ function updateChart() {
         const data = params[0]
         if (!data) return ''
         return `<div style="font-weight:600;margin-bottom:4px;">${data.value[0]} m</div>
-                <div>末阻力: <span style="color:${COLORS.primary};font-weight:600;">${data.value[1]}</span> MPa</div>`
+                <div>鏈樆鍔? <span style="color:${COLORS.primary};font-weight:600;">${data.value[1]}</span> MPa</div>`
       }
     },
 
@@ -242,3 +242,4 @@ watch(() => props.data, updateChart, { deep: true })
   }
 }
 </style>
+
