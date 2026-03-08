@@ -10,13 +10,13 @@
           {{ loading ? copy.loading : copy.refresh }}
         </button>
         <PaperExportMenu
-          trigger-label="论文导出"
+          :trigger-label="copy.exportTrigger"
           :main-label="copy.exportMain"
           :pack-label="copy.exportPack"
           :loading-main-label="copy.exportingMain"
           :loading-pack-label="copy.exportingPack"
-          main-hint="Fig.1 主图（PNG）"
-          pack-hint="Fig.S* + captions + manifest"
+          :main-hint="copy.exportMainHint"
+          :pack-hint="copy.exportPackHint"
           :disabled-main="loading || !hasSpatialData"
           :disabled-pack="loading || !hasSpatialData"
           :loading-main="exportingMain"
@@ -158,96 +158,105 @@ import ScienceChart from '../components/validation/ScienceChart.vue'
 import PaperExportMenu from '../components/common/PaperExportMenu.vue'
 import { NATURE_COLORS } from '../utils/natureFigureConfig'
 import { exportECharts } from '../utils/figureExport'
-import { buildCaptionsMarkdown, buildPaperFigure, buildPaperManifest } from '../utils/paperExportSchema'
+import {
+  buildPaperArtifact,
+  buildPaperFigure,
+  buildPaperFigurePath,
+  buildPaperFigureStem,
+  buildPaperManifest,
+  buildPaperRootPath,
+  buildPaperSupplementZipName,
+  buildPaperTimestampTag,
+  buildPublicationCaptionsMarkdown,
+  buildPublicationIndexDocument,
+  buildPublicationLabelSet,
+  buildPublicationMethodsFooter,
+  buildPublicationNotesMarkdown,
+  buildPublicationRows,
+  buildPublicationReadmeMarkdown,
+  buildPaperTablePath,
+  buildPaperTable
+} from '../utils/paperExportSchema'
 
 const METHOD_LIST = ['idw', 'linear', 'nearest', 'kriging']
 
-const zh = {
-  title: '不确定性与可信度分析',
-  subtitle: '面向科研配图的多模型不确定性量化页面：显示空间异质性、方法差异、深度传递与风险置信区间。',
-  loading: '加载中...',
-  refresh: '刷新分析',
-  seam: '煤层',
-  metric: '指标',
-  method: '主插值方法',
-  resolution: '网格分辨率',
-  focus: '深度关注模式',
-  focusBalanced: '平衡',
-  focusShallow: '浅层强化',
-  focusDeep: '深层强化',
-  geomodelJobId: 'Geomodel 任务 ID（可选）',
-  geomodelJobPlaceholder: '留空时自动选最近 completed 任务',
-  kpiBoreholes: '有效钻孔数',
-  kpiMeanStd: '均值 ± 标准差',
-  kpiCv: '全局变异系数 CV',
-  kpiEntropy: '归一化熵',
-  kpiRiskRatio: '高风险区比例(MPI<60)',
-  kpiConfidence: '综合可信度',
-  mapTitle: '空间局部不确定性热图',
-  mapDesc: '以 3x3 邻域 CV 表示局部波动，颜色越深表示模型在该区域不稳定性越高。',
-  methodTitle: '多插值方法对比',
-  methodDesc: '同一煤层在 4 种插值法下的均值与不确定性并行对比。',
-  profileTitle: '深度传递可信度剖面',
-  profileDesc: '基于 Geomodel 深度权重曲线，显示应力传递置信度及关键锚点。',
-  scatterTitle: '值-不确定性相图',
-  scatterDesc: '散点与趋势线展示指标值和局部不确定性的耦合关系。',
-  exportMain: '导出主图',
-  exportPack: '导出补充图包',
-  exportingMain: '主图导出中...',
-  exportingPack: '打包中...',
-  exportDoneMain: '主图已导出：{name}',
-  exportDonePack: '补充图包已导出：{name}',
-  exportNoChart: '图表尚未就绪，请稍后重试。',
-  exportFailed: '导出失败，请稍后重试。',
-  emptyTitle: '暂无可用空间数据',
-  emptyDesc: '请先选择煤层并刷新分析。',
-  profileFallback: '未获取到地质任务，使用默认剖面。'
-}
-
-const en = {
-  title: 'Uncertainty and Confidence Analysis',
-  subtitle: 'Research-grade panel for uncertainty quantification: spatial heterogeneity, method divergence, depth transfer, and confidence context.',
-  loading: 'Loading...',
-  refresh: 'Refresh',
-  seam: 'Seam',
-  metric: 'Metric',
-  method: 'Primary interpolation',
-  resolution: 'Grid resolution',
-  focus: 'Depth focus',
-  focusBalanced: 'Balanced',
-  focusShallow: 'Shallow',
-  focusDeep: 'Deep',
-  geomodelJobId: 'Geomodel Job ID (optional)',
-  geomodelJobPlaceholder: 'Auto-pick latest completed job if empty',
-  kpiBoreholes: 'Boreholes',
-  kpiMeanStd: 'Mean ± Std',
-  kpiCv: 'Global CV',
-  kpiEntropy: 'Normalized entropy',
-  kpiRiskRatio: 'High-risk ratio (MPI<60)',
-  kpiConfidence: 'Composite confidence',
-  mapTitle: 'Spatial local uncertainty map',
-  mapDesc: 'Local 3x3 CV highlights unstable areas where interpolation variance is high.',
-  methodTitle: 'Cross-method comparison',
-  methodDesc: 'Parallel comparison of mean and uncertainty across four interpolation methods.',
-  profileTitle: 'Depth transfer confidence profile',
-  profileDesc: 'Geomodel-derived depth weights with anchor points for stress transfer confidence.',
-  scatterTitle: 'Value-uncertainty phase plot',
-  scatterDesc: 'Scatter and trendline showing coupling between indicator value and local uncertainty.',
-  exportMain: 'Export Main Figure',
-  exportPack: 'Export Supplement Pack',
-  exportingMain: 'Exporting main...',
-  exportingPack: 'Packing...',
-  exportDoneMain: 'Main figure exported: {name}',
-  exportDonePack: 'Supplement package exported: {name}',
-  exportNoChart: 'Charts are not ready yet.',
-  exportFailed: 'Export failed. Please retry.',
-  emptyTitle: 'No spatial data',
-  emptyDesc: 'Select a seam and refresh analysis first.',
-  profileFallback: 'No geomodel job found. Fallback profile is used.'
-}
-
-const { locale } = useI18n()
-const copy = computed(() => (locale.value === 'zh-CN' ? zh : en))
+const { t, locale } = useI18n()
+const ua = (key, params) => t(`uncertaintyAnalysis.${key}`, params)
+const copy = computed(() => ({
+  title: ua('title'),
+  subtitle: ua('subtitle'),
+  loading: ua('loading'),
+  refresh: ua('refresh'),
+  seam: ua('seam'),
+  metric: ua('metric'),
+  method: ua('method'),
+  resolution: ua('resolution'),
+  focus: ua('focus'),
+  focusBalanced: ua('focusBalanced'),
+  focusShallow: ua('focusShallow'),
+  focusDeep: ua('focusDeep'),
+  geomodelJobId: ua('geomodelJobId'),
+  geomodelJobPlaceholder: ua('geomodelJobPlaceholder'),
+  kpiBoreholes: ua('kpiBoreholes'),
+  kpiMeanStd: ua('kpiMeanStd'),
+  kpiCv: ua('kpiCv'),
+  kpiEntropy: ua('kpiEntropy'),
+  kpiRiskRatio: ua('kpiRiskRatio'),
+  kpiConfidence: ua('kpiConfidence'),
+  mapTitle: ua('mapTitle'),
+  mapDesc: ua('mapDesc'),
+  methodTitle: ua('methodTitle'),
+  methodDesc: ua('methodDesc'),
+  profileTitle: ua('profileTitle'),
+  profileDesc: ua('profileDesc'),
+  scatterTitle: ua('scatterTitle'),
+  scatterDesc: ua('scatterDesc'),
+  exportTrigger: ua('exportTrigger'),
+  exportMain: ua('exportMain'),
+  exportPack: ua('exportPack'),
+  exportingMain: ua('exportingMain'),
+  exportingPack: ua('exportingPack'),
+  exportMainHint: ua('exportMainHint'),
+  exportPackHint: ua('exportPackHint'),
+  exportDoneMain: ua('exportDoneMain'),
+  exportDonePack: ua('exportDonePack'),
+  exportNoChart: ua('exportNoChart'),
+  exportFailed: ua('exportFailed'),
+  publicationFigureLabel: ua('publicationFigureLabel'),
+  publicationSummaryLabel: ua('publicationSummaryLabel'),
+  publicationCaptionLabel: ua('publicationCaptionLabel'),
+  publicationNotesLabel: ua('publicationNotesLabel'),
+  publicationMethodsFooterLabel: ua('publicationMethodsFooterLabel'),
+  publicationCaptionsTitle: ua('publicationCaptionsTitle'),
+  publicationNotesTitle: ua('publicationNotesTitle'),
+  supplementExportTitle: ua('supplementExportTitle'),
+  supplementReadmeIntro: ua('supplementReadmeIntro'),
+  atlasTitle: ua('atlasTitle'),
+  atlasSummary: ua('atlasSummary'),
+  atlasCaption: ua('atlasCaption'),
+  atlasNotes: ua('atlasNotes'),
+  entryNotes: ua('entryNotes'),
+  mapCaption: ua('mapCaption'),
+  mapNotes: ua('mapNotes'),
+  methodCaption: ua('methodCaption'),
+  methodNotes: ua('methodNotes'),
+  profileCaption: ua('profileCaption'),
+  profileNotes: ua('profileNotes'),
+  scatterCaption: ua('scatterCaption'),
+  scatterNotes: ua('scatterNotes'),
+  captionsIntro: ua('captionsIntro'),
+  supplementManifestNote: ua('supplementManifestNote'),
+  emptyTitle: ua('emptyTitle'),
+  emptyDesc: ua('emptyDesc'),
+  profileFallback: ua('profileFallback')
+}))
+const publicationLabels = computed(() => buildPublicationLabelSet({
+  figure: copy.value.publicationFigureLabel,
+  summary: copy.value.publicationSummaryLabel,
+  caption: copy.value.publicationCaptionLabel,
+  notes: copy.value.publicationNotesLabel,
+  methodsFooter: copy.value.publicationMethodsFooterLabel
+}))
 const { workspaceState, setSelectedSeam } = useWorkspaceFlow()
 const route = useRoute()
 
@@ -756,8 +765,6 @@ const getChartEntries = () => ([
   }
 ])
 
-const buildTimestampTag = () => new Date().toISOString().replace(/[:.]/g, '-')
-
 const dataUrlToBlob = async (dataUrl) => {
   const response = await fetch(dataUrl)
   return response.blob()
@@ -850,17 +857,120 @@ const buildMainAtlasCanvas = async (entries) => {
   return canvas
 }
 
+const buildUncertaintyCaptionRows = (title, summary, caption) => buildPublicationRows([
+  { label: publicationLabels.value.figure, value: title },
+  { label: publicationLabels.value.summary, value: summary },
+  { label: publicationLabels.value.caption, value: caption }
+])
+
+const buildUncertaintyNoteRows = (notes, methodsFooter) => {
+  const rows = [{ label: publicationLabels.value.notes, value: notes }]
+  if (methodsFooter) {
+    rows.push({ label: publicationLabels.value.methodsFooter, value: methodsFooter })
+  }
+  return buildPublicationRows(rows)
+}
+
 const buildCaptionMarkdown = () => {
   const figures = [
-    buildPaperFigure({ id: 'Fig.1', title: 'Uncertainty Atlas', caption: `Integrated 2x2 atlas for seam ${seamName.value || '--'} under ${method.value.toUpperCase()} interpolation (resolution ${resolution.value}).` }),
-    buildPaperFigure({ id: 'Fig.S1', title: copy.value.mapTitle, caption: copy.value.mapDesc }),
-    buildPaperFigure({ id: 'Fig.S2', title: copy.value.methodTitle, caption: copy.value.methodDesc }),
-    buildPaperFigure({ id: 'Fig.S3', title: copy.value.profileTitle, caption: copy.value.profileDesc }),
-    buildPaperFigure({ id: 'Fig.S4', title: copy.value.scatterTitle, caption: copy.value.scatterDesc })
+    buildPaperFigure({
+      id: 'Fig.1',
+      title: copy.value.atlasTitle,
+      caption: copy.value.atlasCaption
+        .replace('{method}', method.value.toUpperCase())
+        .replace('{resolution}', String(resolution.value)),
+      meta: {
+        caption_rows: buildUncertaintyCaptionRows(
+          copy.value.atlasTitle,
+          copy.value.atlasSummary.replace('{seam}', seamName.value || '--'),
+          copy.value.atlasCaption
+            .replace('{method}', method.value.toUpperCase())
+            .replace('{resolution}', String(resolution.value))
+        ),
+        note_rows: buildUncertaintyNoteRows(
+          copy.value.atlasNotes
+            .replace('{metric}', metric.value.toUpperCase())
+            .replace('{focus}', profileFocus.value),
+          buildPublicationMethodsFooter({
+            subject: copy.value.atlasTitle,
+            source: 'spatial overview and geomodel-linked uncertainty diagnostics',
+            seam: seamName.value || '',
+            details: [
+              `metric ${metric.value.toUpperCase()}`,
+              `method ${method.value.toUpperCase()}`,
+              `resolution ${resolution.value}`,
+              `profile focus ${profileFocus.value}`
+            ]
+          })
+        )
+      }
+    }),
+    buildPaperFigure({
+      id: 'Fig.S1',
+      title: copy.value.mapTitle,
+      caption: copy.value.mapDesc,
+      meta: {
+        caption_rows: buildUncertaintyCaptionRows(
+          copy.value.mapTitle,
+          copy.value.mapDesc,
+          copy.value.mapCaption
+            .replace('{metric}', metric.value.toUpperCase())
+            .replace('{seam}', seamName.value || '--')
+        ),
+        note_rows: buildUncertaintyNoteRows(
+          copy.value.mapNotes
+            .replace('{method}', method.value.toUpperCase())
+            .replace('{resolution}', String(resolution.value))
+        )
+      }
+    }),
+    buildPaperFigure({
+      id: 'Fig.S2',
+      title: copy.value.methodTitle,
+      caption: copy.value.methodDesc,
+      meta: {
+        caption_rows: buildUncertaintyCaptionRows(copy.value.methodTitle, copy.value.methodDesc, copy.value.methodCaption),
+        note_rows: buildUncertaintyNoteRows(
+          copy.value.methodNotes
+            .replace('{seam}', seamName.value || '--')
+            .replace('{metric}', metric.value.toUpperCase())
+        )
+      }
+    }),
+    buildPaperFigure({
+      id: 'Fig.S3',
+      title: copy.value.profileTitle,
+      caption: copy.value.profileDesc,
+      meta: {
+        caption_rows: buildUncertaintyCaptionRows(
+          copy.value.profileTitle,
+          copy.value.profileDesc,
+          copy.value.profileCaption.replace('{focus}', profileFocus.value)
+        ),
+        note_rows: buildUncertaintyNoteRows(copy.value.profileNotes.replace('{focus}', profileFocus.value))
+      }
+    }),
+    buildPaperFigure({
+      id: 'Fig.S4',
+      title: copy.value.scatterTitle,
+      caption: copy.value.scatterDesc,
+      meta: {
+        caption_rows: buildUncertaintyCaptionRows(copy.value.scatterTitle, copy.value.scatterDesc, copy.value.scatterCaption),
+        note_rows: buildUncertaintyNoteRows(
+          copy.value.scatterNotes
+            .replace('{count}', String(statSummary.value.count || 0))
+            .replace('{score}', fmt(statSummary.value.confidenceScore, 2))
+        )
+      }
+    })
   ]
-  return buildCaptionsMarkdown({
-    title: 'Figure Captions',
-    intro: `Seam ${seamName.value || '--'}, metric ${metric.value.toUpperCase()}, method ${method.value.toUpperCase()}, resolution ${resolution.value}.`,
+  return buildPublicationCaptionsMarkdown({
+    title: copy.value.publicationCaptionsTitle,
+    intro: copy.value.captionsIntro
+      .replace('{seam}', seamName.value || '--')
+      .replace('{metric}', metric.value.toUpperCase())
+      .replace('{method}', method.value.toUpperCase())
+      .replace('{resolution}', String(resolution.value)),
     figures
   })
 }
@@ -894,7 +1004,7 @@ const exportMainAtlas = async () => {
         else resolve(output)
       }, 'image/png')
     })
-    const filename = `Fig1_Uncertainty_Atlas_${buildTimestampTag()}.png`
+    const filename = `${buildPaperFigureStem({ index: 1, slug: 'uncertainty_atlas' })}_${buildPaperTimestampTag()}.png`
     triggerDownload(blob, filename)
     exportNote.value = copy.value.exportDoneMain.replace('{name}', filename)
   } catch (err) {
@@ -918,6 +1028,11 @@ const exportSupplementPackage = async () => {
 
     const JSZip = await getJSZipCtor()
     const zip = new JSZip()
+    const atlasPath = buildPaperFigurePath({
+      index: 1,
+      slug: 'uncertainty_atlas',
+      ext: 'png'
+    })
 
     const atlasCanvas = await buildMainAtlasCanvas(entries)
     if (atlasCanvas) {
@@ -927,14 +1042,19 @@ const exportSupplementPackage = async () => {
           else resolve(output)
         }, 'image/png')
       })
-      zip.file('figures/Fig1_Uncertainty_Atlas.png', atlasBlob)
+      zip.file(atlasPath, atlasBlob)
     }
 
     const manifestFigures = []
 
     for (let i = 0; i < entries.length; i += 1) {
       const entry = entries[i]
-      const figName = `FigS${i + 1}_${entry.slug}`
+      const figPathBase = buildPaperFigurePath({
+        index: i + 1,
+        supplement: true,
+        slug: entry.slug,
+        ext: 'png'
+      })
       const figureFiles = []
 
       const pngDataUrl = exportECharts(entry.chart, {
@@ -943,8 +1063,8 @@ const exportSupplementPackage = async () => {
         backgroundColor: '#FFFFFF'
       })
       const pngBlob = await dataUrlToBlob(pngDataUrl)
-      zip.file(`figures/${figName}.png`, pngBlob)
-      figureFiles.push(`figures/${figName}.png`)
+      zip.file(figPathBase, pngBlob)
+      figureFiles.push(figPathBase)
 
       try {
         const svgDataUrl = exportECharts(entry.chart, {
@@ -953,8 +1073,14 @@ const exportSupplementPackage = async () => {
           backgroundColor: '#FFFFFF'
         })
         const svgBlob = await dataUrlToBlob(svgDataUrl)
-        zip.file(`figures/${figName}.svg`, svgBlob)
-        figureFiles.push(`figures/${figName}.svg`)
+        const svgPath = buildPaperFigurePath({
+          index: i + 1,
+          supplement: true,
+          slug: entry.slug,
+          ext: 'svg'
+        })
+        zip.file(svgPath, svgBlob)
+        figureFiles.push(svgPath)
       } catch {
         // skip svg if renderer does not support current mode
       }
@@ -970,20 +1096,86 @@ const exportSupplementPackage = async () => {
           seam: seamName.value || '',
           metric: metric.value,
           method: method.value,
-          resolution: resolution.value
+          resolution: resolution.value,
+          figure_heading: entry.title,
+          caption_title: entry.title,
+          caption_rows: buildUncertaintyCaptionRows(
+            entry.title,
+            entry.desc,
+            copy.value.atlasCaption
+              .replace('{method}', method.value.toUpperCase())
+              .replace('{resolution}', String(resolution.value))
+          ),
+          note_rows: buildUncertaintyNoteRows(
+            copy.value.entryNotes
+              .replace('{seam}', seamName.value || '--')
+              .replace('{focus}', profileFocus.value),
+            buildPublicationMethodsFooter({
+              subject: entry.title,
+              source: 'spatial uncertainty export',
+              seam: seamName.value || '',
+              details: [
+                `metric ${metric.value.toUpperCase()}`,
+                `method ${method.value.toUpperCase()}`,
+                `resolution ${resolution.value}`,
+                'renderer-aware PNG/SVG fallback'
+              ]
+            })
+          )
         }
       }))
     }
 
-    zip.file('captions.md', buildCaptionMarkdown())
-    zip.file('tables/method_comparison.csv', buildMethodComparisonCsv())
-    zip.file('tables/metric_summary.csv', [
+    const captionsPath = buildPaperRootPath({ name: 'captions', ext: 'md' })
+    const notesPath = buildPaperRootPath({ name: 'publication-notes', ext: 'md' })
+    const manifestPath = buildPaperRootPath({ name: 'manifest', ext: 'json' })
+    const indexPath = buildPaperRootPath({ name: 'index', ext: 'json' })
+    const readmePath = buildPaperRootPath({ name: 'README', ext: 'md' })
+    const generatedAt = new Date().toISOString()
+
+    zip.file(captionsPath, buildCaptionMarkdown())
+    zip.file(notesPath, buildPublicationNotesMarkdown({
+      title: copy.value.publicationNotesTitle,
+      figures: manifestFigures
+    }))
+    const methodComparisonPath = buildPaperTablePath({ name: 'method_comparison', ext: 'csv' })
+    const metricSummaryPath = buildPaperTablePath({ name: 'metric_summary', ext: 'csv' })
+    zip.file(methodComparisonPath, buildMethodComparisonCsv())
+    zip.file(metricSummaryPath, [
       'metric,seam,method,resolution,count,mean,std,cv,entropy_norm,high_risk_ratio,confidence_score',
       `${metric.value},${seamName.value || ''},${method.value},${resolution.value},${statSummary.value.count || 0},${fmt(statSummary.value.mean, 6)},${fmt(statSummary.value.std, 6)},${fmt(statSummary.value.cv, 6)},${fmt(statSummary.value.entropyNorm, 6)},${fmt(statSummary.value.highRiskRatio, 6)},${fmt(statSummary.value.confidenceScore, 6)}`
     ].join('\n'))
+    zip.file(readmePath, buildPublicationReadmeMarkdown({
+      title: copy.value.supplementExportTitle,
+      intro: copy.value.supplementReadmeIntro,
+      sourcePage: 'uncertainty-analysis',
+      manifestPath,
+      indexPath,
+      captionsPath,
+      notesPath,
+      figures: manifestFigures,
+      tables: [
+        buildPaperTable({ name: 'method_comparison', path: methodComparisonPath }),
+        buildPaperTable({ name: 'metric_summary', path: metricSummaryPath })
+      ]
+    }))
+    zip.file(indexPath, JSON.stringify(buildPublicationIndexDocument({
+      title: copy.value.supplementExportTitle,
+      generatedAt,
+      sourcePage: 'uncertainty-analysis',
+      manifestPath,
+      captionsPath,
+      notesPath,
+      readmePath,
+      figures: manifestFigures,
+      tables: [
+        buildPaperTable({ name: 'method_comparison', path: methodComparisonPath }),
+        buildPaperTable({ name: 'metric_summary', path: metricSummaryPath })
+      ]
+    }), null, 2))
     const manifest = buildPaperManifest({
       sourcePage: 'uncertainty-analysis',
-      title: 'Uncertainty Supplement Export',
+      title: copy.value.supplementExportTitle,
       locale: locale.value,
       context: {
         seam: seamName.value || '',
@@ -995,16 +1187,27 @@ const exportSupplementPackage = async () => {
       },
       figures: manifestFigures,
       tables: [
-        { name: 'method_comparison', path: 'tables/method_comparison.csv' },
-        { name: 'metric_summary', path: 'tables/metric_summary.csv' }
+        buildPaperTable({ name: 'method_comparison', path: methodComparisonPath }),
+        buildPaperTable({ name: 'metric_summary', path: metricSummaryPath })
       ],
-      artifacts: [{ name: 'main_atlas', path: 'figures/Fig1_Uncertainty_Atlas.png' }],
-      notes: ['Supplement includes both figure files and tabular summary outputs.']
+      artifacts: [
+        buildPaperArtifact({ name: 'main_atlas', path: atlasPath }),
+        buildPaperArtifact({ name: 'captions', path: captionsPath }),
+        buildPaperArtifact({ name: 'publication_notes', path: notesPath }),
+        buildPaperArtifact({ name: 'index', path: indexPath }),
+        buildPaperArtifact({ name: 'readme', path: readmePath }),
+        buildPaperArtifact({ name: 'manifest', path: manifestPath })
+      ],
+      notes: [copy.value.supplementManifestNote],
+      generatedAt
     })
-    zip.file('manifest.json', JSON.stringify(manifest, null, 2))
+    zip.file(manifestPath, JSON.stringify(manifest, null, 2))
 
     const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
-    const zipName = `Uncertainty_Supplement_${buildTimestampTag()}.zip`
+    const zipName = buildPaperSupplementZipName({
+      topic: 'Uncertainty',
+      timestampTag: buildPaperTimestampTag()
+    })
     triggerDownload(zipBlob, zipName)
     exportNote.value = copy.value.exportDonePack.replace('{name}', zipName)
   } catch (err) {

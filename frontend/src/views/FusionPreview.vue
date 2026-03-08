@@ -78,13 +78,13 @@
           {{ loadingFusion ? fp('loadingFusion') : fp('loadFusion') }}
         </button>
         <PaperExportMenu
-          trigger-label="论文导出"
+          :trigger-label="fp('exportTrigger')"
           :main-label="fp('exportMain')"
           :pack-label="fp('exportSupplement')"
           :loading-main-label="fp('exportingMain')"
           :loading-pack-label="fp('exportingPack')"
-          main-hint="Fig.1 主图（PNG）"
-          pack-hint="Fig.S* 补充图（ZIP）"
+          :main-hint="fp('exportMainHint')"
+          :pack-hint="fp('exportPackHint')"
           :disabled-main="!fusionReady"
           :disabled-pack="!fusionReady"
           :loading-main="exportingMain"
@@ -121,7 +121,7 @@
     <div v-if="!fusionSceneRequested" class="fusion-lazy-card">
       <div class="fusion-lazy-copy">
         <h2>{{ fp('viewerTitle') }}</h2>
-        <p>3D fusion preview is deferred until you request it, so the page can finish loading spatial analysis first.</p>
+        <p>{{ fp('lazyDescription') }}</p>
       </div>
       <button class="tool-btn" type="button" :disabled="loadingSpatial || loadingFusion || !seamName" @click="activateFusionScene()">
         {{ loadingFusion ? fp('loadingFusion') : fp('loadFusion') }}
@@ -164,7 +164,24 @@ import {
 import PaperExportMenu from '../components/common/PaperExportMenu.vue'
 import { useI18n } from '../composables/useI18n'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
-import { buildCaptionsMarkdown, buildPaperFigure, buildPaperManifest } from '../utils/paperExportSchema'
+import {
+  buildPaperArtifact,
+  buildPaperFigure,
+  buildPaperFigureId,
+  buildPaperFigurePath,
+  buildPaperFigureStem,
+  buildPaperManifest,
+  buildPaperRootPath,
+  buildPaperSupplementZipName,
+  buildPaperTimestampTag,
+  buildPublicationCaptionsMarkdown,
+  buildPublicationIndexDocument,
+  buildPublicationLabelSet,
+  buildPublicationMethodsFooter,
+  buildPublicationNotesMarkdown,
+  buildPublicationRows,
+  buildPublicationReadmeMarkdown
+} from '../utils/paperExportSchema'
 
 const loadGeoMpiFusion3D = () => import('../components/GeoMpiFusion3D.vue')
 const GeoMpiFusion3D = defineAsyncComponent(loadGeoMpiFusion3D)
@@ -175,6 +192,14 @@ const { t, locale } = useI18n()
 const { workspaceState, setSelectedSeam } = useWorkspaceFlow()
 
 const fp = (key, params) => t(`fusionPreview.${key}`, params)
+const publicationLabels = computed(() => buildPublicationLabelSet({
+  figure: fp('publicationFigureLabel'),
+  summary: fp('publicationSummaryLabel'),
+  caption: fp('publicationCaptionLabel'),
+  notes: fp('publicationNotesLabel'),
+  methodsFooter: fp('publicationMethodsFooterLabel'),
+  metric: fp('publicationMetricLabel'),
+}))
 
 const seamOptions = ref([])
 const seamName = ref('')
@@ -401,10 +426,6 @@ const triggerDownload = (blob, filename) => {
   URL.revokeObjectURL(url)
 }
 
-const getTimestampTag = () => {
-  return new Date().toISOString().replace(/[:.]/g, '-')
-}
-
 const getExportPreset = () => {
   return figureMode.value === 'nature' ? FIGURE_EXPORT_PROFILE.nature : FIGURE_EXPORT_PROFILE.standard
 }
@@ -428,7 +449,7 @@ const exportMainFigure = async () => {
       height: preset.main.height
     })
     if (!payload?.blob) throw new Error(fp('errorExportMain'))
-    const filename = `Fig1_Fusion_Main_${figureMode.value}_${getTimestampTag()}.png`
+    const filename = `${buildPaperFigureStem({ index: 1, slug: `fusion_main_${figureMode.value}` })}_${buildPaperTimestampTag()}.png`
     triggerDownload(payload.blob, filename)
     exportNote.value = fp('exportMainDone', {
       width: payload.width || preset.main.width,
@@ -453,6 +474,30 @@ const exportSupplementPackage = async () => {
     const preset = getExportPreset()
     const focuses = ['balanced', 'shallow', 'deep']
     const figureRecords = []
+    const buildFusionCaptionRows = (focus) => buildPublicationRows([
+      { label: publicationLabels.value.figure, value: fp('focusFigureTitle', { focus: fp(`focus${focus.charAt(0).toUpperCase()}${focus.slice(1)}`) }) },
+      { label: publicationLabels.value.summary, value: fp('focusFigureSummary', { focus: fp(`focus${focus.charAt(0).toUpperCase()}${focus.slice(1)}`) }) },
+      { label: publicationLabels.value.caption, value: fp('focusFigureCaption', { seam: seamName.value || '--', metric: metric.value.toUpperCase(), method: method.value.toUpperCase() }) }
+    ])
+    const buildFusionNoteRows = (focus, payload) => buildPublicationRows([
+      { label: publicationLabels.value.notes, value: fp('focusFigureNotes', { focus: fp(`focus${focus.charAt(0).toUpperCase()}${focus.slice(1)}`) }) },
+      { label: publicationLabels.value.metric, value: metric.value.toUpperCase() },
+      {
+        label: publicationLabels.value.methodsFooter,
+        value: buildPublicationMethodsFooter({
+          subject: fp('focusFigureTitle', { focus: fp(`focus${focus.charAt(0).toUpperCase()}${focus.slice(1)}`) }),
+          source: 'fusion preview renderer',
+          seam: seamName.value || '',
+          details: [
+            `metric ${metric.value.toUpperCase()}`,
+            `method ${method.value.toUpperCase()}`,
+            `resolution ${resolution.value}`,
+            `figure mode ${figureMode.value}`,
+            `size ${(payload?.width || preset.supplement.width)}x${(payload?.height || preset.supplement.height)}`
+          ]
+        })
+      }
+    ])
 
     for (let index = 0; index < focuses.length; index += 1) {
       const focus = focuses[index]
@@ -466,35 +511,76 @@ const exportSupplementPackage = async () => {
         height: preset.supplement.height
       })
       if (!payload?.blob) continue
-      const tag = `FigS${index + 1}`
-      const filename = `${tag}_Fusion_${focus}.png`
-      zip.file(`figures/${filename}`, payload.blob)
+      const tag = buildPaperFigureId({ index: index + 1, supplement: true })
+      const figurePath = buildPaperFigurePath({
+        index: index + 1,
+        supplement: true,
+        slug: `fusion_${focus}`,
+        ext: 'png'
+      })
+      zip.file(figurePath, payload.blob)
+      const focusLabel = fp(`focus${focus.charAt(0).toUpperCase()}${focus.slice(1)}`)
       figureRecords.push(buildPaperFigure({
         id: tag,
         panel: String.fromCharCode(65 + index),
-        title: `Fusion ${focus}`,
-        caption: `Geomodel-MPI fusion render under ${focus} focus mode.`,
-        files: [`figures/${filename}`],
+        title: fp('focusFigureTitle', { focus: focusLabel }),
+        caption: fp('focusFigureSummary', { focus: focusLabel }),
+        files: [figurePath],
         tags: ['fusion', 'geomodel', focus],
         meta: {
           focus,
           metric: metric.value,
           seam: seamName.value,
           width: payload.width || preset.supplement.width,
-          height: payload.height || preset.supplement.height
+          height: payload.height || preset.supplement.height,
+          figure_heading: fp('focusFigureTitle', { focus: focusLabel }),
+          caption_title: fp('focusFigureTitle', { focus: focusLabel }),
+          caption_rows: buildFusionCaptionRows(focus),
+          note_rows: buildFusionNoteRows(focus, payload)
         }
       }))
     }
 
-    zip.file('captions.md', buildCaptionsMarkdown({
-      title: 'Fusion Figure Captions',
-      intro: `Seam ${seamName.value || '--'}, metric ${metric.value.toUpperCase()}, method ${method.value.toUpperCase()}.`,
+    const captionsPath = buildPaperRootPath({ name: 'captions', ext: 'md' })
+    const notesPath = buildPaperRootPath({ name: 'publication-notes', ext: 'md' })
+    const manifestPath = buildPaperRootPath({ name: 'manifest', ext: 'json' })
+    const indexPath = buildPaperRootPath({ name: 'index', ext: 'json' })
+    const readmePath = buildPaperRootPath({ name: 'README', ext: 'md' })
+    const generatedAt = new Date().toISOString()
+
+    zip.file(captionsPath, buildPublicationCaptionsMarkdown({
+      title: fp('supplementCaptionsTitle'),
+      intro: fp('supplementCaptionsIntro', { seam: seamName.value || '--', metric: metric.value.toUpperCase(), method: method.value.toUpperCase() }),
       figures: figureRecords
     }))
+    zip.file(notesPath, buildPublicationNotesMarkdown({
+      title: fp('supplementNotesTitle'),
+      figures: figureRecords
+    }))
+    zip.file(readmePath, buildPublicationReadmeMarkdown({
+      title: fp('supplementExportTitle'),
+      intro: fp('supplementReadmeIntro'),
+      sourcePage: 'fusion-preview',
+      manifestPath,
+      indexPath,
+      captionsPath,
+      notesPath,
+      figures: figureRecords
+    }))
+    zip.file(indexPath, JSON.stringify(buildPublicationIndexDocument({
+      title: fp('supplementExportTitle'),
+      generatedAt,
+      sourcePage: 'fusion-preview',
+      manifestPath,
+      captionsPath,
+      notesPath,
+      readmePath,
+      figures: figureRecords
+    }), null, 2))
 
     const manifest = buildPaperManifest({
       sourcePage: 'fusion-preview',
-      title: 'Fusion Supplement Export',
+      title: fp('supplementExportTitle'),
       locale: locale.value,
       context: {
         seam: seamName.value || '',
@@ -506,16 +592,27 @@ const exportSupplementPackage = async () => {
         focus: profileFocus.value
       },
       figures: figureRecords,
+      artifacts: [
+        buildPaperArtifact({ name: 'captions', path: captionsPath }),
+        buildPaperArtifact({ name: 'publication_notes', path: notesPath }),
+        buildPaperArtifact({ name: 'index', path: indexPath }),
+        buildPaperArtifact({ name: 'readme', path: readmePath }),
+        buildPaperArtifact({ name: 'manifest', path: manifestPath })
+      ],
       notes: [
-        'All figures are exported from fusion preview in publication mode.',
-        'Supplement includes three focus configurations.'
-      ]
+        fp('supplementManifestNote1'),
+        fp('supplementManifestNote2')
+      ],
+      generatedAt
     })
 
-    zip.file('manifest.json', JSON.stringify(manifest, null, 2))
-    zip.file('data/manifest.json', JSON.stringify(manifest, null, 2))
+    zip.file(manifestPath, JSON.stringify(manifest, null, 2))
     const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
-    triggerDownload(zipBlob, `Fusion_Supplement_${figureMode.value}_${getTimestampTag()}.zip`)
+    triggerDownload(zipBlob, buildPaperSupplementZipName({
+      topic: 'Fusion',
+      variant: figureMode.value,
+      timestampTag: buildPaperTimestampTag()
+    }))
     exportNote.value = fp('exportPackDone', { count: figureRecords.length })
   } catch (error) {
     exportNote.value = getApiErrorMessage(error, fp('errorExportPack'))

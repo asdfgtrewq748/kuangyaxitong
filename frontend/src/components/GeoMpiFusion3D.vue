@@ -68,25 +68,15 @@
       <div v-if="!loading && hasRenderableData && !errorText" class="figure-overlay">
         <div class="figure-topline">
           <span class="panel-tag">{{ panelLabel }}</span>
-          <span class="figure-topic">{{ metricLabel }}-Geology Coupled View</span>
+          <span class="figure-topic">{{ heroCopy.topic }}</span>
         </div>
-        <h4 class="figure-headline">Integrated Multi-source Structure-Stress Interpretation</h4>
-        <p class="figure-meta">
-          Seam {{ contextMeta?.seam || '--' }} | Grid {{ gridShapeText }} | Method {{ String(contextMeta?.method || '--').toUpperCase() }}
-        </p>
+        <h4 class="figure-headline">{{ heroCopy.headline }}</h4>
+        <p class="figure-meta">{{ figureHeaderCopy.metaLine }}</p>
         <div class="figure-kpis">
-          <span>Layers {{ layerCount }}</span>
-          <span>Boreholes {{ boreholeCount }}</span>
-          <span>Anchors {{ stressAnchorItems.length }}</span>
-          <span>Focus {{ stressFocusLabel }}</span>
+          <span v-for="line in figureHeaderCopy.kpiLines" :key="line">{{ line }}</span>
         </div>
         <div class="content-metrics">
-          <p>Mean {{ formatValue(mpiSummary.mean) }} MPa</p>
-          <p>CV {{ formatValue(mpiSummary.cv) }}</p>
-          <p>P90 cover {{ formatPercent(mpiSummary.p90Cover) }}</p>
-          <p>IQR {{ formatValue(mpiSummary.iqr) }}</p>
-          <p>Entropy {{ formatValue(mpiSummary.entropyNorm) }}</p>
-          <p>Skew {{ formatValue(mpiSummary.skewness) }}</p>
+          <p v-for="line in heroCopy.metricRows" :key="line">{{ line }}</p>
         </div>
         <div class="diagnostic-badges">
           <span
@@ -100,17 +90,17 @@
           </span>
         </div>
         <div class="methods-panel">
-          <p class="methods-title">Methods and provenance</p>
+          <p class="methods-title">{{ publicationLabels.methodsPanel }}</p>
           <p v-for="row in methodProvenanceRows" :key="row.label" class="methods-row">
             <span class="methods-key">{{ row.label }}</span>
             <span class="methods-value">{{ row.value }}</span>
           </p>
         </div>
-        <p class="figure-note">Nature-style content panel: structure + statistics + depth coupling.</p>
+        <p class="figure-note">{{ statisticCopy.figureNote }}</p>
       </div>
 
       <div v-if="!loading && hasRenderableData && !errorText" class="legend-overlay">
-        <div class="legend-title">{{ metricLabel }} (MPa)</div>
+        <div class="legend-title">{{ legendCopy.legendTitle }}</div>
         <div class="legend-bar">
           <span class="legend-tick"></span>
           <span class="legend-tick"></span>
@@ -122,16 +112,16 @@
           <span>{{ formatValue(metricStats?.max) }}</span>
         </div>
         <p class="section-hint">
-          Depth span {{ formatValue(dataBounds.min_z) }} to {{ formatValue(dataBounds.max_z) }}
+          {{ legendCopy.depthSpanLine }}
         </p>
         <p v-if="sectionEnabled" class="section-hint">
-          Section {{ sectionAxis.toUpperCase() }} = {{ formatValue(sectionThreshold) }}
+          {{ legendCopy.sectionLine }}
         </p>
         <p v-if="showStressCloud" class="section-hint cloud-hint">
-          Stress cloud = MPI field x depth transfer ({{ stressProfileLabel }})
+          {{ legendCopy.cloudLine }}
         </p>
         <div v-if="profileCurvePoints" class="profile-curve-wrap">
-          <p class="profile-title">Depth transfer profile</p>
+          <p class="profile-title">{{ statisticCopy.profileTitle }}</p>
           <svg class="profile-curve" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
             <line x1="0" y1="35" x2="100" y2="35" class="profile-axis" />
             <line x1="0" y1="1" x2="0" y2="35" class="profile-axis" />
@@ -139,7 +129,7 @@
           </svg>
         </div>
         <div v-if="showStressCloud && showStressAnchors && stressAnchorItems.length" class="anchor-list">
-          <p class="anchor-title">Depth anchors</p>
+          <p class="anchor-title">{{ statisticCopy.anchorTitle }}</p>
           <p v-for="item in stressAnchorItems.slice(0, 4)" :key="`anchor-${item.name}-${item.zNorm}`" class="anchor-item">
             <span class="anchor-name">{{ item.name }}</span>
             <span class="anchor-meta">z={{ formatValue(item.zWorld) }} | w={{ formatValue(item.importance) }}</span>
@@ -147,7 +137,7 @@
         </div>
         <div class="depth-strip-wrap">
           <span class="subfigure-label">d</span>
-          <p class="depth-strip-title">Stratigraphic depth guide</p>
+          <p class="depth-strip-title">{{ publicationLabels.depthGuideTitle }}</p>
           <div class="depth-strip-layout">
             <svg class="depth-strip" viewBox="0 0 88 220" preserveAspectRatio="none" aria-hidden="true">
               <rect x="28" y="8" width="18" height="204" rx="9" class="depth-strip-bg" />
@@ -172,9 +162,7 @@
               </g>
             </svg>
             <div class="depth-strip-notes">
-              <p>Focus band: {{ stressFocusLabel }}</p>
-              <p>Anchors ranked by transfer weight.</p>
-              <p>Depth frame: {{ formatValue(dataBounds.max_z) }} to {{ formatValue(dataBounds.min_z) }} m.</p>
+              <p v-for="line in diagnosticCopy.depthNotes" :key="line">{{ line }}</p>
             </div>
           </div>
         </div>
@@ -182,21 +170,21 @@
 
       <div v-if="!loading && hasRenderableData && !errorText" class="orientation-overlay">
         <div class="north-block">
-          <span class="north-label">N</span>
+          <span class="north-label">{{ legendCopy.northLabel }}</span>
           <span class="north-arrow">^</span>
         </div>
         <div class="scale-block">
           <div class="scale-bar-line"></div>
           <p>{{ scaleBarLabel }}</p>
         </div>
-        <p class="orientation-meta">X-east / Y-north</p>
+        <p class="orientation-meta">{{ legendCopy.orientationMeta }}</p>
       </div>
 
       <div v-if="!loading && hasRenderableData && !errorText" class="analysis-overlay">
-        <p class="analysis-title">Quantitative Highlights</p>
+        <p class="analysis-title">{{ statisticCopy.analysisTitle }}</p>
         <div class="inset-map-wrap">
           <span class="subfigure-label">a</span>
-          <p class="inset-title">Plan-view MPI inset</p>
+          <p class="inset-title">{{ publicationLabels.insetTitle }}</p>
           <svg class="inset-map" :viewBox="insetViewBox" preserveAspectRatio="none" aria-hidden="true">
             <rect
               v-for="cell in insetHeatmapCells"
@@ -224,11 +212,11 @@
               class="inset-hotspot"
             />
           </svg>
-          <p class="inset-caption">Line = section, circles = hotspots</p>
+          <p class="inset-caption">{{ publicationLabels.insetCaption }}</p>
         </div>
         <div class="dist-wrap">
           <span class="subfigure-label">b</span>
-          <p class="dist-title">MPI distribution</p>
+          <p class="dist-title">{{ publicationLabels.distributionTitle }}</p>
           <svg class="dist-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
             <rect
               v-for="bar in histogramBars"
@@ -249,7 +237,7 @@
               class="dist-qline"
             />
           </svg>
-          <p class="dist-caption">Q1/Q2/Q3 markers</p>
+          <p class="dist-caption">{{ statisticCopy.distributionCaption }}</p>
         </div>
         <div class="section-profile-wrap">
           <span class="subfigure-label">c</span>
@@ -282,23 +270,21 @@
           </div>
           <p class="section-profile-note">{{ sectionProfileSpreadLabel }}</p>
         </div>
-        <p>Section retained: {{ formatPercent(sectionRetainedRatio) }}</p>
-        <p>Hotspots (P90+): {{ hotspotCandidates.length }}</p>
-        <p>Q1/Q2/Q3: {{ formatValue(mpiSummary.p25) }} / {{ formatValue(mpiSummary.p50) }} / {{ formatValue(mpiSummary.p75) }}</p>
+        <p v-for="line in statisticCopy.summaryLines" :key="line">{{ line }}</p>
         <p v-for="item in hotspotTopList.slice(0, 3)" :key="`hline-${item}`" class="hotspot-line">{{ item }}</p>
       </div>
 
       <div v-if="!loading && hasRenderableData && !errorText" class="caption-overlay">
         <div class="caption-grid">
           <div class="caption-block">
-            <p class="caption-title">Figure caption</p>
+            <p class="caption-title">{{ publicationLabels.captionBlock }}</p>
             <p v-for="row in publicationCaptionRows" :key="row.label" class="caption-row">
               <span class="caption-key">{{ row.label }}</span>
               <span class="caption-value">{{ row.value }}</span>
             </p>
           </div>
           <div class="caption-block caption-block-notes">
-            <p class="caption-title">Notes and abbreviations</p>
+            <p class="caption-title">{{ publicationLabels.notesBlock }}</p>
             <p v-for="row in publicationNoteRows" :key="row.label" class="caption-row">
               <span class="caption-key">{{ row.label }}</span>
               <span class="caption-value">{{ row.value }}</span>
@@ -313,6 +299,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { loadOrbitControls, three } from '@/lib/three-fusion'
+import { buildPublicationDiagnosticCopy, buildPublicationFigureHeaderCopy, buildPublicationHeroCopy, buildPublicationLabelSet, buildPublicationLegendCopy, buildPublicationMethodsFooter, buildPublicationNarrativeSentence, buildPublicationRows, buildPublicationStatisticCopy, buildPublicationSummaryCopy } from '@/utils/paperExportSchema'
 import AsyncState from './AsyncState.vue'
 
 const props = defineProps({
@@ -616,21 +603,49 @@ const samplingClass = computed(() => {
 })
 const diagnosticBadges = computed(() => ([
   {
-    label: 'Fabric',
+    label: publicationLabels.fabric,
     value: heterogeneityClass.value,
     tone: heterogeneityScore.value >= 0.48 ? 'warn' : 'calm',
   },
   {
-    label: 'Hotspot',
+    label: publicationLabels.hotspot,
     value: hotspotRegime.value,
     tone: hotspotCandidates.value.length >= 3 ? 'risk' : 'calm',
   },
   {
-    label: 'Sampling',
+    label: publicationLabels.sampling,
     value: samplingClass.value,
     tone: samplingClass.value === 'low control' ? 'risk' : samplingClass.value === 'anchor-limited control' ? 'warn' : 'calm',
   },
 ]))
+const publicationLabels = buildPublicationLabelSet({
+  title: 'Title',
+  finding: 'Finding',
+  support: 'Support',
+  data: 'Data',
+  frame: 'Frame',
+  abbrev: 'Abbrev.',
+  seam: 'Seam',
+  fusion: 'Fusion',
+  resolution: 'Resolution',
+  stressPrior: 'Stress prior',
+  section: 'Section',
+  control: 'Control',
+  fabric: 'Fabric',
+  hotspot: 'Hotspot',
+  sampling: 'Sampling',
+  methodsPanel: 'Methods and provenance',
+  depthGuideTitle: 'Stratigraphic depth guide',
+  insetTitle: 'Plan-view MPI inset',
+  insetCaption: 'Line = section, circles = hotspots',
+  distributionTitle: 'MPI distribution',
+  sectionTransectTitle: 'Section transect',
+  xSectionTransectTitle: 'X-direction section transect',
+  ySectionTransectTitle: 'Y-direction section transect',
+  representativeTransectTitle: 'Representative lateral transect',
+  peakFallback: 'Peak --',
+  spreadFallback: 'Band = local interquartile envelope.',
+})
 const methodProvenanceRows = computed(() => {
   const resolution = Number(props.contextMeta?.resolution)
   const method = String(props.contextMeta?.method || '').trim().toUpperCase() || 'UNSPECIFIED'
@@ -641,14 +656,14 @@ const methodProvenanceRows = computed(() => {
     ? `${sectionAxis.value.toUpperCase()} @ ${formatValue(sectionThreshold.value)}`
     : 'not applied'
 
-  return [
-    { label: 'Seam', value: seam },
-    { label: 'Fusion', value: `${method} on ${gridShapeText.value} grid` },
-    { label: 'Resolution', value: Number.isFinite(resolution) ? `${formatValue(resolution)} m` : 'not reported' },
-    { label: 'Stress prior', value: `${source} | focus ${stressFocusLabel.value}` },
-    { label: 'Section', value: sectionMode },
-    { label: 'Control', value: `${boreholeCount.value} boreholes, ${anchorCount} anchors` },
-  ]
+  return buildPublicationRows([
+    { label: publicationLabels.seam, value: seam },
+    { label: publicationLabels.fusion, value: `${method} on ${gridShapeText.value} grid` },
+    { label: publicationLabels.resolution, value: Number.isFinite(resolution) ? `${formatValue(resolution)} m` : 'not reported' },
+    { label: publicationLabels.stressPrior, value: `${source} | focus ${stressFocusLabel.value}` },
+    { label: publicationLabels.section, value: sectionMode },
+    { label: publicationLabels.control, value: `${boreholeCount.value} boreholes, ${anchorCount} anchors` },
+  ])
 })
 const paperNotation = computed(() => {
   const rawPanelLabel = String(props.panelLabel || 'Fig. 1').trim()
@@ -665,51 +680,140 @@ const paperNotation = computed(() => {
     sampleSizeLabel: `n = ${mpiSummary.value.count || 0}`,
     figureHeading: `${normalizedFigureLabel} | Geological-stress fusion diagnostics`,
     captionTitle: `${normalizedFigureLabel}. ${figureTitle}`,
-    summaryLead: `${figureNarrative.value} ${metricLabel.value} evidence spans ${formatValue(props.metricStats?.min)} to ${formatValue(props.metricStats?.max)} ${'MPa'} with ${`n = ${mpiSummary.value.count || 0}`}.`,
-    metricLine: `${metricLabel.value} (${metricLabel.value.includes('index') ? 'index' : 'proxy'})  min ${formatValue(props.metricStats?.min)}   mean ${formatValue(props.metricStats?.mean)}   max ${formatValue(props.metricStats?.max)}`,
-    quantileLine: `Q1 / Q2 / Q3 ${formatValue(mpiSummary.value.p25)} / ${formatValue(mpiSummary.value.p50)} / ${formatValue(mpiSummary.value.p75)} ${'MPa'}  |  CV ${formatValue(mpiSummary.value.cv)}`,
-    coverLine: `Q3 cover ${formatPercent(mpiSummary.value.p75Cover)}  |  P90 cover ${formatPercent(mpiSummary.value.p90Cover)}  |  Section retained ${formatPercent(sectionRetainedRatio.value)}`,
-    distributionLine: `Entropy ${formatValue(mpiSummary.value.entropyNorm)}  |  Skewness ${formatValue(mpiSummary.value.skewness)}  |  n = ${mpiSummary.value.count || 0}`,
-    supportLine: `Heterogeneity ${formatValue(heterogeneityScore.value)} | Borehole density ${formatValue(boreholeDensityKm2.value)} boreholes km^-2 | n = ${mpiSummary.value.count || 0}`,
-    methodsFooter: `Methods footer: ${String(props.contextMeta?.method || '--').toUpperCase()} fusion on ${gridShapeText.value}; resolution ${formatValue(props.contextMeta?.resolution)} ${'m'}; frame ${'X east / Y north'}; scale ${scaleBarLabel.value}.`,
+    summaryLead: summaryCopy.value.summaryLead,
+    metricLine: summaryCopy.value.metricLine,
+    quantileLine: summaryCopy.value.quantileLine,
+    coverLine: summaryCopy.value.coverLine,
+    distributionLine: summaryCopy.value.distributionLine,
+    supportLine: summaryCopy.value.supportLine,
+    methodsFooter: buildPublicationMethodsFooter({
+      subject: `${metricLabel.value}-geology fusion figure`,
+      source: `${String(props.contextMeta?.method || '--').toUpperCase()} fusion`,
+      seam: String(props.contextMeta?.seam || ''),
+      details: [
+        `${gridShapeText.value} grid`,
+        `resolution ${formatValue(props.contextMeta?.resolution)} m`,
+        `frame X east / Y north`,
+        `scale ${scaleBarLabel.value}`,
+      ],
+    }),
     abbreviationsLine: 'MPI, mining pressure index; CV, coefficient of variation; IQR, interquartile range; Q1/Q2/Q3, 25th/50th/75th percentiles; P90, 90th percentile.',
   }
 })
-const publicationCaptionRows = computed(() => ([
+const diagnosticCopy = computed(() => buildPublicationDiagnosticCopy({
+  profileSource: stressProfileLabel.value,
+  focus: stressFocusLabel.value,
+  seam: String(props.contextMeta?.seam || '--'),
+  grid: gridShapeText.value,
+  method: String(props.contextMeta?.method || '--'),
+  resolution: `${formatValue(props.contextMeta?.resolution)} m`,
+  layerCount: layerCount.value,
+  boreholeCount: boreholeCount.value,
+  anchorCount: stressAnchorItems.value.length,
+  depthMax: formatValue(dataBounds.value.max_z),
+  depthMin: formatValue(dataBounds.value.min_z),
+  depthUnit: paperNotation.value.depthUnit,
+}))
+const figureHeaderCopy = computed(() => buildPublicationFigureHeaderCopy({
+  seam: String(props.contextMeta?.seam || '--'),
+  grid: gridShapeText.value,
+  method: String(props.contextMeta?.method || '--'),
+  layerCount: layerCount.value,
+  boreholeCount: boreholeCount.value,
+  anchorCount: stressAnchorItems.value.length,
+  focus: stressFocusLabel.value,
+}))
+const heroCopy = computed(() => buildPublicationHeroCopy({
+  metricLabel: metricLabel.value,
+  metricUnit: paperNotation.value.metricUnit,
+  mean: formatValue(mpiSummary.value.mean),
+  cv: formatValue(mpiSummary.value.cv),
+  p90Cover: formatPercent(mpiSummary.value.p90Cover),
+  iqr: formatValue(mpiSummary.value.iqr),
+  entropy: formatValue(mpiSummary.value.entropyNorm),
+  skew: formatValue(mpiSummary.value.skewness),
+}))
+const legendCopy = computed(() => buildPublicationLegendCopy({
+  metricLabel: metricLabel.value,
+  metricUnit: paperNotation.value.metricUnit,
+  depthMin: formatValue(dataBounds.value.min_z),
+  depthMax: formatValue(dataBounds.value.max_z),
+  depthUnit: paperNotation.value.depthUnit,
+  sectionAxis: sectionAxis.value,
+  sectionThreshold: formatValue(sectionThreshold.value),
+  stressProfileLabel: stressProfileLabel.value,
+  spatialFrameLabel: paperNotation.value.spatialFrameLabel,
+}))
+const summaryCopy = computed(() => buildPublicationSummaryCopy({
+  figureNarrative: figureNarrative.value,
+  metricLabel: metricLabel.value,
+  metricKind: metricLabel.value.includes('index') ? 'index' : 'proxy',
+  metricUnit: paperNotation.value.metricUnit,
+  metricMin: formatValue(props.metricStats?.min),
+  metricMean: formatValue(props.metricStats?.mean),
+  metricMax: formatValue(props.metricStats?.max),
+  sampleSizeLabel: paperNotation.value.sampleSizeLabel,
+  p25: formatValue(mpiSummary.value.p25),
+  p50: formatValue(mpiSummary.value.p50),
+  p75: formatValue(mpiSummary.value.p75),
+  cv: formatValue(mpiSummary.value.cv),
+  p75Cover: formatPercent(mpiSummary.value.p75Cover),
+  p90Cover: formatPercent(mpiSummary.value.p90Cover),
+  sectionRetained: formatPercent(sectionRetainedRatio.value),
+  entropy: formatValue(mpiSummary.value.entropyNorm),
+  skewness: formatValue(mpiSummary.value.skewness),
+  heterogeneity: formatValue(heterogeneityScore.value),
+  boreholeDensity: formatValue(boreholeDensityKm2.value),
+  densityUnit: paperNotation.value.densityUnit,
+}))
+const statisticCopy = computed(() => buildPublicationStatisticCopy({
+  analysisTitle: 'Quantitative Highlights',
+  profileTitle: 'Depth transfer profile',
+  anchorTitle: 'Depth anchors',
+  figureNote: 'Nature-style content panel: structure + statistics + depth coupling.',
+  distributionCaption: 'Q1/Q2/Q3 markers',
+  sectionRetained: formatPercent(sectionRetainedRatio.value),
+  hotspotCount: hotspotCandidates.value.length,
+  p25: formatValue(mpiSummary.value.p25),
+  p50: formatValue(mpiSummary.value.p50),
+  p75: formatValue(mpiSummary.value.p75),
+}))
+const publicationCaptionRows = computed(() => buildPublicationRows([
   {
-    label: 'Title',
+    label: publicationLabels.title,
     value: paperNotation.value.captionTitle,
   },
   {
-    label: 'Finding',
+    label: publicationLabels.finding,
     value: figureNarrative.value,
   },
   {
-    label: 'Support',
+    label: publicationLabels.support,
     value: paperNotation.value.supportLine,
   },
 ]))
-const publicationNoteRows = computed(() => ([
+const publicationNoteRows = computed(() => buildPublicationRows([
   {
-    label: 'Data',
+    label: publicationLabels.data,
     value: `${layerCount.value} layers + ${boreholeCount.value} boreholes + ${gridShapeText.value} metric grid`,
   },
   {
-    label: 'Frame',
+    label: publicationLabels.frame,
     value: `${paperNotation.value.spatialFrameLabel}; depth ${formatValue(dataBounds.value.max_z)} to ${formatValue(dataBounds.value.min_z)} ${paperNotation.value.depthUnit}; scale ${scaleBarLabel.value}`,
   },
   {
-    label: 'Abbrev.',
+    label: publicationLabels.abbrev,
     value: paperNotation.value.abbreviationsLine,
   },
 ]))
-const figureNarrative = computed(() => {
-  if (!mpiSummary.value.count) return 'Metric distribution is unavailable for current selection.'
-  const hotspotText = hotspotTopList.value.length ? hotspotTopList.value[0] : 'No dominant hotspot'
-  const skew = toFinite(mpiSummary.value.skewness, 0)
-  const skewDesc = skew > 0.3 ? 'right-tailed stress amplification' : skew < -0.3 ? 'left-tailed attenuation' : 'near-symmetric distribution'
-  return `${metricLabel.value} shows ${skewDesc}; strongest anomaly at ${hotspotText}. Section keeps ${formatPercent(sectionRetainedRatio.value)} of the volume, with ${heterogeneityClass.value} fabric under ${samplingClass.value}.`
-})
+const figureNarrative = computed(() => buildPublicationNarrativeSentence({
+  clauses: mpiSummary.value.count
+    ? [
+        `${metricLabel.value} shows ${toFinite(mpiSummary.value.skewness, 0) > 0.3 ? 'right-tailed stress amplification' : toFinite(mpiSummary.value.skewness, 0) < -0.3 ? 'left-tailed attenuation' : 'near-symmetric distribution'}; strongest anomaly at ${hotspotTopList.value.length ? hotspotTopList.value[0] : 'No dominant hotspot'}`,
+        `Section keeps ${formatPercent(sectionRetainedRatio.value)} of the volume, with ${heterogeneityClass.value} fabric under ${samplingClass.value}`
+      ]
+    : ['Metric distribution is unavailable for current selection']
+}))
 const profileCurvePoints = computed(() => {
   const bins = Array.isArray(props.stressProfile?.bins) ? props.stressProfile.bins : []
   const weights = Array.isArray(props.stressProfile?.weights) ? props.stressProfile.weights : []
@@ -928,9 +1032,9 @@ const sectionProfileDiagnostics = computed(() => {
       path: '',
       bandPath: '',
       guideX: null,
-      modeLabel: 'Section transect',
-      peakLabel: 'Peak --',
-      spreadLabel: 'Band = local interquartile envelope.',
+      modeLabel: publicationLabels.sectionTransectTitle,
+      peakLabel: publicationLabels.peakFallback,
+      spreadLabel: publicationLabels.spreadFallback,
       rangeLabel: '-- to -- MPa',
     }
   }
@@ -942,22 +1046,22 @@ const sectionProfileDiagnostics = computed(() => {
       path: '',
       bandPath: '',
       guideX: null,
-      modeLabel: 'Section transect',
-      peakLabel: 'Peak --',
-      spreadLabel: 'Band = local interquartile envelope.',
+      modeLabel: publicationLabels.sectionTransectTitle,
+      peakLabel: publicationLabels.peakFallback,
+      spreadLabel: publicationLabels.spreadFallback,
       rangeLabel: '-- to -- MPa',
     }
   }
 
   const samples = []
   let guideX = null
-  let modeLabel = 'Section transect'
+  let modeLabel = publicationLabels.sectionTransectTitle
   let axisDescriptor = 'track'
 
   if (sectionAxis.value === 'x') {
     const focusCol = Math.max(0, Math.min(cols - 1, Math.round(sectionRetainedRatio.value * (cols - 1))))
     guideX = ((focusCol / Math.max(cols - 1, 1)) * 100).toFixed(3)
-    modeLabel = 'Y-direction section transect'
+    modeLabel = publicationLabels.ySectionTransectTitle
     axisDescriptor = 'Y'
     for (let r = 0; r < rows; r += 1) {
       const local = []
@@ -978,7 +1082,7 @@ const sectionProfileDiagnostics = computed(() => {
   } else if (sectionAxis.value === 'y') {
     const focusRow = Math.max(0, Math.min(rows - 1, Math.round(sectionRetainedRatio.value * (rows - 1))))
     guideX = ((focusRow / Math.max(rows - 1, 1)) * 100).toFixed(3)
-    modeLabel = 'X-direction section transect'
+    modeLabel = publicationLabels.xSectionTransectTitle
     axisDescriptor = 'X'
     for (let c = 0; c < cols; c += 1) {
       const local = []
@@ -997,7 +1101,7 @@ const sectionProfileDiagnostics = computed(() => {
       })
     }
   } else {
-    modeLabel = 'Representative lateral transect'
+    modeLabel = publicationLabels.representativeTransectTitle
     axisDescriptor = 'X'
     for (let c = 0; c < cols; c += 1) {
       const local = []
@@ -1023,8 +1127,8 @@ const sectionProfileDiagnostics = computed(() => {
       bandPath: '',
       guideX,
       modeLabel,
-      peakLabel: 'Peak --',
-      spreadLabel: 'Band = local interquartile envelope.',
+      peakLabel: publicationLabels.peakFallback,
+      spreadLabel: publicationLabels.spreadFallback,
       rangeLabel: '-- to -- MPa',
     }
   }
@@ -1932,14 +2036,15 @@ const buildExportSnapshot = () => {
     captionTitle: paperNotation.value.captionTitle,
     summaryLead: paperNotation.value.summaryLead,
     metricLine: paperNotation.value.metricLine,
-    profileLine: `Profile source: ${stressProfileLabel.value}  |  focus: ${stressFocusLabel.value}`,
-    metaLine: `Seam ${String(props.contextMeta?.seam || '--')} | Grid ${gridShapeText.value} | Method ${String(props.contextMeta?.method || '--').toUpperCase()} | Resolution ${formatValue(props.contextMeta?.resolution)}`,
-    structureLine: `Layers ${layerCount.value}  Boreholes ${boreholeCount.value}  Anchors ${stressAnchorItems.value.length}`,
+    profileLine: diagnosticCopy.value.profileLine,
+    metaLine: diagnosticCopy.value.metaLine,
+    structureLine: diagnosticCopy.value.structureLine,
     quantLine: paperNotation.value.quantileLine,
     coverLine: paperNotation.value.coverLine,
     distLine: paperNotation.value.distributionLine,
-    methodsLine: `Data fusion: mesh layers + boreholes + ${gridShapeText.value} metric grid`,
+    methodsLine: diagnosticCopy.value.methodsLine,
     narrativeLine,
+    publicationLabels,
     hotspotRows: showHotspots.value ? hotspotTopList.value.slice(0, 2) : [],
     anchorRows: showStressCloud.value && showStressAnchors.value ? exportAnchorRows.value : [],
     methodProvenanceRows: methodProvenanceRows.value,
@@ -1953,11 +2058,7 @@ const buildExportSnapshot = () => {
       axisTicks: depthAxisTicks.value,
       focusBand: depthFocusBand.value,
       anchorTrack: depthAnchorTrack.value,
-      notes: [
-        `Focus band: ${stressFocusLabel.value}`,
-        'Anchors ranked by transfer weight.',
-        `Depth frame: ${formatValue(dataBounds.value.max_z)} to ${formatValue(dataBounds.value.min_z)} m.`,
-      ],
+      notes: diagnosticCopy.value.depthNotes,
     },
     subfigureLabels: {
       inset: 'a',

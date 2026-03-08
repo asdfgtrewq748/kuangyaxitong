@@ -150,11 +150,12 @@ const strokePath2D = (ctx, d, draw) => {
 }
 
 const drawInsetPanel = (ctx, x, y, width, height, snapshot, scale) => {
+  const labels = snapshot.publicationLabels || {}
   createPanel(ctx, x, y, width, height)
   drawSubfigureLabel(ctx, snapshot.subfigureLabels?.inset || 'a', x + Math.round(16 * scale), y + Math.round(24 * scale), scale)
   ctx.fillStyle = '#0f172a'
   ctx.font = `600 ${Math.round(18 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText('Plan-view MPI inset', x + Math.round(42 * scale), y + Math.round(24 * scale))
+  ctx.fillText(snapshot.publicationLabels?.insetTitle || labels.insetTitle || 'Plan-view MPI inset', x + Math.round(42 * scale), y + Math.round(24 * scale))
 
   const chartX = x + Math.round(16 * scale)
   const chartY = y + Math.round(40 * scale)
@@ -201,15 +202,16 @@ const drawInsetPanel = (ctx, x, y, width, height, snapshot, scale) => {
 
   ctx.fillStyle = '#475569'
   ctx.font = `500 ${Math.round(14 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText('Line = section, circles = hotspots', chartX, y + height - Math.round(16 * scale))
+  ctx.fillText(snapshot.publicationLabels?.insetCaption || labels.insetCaption || 'Line = section, circles = hotspots', chartX, y + height - Math.round(16 * scale))
 }
 
 const drawSectionPanel = (ctx, x, y, width, height, snapshot, scale) => {
+  const labels = snapshot.publicationLabels || {}
   createPanel(ctx, x, y, width, height)
   drawSubfigureLabel(ctx, snapshot.subfigureLabels?.section || 'c', x + Math.round(16 * scale), y + Math.round(24 * scale), scale)
   ctx.fillStyle = '#0f172a'
   ctx.font = `600 ${Math.round(18 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText('Section transect', x + Math.round(42 * scale), y + Math.round(24 * scale))
+  ctx.fillText(snapshot.publicationLabels?.sectionTransectTitle || labels.sectionTransectTitle || 'Section transect', x + Math.round(42 * scale), y + Math.round(24 * scale))
 
   const modeLabel = snapshot.sectionProfile?.modeLabel || 'Representative transect'
   ctx.fillStyle = '#475569'
@@ -266,11 +268,12 @@ const drawSectionPanel = (ctx, x, y, width, height, snapshot, scale) => {
 }
 
 const drawDepthGuidePanel = (ctx, x, y, width, height, snapshot, scale) => {
+  const labels = snapshot.publicationLabels || {}
   createPanel(ctx, x, y, width, height)
   drawSubfigureLabel(ctx, snapshot.subfigureLabels?.depth || 'd', x + Math.round(16 * scale), y + Math.round(24 * scale), scale)
   ctx.fillStyle = '#0f172a'
   ctx.font = `600 ${Math.round(18 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText('Stratigraphic depth guide', x + Math.round(42 * scale), y + Math.round(24 * scale))
+  ctx.fillText(snapshot.publicationLabels?.depthGuideTitle || labels.depthGuideTitle || 'Stratigraphic depth guide', x + Math.round(42 * scale), y + Math.round(24 * scale))
 
   const stripX = x + Math.round(16 * scale)
   const stripY = y + Math.round(42 * scale)
@@ -340,6 +343,7 @@ const drawDepthGuidePanel = (ctx, x, y, width, height, snapshot, scale) => {
 }
 
 const drawExportOverlay = (ctx, width, height, snapshot) => {
+  const labels = snapshot.publicationLabels || {}
   const scale = Math.max(0.8, width / 2400)
   const pad = Math.round(48 * scale)
   const gap = Math.round(24 * scale)
@@ -499,7 +503,7 @@ const drawExportOverlay = (ctx, width, height, snapshot) => {
     cursorY += Math.round(10 * scale)
     ctx.fillStyle = '#0f172a'
     ctx.font = `600 ${Math.round(21 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-    ctx.fillText('Methods and provenance', leftPanelX + leftInnerPad, cursorY)
+    ctx.fillText(labels.methodsPanel || 'Methods and provenance', leftPanelX + leftInnerPad, cursorY)
     cursorY += Math.round(22 * scale)
     drawLabeledRows(ctx, methodRows, leftPanelX + leftInnerPad, cursorY, leftContentW, {
       labelWidth: methodLabelWidth,
@@ -581,7 +585,7 @@ const drawExportOverlay = (ctx, width, height, snapshot) => {
   ctx.fillStyle = '#0f172a'
   ctx.font = `700 ${Math.round(21 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
   drawSubfigureLabel(ctx, snapshot.subfigureLabels?.distribution || 'b', histX + Math.round(16 * scale), histY + Math.round(30 * scale), scale)
-  ctx.fillText('MPI distribution', histX + Math.round(42 * scale), histY + Math.round(30 * scale))
+  ctx.fillText(labels.distributionTitle || 'MPI distribution', histX + Math.round(42 * scale), histY + Math.round(30 * scale))
 
   const chartX = histX + Math.round(16 * scale)
   const chartY = histY + Math.round(42 * scale)
@@ -626,8 +630,8 @@ const drawExportOverlay = (ctx, width, height, snapshot) => {
 
   ctx.fillStyle = '#0f172a'
   ctx.font = `700 ${Math.round(18 * scale)}px "Segoe UI", "Noto Sans SC", sans-serif`
-  ctx.fillText('Figure caption', captionLeftX, captionHeaderY)
-  ctx.fillText('Notes and abbreviations', captionRightX, captionHeaderY)
+  ctx.fillText(labels.captionBlock || 'Figure caption', captionLeftX, captionHeaderY)
+  ctx.fillText(labels.notesBlock || 'Notes and abbreviations', captionRightX, captionHeaderY)
 
   drawLabeledRows(ctx, captionRows, captionLeftX, captionBodyY, captionColumnWidth, {
     labelWidth: captionLabelWidth,

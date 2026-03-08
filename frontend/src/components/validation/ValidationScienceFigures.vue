@@ -14,9 +14,15 @@
       </div>
     </header>
 
-    <article v-for="card in figureCards" :key="card.id" class="figure-card">
+    <article
+      v-for="card in figureCards"
+      :key="card.id"
+      class="figure-card"
+      @click="emit('figure-focus', card.id)"
+    >
       <h4>{{ card.title }}</h4>
       <ScienceChart
+        :ref="(instance) => setChartRef(card.id, instance)"
         :option="card.option"
         :height="figureChartHeight"
         @chart-click="handleCardChartClick(card, $event)"
@@ -69,7 +75,8 @@ const props = defineProps({
     default: 100
   }
 })
-const emit = defineEmits(['matrix-select'])
+const emit = defineEmits(['matrix-select', 'figure-focus'])
+const chartRefs = ref({})
 
 const palette = {
   blue: '#1d4ed8',
@@ -704,7 +711,17 @@ const onFig11Click = (params) => {
   }
 }
 
+const setChartRef = (figureId, instance) => {
+  if (!figureId) return
+  if (instance) {
+    chartRefs.value[figureId] = instance
+    return
+  }
+  delete chartRefs.value[figureId]
+}
+
 const handleCardChartClick = (card, params) => {
+  emit('figure-focus', card?.id || '')
   card?.onChartClick?.(params)
 }
 
@@ -801,6 +818,16 @@ const figureCards = computed(() => ([
     onChartClick: onFig11Click
   }
 ]))
+
+const getFigureMetaList = () => figureCards.value.map(({ option, onChartClick, ...meta }) => ({ ...meta }))
+const getFigureMetaById = (figureId) => getFigureMetaList().find((item) => item.id === figureId) || null
+const getChartInstanceById = (figureId) => chartRefs.value[figureId]?.getChartInstance?.() || null
+
+defineExpose({
+  getFigureMetaList,
+  getFigureMetaById,
+  getChartInstanceById
+})
 
 const fig2Option = computed(() => {
   const d = fig2Data.value

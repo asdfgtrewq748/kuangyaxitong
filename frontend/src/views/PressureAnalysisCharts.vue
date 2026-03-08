@@ -1,24 +1,24 @@
 ﻿<template>
   <div class="pressure-charts-page">
     <header class="page-header">
-      <button class="back-btn" @click="goBack" title="返回矿压分析">
+      <button class="back-btn" @click="goBack" :title="pac('backToPressureAnalysis')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M15 18l-6-6 6-6" />
         </svg>
       </button>
       <div class="title-wrap">
-        <h1>矿压图表中心</h1>
-        <p>将高密度图表与科研导出工具迁移到独立子页面，避免主页面拥挤。</p>
+        <h1>{{ pac('title') }}</h1>
+        <p>{{ pac('subtitle') }}</p>
       </div>
       <div class="header-actions">
         <PaperExportMenu
-          trigger-label="论文导出"
-          main-label="导出当前主图"
-          pack-label="导出补充图包"
-          loading-main-label="主图导出中..."
-          loading-pack-label="打包中..."
-          main-hint="当前标签高分辨率图"
-          pack-hint="全标签 PNG/SVG + 图注 + 清单"
+          :trigger-label="pac('exportTrigger')"
+          :main-label="pac('exportMain')"
+          :pack-label="pac('exportSupplement')"
+          :loading-main-label="pac('exportingMain')"
+          :loading-pack-label="pac('exportingPack')"
+          :main-hint="pac('exportMainHint')"
+          :pack-hint="pac('exportPackHint')"
           :disabled-main="Boolean(snapshotError)"
           :disabled-pack="Boolean(snapshotError)"
           :loading-main="exportingMain"
@@ -26,14 +26,14 @@
           @export-main="exportMainFigure"
           @export-pack="exportSupplementPackage"
         />
-        <button class="ghost-btn" @click="goBack">返回主分析页</button>
+        <button class="ghost-btn" @click="goBack">{{ pac('backToPressureAnalysis') }}</button>
       </div>
     </header>
 
     <section v-if="snapshotError" class="empty-card">
-      <h3>暂无可用图表数据</h3>
+      <h3>{{ pac('emptyTitle') }}</h3>
       <p>{{ snapshotError }}</p>
-      <button class="ghost-btn" @click="goBack">回到矿压分析并生成数据</button>
+      <button class="ghost-btn" @click="goBack">{{ pac('emptyAction') }}</button>
     </section>
 
     <template v-else>
@@ -54,19 +54,19 @@
 
       <section class="summary-grid">
         <article class="summary-card">
-          <span class="label">时间范围</span>
+          <span class="label">{{ pac('summaryDateRange') }}</span>
           <strong>{{ context.dateRangeText || '--' }}</strong>
         </article>
         <article class="summary-card">
-          <span class="label">支架范围</span>
+          <span class="label">{{ pac('summarySupportRange') }}</span>
           <strong>#{{ context.supportStart }} - #{{ context.supportEnd }}</strong>
         </article>
         <article class="summary-card">
-          <span class="label">均值 / 峰值</span>
+          <span class="label">{{ pac('summaryMeanPeak') }}</span>
           <strong>{{ statsLabel }}</strong>
         </article>
         <article class="summary-card">
-          <span class="label">异常点</span>
+          <span class="label">{{ pac('summaryAnomaly') }}</span>
           <strong>{{ context.anomalyCount ?? 0 }}</strong>
         </article>
       </section>
@@ -79,7 +79,7 @@
             :class="['tab-btn', { active: activeTab === tab.id }]"
             @click="activeTab = tab.id"
           >
-            <span class="tab-label">{{ tab.label }}</span>
+            <span class="tab-label">{{ pac(tab.labelKey) }}</span>
           </button>
         </div>
 
@@ -87,67 +87,67 @@
           <Transition name="tab-slide" mode="out-in">
             <div v-if="activeTab === 'hist'" key="hist" class="tab-panel">
               <LazyChart height="420px" :loading="!histogramData.length">
-                <PressureHistogramUltra ref="histogramRef" title="阻力分布直方图" :data="histogramData" :bins="30" />
+                <PressureHistogramUltra ref="histogramRef" :title="pac('chartHistTitle')" :data="histogramData" :bins="30" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'spatial'" key="spatial" class="tab-panel">
               <LazyChart height="420px" :loading="!spatialDistData.length">
-                <PressureSpatialDistUltra ref="spatialRef" title="空间分布" :data="spatialDistData" />
+                <PressureSpatialDistUltra ref="spatialRef" :title="pac('chartSpatialTitle')" :data="spatialDistData" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'cycle'" key="cycle" class="tab-panel">
               <LazyChart height="420px" :loading="!cycleData.length">
-                <PressureCycleDetectUltra ref="cycleRef" title="周期检测" :data="cycleData" :periods="detectedPeriods" />
+                <PressureCycleDetectUltra ref="cycleRef" :title="pac('chartCycleTitle')" :data="cycleData" :periods="detectedPeriods" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'corr'" key="corr" class="tab-panel">
               <LazyChart height="420px" :loading="!correlationMatrix">
-                <PressureCorrelationUltra ref="correlationRef" title="支架相关性" :matrix="correlationMatrix" />
+                <PressureCorrelationUltra ref="correlationRef" :title="pac('chartCorrTitle')" :matrix="correlationMatrix" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'compare'" key="compare" class="tab-panel">
               <LazyChart height="420px" :loading="!frontColumnData.length && !rearColumnData.length">
-                <PressureColumnCompareUltra ref="compareRef" title="前后柱对比" :front-data="frontColumnData" :rear-data="rearColumnData" />
+                <PressureColumnCompareUltra ref="compareRef" :title="pac('chartCompareTitle')" :front-data="frontColumnData" :rear-data="rearColumnData" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'boxplot'" key="boxplot" class="tab-panel">
               <LazyChart height="420px" :loading="!rawData.length">
-                <PressureBoxPlot ref="boxplotRef" panel-label="C" title="压力分布箱线图" subtitle="Box Plot Analysis" :data="rawData" time-range="day" />
+                <PressureBoxPlot ref="boxplotRef" panel-label="C" :title="pac('chartBoxplotTitle')" :subtitle="pac('chartBoxplotSubtitle')" :data="rawData" time-range="day" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'cdf'" key="cdf" class="tab-panel">
               <LazyChart height="420px" :loading="!rawData.length">
-                <PressureCDF ref="cdfRef" panel-label="D" title="累计分布函数" subtitle="Cumulative Distribution" :data="rawData" />
+                <PressureCDF ref="cdfRef" panel-label="D" :title="pac('chartCdfTitle')" :subtitle="pac('chartCdfSubtitle')" :data="rawData" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'spectral'" key="spectral" class="tab-panel">
               <LazyChart height="420px" :loading="!selectedSupportData.length">
-                <PressureSpectral ref="spectralRef" panel-label="E" title="频谱分析" subtitle="Spectral Analysis" :data="selectedSupportData" />
+                <PressureSpectral ref="spectralRef" panel-label="E" :title="pac('chartSpectralTitle')" :subtitle="pac('chartSpectralSubtitle')" :data="selectedSupportData" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'scatter'" key="scatter" class="tab-panel">
               <LazyChart height="420px" :loading="!rawData.length">
-                <PressureScatterMatrix ref="scatterRef" panel-label="F" title="多支架相关性矩阵" subtitle="Scatter Plot Matrix" :data="rawData" :support-ids="[1, 25, 50, 75, 100, 125]" />
+                <PressureScatterMatrix ref="scatterRef" panel-label="F" :title="pac('chartScatterTitle')" :subtitle="pac('chartScatterSubtitle')" :data="rawData" :support-ids="[1, 25, 50, 75, 100, 125]" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'anomaly'" key="anomaly" class="tab-panel">
               <LazyChart height="420px" :loading="!heatmapMatrix.length">
-                <AnomalyHeatmap ref="anomalyRef" panel-label="G" title="异常分布热力图" subtitle="Anomaly Detection Map" :matrix="heatmapMatrix" :stats="stats" :threshold="2.0" />
+                <AnomalyHeatmap ref="anomalyRef" panel-label="G" :title="pac('chartAnomalyTitle')" :subtitle="pac('chartAnomalySubtitle')" :matrix="heatmapMatrix" :stats="stats" :threshold="2.0" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'radar'" key="radar" class="tab-panel">
               <LazyChart height="420px" :loading="!selectedSupportData.length">
-                <PressureRadar ref="radarRef" panel-label="H" title="压力特征雷达图" subtitle="Multi-dimensional Analysis" :data="selectedSupportData" />
+                <PressureRadar ref="radarRef" panel-label="H" :title="pac('chartRadarTitle')" :subtitle="pac('chartRadarSubtitle')" :data="selectedSupportData" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'density'" key="density" class="tab-panel">
               <LazyChart height="420px" :loading="!rawData.length">
-                <PressureDensity ref="densityRef" panel-label="I" title="核密度估计" subtitle="Kernel Density Estimation" :data="rawData" />
+                <PressureDensity ref="densityRef" panel-label="I" :title="pac('chartDensityTitle')" :subtitle="pac('chartDensitySubtitle')" :data="rawData" />
               </LazyChart>
             </div>
             <div v-else-if="activeTab === 'contour'" key="contour" class="tab-panel">
               <LazyChart height="420px" :loading="!heatmapMatrix.length">
-                <PressureContour ref="contourRef" panel-label="J" title="压力等值线图" subtitle="Contour Map" :matrix="heatmapMatrix" :num-supports="numRows" :levels="12" />
+                <PressureContour ref="contourRef" panel-label="J" :title="pac('chartContourTitle')" :subtitle="pac('chartContourSubtitle')" :matrix="heatmapMatrix" :num-supports="numRows" :levels="12" />
               </LazyChart>
             </div>
           </Transition>
@@ -161,8 +161,8 @@
         </div>
         <p class="caption-summary">{{ activeFigureMeta.figureSummary }}</p>
         <div class="caption-notes">
-          <span><strong>Unit:</strong> {{ activeFigureMeta.unit }}</span>
-          <span><strong>Notes:</strong> {{ activeFigureMeta.figureNotes }}</span>
+          <span><strong>{{ pac('activeFigureUnit') }}:</strong> {{ activeFigureMeta.unit }}</span>
+          <span><strong>{{ pac('activeFigureNotes') }}:</strong> {{ activeFigureMeta.figureNotes }}</span>
         </div>
         <p class="methods-footer">{{ activeFigureMeta.methodsFooter }}</p>
       </section>
@@ -207,11 +207,30 @@ import MethodologyPanel from '@/components/pressure/MethodologyPanel.vue'
 import LazyChart from '@/components/common/LazyChart.vue'
 import PaperExportMenu from '@/components/common/PaperExportMenu.vue'
 import { exportECharts } from '@/utils/figureExport'
-import { buildCaptionsMarkdown, buildPaperFigure, buildPaperManifest } from '@/utils/paperExportSchema'
+import { useI18n } from '../composables/useI18n'
+import {
+  buildPaperArtifact,
+  buildPaperFigure,
+  buildPaperFigureId,
+  buildPaperFigurePath,
+  buildPaperManifest,
+  buildPaperRootPath,
+  buildPaperSupplementZipName,
+  buildPaperTimestampTag,
+  buildPublicationCaptionsMarkdown,
+  buildPublicationIndexDocument,
+  buildPublicationLabelSet,
+  buildPublicationMethodsFooter,
+  buildPublicationNotesMarkdown,
+  buildPublicationRows,
+  buildPublicationReadmeMarkdown
+} from '@/utils/paperExportSchema'
 
 const CHART_CENTER_SNAPSHOT_KEY = 'pressure_analysis_chart_snapshot_v1'
 
 const router = useRouter()
+const { t, locale } = useI18n()
+const pac = (key, params) => t(`pressureAnalysisCharts.${key}`, params)
 const snapshot = ref(null)
 const snapshotError = ref('')
 const activeTab = ref('hist')
@@ -237,19 +256,19 @@ const densityRef = ref(null)
 const contourRef = ref(null)
 
 const chartTabs = [
-  { id: 'hist', label: '分布' },
-  { id: 'spatial', label: '空间' },
-  { id: 'cycle', label: '周期' },
-  { id: 'corr', label: '相关' },
-  { id: 'compare', label: '对比' },
-  { id: 'boxplot', label: '箱线' },
-  { id: 'cdf', label: '累计' },
-  { id: 'spectral', label: '频谱' },
-  { id: 'scatter', label: '矩阵' },
-  { id: 'anomaly', label: '异常' },
-  { id: 'radar', label: '雷达' },
-  { id: 'density', label: '密度' },
-  { id: 'contour', label: '等值线' }
+  { id: 'hist', labelKey: 'tabHist' },
+  { id: 'spatial', labelKey: 'tabSpatial' },
+  { id: 'cycle', labelKey: 'tabCycle' },
+  { id: 'corr', labelKey: 'tabCorr' },
+  { id: 'compare', labelKey: 'tabCompare' },
+  { id: 'boxplot', labelKey: 'tabBoxplot' },
+  { id: 'cdf', labelKey: 'tabCdf' },
+  { id: 'spectral', labelKey: 'tabSpectral' },
+  { id: 'scatter', labelKey: 'tabScatter' },
+  { id: 'anomaly', labelKey: 'tabAnomaly' },
+  { id: 'radar', labelKey: 'tabRadar' },
+  { id: 'density', labelKey: 'tabDensity' },
+  { id: 'contour', labelKey: 'tabContour' }
 ]
 
 function toDateOrNull(raw) {
@@ -418,145 +437,106 @@ const statsLabel = computed(() => {
   if (!s) return '--'
   return `${Number(s.mean || 0).toFixed(2)} / ${Number(s.max || 0).toFixed(2)} MPa`
 })
-const activeTabLabel = computed(() => chartTabs.find((tab) => tab.id === activeTab.value)?.label || '--')
+const activeTabLabel = computed(() => {
+  const tab = chartTabs.find((item) => item.id === activeTab.value)
+  return tab ? pac(tab.labelKey) : '--'
+})
+
+const buildChartMeta = (prefix, unit) => ({
+  figureTitle: pac(`${prefix}FigureTitle`),
+  figureSummary: pac(`${prefix}FigureSummary`),
+  figureCaption: pac(`${prefix}FigureCaption`),
+  figureNotes: pac(`${prefix}FigureNotes`),
+  unit,
+  methodsFooter: pac(`${prefix}MethodsFooter`)
+})
+
 const chartPaperMeta = computed(() => ({
   hist: {
     figureId: 'Figure C1',
-    figureTitle: 'Resistance distribution histogram',
-    figureSummary: 'Histogram plate resolving the empirical resistance envelope and dominant occupancy range across the selected support interval.',
-    figureCaption: 'Histogram of support resistance values, used to assess central tendency, spread, and occupancy of the dominant loading regime.',
-    figureNotes: 'Bars summarize pooled support resistance samples; visual emphasis is on spread and dominant mode.',
-    unit: 'MPa',
-    methodsFooter: 'Methods footer: pooled resistance samples are binned into histogram form from the chart-center snapshot.'
+    ...buildChartMeta('hist', 'MPa')
   },
   spatial: {
     figureId: 'Figure C2',
-    figureTitle: 'Support-wise spatial resistance profile',
-    figureSummary: 'Support-mean resistance plate highlighting along-face spatial gradients and local concentration zones.',
-    figureCaption: 'Spatial distribution of mean support resistance along the working face, used to identify structured loading gradients.',
-    figureNotes: 'Each support is aggregated over the selected period.',
-    unit: 'MPa',
-    methodsFooter: 'Methods footer: support means are derived from the decoded raw resistance series in the active snapshot.'
+    ...buildChartMeta('spatial', 'MPa')
   },
   cycle: {
     figureId: 'Figure C3',
-    figureTitle: 'Periodicity detection plate',
-    figureSummary: 'Cycle plate isolating recurrent loading fluctuations and candidate periodic structure in the selected series.',
-    figureCaption: 'Cycle-detection view of resistance evolution, used to identify periodic loading signatures and recurrence intervals.',
-    figureNotes: 'Periods are estimated from the series provided by the active snapshot.',
-    unit: 'MPa',
-    methodsFooter: 'Methods footer: temporal sequence is read from cycle-ready snapshot data or reconstructed from the heatmap midline.'
+    ...buildChartMeta('cycle', 'MPa')
   },
   corr: {
     figureId: 'Figure C4',
-    figureTitle: 'Inter-support correlation matrix',
-    figureSummary: 'Matrix plate quantifying co-variation between supports to reveal coherent pressure-transfer neighborhoods.',
-    figureCaption: 'Correlation matrix of support resistance, used to identify coherent clusters and mechanically coupled segments.',
-    figureNotes: 'Matrix entries summarize pairwise similarity between supports.',
-    unit: 'Correlation coefficient',
-    methodsFooter: 'Methods footer: pairwise correlation coefficients are sourced from the chart-center snapshot.'
+    ...buildChartMeta('corr', 'Correlation coefficient')
   },
   compare: {
     figureId: 'Figure C5',
-    figureTitle: 'Front-versus-rear column comparison',
-    figureSummary: 'Comparative plate separating front and rear column response to expose asymmetry in loading allocation.',
-    figureCaption: 'Comparison between front and rear column resistance, used to diagnose asymmetric support behavior.',
-    figureNotes: 'Front and rear subsets are decoded from column labels in the snapshot.',
-    unit: 'MPa',
-    methodsFooter: 'Methods footer: front and rear column groups are split from raw decoded pressure rows.'
+    ...buildChartMeta('compare', 'MPa')
   },
   boxplot: {
     figureId: 'Figure C6',
-    figureTitle: 'Resistance distribution box plot',
-    figureSummary: 'Distribution plate emphasizing quartiles, median shift, and tail behavior without histogram binning bias.',
-    figureCaption: 'Box-plot view of resistance distribution, used to summarize quartiles, median, and outlier structure.',
-    figureNotes: 'Quartile-based summary complements the histogram plate.',
-    unit: 'MPa',
-    methodsFooter: 'Methods footer: box-plot statistics are computed directly from raw resistance values.'
+    ...buildChartMeta('boxplot', 'MPa')
   },
   cdf: {
     figureId: 'Figure C7',
-    figureTitle: 'Cumulative distribution function',
-    figureSummary: 'CDF plate reporting percentile accumulation and threshold occupancy across the resistance range.',
-    figureCaption: 'Cumulative distribution of resistance values, used to read percentile thresholds and coverage levels.',
-    figureNotes: 'Useful for threshold-based operational interpretation.',
-    unit: 'Cumulative probability',
-    methodsFooter: 'Methods footer: cumulative proportions are estimated from sorted raw resistance samples.'
+    ...buildChartMeta('cdf', 'Cumulative probability')
   },
   spectral: {
     figureId: 'Figure C8',
-    figureTitle: 'Spectral energy decomposition',
-    figureSummary: 'Frequency-domain plate isolating dominant oscillatory content in the selected support time series.',
-    figureCaption: 'Spectral analysis of the selected support series, used to identify dominant loading frequencies.',
-    figureNotes: 'Interpreted jointly with the cycle-detection plate.',
-    unit: 'Spectral power',
-    methodsFooter: 'Methods footer: frequency-domain decomposition is computed from the selected support time series.'
+    ...buildChartMeta('spectral', 'Spectral power')
   },
   scatter: {
     figureId: 'Figure C9',
-    figureTitle: 'Multi-support scatter matrix',
-    figureSummary: 'Pairwise scatter plate screening nonlinear association and clustering between representative supports.',
-    figureCaption: 'Scatter-matrix view for representative supports, used to assess linear and nonlinear joint patterns.',
-    figureNotes: 'Representative support IDs are fixed for cross-tab comparability.',
-    unit: 'MPa',
-    methodsFooter: 'Methods footer: scatter pairs are assembled from synchronized support-level resistance values.'
+    ...buildChartMeta('scatter', 'MPa')
   },
   anomaly: {
     figureId: 'Figure C10',
-    figureTitle: 'Anomaly heatmap',
-    figureSummary: 'Anomaly plate localizing departures from typical loading behavior in support-time space.',
-    figureCaption: 'Heatmap of anomalous resistance departures, used to localize abnormal loading in support-time coordinates.',
-    figureNotes: 'Thresholding follows the anomaly settings of the chart center.',
-    unit: 'Standardized anomaly score',
-    methodsFooter: 'Methods footer: anomaly scores are visualized from the heatmap matrix with the active threshold convention.'
+    ...buildChartMeta('anomaly', 'Standardized anomaly score')
   },
   radar: {
     figureId: 'Figure C11',
-    figureTitle: 'Multidimensional pressure radar',
-    figureSummary: 'Radar plate condensing multiple pressure features into a compact comparative profile.',
-    figureCaption: 'Radar summary of multidimensional pressure features, used to compare composite response structure.',
-    figureNotes: 'Best interpreted as a relative feature profile rather than absolute magnitude.',
-    unit: 'Normalized feature score',
-    methodsFooter: 'Methods footer: radar axes are derived from feature engineering over the selected support data.'
+    ...buildChartMeta('radar', 'Normalized feature score')
   },
   density: {
     figureId: 'Figure C12',
-    figureTitle: 'Kernel density estimate',
-    figureSummary: 'Smoothed density plate resolving modal structure without dependence on fixed histogram bins.',
-    figureCaption: 'Kernel-density estimate of resistance values, used to assess multimodality and smooth occupancy structure.',
-    figureNotes: 'KDE complements the histogram and box-plot views.',
-    unit: 'Density',
-    methodsFooter: 'Methods footer: kernel density is estimated from raw resistance samples in the active snapshot.'
+    ...buildChartMeta('density', 'Density')
   },
   contour: {
     figureId: 'Figure C13',
-    figureTitle: 'Resistance contour map',
-    figureSummary: 'Contour plate summarizing continuous spatial resistance morphology and gradient structure.',
-    figureCaption: 'Contour map of resistance intensity, used to read smooth spatial gradients and coherent high-load zones.',
-    figureNotes: 'Contour levels are generated from the heatmap matrix in support-space coordinates.',
-    unit: 'MPa',
-    methodsFooter: 'Methods footer: contour levels are interpolated from the resistance heatmap matrix.'
+    ...buildChartMeta('contour', 'MPa')
   },
 }))
 const activeFigureMeta = computed(() => chartPaperMeta.value[activeTab.value] || {
   figureId: 'Figure C0',
   figureTitle: activeTabLabel.value,
-  figureSummary: 'Active chart metadata unavailable.',
-  figureCaption: 'Active chart metadata unavailable.',
-  figureNotes: 'No additional notes.',
+  figureSummary: pac('fallbackFigureSummary'),
+  figureCaption: pac('fallbackFigureCaption'),
+  figureNotes: pac('fallbackFigureNotes'),
   unit: '--',
-  methodsFooter: 'Methods footer: metadata unavailable.'
+  methodsFooter: pac('fallbackMethodsFooter')
 })
 const paperFrame = computed(() => ({
-  heading: 'Figure Set | Pressure chart center',
-  title: 'Figure-ready pressure analytics plates',
-  summary: `A consolidated plate workspace for mining-pressure diagnostics across ${context.value?.dateRangeText || '--'}, covering supports #${context.value?.supportStart || '--'}-${context.value?.supportEnd || '--'}.`,
+  heading: pac('figureHeading'),
+  title: pac('figureTitle'),
+  summary: pac('figureSummary', {
+    dateRange: context.value?.dateRangeText || '--',
+    supportStart: context.value?.supportStart || '--',
+    supportEnd: context.value?.supportEnd || '--'
+  }),
   cards: [
-    { label: 'Primary evidence', value: statsLabel.value },
-    { label: 'Active plate', value: activeTabLabel.value },
-    { label: 'Anomaly count', value: String(context.value?.anomalyCount ?? 0) },
+    { label: pac('cardPrimaryEvidence'), value: statsLabel.value },
+    { label: pac('cardActivePlate'), value: activeTabLabel.value },
+    { label: pac('cardAnomalyCount'), value: String(context.value?.anomalyCount ?? 0) },
   ],
-  methodsFooter: `Methods footer: derived from the pressure-analysis snapshot using support-wise resistance series, spatial heatmap matrices, and ECharts publication exports; current plate ${activeTabLabel.value}.`,
+  methodsFooter: buildPublicationMethodsFooter({
+    subject: 'Pressure analytics plates',
+    source: 'pressure-analysis snapshot',
+    details: [
+      'support-wise resistance series',
+      'spatial heatmap matrices',
+      'ECharts publication exports',
+      `current plate ${activeTabLabel.value}`
+    ]
+  }),
 }))
 
 function collectChartInstances() {
@@ -600,12 +580,24 @@ const resolveChartRefByTab = (tabId) => {
 const resolveChartInstanceByTab = (tabId) => resolveChartRefByTab(tabId)?.getChartInstance?.() || null
 const resolveActiveChartInstance = () => resolveChartInstanceByTab(activeTab.value)
 
-const buildTimestampTag = () => new Date().toISOString().replace(/[:.]/g, '-')
-
 const dataUrlToBlob = async (dataUrl) => {
   const resp = await fetch(dataUrl)
   return resp.blob()
 }
+
+const publicationLabels = buildPublicationLabelSet()
+
+const buildPublicationCaptionRows = (meta) => buildPublicationRows([
+  { label: publicationLabels.figure, value: meta?.figureTitle || '--' },
+  { label: publicationLabels.summary, value: meta?.figureSummary || '--' },
+  { label: publicationLabels.caption, value: meta?.figureCaption || '--' }
+])
+
+const buildPublicationNoteRows = (meta) => buildPublicationRows([
+  { label: publicationLabels.unit, value: meta?.unit || '--' },
+  { label: publicationLabels.notes, value: meta?.figureNotes || '--' },
+  { label: publicationLabels.methodsFooter, value: meta?.methodsFooter || '--' }
+])
 
 const triggerDownload = (blob, filename) => {
   const url = URL.createObjectURL(blob)
@@ -649,7 +641,7 @@ async function exportMainFigure() {
     await nextTick()
     const chart = resolveChartInstanceByTab(activeTab.value)
     if (!chart) {
-      showToast('当前图表尚未加载完成')
+      showToast(pac('toastChartNotReady'))
       return
     }
     const dataUrl = exportECharts(chart, {
@@ -658,11 +650,11 @@ async function exportMainFigure() {
       backgroundColor: '#FFFFFF'
     })
     const blob = await dataUrlToBlob(dataUrl)
-    const filename = `Pressure_Fig_${activeTab.value}_${buildTimestampTag()}.png`
+    const filename = `Pressure_Fig_${activeTab.value}_${buildPaperTimestampTag()}.png`
     triggerDownload(blob, filename)
-    showToast(`主图已导出：${filename}`)
+    showToast(pac('toastMainExported', { filename }))
   } catch (error) {
-    showToast(error?.message || '主图导出失败')
+    showToast(error?.message || pac('toastMainExportFailed'))
   } finally {
     exportingMain.value = false
   }
@@ -687,16 +679,21 @@ async function exportSupplementPackage() {
       const chart = resolveChartInstanceByTab(tab.id)
       if (!chart) continue
 
-      const figId = `FigS${exportedCount + 1}`
-      const baseName = `${figId}_${tab.id}_${buildTimestampTag()}`
+      const figId = buildPaperFigureId({ index: exportedCount + 1, supplement: true })
       const figureFiles = []
       const pngUrl = exportECharts(chart, {
         type: 'png',
         pixelRatio: 3.2,
         backgroundColor: '#FFFFFF'
       })
-      zip.file(`figures/${baseName}.png`, await dataUrlToBlob(pngUrl))
-      figureFiles.push(`figures/${baseName}.png`)
+      const pngPath = buildPaperFigurePath({
+        index: exportedCount + 1,
+        supplement: true,
+        slug: tab.id,
+        ext: 'png'
+      })
+      zip.file(pngPath, await dataUrlToBlob(pngUrl))
+      figureFiles.push(pngPath)
 
       try {
         const svgUrl = exportECharts(chart, {
@@ -704,8 +701,14 @@ async function exportSupplementPackage() {
           pixelRatio: 2,
           backgroundColor: '#FFFFFF'
         })
-        zip.file(`figures/${baseName}.svg`, await dataUrlToBlob(svgUrl))
-        figureFiles.push(`figures/${baseName}.svg`)
+        const svgPath = buildPaperFigurePath({
+          index: exportedCount + 1,
+          supplement: true,
+          slug: tab.id,
+          ext: 'svg'
+        })
+        zip.file(svgPath, await dataUrlToBlob(svgUrl))
+        figureFiles.push(svgPath)
       } catch {
         // no-op: skip svg fallback
       }
@@ -721,6 +724,10 @@ async function exportSupplementPackage() {
           tab_id: tab.id,
           active_tab: tab.id,
           exported_at: new Date().toISOString(),
+          figure_heading: meta.figureTitle,
+          caption_title: meta.figureTitle,
+          caption_rows: buildPublicationCaptionRows(meta),
+          note_rows: buildPublicationNoteRows(meta),
           unit: meta.unit,
           summary: meta.figureSummary,
           notes: meta.figureNotes,
@@ -730,15 +737,46 @@ async function exportSupplementPackage() {
       exportedCount += 1
     }
 
-    zip.file('captions.md', buildCaptionsMarkdown({
+    const captionsPath = buildPaperRootPath({ name: 'captions', ext: 'md' })
+    const notesPath = buildPaperRootPath({ name: 'publication-notes', ext: 'md' })
+    const manifestPath = buildPaperRootPath({ name: 'manifest', ext: 'json' })
+    const indexPath = buildPaperRootPath({ name: 'index', ext: 'json' })
+    const readmePath = buildPaperRootPath({ name: 'README', ext: 'md' })
+    const generatedAt = new Date().toISOString()
+
+    zip.file(captionsPath, buildPublicationCaptionsMarkdown({
       title: 'Pressure Chart Supplement',
       intro: `Date range: ${context.value?.dateRangeText || '--'}, supports #${context.value?.supportStart || '--'}-#${context.value?.supportEnd || '--'}.`,
       figures
     }))
-    zip.file('manifest.json', JSON.stringify(buildPaperManifest({
+    zip.file(notesPath, buildPublicationNotesMarkdown({
+      title: 'Publication Notes',
+      figures
+    }))
+    zip.file(readmePath, buildPublicationReadmeMarkdown({
+      title: 'Pressure Chart Supplement Export',
+      intro: 'This archive contains publication-ready pressure analysis figures and their supporting metadata.',
+      sourcePage: 'pressure-analysis-charts',
+      manifestPath,
+      indexPath,
+      captionsPath,
+      notesPath,
+      figures
+    }))
+    zip.file(indexPath, JSON.stringify(buildPublicationIndexDocument({
+      title: 'Pressure Chart Supplement Export',
+      generatedAt,
+      sourcePage: 'pressure-analysis-charts',
+      manifestPath,
+      captionsPath,
+      notesPath,
+      readmePath,
+      figures
+    }), null, 2))
+    zip.file(manifestPath, JSON.stringify(buildPaperManifest({
       sourcePage: 'pressure-analysis-charts',
       title: 'Pressure Chart Supplement Export',
-      locale: 'zh-CN',
+      locale: locale.value,
       context: {
         date_range: context.value?.dateRangeText || '',
         support_start: context.value?.supportStart ?? null,
@@ -746,15 +784,26 @@ async function exportSupplementPackage() {
         anomaly_count: context.value?.anomalyCount ?? null
       },
       figures,
-      notes: [`exported_count=${exportedCount}`]
+      artifacts: [
+        buildPaperArtifact({ name: 'captions', path: captionsPath }),
+        buildPaperArtifact({ name: 'publication_notes', path: notesPath }),
+        buildPaperArtifact({ name: 'index', path: indexPath }),
+        buildPaperArtifact({ name: 'readme', path: readmePath }),
+        buildPaperArtifact({ name: 'manifest', path: manifestPath })
+      ],
+      notes: [`exported_count=${exportedCount}`],
+      generatedAt
     }), null, 2))
 
     const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
-    const zipName = `Pressure_Supplement_${buildTimestampTag()}.zip`
+    const zipName = buildPaperSupplementZipName({
+      topic: 'Pressure',
+      timestampTag: buildPaperTimestampTag()
+    })
     triggerDownload(zipBlob, zipName)
-    showToast(`已导出补充图包（${exportedCount}张）`)
+    showToast(pac('toastSupplementExported', { count: exportedCount }))
   } catch (error) {
-    showToast(error?.message || '补充图包导出失败')
+    showToast(error?.message || pac('toastSupplementExportFailed'))
   } finally {
     activeTab.value = originTab
     exportingPack.value = false
@@ -771,7 +820,7 @@ function showToast(message) {
 
 function onExportComplete(results) {
   const successCount = (results || []).filter((r) => r?.success).length
-  showToast(`已导出 ${successCount} 张图表`)
+  showToast(pac('toastExportComplete', { count: successCount }))
 }
 
 function onResearchPaletteChange(palette) {
@@ -782,20 +831,23 @@ function onResearchPaletteChange(palette) {
   ].filter(Boolean))
 
   if (!colors.length || uniqueCharts.size === 0) {
-    showToast(`已切换配色：${palette?.name || '默认'}`)
+    showToast(pac('toastPaletteSwitched', { name: palette?.name || pac('defaultPalette') }))
     return
   }
 
   uniqueCharts.forEach((chart) => {
     chart.setOption({ color: colors }, false, true)
   })
-  showToast(`已应用配色：${palette?.name || '默认'}（${uniqueCharts.size} 图）`)
+  showToast(pac('toastPaletteApplied', {
+    name: palette?.name || pac('defaultPalette'),
+    count: uniqueCharts.size
+  }))
 }
 
 async function onResearchExport(config) {
   const chart = resolveActiveChartInstance()
   if (!chart) {
-    showToast('当前图表尚未加载完成')
+    showToast(pac('toastChartNotReady'))
     return
   }
 
@@ -812,16 +864,19 @@ async function onResearchExport(config) {
     })
     const blob = await dataUrlToBlob(dataUrl)
     const ext = exportType === 'svg' ? 'svg' : 'png'
-    const filename = `Pressure_Research_${activeTab.value}_${buildTimestampTag()}.${ext}`
+    const filename = `Pressure_Research_${activeTab.value}_${buildPaperTimestampTag()}.${ext}`
     triggerDownload(blob, filename)
 
     if (requestedFormat !== exportType) {
-      showToast(`已导出 ${ext.toUpperCase()}（${requestedFormat.toUpperCase()} 当前回退为 ${ext.toUpperCase()}）`)
+      showToast(pac('toastResearchFallback', {
+        actual: ext.toUpperCase(),
+        requested: requestedFormat.toUpperCase()
+      }))
       return
     }
-    showToast(`已导出：${filename}`)
+    showToast(pac('toastResearchExported', { filename }))
   } catch (error) {
-    showToast(error?.message || '科研导出失败')
+    showToast(error?.message || pac('toastResearchExportFailed'))
   }
 }
 
@@ -834,7 +889,7 @@ function loadSnapshot() {
   try {
     const raw = window.sessionStorage?.getItem?.(CHART_CENTER_SNAPSHOT_KEY)
     if (!raw) {
-      snapshotError.value = '请先在矿压数据分析页完成数据加载，再进入图表中心。'
+      snapshotError.value = pac('snapshotMissing')
       snapshot.value = null
       return
     }

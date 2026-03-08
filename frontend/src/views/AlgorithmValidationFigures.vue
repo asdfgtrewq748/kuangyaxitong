@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="figures-page">
     <header class="page-header">
       <button class="icon-btn" type="button" :title="avf('back')" @click="goBack">
@@ -8,7 +8,15 @@
         <h1>{{ avf('title') }}</h1>
         <p>{{ avf('subtitle') }}</p>
       </div>
-      <button class="tool-btn" type="button" @click="goBack">{{ avf('backToValidation') }}</button>
+      <div class="header-actions">
+        <button class="tool-btn" type="button" :disabled="exportingMain" @click="exportActiveFigure">
+          {{ exportingMain ? avf('exportingFigure') : avf('exportFigure') }}
+        </button>
+        <button class="tool-btn secondary" type="button" :disabled="exportingPack" @click="exportSupplementPackage">
+          {{ exportingPack ? avf('packaging') : avf('exportSupplement') }}
+        </button>
+        <button class="tool-btn" type="button" @click="goBack">{{ avf('backToValidation') }}</button>
+      </div>
     </header>
 
     <section v-if="snapshotError" class="empty-state">
@@ -38,7 +46,7 @@
       </div>
       <div class="layout-toolbar">
         <div class="toolbar-group">
-          <span class="toolbar-label">列数</span>
+          <span class="toolbar-label">{{ avf('columns') }}</span>
           <button
             v-for="mode in columnModes"
             :key="mode.value"
@@ -51,7 +59,7 @@
           </button>
         </div>
         <div class="toolbar-group">
-          <span class="toolbar-label">密度</span>
+          <span class="toolbar-label">{{ avf('density') }}</span>
           <button
             v-for="mode in densityModes"
             :key="mode.value"
@@ -64,7 +72,7 @@
           </button>
         </div>
         <div class="toolbar-group scale-group">
-          <span class="toolbar-label">图表缩放</span>
+          <span class="toolbar-label">{{ avf('scale') }}</span>
           <input
             v-model.number="chartScale"
             class="scale-slider"
@@ -74,25 +82,71 @@
             step="1"
           />
           <span class="scale-value">{{ chartScale }}%</span>
-          <button type="button" class="chip-btn" @click="resetLayoutControls">重置</button>
+          <button type="button" class="chip-btn" @click="resetLayoutControls">{{ avf('reset') }}</button>
+        </div>
+        <div class="toolbar-group selector-group">
+          <span class="toolbar-label">{{ avf('activeFigure') }}</span>
+          <button
+            v-for="item in figureMetaList"
+            :key="item.id"
+            type="button"
+            class="chip-btn"
+            :class="{ active: activeFigureId === item.id }"
+            @click="activeFigureId = item.id"
+          >
+            {{ item.id.toUpperCase() }}
+          </button>
         </div>
       </div>
+      <section class="active-figure-caption">
+        <div class="caption-head">
+          <span class="caption-kicker">{{ activeFigureMeta.title || avf('figureContextUnavailable') }}</span>
+          <h3>{{ activeFigureMeta.result || avf('selectFigurePrompt') }}</h3>
+        </div>
+        <p class="caption-summary">{{ activeFigureMeta.interpretation || avf('metadataPending') }}</p>
+        <div class="caption-notes">
+          <span><strong>{{ avf('notesLabel') }}:</strong> {{ activeFigureMeta.notes || '--' }}</span>
+          <span><strong>{{ avf('abbrevLabel') }}:</strong> {{ activeFigureMeta.abbreviations || '--' }}</span>
+        </div>
+        <p class="methods-footer">{{ activeFigureMethodsFooter }}</p>
+      </section>
       <ValidationScienceFigures
+        ref="scienceFiguresRef"
         :result="snapshot?.result || null"
         :evaluation="snapshot?.evaluation || null"
         :columns="layoutColumns"
         :density="density"
         :chart-scale="chartScale"
+        @figure-focus="handleFigureFocus"
       />
     </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ValidationScienceFigures from '../components/validation/ValidationScienceFigures.vue'
 import { useI18n } from '../composables/useI18n'
+import { useToast } from '../composables/useToast'
+import { exportECharts } from '@/utils/figureExport'
+import {
+  buildPaperArtifact,
+  buildPaperFigure,
+  buildPaperFigureId,
+  buildPaperFigurePath,
+  buildPaperManifest,
+  buildPaperRootPath,
+  buildPaperSupplementZipName,
+  buildPaperTimestampTag,
+  buildPublicationCaptionsMarkdown,
+  buildPublicationIndexDocument,
+  buildPublicationLabelSet,
+  buildPublicationMethodsFooter,
+  buildPublicationNotesMarkdown,
+  buildPublicationRows,
+  buildPublicationReadmeMarkdown
+} from '@/utils/paperExportSchema'
 
 const SCIENCE_SNAPSHOT_KEY = 'algorithm_validation_science_snapshot_v1'
 const SCIENCE_LAYOUT_PREF_KEY = 'algorithm_validation_figures_layout_v1'
@@ -100,25 +154,31 @@ const SCIENCE_LAYOUT_PREF_KEY = 'algorithm_validation_figures_layout_v1'
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const toast = useToast()
 
 const avf = (key, params) => t(`algorithmValidationFigures.${key}`, params)
 
+const scienceFiguresRef = ref(null)
 const snapshot = ref(null)
 const snapshotError = ref('')
 const layoutColumns = ref('auto')
 const density = ref('balanced')
 const chartScale = ref(100)
+const activeFigureId = ref('fig2')
+const exportingMain = ref(false)
+const exportingPack = ref(false)
+let jsZipCtor = null
 
 const columnModes = [
-  { value: 'auto', label: '自适应' },
-  { value: 1, label: '1列' },
-  { value: 2, label: '2列' }
+  { value: 'auto', label: 'Auto' },
+  { value: 1, label: '1 Column' },
+  { value: 2, label: '2 Columns' }
 ]
 
 const densityModes = [
-  { value: 'compact', label: '紧凑' },
-  { value: 'balanced', label: '均衡' },
-  { value: 'focus', label: '沉浸' }
+  { value: 'compact', label: 'Compact' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'focus', label: 'Focus' }
 ]
 
 const snapshotUpdatedLabel = computed(() => {
@@ -128,10 +188,16 @@ const snapshotUpdatedLabel = computed(() => {
   if (!Number.isFinite(ts)) return '--'
   return new Date(ts).toLocaleString()
 })
+
+const thresholdMode = computed(() => String(
+  snapshot.value?.result?.evaluation_inputs?.mode ||
+  snapshot.value?.result?.evaluation_inputs?.source ||
+  '--'
+))
+
 const paperFrame = computed(() => {
   const auc = Number(snapshot.value?.evaluation?.auc ?? snapshot.value?.result?.kpi?.auc)
   const prAuc = Number(snapshot.value?.evaluation?.pr_auc)
-  const thresholdMode = String(snapshot.value?.result?.evaluation_inputs?.mode || snapshot.value?.result?.evaluation_inputs?.source || '--')
   return {
     heading: 'Figure Set | Algorithm validation',
     title: 'Validation science plates for fusion-model assessment',
@@ -141,13 +207,118 @@ const paperFrame = computed(() => {
       { label: 'ROC AUC', value: Number.isFinite(auc) ? auc.toFixed(3) : '--' },
       { label: 'PR AUC', value: Number.isFinite(prAuc) ? prAuc.toFixed(3) : '--' },
     ],
-    methodsFooter: `Methods footer: figures are assembled from the cached validation snapshot, with threshold mode ${thresholdMode}, local layout controls, and publication-oriented multi-panel rendering.`,
+    methodsFooter: buildPublicationMethodsFooter({
+      subject: 'Validation science plates',
+      source: 'cached validation snapshot',
+      seam: snapshot.value?.seam || '',
+      details: [
+        `threshold mode ${thresholdMode.value}`,
+        'local layout controls',
+        'publication-oriented multi-panel rendering'
+      ]
+    }),
   }
 })
+
+const figureMetaList = computed(() => {
+  snapshot.value
+  return scienceFiguresRef.value?.getFigureMetaList?.() || []
+})
+
+const activeFigureMeta = computed(() => {
+  const list = figureMetaList.value
+  return list.find((item) => item.id === activeFigureId.value) || list[0] || {}
+})
+
+const activeFigureMethodsFooter = computed(() => {
+  if (!activeFigureMeta.value?.id) {
+    return 'Methods footer: validation figure metadata will appear after the gallery initializes.'
+  }
+  return buildPublicationMethodsFooter({
+    subject: activeFigureMeta.value.title,
+    source: 'cached validation snapshot',
+    seam: snapshot.value?.seam || '',
+    details: [
+      `threshold mode ${thresholdMode.value}`,
+      `layout ${String(layoutColumns.value)}`,
+      `density ${density.value}`,
+      `chart scale ${chartScale.value}%`
+    ]
+  })
+})
+
+watch(figureMetaList, (list) => {
+  if (!Array.isArray(list) || !list.length) return
+  if (!list.some((item) => item.id === activeFigureId.value)) {
+    activeFigureId.value = list[0].id
+  }
+}, { immediate: true })
 
 const normalizeQuerySeam = (value) => {
   if (Array.isArray(value)) return value[0] || ''
   return typeof value === 'string' ? value : ''
+}
+
+const dataUrlToBlob = async (dataUrl) => {
+  const resp = await fetch(dataUrl)
+  return resp.blob()
+}
+
+const triggerDownload = (blob, filename) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+const getJSZipCtor = async () => {
+  if (jsZipCtor) return jsZipCtor
+  const mod = await import('jszip')
+  jsZipCtor = mod?.default || mod?.JSZip || null
+  if (!jsZipCtor) throw new Error('JSZip unavailable')
+  return jsZipCtor
+}
+
+const wait = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms))
+const resolveChartInstanceById = (figureId) => scienceFiguresRef.value?.getChartInstanceById?.(figureId) || null
+const publicationLabels = buildPublicationLabelSet()
+
+const buildPublicationCaptionRows = (meta) => {
+  if (!meta?.id) return []
+  return buildPublicationRows([
+    { label: publicationLabels.figure, value: meta.title || meta.id },
+    { label: publicationLabels.interpretation, value: meta.interpretation || '--' },
+    { label: publicationLabels.result, value: meta.result || '--' }
+  ])
+}
+
+const buildPublicationNoteRows = (meta) => {
+  if (!meta?.id) return []
+  return buildPublicationRows([
+    { label: publicationLabels.notes, value: meta.notes || '--' },
+    { label: publicationLabels.abbrev, value: meta.abbreviations || '--' },
+    {
+      label: publicationLabels.methodsFooter,
+      value: buildPublicationMethodsFooter({
+        subject: meta.title,
+        source: 'cached validation snapshot',
+        seam: snapshot.value?.seam || '',
+        details: [
+          `threshold mode ${thresholdMode.value}`,
+          `layout ${String(layoutColumns.value)}`,
+          `density ${density.value}`,
+          `chart scale ${chartScale.value}%`
+        ]
+      })
+    }
+  ])
+}
+
+const buildFigureCaption = (meta) => {
+  if (!meta) return 'No caption available.'
+  return `${meta.interpretation || ''} ${meta.result || ''}`.trim() || 'No caption available.'
 }
 
 const loadSnapshot = () => {
@@ -204,6 +375,12 @@ const resetLayoutControls = () => {
   chartScale.value = 100
 }
 
+const handleFigureFocus = (figureId) => {
+  if (typeof figureId === 'string' && figureId) {
+    activeFigureId.value = figureId
+  }
+}
+
 watch([layoutColumns, density, chartScale], () => {
   try {
     window.localStorage?.setItem?.(
@@ -218,6 +395,192 @@ watch([layoutColumns, density, chartScale], () => {
     // ignore write failure
   }
 })
+
+async function exportActiveFigure() {
+  if (exportingMain.value) return
+  exportingMain.value = true
+  try {
+    await nextTick()
+    await wait(80)
+    const chart = resolveChartInstanceById(activeFigureId.value)
+    const meta = activeFigureMeta.value
+    if (!chart || !meta?.id) {
+      toast.warning('Validation figure is not ready for export yet.')
+      return
+    }
+    const dataUrl = exportECharts(chart, {
+      type: 'png',
+      pixelRatio: 3.2,
+      backgroundColor: '#FFFFFF'
+    })
+    const blob = await dataUrlToBlob(dataUrl)
+    const filename = `Validation_${meta.id}_${buildPaperTimestampTag()}.png`
+    triggerDownload(blob, filename)
+    toast.success(`Exported ${meta.id.toUpperCase()} as ${filename}`)
+  } catch (error) {
+    toast.error(error?.message || 'Validation figure export failed.')
+  } finally {
+    exportingMain.value = false
+  }
+}
+
+async function exportSupplementPackage() {
+  if (exportingPack.value) return
+  exportingPack.value = true
+  try {
+    await nextTick()
+    const JSZip = await getJSZipCtor()
+    const zip = new JSZip()
+    const figures = []
+    let exportedCount = 0
+
+    for (let i = 0; i < figureMetaList.value.length; i += 1) {
+      const meta = figureMetaList.value[i]
+      const chart = resolveChartInstanceById(meta.id)
+      if (!chart) continue
+
+      const figId = buildPaperFigureId({ index: exportedCount + 1, supplement: true })
+      const figureFiles = []
+
+      const pngUrl = exportECharts(chart, {
+        type: 'png',
+        pixelRatio: 3.2,
+        backgroundColor: '#FFFFFF'
+      })
+      const pngPath = buildPaperFigurePath({
+        index: exportedCount + 1,
+        supplement: true,
+        slug: meta.id,
+        ext: 'png'
+      })
+      zip.file(pngPath, await dataUrlToBlob(pngUrl))
+      figureFiles.push(pngPath)
+
+      try {
+        const svgUrl = exportECharts(chart, {
+          type: 'svg',
+          pixelRatio: 2,
+          backgroundColor: '#FFFFFF'
+        })
+        const svgPath = buildPaperFigurePath({
+          index: exportedCount + 1,
+          supplement: true,
+          slug: meta.id,
+          ext: 'svg'
+        })
+        zip.file(svgPath, await dataUrlToBlob(svgUrl))
+        figureFiles.push(svgPath)
+      } catch {
+        // no-op: svg export is optional
+      }
+
+      figures.push(buildPaperFigure({
+        id: figId,
+        panel: String.fromCharCode(65 + exportedCount),
+        title: meta.title,
+        caption: buildFigureCaption(meta),
+        files: figureFiles,
+        tags: ['validation', 'science-plates', meta.id],
+        meta: {
+          figure_id: meta.id,
+          exported_at: new Date().toISOString(),
+          seam: snapshot.value?.seam || '',
+          figure_heading: meta.title || meta.id,
+          caption_title: meta.title || meta.id,
+          caption_rows: buildPublicationCaptionRows(meta),
+          note_rows: buildPublicationNoteRows(meta),
+          notes: meta.notes || '',
+          abbreviations: meta.abbreviations || '',
+          methods_footer: buildPublicationMethodsFooter({
+            subject: meta.title,
+            source: 'cached validation snapshot',
+            seam: snapshot.value?.seam || '',
+            details: [
+              `threshold mode ${thresholdMode.value}`,
+              `layout ${String(layoutColumns.value)}`,
+              `density ${density.value}`,
+              `chart scale ${chartScale.value}%`
+            ]
+          })
+        }
+      }))
+      exportedCount += 1
+    }
+
+    const captionsPath = buildPaperRootPath({ name: 'captions', ext: 'md' })
+    const notesPath = buildPaperRootPath({ name: 'publication-notes', ext: 'md' })
+    const manifestPath = buildPaperRootPath({ name: 'manifest', ext: 'json' })
+    const indexPath = buildPaperRootPath({ name: 'index', ext: 'json' })
+    const readmePath = buildPaperRootPath({ name: 'README', ext: 'md' })
+    const generatedAt = new Date().toISOString()
+
+    zip.file(captionsPath, buildPublicationCaptionsMarkdown({
+      title: 'Validation Figure Supplement',
+      intro: `Seam: ${snapshot.value?.seam || '--'}; updated at ${snapshotUpdatedLabel.value}; threshold mode ${thresholdMode.value}.`,
+      figures
+    }))
+    zip.file(notesPath, buildPublicationNotesMarkdown({
+      title: 'Publication Notes',
+      figures
+    }))
+    zip.file(readmePath, buildPublicationReadmeMarkdown({
+      title: 'Algorithm Validation Supplement Export',
+      intro: 'This archive contains publication-ready validation figures and supporting metadata.',
+      sourcePage: 'algorithm-validation-figures',
+      manifestPath,
+      indexPath,
+      captionsPath,
+      notesPath,
+      figures
+    }))
+    zip.file(indexPath, JSON.stringify(buildPublicationIndexDocument({
+      title: 'Algorithm Validation Supplement Export',
+      generatedAt,
+      sourcePage: 'algorithm-validation-figures',
+      manifestPath,
+      captionsPath,
+      notesPath,
+      readmePath,
+      figures
+    }), null, 2))
+
+    zip.file(manifestPath, JSON.stringify(buildPaperManifest({
+      sourcePage: 'algorithm-validation-figures',
+      title: 'Algorithm Validation Supplement Export',
+      locale: 'zh-CN',
+      context: {
+        seam: snapshot.value?.seam || '',
+        updated_at: snapshot.value?.updated_at || '',
+        threshold_mode: thresholdMode.value,
+        layout_columns: layoutColumns.value,
+        density: density.value,
+        chart_scale: chartScale.value
+      },
+      figures,
+      artifacts: [
+        buildPaperArtifact({ name: 'captions', path: captionsPath }),
+        buildPaperArtifact({ name: 'publication_notes', path: notesPath }),
+        buildPaperArtifact({ name: 'index', path: indexPath }),
+        buildPaperArtifact({ name: 'readme', path: readmePath }),
+        buildPaperArtifact({ name: 'manifest', path: manifestPath })
+      ],
+      notes: [`exported_count=${exportedCount}`],
+      generatedAt
+    }), null, 2))
+
+    const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
+    const zipName = buildPaperSupplementZipName({
+      topic: 'Validation',
+      timestampTag: buildPaperTimestampTag()
+    })
+    triggerDownload(zipBlob, zipName)
+    toast.success(`Exported validation supplement with ${exportedCount} figures.`)
+  } catch (error) {
+    toast.error(error?.message || 'Validation supplement export failed.')
+  } finally {
+    exportingPack.value = false
+  }
+}
 
 onMounted(() => {
   loadLayoutPrefs()
@@ -275,6 +638,13 @@ onMounted(() => {
   margin: 4px 0 0;
   font-size: 12px;
   color: #475569;
+}
+
+.header-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .publication-frame {
@@ -389,7 +759,8 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.chip-btn {
+.chip-btn,
+.tool-btn {
   height: 28px;
   border: 1px solid #cbd5e1;
   border-radius: 999px;
@@ -401,18 +772,34 @@ onMounted(() => {
   transition: all 0.16s ease;
 }
 
-.chip-btn:hover {
+.tool-btn {
+  height: 32px;
+}
+
+.chip-btn:hover,
+.tool-btn:hover {
   border-color: #94a3b8;
 }
 
-.chip-btn.active {
+.chip-btn.active,
+.tool-btn.secondary {
   border-color: #0f766e;
   background: #ecfeff;
   color: #134e4a;
 }
 
+.chip-btn:disabled,
+.tool-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .scale-group {
   margin-left: auto;
+}
+
+.selector-group {
+  width: 100%;
 }
 
 .scale-slider {
@@ -425,6 +812,53 @@ onMounted(() => {
   font-size: 12px;
   color: #0f172a;
   font-variant-numeric: tabular-nums;
+}
+
+.active-figure-caption {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid #dbe4ea;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfc 100%);
+}
+
+.caption-head {
+  display: grid;
+  gap: 4px;
+}
+
+.caption-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.caption-head h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+  color: #0f172a;
+  font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
+}
+
+.caption-summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.caption-notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #475569;
 }
 
 .empty-state {
@@ -453,8 +887,9 @@ onMounted(() => {
     grid-template-columns: auto 1fr;
   }
 
-  .page-header .tool-btn {
+  .header-actions {
     grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 
   .scale-group {
@@ -462,11 +897,16 @@ onMounted(() => {
     margin-left: 0;
   }
 
+  .selector-group {
+    width: 100%;
+  }
+
   .scale-slider {
     width: 110px;
   }
 
-  .publication-summary-grid {
+  .publication-summary-grid,
+  .caption-notes {
     grid-template-columns: 1fr;
   }
 }
