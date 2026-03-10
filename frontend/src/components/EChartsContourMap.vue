@@ -1,13 +1,42 @@
 <template>
   <div class="canvas-contour-wrapper" :class="{ 'cross-section-mode': crossSectionMode }">
+    <div class="figure-header">
+      <div class="figure-copy">
+        <span class="figure-kicker">{{ crossSectionMode ? 'Cross-section mode' : 'Interpolated surface' }}</span>
+        <h3 class="figure-title">{{ resolvedPropertyLabel }} contour plate</h3>
+        <p class="figure-story">{{ figureStory }}</p>
+      </div>
+      <div class="figure-highlights">
+        <div
+          v-for="item in mapHighlights"
+          :key="item.label"
+          class="highlight-chip"
+          :class="item.tone ? `tone-${item.tone}` : ''"
+        >
+          <span class="highlight-label">{{ item.label }}</span>
+          <strong class="highlight-value">{{ item.value }}</strong>
+        </div>
+      </div>
+    </div>
+
     <div ref="container" class="canvas-container">
       <canvas ref="heatmapCanvas" class="heatmap-layer"></canvas>
       <canvas ref="overlayCanvas" class="overlay-layer"></canvas>
+
+      <div class="north-arrow" aria-hidden="true">
+        <span class="north-label">N</span>
+        <span class="north-stem"></span>
+      </div>
+
+      <div v-if="scaleBar" class="scale-bar">
+        <span class="scale-bar-rule" :style="{ width: `${scaleBar.widthPercent}%` }"></span>
+        <span class="scale-bar-label">{{ scaleBar.label }}</span>
+      </div>
     </div>
 
     <!-- Legend -->
     <div v-if="valueRange" class="legend">
-      <div class="legend-title">{{ propertyLabel }}</div>
+      <div class="legend-title">{{ resolvedPropertyLabel }}</div>
       <div class="legend-bar">
         <div class="legend-gradient" :style="legendGradientStyle"></div>
       </div>
@@ -61,7 +90,7 @@
       <div class="tooltip-badge" v-if="!hoverInfo.isBorehole">插值</div>
       <div class="tooltip-title">{{ hoverInfo.name }}</div>
       <div class="tooltip-coords">({{ hoverInfo.x?.toFixed(1) }}, {{ hoverInfo.y?.toFixed(1) }})</div>
-      <div class="tooltip-value">{{ propertyLabel }}: {{ hoverInfo.value?.toFixed(2) }}m</div>
+      <div class="tooltip-value">{{ resolvedPropertyLabel }}: {{ hoverInfo.value?.toFixed(2) }}m</div>
     </div>
   </div>
 </template>
@@ -113,6 +142,46 @@ const PALETTES = {
 const legendGradientStyle = computed(() => {
   const colors = PALETTES[props.colormap] || PALETTES.YlOrBr
   return { background: `linear-gradient(90deg, ${colors.join(',')})` }
+})
+
+const resolvedPropertyLabel = computed(() => {
+  return props.propertyLabel && props.propertyLabel !== '鍘氬害'
+    ? props.propertyLabel
+    : 'Thickness'
+})
+
+const figureStory = computed(() => {
+  const boreholeCount = props.boreholes?.length || 0
+  const modeText = props.crossSectionMode
+    ? 'Cross-section picking is active to support profile extraction.'
+    : 'The plate emphasizes interpolated gradients and local borehole control.'
+  return `IDW interpolation is generated from ${boreholeCount} boreholes across the study bounds. ${modeText}`
+})
+
+const mapHighlights = computed(() => {
+  const boreholeCount = props.boreholes?.length || 0
+  const rangeText = props.valueRange
+    ? `${props.valueRange.min?.toFixed(1)}-${props.valueRange.max?.toFixed(1)} m`
+    : '--'
+
+  return [
+    { label: 'Boreholes', value: boreholeCount, tone: 'focus' },
+    { label: 'Range', value: rangeText, tone: 'positive' },
+    { label: 'Mode', value: props.crossSectionMode ? 'Section picking' : 'Plan view', tone: 'alert' }
+  ]
+})
+
+const scaleBar = computed(() => {
+  const width = (props.bounds?.max_x ?? 0) - (props.bounds?.min_x ?? 0)
+  if (!Number.isFinite(width) || width <= 0) return null
+
+  const candidates = [10, 25, 50, 100, 200, 500, 1000]
+  const target = width / 4
+  const distance = candidates.find((item) => item >= target) || candidates[candidates.length - 1]
+  return {
+    label: `${distance} m`,
+    widthPercent: Math.min((distance / width) * 100, 32)
+  }
 })
 
 const tooltipStyle = computed(() => {
@@ -605,7 +674,16 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at top left, rgba(195, 138, 45, 0.08), transparent 28%),
+    linear-gradient(180deg, #fffef9 0%, #fffdfa 100%);
+  border: 1px solid rgba(143, 115, 76, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 16px 38px rgba(31, 41, 55, 0.08);
   overflow: hidden;
 }
 
@@ -613,10 +691,97 @@ defineExpose({
   cursor: crosshair;
 }
 
+.figure-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.figure-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 64ch;
+}
+
+.figure-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8b6b46;
+}
+
+.figure-title {
+  margin: 0;
+  color: #241d14;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: "Source Han Serif SC", "Noto Serif SC", "Times New Roman", serif;
+}
+
+.figure-story {
+  margin: 0;
+  color: #5b4631;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.figure-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.highlight-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(115, 90, 61, 0.14);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.highlight-chip.tone-focus {
+  border-color: rgba(137, 92, 38, 0.22);
+  background: rgba(137, 92, 38, 0.08);
+}
+
+.highlight-chip.tone-positive {
+  border-color: rgba(50, 117, 76, 0.22);
+  background: rgba(50, 117, 76, 0.08);
+}
+
+.highlight-chip.tone-alert {
+  border-color: rgba(179, 92, 55, 0.22);
+  background: rgba(179, 92, 55, 0.08);
+}
+
+.highlight-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a5b3f;
+}
+
+.highlight-value {
+  font-size: 12px;
+  color: #2d241a;
+}
+
 .canvas-container {
   position: relative;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #f8fafc;
 }
 
 .heatmap-layer,
@@ -632,11 +797,82 @@ defineExpose({
   pointer-events: none;
 }
 
+.north-arrow {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  z-index: 12;
+}
+
+.north-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: #475569;
+}
+
+.north-stem {
+  position: relative;
+  width: 2px;
+  height: 26px;
+  background: linear-gradient(180deg, #0f766e 0%, #1e293b 100%);
+}
+
+.north-stem::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: -5px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid #0f766e;
+}
+
+.scale-bar {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  z-index: 12;
+}
+
+.scale-bar-rule {
+  display: inline-block;
+  height: 6px;
+  min-width: 48px;
+  background: linear-gradient(90deg, #1e293b 0%, #1e293b 50%, #94a3b8 50%, #94a3b8 100%);
+  border-radius: 999px;
+}
+
+.scale-bar-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.08em;
+}
+
 /* Legend */
 .legend {
   position: absolute;
-  bottom: 12px;
-  left: 12px;
+  bottom: 24px;
+  left: 28px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   padding: 8px 10px;
@@ -678,8 +914,8 @@ defineExpose({
 /* Controls */
 .map-controls {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 104px;
+  right: 28px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -743,8 +979,8 @@ defineExpose({
 /* Cross-section info */
 .cross-section-info {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 104px;
+  left: 28px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   padding: 8px 12px;
@@ -841,5 +1077,28 @@ defineExpose({
 
 .hover-tooltip.is-borehole .tooltip-value {
   color: #0f766e;
+}
+
+@media (max-width: 900px) {
+  .canvas-contour-wrapper {
+    padding: 14px;
+  }
+
+  .figure-header {
+    flex-direction: column;
+  }
+
+  .figure-highlights {
+    justify-content: flex-start;
+  }
+
+  .canvas-container {
+    min-height: 360px;
+  }
+
+  .map-controls,
+  .cross-section-info {
+    top: 146px;
+  }
 }
 </style>

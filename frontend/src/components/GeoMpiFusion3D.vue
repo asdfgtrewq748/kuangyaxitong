@@ -1,54 +1,67 @@
-<template>
+﻿<template>
   <section class="geo-mpi-fusion" :class="{ paper: paperMode }">
     <header class="fusion-header">
-      <div class="title-wrap">
-        <h3>{{ title }}</h3>
-        <p v-if="subtitle">{{ subtitle }}</p>
+      <div v-if="paperMode && hasRenderableData && !errorText" class="paper-frame">
+        <div class="paper-frame-head">
+          <span class="paper-frame-kicker">{{ paperNotation.figureHeading }}</span>
+          <p class="paper-frame-summary">{{ paperNotation.summaryLead }}</p>
+        </div>
+        <div class="paper-frame-chips">
+          <span v-for="chip in publicationHeaderChips" :key="chip" class="paper-frame-chip">{{ chip }}</span>
+        </div>
+        <p class="paper-frame-footer">{{ paperNotation.methodsFooter }}</p>
       </div>
-      <div class="toolbar">
-        <label class="toggle"><input v-model="showLayers" type="checkbox">Layers</label>
-        <label class="toggle"><input v-model="showMpiSurface" type="checkbox">MPI Surface</label>
-        <label class="toggle"><input v-model="showMpiContours" type="checkbox">Contours</label>
-        <label class="toggle"><input v-model="showHotspots" type="checkbox">Hotspots</label>
-        <label class="toggle"><input v-model="showStressCloud" type="checkbox">Stress Cloud</label>
-        <label class="toggle"><input v-model="showStressAnchors" type="checkbox" :disabled="!hasStressAnchors">Anchors</label>
-        <label class="toggle"><input v-model="showBoreholes" type="checkbox">Boreholes</label>
-        <label class="toggle"><input v-model="autoRotate" type="checkbox">Auto-Rotate</label>
-        <label class="toggle"><input v-model="sectionEnabled" type="checkbox">Section</label>
-        <label class="axis">
-          <span>Axis</span>
-          <select v-model="sectionAxis" :disabled="!sectionEnabled">
-            <option value="x">X</option>
-            <option value="y">Y</option>
-            <option value="z">Z</option>
-          </select>
-        </label>
-        <label class="slider" :class="{ disabled: !sectionEnabled }">
-          <span>{{ sectionDisplay }}</span>
-          <input
-            v-model.number="sectionRatio"
-            type="range"
-            min="0.05"
-            max="0.95"
-            step="0.01"
-            :disabled="!sectionEnabled"
-          >
-        </label>
-        <label class="slider density">
-          <span>Cloud {{ Math.round(cloudDensity * 100) }}%</span>
-          <input
-            v-model.number="cloudDensity"
-            type="range"
-            min="0.25"
-            max="1"
-            step="0.05"
-          >
-        </label>
-        <button type="button" class="ghost-btn" @click="resetView">Reset View</button>
-        <button type="button" class="ghost-btn export-btn" :disabled="isExporting || !hasRenderableData || loading" @click="exportFigure">
-          {{ isExporting ? 'Exporting...' : 'Export Figure' }}
-        </button>
-        <button type="button" class="refresh-btn" @click="$emit('refresh')">Refresh</button>
+      <div class="header-main">
+        <div class="title-wrap">
+          <h3>{{ title }}</h3>
+          <p v-if="subtitle">{{ subtitle }}</p>
+        </div>
+        <div class="toolbar">
+          <span class="toolbar-label">Scene controls</span>
+          <label class="toggle"><input v-model="showLayers" type="checkbox">Layers</label>
+          <label class="toggle"><input v-model="showMpiSurface" type="checkbox">MPI Surface</label>
+          <label class="toggle"><input v-model="showMpiContours" type="checkbox">Contours</label>
+          <label class="toggle"><input v-model="showHotspots" type="checkbox">Hotspots</label>
+          <label class="toggle"><input v-model="showStressCloud" type="checkbox">Stress Cloud</label>
+          <label class="toggle"><input v-model="showStressAnchors" type="checkbox" :disabled="!hasStressAnchors">Anchors</label>
+          <label class="toggle"><input v-model="showBoreholes" type="checkbox">Boreholes</label>
+          <label class="toggle"><input v-model="autoRotate" type="checkbox">Auto-Rotate</label>
+          <label class="toggle"><input v-model="sectionEnabled" type="checkbox">Section</label>
+          <label class="axis">
+            <span>Axis</span>
+            <select v-model="sectionAxis" :disabled="!sectionEnabled">
+              <option value="x">X</option>
+              <option value="y">Y</option>
+              <option value="z">Z</option>
+            </select>
+          </label>
+          <label class="slider" :class="{ disabled: !sectionEnabled }">
+            <span>{{ sectionDisplay }}</span>
+            <input
+              v-model.number="sectionRatio"
+              type="range"
+              min="0.05"
+              max="0.95"
+              step="0.01"
+              :disabled="!sectionEnabled"
+            >
+          </label>
+          <label class="slider density">
+            <span>Cloud {{ Math.round(cloudDensity * 100) }}%</span>
+            <input
+              v-model.number="cloudDensity"
+              type="range"
+              min="0.25"
+              max="1"
+              step="0.05"
+            >
+          </label>
+          <button type="button" class="ghost-btn" @click="resetView">Reset View</button>
+          <button type="button" class="ghost-btn export-btn" :disabled="isExporting || !hasRenderableData || loading" @click="exportFigure">
+            {{ isExporting ? 'Exporting...' : 'Export Figure' }}
+          </button>
+          <button type="button" class="refresh-btn" @click="$emit('refresh')">Refresh</button>
+        </div>
       </div>
     </header>
 
@@ -700,6 +713,14 @@ const paperNotation = computed(() => {
     abbreviationsLine: 'MPI, mining pressure index; CV, coefficient of variation; IQR, interquartile range; Q1/Q2/Q3, 25th/50th/75th percentiles; P90, 90th percentile.',
   }
 })
+const publicationHeaderChips = computed(() => ([
+  `seam ${String(props.contextMeta?.seam || '--')}`,
+  `grid ${gridShapeText.value}`,
+  `mean ${formatValue(mpiSummary.value.mean)}`,
+  `P90 cover ${formatPercent(mpiSummary.value.p90Cover)}`,
+  `anchors ${stressAnchorItems.value.length}`,
+  `method ${String(props.contextMeta?.method || '--').toUpperCase()}`
+]))
 const diagnosticCopy = computed(() => buildPublicationDiagnosticCopy({
   profileSource: stressProfileLabel.value,
   focus: stressFocusLabel.value,
@@ -2246,6 +2267,65 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.96);
 }
 
+.header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.paper-frame {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #dbe4ea;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbfc 0%, #ffffff 100%);
+}
+
+.paper-frame-head {
+  display: grid;
+  gap: 4px;
+}
+
+.paper-frame-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.paper-frame-summary {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.paper-frame-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.paper-frame-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 11px;
+}
+
+.paper-frame-footer {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #526071;
+}
+
 .title-wrap h3 {
   margin: 0;
   font-size: 15px;
@@ -2263,6 +2343,14 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.toolbar-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #475569;
 }
 
 .toggle {
@@ -3107,6 +3195,16 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 760px) {
+  .paper-frame {
+    padding: 10px 11px;
+  }
+  .paper-frame-chips {
+    gap: 5px;
+  }
+  .paper-frame-chip {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
   .viewer-body {
     height: 360px;
   }
@@ -3189,6 +3287,8 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+
+
 
 
 

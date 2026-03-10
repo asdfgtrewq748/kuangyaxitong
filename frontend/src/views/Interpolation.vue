@@ -37,7 +37,24 @@
       </h3>
       <p class="section-desc">{{ ip('selectSeamDesc') }}</p>
 
-      <div class="seam-selection-grid">
+      <div v-if="seamError" class="seam-alert-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <circle cx="12" cy="16" r="0.8" fill="currentColor" stroke="none"></circle>
+        </svg>
+        <span>{{ seamError }}</span>
+      </div>
+
+      <div v-if="loadingSeams" class="seam-loading-state">
+        <span class="spinner"></span>
+        <div>
+          <strong>正在连接插值服务</strong>
+          <p>加载煤层目录与缓存图件摘要，随后自动进入高分辨率插值预览。</p>
+        </div>
+      </div>
+
+      <div v-else-if="availableSeams.length" class="seam-selection-grid">
         <div
           v-for="(seam, idx) in availableSeams"
           :key="seam.name"
@@ -65,6 +82,30 @@
                 <span class="mini-stat-value">{{ seam.thickness_range?.min?.toFixed(1) }}–{{ seam.thickness_range?.max?.toFixed(1) }} m</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="seam-fallback-state">
+        <div class="fallback-hero">
+          <div class="fallback-icon">SCI</div>
+          <div>
+            <h4>插值服务暂不可用</h4>
+            <p>当前无法从后端获取煤层与钻孔数据，因此论文级等值线图无法即时重建。页面已切换到离线降级模式，避免出现无说明空白。</p>
+          </div>
+        </div>
+        <div class="fallback-metrics">
+          <div class="fallback-metric">
+            <span>服务状态</span>
+            <strong>Offline</strong>
+          </div>
+          <div class="fallback-metric">
+            <span>缓存图件</span>
+            <strong>{{ availableSeams.length ? '可恢复' : '未找到' }}</strong>
+          </div>
+          <div class="fallback-metric">
+            <span>建议动作</span>
+            <strong>启动 5000 端口 API</strong>
           </div>
         </div>
       </div>
@@ -846,14 +887,63 @@ const writeLastContourCache = (seamName, data) => {
   }
 }
 
+const buildSeamSummaryFromCache = (cached) => {
+  const boreholes = Array.isArray(cached?.data?.boreholes) ? cached.data.boreholes : []
+  const thicknessValues = boreholes
+    .map((item) => Number(item?.thickness))
+    .filter((value) => Number.isFinite(value))
+
+  if (!cached?.seamName || !boreholes.length || !thicknessValues.length) {
+    return null
+  }
+
+  const avgThickness = thicknessValues.reduce((sum, value) => sum + value, 0) / thicknessValues.length
+
+  return {
+    name: cached.seamName,
+    borehole_count: boreholes.length,
+    avg_thickness: avgThickness,
+    thickness_range: {
+      min: Math.min(...thicknessValues),
+      max: Math.max(...thicknessValues)
+    }
+  }
+}
+
+const readCachedSeamSummary = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(LAST_CONTOUR_CACHE_KEY)
+    if (!raw) return null
+    return buildSeamSummaryFromCache(JSON.parse(raw))
+  } catch (err) {
+    return null
+  }
+}
+
 // Load seams
 const loadSeams = async () => {
   loadingSeams.value = true
+  seamError.value = null
   try {
     const { data } = await getCoalSeams()
-    availableSeams.value = data.seams || []
+    const seams = Array.isArray(data?.seams) ? data.seams : []
+    if (seams.length) {
+      availableSeams.value = seams
+      return
+    }
+
+    const cachedSeam = readCachedSeamSummary()
+    availableSeams.value = cachedSeam ? [cachedSeam] : []
+    seamError.value = cachedSeam
+      ? '煤层目录未返回，已回退到上次缓存图件。'
+      : '未获取到煤层目录，请检查插值服务或重新导入数据。'
   } catch (err) {
-    seamError.value = '加载煤层失败'
+    const cachedSeam = readCachedSeamSummary()
+    availableSeams.value = cachedSeam ? [cachedSeam] : []
+    seamError.value = cachedSeam
+      ? '插值服务离线，已加载上次缓存图件。'
+      : '加载煤层失败，请确认 5000 端口插值服务已启动。'
   } finally {
     loadingSeams.value = false
   }
@@ -2444,6 +2534,10 @@ onMounted(async () => {
     await selectSeam(preferred)
   }
 
+  if (!selectedSeam.value && availableSeams.value.length) {
+    await selectSeam(availableSeams.value[0])
+  }
+
   // Register keyboard shortcuts
   document.addEventListener('keydown', handleKeydown)
 
@@ -2666,6 +2760,102 @@ defineExpose({ resetView })
 
 .seam-select-card {
   padding: var(--spacing-xl);
+}
+
+.seam-alert-banner {
+  margin-top: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(194, 110, 38, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 245, 231, 0.92), rgba(255, 251, 246, 0.98));
+  color: #8a4a19;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.seam-loading-state,
+.seam-fallback-state {
+  margin-top: var(--spacing-xl);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 26%),
+    radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.08), transparent 24%),
+    #fffdfa;
+  padding: 22px 24px;
+}
+
+.seam-loading-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.seam-loading-state strong,
+.fallback-hero h4 {
+  display: block;
+  margin: 0 0 6px;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.seam-loading-state p,
+.fallback-hero p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+.fallback-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.fallback-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #111827, #374151);
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.fallback-metrics {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fallback-metric {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  display: grid;
+  gap: 6px;
+}
+
+.fallback-metric span {
+  color: #64748b;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fallback-metric strong {
+  color: #0f172a;
+  font-size: 15px;
 }
 
 .seam-selection-grid {
@@ -3578,6 +3768,10 @@ defineExpose({ resetView })
   .seam-selection-grid {
     grid-template-columns: 1fr;
     max-height: 420px;
+  }
+
+  .fallback-metrics {
+    grid-template-columns: 1fr;
   }
 
   .action-buttons {

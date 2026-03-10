@@ -1,291 +1,241 @@
 <template>
   <NatureChartContainerUltra
     panel-label="C"
-    :title="title"
-    subtitle="Distribution Histogram"
-    x-axis-label="Resistance (MPa)"
+    :title="resolvedTitle"
+    subtitle="Distribution structure"
+    :story="story"
+    x-axis-label="Pressure bins (MPa)"
     y-axis-label="Frequency"
+    :caption="caption"
     :footnote="footnote"
+    :note="note"
+    :highlights="highlights"
+    icon="PDF"
     width="full"
-    height="220px"
+    height="250px"
   >
     <div ref="chartRef" class="echarts-container-ultra"></div>
   </NatureChartContainerUltra>
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
-import { echarts } from '@/lib/echarts-pressure'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import NatureChartContainerUltra from '../shared/NatureChartContainerUltra.vue'
-import { NATURE_ECHARTS_THEME, NATURE_COLORS } from '@/utils/natureFigureConfig'
-import { exportECharts } from '@/utils/figureExport'
+import { echarts } from '@/lib/echarts-pressure'
+import { buildFigureHighlights, mergePublicationChartOption } from '@/utils/publicationFigureTheme'
+import {
+  calculateHistogram,
+  calculateKDE,
+  summarizeDistribution
+} from '@/utils/pressureFigureAnalytics'
 
 const props = defineProps({
-  title: { type: String, default: '闃诲姏鍒嗗竷' },
+  title: { type: String, default: '' },
   data: { type: Array, default: () => [] },
-  bins: { type: Number, default: 30 }
+  bins: { type: Number, default: 24 }
 })
 
 const chartRef = ref(null)
 let chartInstance = null
 
+const values = computed(() => (props.data || []).filter((value) => Number.isFinite(Number(value))).map(Number))
+const summary = computed(() => summarizeDistribution(values.value))
+const histogram = computed(() => calculateHistogram(values.value, props.bins))
+const kde = computed(() => calculateKDE(values.value))
+
+const resolvedTitle = computed(() => props.title || 'Pressure distribution')
+
+const story = computed(() => {
+  if (!summary.value.count) return 'Distribution data are unavailable for the active selection.'
+
+  return `The histogram resolves the central pressure band, tail spread, and density ridge simultaneously, allowing rapid comparison between the modal load interval and upper-tail risk.`
+})
+
+const caption = computed(
+  () => 'Histogram of observed pressure values with scaled kernel-density envelope and percentile markers.'
+)
+
+const footnote = computed(() => {
+  if (!summary.value.count) return ''
+
+  return `Mean ${summary.value.mean.toFixed(2)} MPa; SD ${summary.value.std.toFixed(2)} MPa; range ${summary.value.min.toFixed(2)}-${summary.value.max.toFixed(2)} MPa.`
+})
+
+const note = computed(() => {
+  if (!summary.value.count) return ''
+  return 'Dashed guides indicate the median and 90th percentile; the line curve is a frequency-scaled kernel density estimate.'
+})
+
+const highlights = computed(() =>
+  buildFigureHighlights([
+    { label: 'n', value: summary.value.count, tone: 'focus' },
+    { label: 'P50', value: `${summary.value.p50.toFixed(2)} MPa`, tone: 'positive' },
+    { label: 'P90', value: `${summary.value.p90.toFixed(2)} MPa`, tone: 'alert' }
+  ])
+)
+
 defineExpose({
   getChartInstance: () => chartInstance
 })
 
-const footnote = computed(() => {
-  if (!props.data || props.data.length === 0) return ''
-  const mean = props.data.reduce((a, b) => a + b, 0) / props.data.length
-  const std = Math.sqrt(props.data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / props.data.length)
-  return `Mean = ${mean.toFixed(2)}, SD = ${std.toFixed(2)}, n = ${props.data.length}`
-})
+function nearestBinIndex(target) {
+  const centers = histogram.value.centers || []
+  if (!centers.length || !Number.isFinite(target)) return 0
 
-const COLORS = {
-  primary: '#0072B2',
-  secondary: '#D55E00',
-  accent: '#009E73',
-  grid: '#E8E8E8'
+  return centers.reduce((bestIndex, center, index) => {
+    const bestDistance = Math.abs(centers[bestIndex] - target)
+    const currentDistance = Math.abs(center - target)
+    return currentDistance < bestDistance ? index : bestIndex
+  }, 0)
 }
 
-function calculateHistogram(data, bins) {
-  if (!data || data.length === 0) return { values: [], edges: [] }
-
-  const valid = data.filter(Number.isFinite)
-  const min = Math.min(...valid)
-  const max = Math.max(...valid)
-  const binWidth = (max - min) / bins
-
-  const edges = []
-  const counts = Array(bins).fill(0)
-
-  for (let i = 0; i <= bins; i++) {
-    edges.push(min + i * binWidth)
-  }
-
-  for (const v of valid) {
-    const idx = Math.min(Math.floor((v - min) / binWidth), bins - 1)
-    if (idx >= 0 && idx < bins) {
-      counts[idx]++
-    }
-  }
-
-  return { 
-    values: counts, 
-    edges,
-    stats: {
-      min, max, mean: valid.reduce((a,b) => a+b, 0) / valid.length
-    }
-  }
-}
-
-function calculateKDE(data, points = 100) {
-  if (!data || data.length < 2) return []
-  
-  const valid = data.filter(Number.isFinite)
-  const min = Math.min(...valid)
-  const max = Math.max(...valid)
-  const bandwidth = (max - min) / Math.pow(valid.length, 0.2) // Silverman's rule
-  
-  const kde = []
-  for (let i = 0; i < points; i++) {
-    const x = min + (max - min) * (i / (points - 1))
-    let sum = 0
-    for (const xi of valid) {
-      const u = (x - xi) / bandwidth
-      sum += Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
-    }
-    kde.push({
-      x: x.toFixed(2),
-      y: sum / (valid.length * bandwidth)
-    })
-  }
-  return kde
+function formatRangeLabel(index) {
+  const low = histogram.value.edges?.[index]
+  const high = histogram.value.edges?.[index + 1]
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return '--'
+  return `${low.toFixed(2)}-${high.toFixed(2)}`
 }
 
 function initChart() {
   if (!chartRef.value) return
 
-  // 妫€鏌ュ鍣ㄥ昂瀵革紝閬垮厤 ECharts 鎶ラ敊
   const { clientWidth, clientHeight } = chartRef.value
-  if (clientWidth === 0 || clientHeight === 0) {
-    // 寤惰繜鍒濆鍖栵紝绛夊緟瀹瑰櫒鏈夊昂瀵?
-    setTimeout(initChart, 100)
+  if (!clientWidth || !clientHeight) {
+    window.setTimeout(initChart, 100)
     return
   }
 
   chartInstance = echarts.init(chartRef.value, null, {
     renderer: 'canvas',
-    devicePixelRatio: window.devicePixelRatio || 2
+    devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2)
   })
+
   updateChart()
 }
 
 function updateChart() {
-  if (!chartInstance || !props.data || props.data.length === 0) return
+  if (!chartInstance) return
 
-  const { values, edges, stats } = calculateHistogram(props.data, props.bins)
-  const kdeData = calculateKDE(props.data)
-  
-  const xData = []
-  for (let i = 0; i < values.length; i++) {
-    xData.push(((edges[i] + edges[i + 1]) / 2).toFixed(1))
+  if (!values.value.length) {
+    chartInstance.clear()
+    return
   }
 
-  const maxCount = Math.max(...values)
-  const maxIdx = values.indexOf(maxCount)
+  const counts = histogram.value.values
+  const centers = histogram.value.centers
+  const labels = centers.map((center) => center.toFixed(2))
+  const maxCount = Math.max(...counts)
+  const modalIndex = counts.indexOf(maxCount)
+  const kdeScale = kde.value.length ? maxCount / Math.max(...kde.value.map((item) => item.y)) : 1
+  const scaledKde = kde.value.map((item) => ({
+    x: item.x,
+    y: item.y * kdeScale
+  }))
+  const medianIndex = nearestBinIndex(summary.value.p50)
+  const p90Index = nearestBinIndex(summary.value.p90)
 
-  const option = {
-    backgroundColor: 'transparent',
+  const option = mergePublicationChartOption({
+    animationDuration: 650,
     grid: {
-      left: 50,
-      right: 25,
-      top: 20,
-      bottom: 40
+      top: 34,
+      right: 24,
+      bottom: 46,
+      left: 54
     },
-
     xAxis: {
       type: 'category',
-      data: xData,
-      axisLine: {
-        lineStyle: { color: '#171717', width: 0.8 }
-      },
-      axisTick: {
-        inside: true,
-        lineStyle: { color: '#171717', width: 0.8 }
-      },
+      data: labels,
       axisLabel: {
-        fontSize: 9,
-        color: '#525252',
-        fontFamily: 'Times New Roman, serif',
-        interval: Math.floor(xData.length / 5)
-      },
-      splitLine: { show: false }
-    },
-
-    yAxis: {
-      type: 'value',
-      axisLine: {
-        show: true,
-        lineStyle: { color: '#171717', width: 0.8 }
-      },
-      axisTick: {
-        inside: true,
-        lineStyle: { color: '#171717', width: 0.8 }
-      },
-      axisLabel: {
-        fontSize: 9,
-        color: '#525252',
-        fontFamily: 'Times New Roman, serif'
-      },
-      splitLine: {
-        lineStyle: { color: COLORS.grid, width: 0.5, type: [4, 4] }
+        interval: Math.max(Math.floor(labels.length / 6), 0),
+        formatter(value) {
+          return Number(value).toFixed(1)
+        }
       }
     },
-
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: (range) => range.max * 1.12
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter(params) {
+        const bar = params.find((item) => item.seriesName === 'Frequency')
+        if (!bar) return ''
+        const index = bar.dataIndex
+        return `${formatRangeLabel(index)} MPa<br/>Frequency: ${bar.value}`
+      }
+    },
     series: [
-      // KDE鏇茬嚎
       {
-        name: 'KDE',
+        name: 'Density',
         type: 'line',
-        data: kdeData.map(d => Math.round(d.y * props.data.length)),
+        data: scaledKde.map((item) => item.y),
         smooth: true,
         symbol: 'none',
         lineStyle: {
-          color: COLORS.secondary,
+          color: '#b35c37',
           width: 2,
-          type: [8, 4]
+          type: 'dashed'
         },
-        z: 2
+        z: 3
       },
-      
-      // 鐩存柟鍥?
       {
         name: 'Frequency',
         type: 'bar',
-        data: values.map((val, idx) => ({
-          value: val,
+        data: counts.map((count, index) => ({
+          value: count,
           itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: COLORS.primary },
-              { offset: 1, color: '#4da6e8' }
-            ]),
-            borderRadius: idx === maxIdx ? [3, 3, 0, 0] : [1, 1, 0, 0],
-            borderWidth: idx === maxIdx ? 0 : 0
+            color:
+              index === modalIndex
+                ? '#b35c37'
+                : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#4f89ab' },
+                    { offset: 1, color: '#255f85' }
+                  ])
           }
         })),
-        barWidth: '92%',
-        emphasis: {
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: COLORS.secondary },
-              { offset: 1, color: '#f5a623' }
-            ])
-          }
-        },
         markPoint: {
           symbol: 'pin',
-          symbolSize: 35,
+          symbolSize: 36,
           data: [
             {
-              coord: [maxIdx, maxCount],
-              value: maxCount,
-              itemStyle: { color: COLORS.secondary },
-              label: {
-                fontSize: 9,
-                color: '#fff',
-                fontWeight: 600
-              }
+              coord: [labels[modalIndex], counts[modalIndex]],
+              value: 'Mode',
+              itemStyle: { color: '#8a3b4b' }
             }
           ],
-          animationDelay: 600
+          label: {
+            color: '#fffdfa',
+            fontWeight: 700
+          }
         },
         markLine: {
-          silent: true,
           symbol: 'none',
-          lineStyle: {
-            color: COLORS.accent,
-            width: 1.5,
-            type: [6, 4]
-          },
           label: {
-            position: 'end',
-            fontSize: 9,
-            color: COLORS.accent,
-            formatter: '渭'
+            formatter(params) {
+              return params.name
+            }
           },
           data: [
-            { xAxis: xData.findIndex(x => parseFloat(x) >= stats.mean) }
+            {
+              name: `P50 ${summary.value.p50.toFixed(2)}`,
+              xAxis: labels[medianIndex],
+              lineStyle: { color: '#0f766e', type: 'dashed' },
+              label: { color: '#0f766e' }
+            },
+            {
+              name: `P90 ${summary.value.p90.toFixed(2)}`,
+              xAxis: labels[p90Index],
+              lineStyle: { color: '#b35c37', type: 'dashed' },
+              label: { color: '#b35c37' }
+            }
           ]
         },
-        z: 1
+        z: 2
       }
-    ],
-
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(255, 255, 255, 0.98)',
-      borderColor: '#e5e5e5',
-      borderWidth: 1,
-      padding: [12, 16],
-      textStyle: { color: '#171717', fontSize: 12 },
-      extraCssText: 'box-shadow: 0 8px 24px rgba(0,0,0,0.12); border-radius: 8px;',
-      formatter: (params) => {
-        const barData = params.find(p => p.seriesName === 'Frequency')
-        if (!barData) return ''
-        return `<div style="font-weight: 600; margin-bottom: 4px;">${barData.axisValue} MPa</div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: ${COLORS.primary};"></span>
-                  <span style="color: #525252;">棰戞暟:</span>
-                  <span style="font-weight: 700; color: ${COLORS.primary};">${barData.value}</span>
-                </div>`
-      }
-    },
-
-    animation: true,
-    animationDuration: 800,
-    animationEasing: 'cubicOut',
-    animationDelay: (idx) => idx * 8
-  }
+    ]
+  })
 
   chartInstance.setOption(option, { notMerge: true })
 }
@@ -305,13 +255,13 @@ onBeforeUnmount(() => {
 })
 
 watch(() => props.data, updateChart, { deep: true })
+watch(() => props.bins, updateChart)
 </script>
 
 <style scoped>
 .echarts-container-ultra {
   width: 100%;
   height: 100%;
-  min-height: 160px;
+  min-height: 200px;
 }
 </style>
-

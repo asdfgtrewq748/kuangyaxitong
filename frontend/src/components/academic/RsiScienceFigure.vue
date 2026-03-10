@@ -1,9 +1,12 @@
 <template>
-  <figure class="nature-figure" role="img" :aria-label="aa('rsiFigureAria')">
-    <figcaption class="nature-caption">
-      <span class="fig-label">{{ aa('rsiFigureTag') }}</span> {{ aa('rsiFigureCaption') }}
-    </figcaption>
-
+  <PublicationFigureShell
+    :figure-label="aa('rsiFigureTag')"
+    :caption="aa('rsiFigureCaption')"
+    :summary="shellSummary"
+    :chips="shellChips"
+    :note="shellNote"
+    :aria-label="aa('rsiFigureAria')"
+  >
     <div class="nature-grid">
       <!-- Panel A: Phase Field Order Parameter -->
       <article class="nature-panel">
@@ -292,91 +295,78 @@
         </div>
       </article>
     </div>
-  </figure>
+  </PublicationFigureShell>
 </template>
 
 <script setup>
-defineProps({
+import PublicationFigureShell from '../common/PublicationFigureShell.vue'
+
+const props = defineProps({
   aa: {
     type: Function,
     required: true
   }
 })
+
+const aa = (...args) => props.aa(...args)
+
+const shellSummary = '相场损伤力学、裂纹扩展历程、能量释放平衡与迭代计算被整合为一张高信息密度的破裂敏感性机理图。'
+const shellChips = [
+  '相场序参量',
+  'Griffith 阈值穿越',
+  '迭代能量最小化'
+]
+const shellNote = '方法注：图版按论文机理链组织，依次展示状态变量定义、裂纹扩展序列、能量判据与最终 RSI 综合过程。'
 </script>
 
 <style scoped>
-/* Nature-inspired figure styling */
-.nature-figure {
-  background: #FFFFFF;
-  border: 1px solid #E5E8E8;
-  border-radius: 4px;
-  padding: 24px;
-  margin: 20px 0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-
-.nature-caption {
-  font-size: 11px;
-  color: #34495E;
-  line-height: 1.7;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #ECF0F1;
-  font-family: "Helvetica", "Arial", sans-serif;
-}
-
-.fig-label {
-  color: #2C3E50;
-  font-weight: 700;
-  margin-right: 4px;
-  font-size: 11px;
-}
-
-/* Nature-style grid layout */
 .nature-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
 }
 
 .nature-panel {
-  background: #FFFFFF;
-  border: none;
-  padding: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 246, 238, 0.98) 100%);
+  border: 1px solid rgba(215, 208, 195, 0.82);
+  border-radius: 18px;
+  padding: 14px;
   position: relative;
+  box-shadow: 0 14px 30px rgba(29, 39, 51, 0.06);
 }
 
 .panel-annotation {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
-/* Nature-style panel label - bold sans-serif */
 .nature-label {
-  font-family: "Helvetica", "Arial", sans-serif;
+  font-family: "Aptos", "Segoe UI", Arial, sans-serif;
   font-size: 14px;
   font-weight: 700;
-  color: #2C3E50;
+  color: #1D2733;
   line-height: 1;
 }
 
-/* Nature-style title */
 .nature-title {
   margin: 0;
-  font-family: "Helvetica", "Arial", sans-serif;
+  font-family: "Source Han Sans SC", "Noto Sans SC", "Aptos", "Segoe UI", Arial, sans-serif;
   font-size: 10px;
-  font-weight: 500;
-  color: #5D6D7E;
-  text-transform: capitalize;
-  letter-spacing: 0.3px;
+  font-weight: 700;
+  color: #607081;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .panel-svg {
-  background: #FAFAFA;
-  border-radius: 2px;
+  background: linear-gradient(180deg, #FCFBF8 0%, #F5EFE6 100%);
+  border: 1px solid rgba(215, 208, 195, 0.72);
+  border-radius: 14px;
   overflow: hidden;
+  padding: 6px;
 }
 
 .panel-svg svg {
@@ -389,13 +379,17 @@ defineProps({
 @media (max-width: 960px) {
   .nature-grid {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 20px;
   }
 }
 
 @media (max-width: 480px) {
-  .nature-figure {
-    padding: 16px;
+  .nature-panel {
+    padding: 12px;
+  }
+
+  .panel-svg {
+    padding: 4px;
   }
 }
 </style>

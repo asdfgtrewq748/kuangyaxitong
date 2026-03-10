@@ -1,0 +1,62 @@
+{
+  "report": {
+    "title": "Mining Pressure Evaluation System",
+    "selectedSeam": "15-1上煤",
+    "navKicker": "Validation workspace | publication mode",
+    "toolbarSummary": "Seven navigation actions keep the validation workspace in publication mode, linking export, evidence review, and downstream figure pages.",
+    "topPanelTitle": "Validation summary board",
+    "topPanelSummary": "Seam 15-1上煤 currently runs IDW interpolation at 50 m, with 0 high-risk points and evaluation source 真实标签流.",
+    "topCards": [
+      "Seam15-1上煤",
+      "InterpolationIDW",
+      "AUC0.950",
+      "High-risk points0"
+    ],
+    "toolbarChips": [
+      "Weight panel: Closed",
+      "Geo compare: Closed",
+      "Evaluation: Open",
+      "Contrast: Stable"
+    ],
+    "metricPanelTitle": null,
+    "metricPanelSummary": "Four seam-specific KPI cards expose the current pressure indicators; abnormal diagnostics are highlighted inline for immediate panel selection.",
+    "metricCards": [
+      "MPI综合指标! 异常68.87最低 64.32最高 72.08",
+      "RSI顶板稳定! 异常68.87最低 68.87最高 68.87",
+      "BRI冲击风险! 异常89.88最低 76.22最高 99.97",
+      "ASI支承应力39.45最低 37.60最高 44.60"
+    ],
+    "stageTitle": null,
+    "legendTitle": null,
+    "thumbTitle": null,
+    "loadingTip": null,
+    "errorText": null,
+    "navRect": {
+      "x": 124,
+      "y": 187,
+      "width": 1440,
+      "height": 214
+    },
+    "topPanelRect": {
+      "x": 124,
+      "y": 413,
+      "width": 1440,
+      "height": 306
+    },
+    "metricPanelRect": {
+      "x": 124,
+      "y": 731,
+      "width": 1440,
+      "height": 303
+    },
+    "stageRect": null,
+    "legendRect": null,
+    "thumbRect": {
+      "x": 1207,
+      "y": 1046,
+      "width": 357,
+      "height": 1042
+    }
+  },
+  "consoleMessages": []
+}

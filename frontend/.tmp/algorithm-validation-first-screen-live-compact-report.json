@@ -1,0 +1,41 @@
+{
+  "report": {
+    "topBandRect": {
+      "x": 124,
+      "y": 318,
+      "width": 1440,
+      "height": 342
+    },
+    "topPanelRect": {
+      "x": 124,
+      "y": 318,
+      "width": 612,
+      "height": 342
+    },
+    "metricPanelRect": {
+      "x": 748,
+      "y": 318,
+      "width": 816,
+      "height": 342
+    },
+    "mainLayoutRect": {
+      "x": 124,
+      "y": 672,
+      "width": 1440,
+      "height": 1040
+    },
+    "stageRect": {
+      "x": 125,
+      "y": 904,
+      "width": 1069,
+      "height": 579
+    },
+    "trustBannerRect": {
+      "x": 125,
+      "y": 757,
+      "width": 1069,
+      "height": 35
+    }
+  },
+  "consoleMessages": []
+}

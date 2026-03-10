@@ -1,0 +1,19 @@
+{
+  "url": "http://127.0.0.1:4173/algorithm-validation",
+  "title": "矿压评估系统",
+  "viewport": {
+    "width": 1440,
+    "height": 1200
+  },
+  "topBand": {
+    "top": 318,
+    "height": 341.53125
+  },
+  "stage": {
+    "top": 918.890625,
+    "height": 545.390625
+  },
+  "firstScreenContainsStage": true,
+  "englishHits": [],
+  "consoleErrors": []
+}

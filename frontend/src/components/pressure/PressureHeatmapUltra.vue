@@ -3,10 +3,16 @@
     <!-- 閺嶅洭顣介弽?-->
     <header class="heatmap-header">
       <div class="header-left">
-        <div class="panel-badge">{{ panelLabel }}</div>
-        <div class="title-group">
-          <h2 class="heatmap-title">{{ title }}</h2>
-          <p v-if="subtitle" class="heatmap-subtitle">{{ subtitle }}</p>
+        <div class="header-copy">
+          <div class="eyebrow-row">
+            <div class="panel-badge">{{ panelLabel }}</div>
+            <span class="header-kicker">Pressure field atlas</span>
+          </div>
+          <div class="title-group">
+            <h2 class="heatmap-title">{{ title }}</h2>
+            <p v-if="subtitle" class="heatmap-subtitle">{{ subtitle }}</p>
+            <p class="heatmap-story">{{ headerStory }}</p>
+          </div>
         </div>
       </div>
       <div class="header-center">
@@ -43,6 +49,18 @@
         </button>
       </div>
     </header>
+
+    <div v-if="editorialStats.length" class="editorial-strip">
+      <div
+        v-for="item in editorialStats"
+        :key="item.label"
+        class="editorial-stat"
+        :class="item.tone ? `tone-${item.tone}` : ''"
+      >
+        <span class="editorial-label">{{ item.label }}</span>
+        <strong class="editorial-value">{{ item.value }}</strong>
+      </div>
+    </div>
 
     <!-- 娑撶眴anvas閸栧搫鐓?-->
     <div class="canvas-wrapper" ref="canvasWrapperRef">
@@ -116,6 +134,13 @@
         </div>
         
         <!-- 閸ュ彞绶?-->
+        <div v-if="hotspotSummary" class="hotspot-card">
+          <span class="hotspot-kicker">Hotspot</span>
+          <strong class="hotspot-title">Support {{ hotspotSummary.supportId }}</strong>
+          <span class="hotspot-value">{{ hotspotSummary.value }}</span>
+          <span class="hotspot-meta">{{ hotspotSummary.meta }}</span>
+        </div>
+
         <div class="region-legend">
           <div class="legend-item">
             <span class="legend-color workface"></span>
@@ -452,6 +477,62 @@ const legendPoints = computed(() => {
     value: (min + (max - min) * t).toFixed(1),
     position: t * 100
   }))
+})
+
+const validCells = computed(() =>
+  (props.cells || []).filter((cell) => Number.isFinite(Number(cell?.value)))
+)
+
+const hotspotSummary = computed(() => {
+  if (!validCells.value.length) return null
+
+  const hotspot = validCells.value.reduce((best, cell) =>
+    Number(cell.value) > Number(best.value) ? cell : best
+  )
+
+  return {
+    supportId: hotspot.supportId ?? '--',
+    value: `${formatValue(hotspot.value)} MPa`,
+    meta: `${formatCompactDate(hotspot.date)} | ${Math.round(hotspot.advanceDistance || 0)} m`
+  }
+})
+
+const dateExtent = computed(() => {
+  const dates = validCells.value
+    .map((cell) => new Date(cell?.date))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => a - b)
+
+  if (!dates.length) return '--'
+
+  return `${formatCompactDate(dates[0])} to ${formatCompactDate(dates[dates.length - 1])}`
+})
+
+const coverageRatio = computed(() => {
+  const denominator = (props.numRows || 0) * (props.numCols || 0)
+  if (!denominator) return 0
+  return (validCells.value.length / denominator) * 100
+})
+
+const editorialStats = computed(() => {
+  if (!hasData.value) return []
+
+  return [
+    { label: 'Matrix coverage', value: `${coverageRatio.value.toFixed(1)}%`, tone: 'focus' },
+    { label: 'Observation window', value: dateExtent.value, tone: 'positive' },
+    { label: 'Peak hotspot', value: hotspotSummary.value?.value || '--', tone: 'alert' }
+  ]
+})
+
+const headerStory = computed(() => {
+  if (!hasData.value) return 'The heatmap will summarize the spatiotemporal pressure field once a valid matrix is available.'
+
+  return `The atlas resolves ${props.numRows || 0} supports across ${props.numCols || 0} advance steps, allowing hotspot localization, coverage auditing, and contour comparison within a single publication plate.`
+})
+
+const figureNote = computed(() => {
+  const mode = currentViewMode.value === 'contour' ? 'Contour view interpolates equal-pressure bands.' : 'Heatmap view preserves cell-level heterogeneity.'
+  return `${mode} Grid overlays and zoom controls are retained for inspection, while export supports publication-resolution output.`
 })
 
 // Y鏉炴潙鍩㈡惔锔肩窗閺€顖涚仸缂傛牕褰块敍鍫濆冀鏉烆剨绱?閸︺劌绨抽柈顭掔礆
@@ -902,6 +983,13 @@ function formatValue(val) {
   return val.toFixed(2)
 }
 
+function formatCompactDate(value) {
+  if (!value) return '--'
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return '--'
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 function formatDateFull(date) {
   if (!date) return '--'
   return new Date(date).toLocaleDateString('zh-CN')
@@ -949,19 +1037,39 @@ watch(() => props.matrix, () => {
 }
 
 .heatmap-header {
-  height: var(--header-height);
-  padding: 0 16px;
+  min-height: var(--header-height);
+  padding: 14px 16px 12px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   border-bottom: 1px solid #f0f0f0;
-  background: linear-gradient(180deg, #fafafa, #ffffff);
+  background: linear-gradient(180deg, #fffdf7, #ffffff);
 }
 
 .header-left {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8b6b46;
 }
 
 .panel-badge {
@@ -987,6 +1095,58 @@ watch(() => props.matrix, () => {
   margin: 2px 0 0;
   font-size: 11px;
   color: #737373;
+}
+
+.heatmap-story {
+  max-width: 720px;
+  color: #5a4630;
+  line-height: 1.5;
+}
+
+.editorial-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px 0;
+  background: linear-gradient(180deg, #fffdfa 0%, #ffffff 100%);
+}
+
+.editorial-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(115, 90, 61, 0.15);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.editorial-stat.tone-focus {
+  border-color: rgba(137, 92, 38, 0.22);
+  background: rgba(137, 92, 38, 0.08);
+}
+
+.editorial-stat.tone-positive {
+  border-color: rgba(50, 117, 76, 0.2);
+  background: rgba(50, 117, 76, 0.08);
+}
+
+.editorial-stat.tone-alert {
+  border-color: rgba(179, 92, 55, 0.22);
+  background: rgba(179, 92, 55, 0.1);
+}
+
+.editorial-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #80664a;
+}
+
+.editorial-value {
+  font-size: 12px;
+  color: #2e2419;
 }
 
 .header-center {
@@ -1184,6 +1344,46 @@ canvas {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   z-index: 10;
+}
+
+.hotspot-card {
+  position: absolute;
+  left: calc(var(--axis-size) + 16px);
+  top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 148px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 253, 250, 0.95);
+  border: 1px solid rgba(179, 92, 55, 0.18);
+  box-shadow: 0 8px 18px rgba(90, 70, 48, 0.12);
+  z-index: 10;
+}
+
+.hotspot-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8b6b46;
+}
+
+.hotspot-title {
+  font-size: 13px;
+  color: #2f2418;
+}
+
+.hotspot-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #b35c37;
+}
+
+.hotspot-meta {
+  font-size: 11px;
+  color: #71563d;
 }
 
 .legend-item {

@@ -1,0 +1,34 @@
+{
+  "report": {
+    "stageAnnotationRect": {
+      "x": 125,
+      "y": 757,
+      "width": 1069,
+      "height": 162
+    },
+    "stageRect": {
+      "x": 125,
+      "y": 919,
+      "width": 1069,
+      "height": 564
+    },
+    "stageTrustChips": [
+      "空间图：真实钻孔与坐标数据",
+      "评估：真实标签流",
+      "算法：新算法(advanced_v2)",
+      "指标异常：RSI / BRI / MPI"
+    ],
+    "stageTrustMeta": [
+      "标签源 validation_demo_labels.csv",
+      "钻孔 10 个 · 坐标源 zuobiao.csv"
+    ],
+    "stageCards": [
+      "Seam15-1上煤",
+      "MetricMPI",
+      "Resolution50 m",
+      "High-risk points0"
+    ],
+    "methodsFooter": "Methods footer: Planar validation heatmap is exported from the validation spatial workspace for seam 15-1上煤, using metric MPI, method IDW, resolution 50 m, contours 9."
+  },
+  "consoleMessages": []
+}

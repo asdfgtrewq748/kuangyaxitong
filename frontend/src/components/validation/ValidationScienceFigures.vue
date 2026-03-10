@@ -14,43 +14,48 @@
       </div>
     </header>
 
-    <article
+    <PublicationFigureShell
       v-for="card in figureCards"
       :key="card.id"
-      class="figure-card"
+      class="science-figure-shell"
+      :figure-label="card.kicker"
+      :caption="card.title"
+      :summary="card.interpretation"
+      :chips="card.highlights"
+      :note="card.methodsFooter"
       @click="emit('figure-focus', card.id)"
     >
-      <h4>{{ card.title }}</h4>
+      <div class="figure-panel-topline">
+        <span class="figure-badge">{{ card.metricBadge }}</span>
+        <span class="figure-badge subtle">{{ card.contextBadge }}</span>
+      </div>
       <ScienceChart
         :ref="(instance) => setChartRef(card.id, instance)"
         :option="card.option"
         :height="figureChartHeight"
         @chart-click="handleCardChartClick(card, $event)"
       />
-      <div class="figure-caption-block">
-        <p class="caption">
-          <span class="caption-label">Interpretation</span>
-          <span>{{ card.interpretation }}</span>
-        </p>
-        <p class="caption meta">
-          <span class="caption-label">Result</span>
-          <span>{{ card.result }}</span>
-        </p>
-        <p class="caption caption-note-row">
-          <span class="caption-label">Notes</span>
-          <span>{{ card.notes }}</span>
-        </p>
-        <p class="caption caption-note-row">
-          <span class="caption-label">Abbrev.</span>
-          <span>{{ card.abbreviations }}</span>
-        </p>
+      <div class="figure-detail-grid">
+        <article class="detail-card primary">
+          <span class="detail-label">关键结论</span>
+          <p>{{ card.result }}</p>
+        </article>
+        <article class="detail-card">
+          <span class="detail-label">阅读提示</span>
+          <p>{{ card.notes }}</p>
+        </article>
+        <article class="detail-card full">
+          <span class="detail-label">缩写说明</span>
+          <p>{{ card.abbreviations }}</p>
+        </article>
       </div>
-    </article>
+    </PublicationFigureShell>
   </section>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import PublicationFigureShell from '../common/PublicationFigureShell.vue'
 import ScienceChart from './ScienceChart.vue'
 
 const props = defineProps({
@@ -700,9 +705,116 @@ const validationNotation = computed(() => ({
   distanceUnit: 'm',
   percentageUnit: '%',
   sampleLabel: `n = ${sampleSize.value}`,
-  bootstrapLabel: bootstrapBands.value ? `bootstrap ${bootstrapBands.value.iterations}` : 'bootstrap unavailable',
-  abbreviations: 'RSI, roof stability index; BRI, burst risk index; ASI, abutment stress index; DBN, dynamic Bayesian network; CI, confidence interval; ECE, expected calibration error.'
+  bootstrapLabel: bootstrapBands.value ? `Bootstrap ${bootstrapBands.value.iterations}次` : '无 Bootstrap 结果',
+  abbreviations: 'RSI：顶板稳定性指数；BRI：冲击风险指数；ASI：支承应力指数；DBN：动态贝叶斯网络；CI：置信区间；ECE：期望校准误差。'
 }))
+
+const buildFigureHighlights = (figureId) => {
+  switch (figureId) {
+    case 'fig2': {
+      const d = fig2Data.value
+      return [
+        `薄弱层位 ${d.layers[d.minIdx]}`,
+        `最低稳定度 ${d.stability[d.minIdx].toFixed(1)}%`,
+        '报警阈值 60%'
+      ]
+    }
+    case 'fig3': {
+      const d = fig3Data.value
+      return [
+        `峰值时窗 ${d.windows[d.peakIdx]}`,
+        `能量 ${d.energy[d.peakIdx].toFixed(1)} a.u.`,
+        `末端风险 ${d.cumulativeRisk[d.cumulativeRisk.length - 1].toFixed(1)}%`
+      ]
+    }
+    case 'fig4': {
+      const d = fig4Data.value
+      return [
+        `Kt峰值 ${d.kt[d.peakIdx].toFixed(2)}`,
+        `风险半径 ${d.riskRadius.toFixed(1)} m`,
+        `切向应力 ${d.tangential[d.peakIdx].toFixed(1)} MPa`
+      ]
+    }
+    case 'fig5': {
+      const d = fig5Data.value
+      return [
+        `最新后验 ${d.p[d.p.length - 1].toFixed(3)}`,
+        `预警时窗 ${d.alertCount}`,
+        `评估源 ${evalModeLabel.value}`
+      ]
+    }
+    case 'fig6': {
+      const d = fig6Data.value
+      const bestIdx = d.gain.reduce((best, cur, i, arr) => (cur > arr[best] ? i : best), 0)
+      return [
+        `最大增益 ${d.categories[bestIdx]}`,
+        `MPI ${d.newScores[0].toFixed(1)}`,
+        `AUC ${metricAuc.value.toFixed(3)}`
+      ]
+    }
+    case 'fig7': {
+      const d = fig7Data.value
+      const idx = d.drop.reduce((best, cur, i, arr) => (cur > arr[best] ? i : best), 0)
+      return [
+        `最大下降 ${d.categories[idx]}`,
+        `下降值 ${d.drop[idx].toFixed(2)}`,
+        `贡献度 ${d.contribution[idx].toFixed(1)}%`
+      ]
+    }
+    case 'fig8':
+      return [
+        `ECE ${metricEce.value.toFixed(4)}`,
+        `分箱 ${calibrationData.value.centers.length}`,
+        validationNotation.value.sampleLabel
+      ]
+    case 'fig9': {
+      const b = bestYouden.value
+      return [
+        `AUC ${metricAuc.value.toFixed(3)}`,
+        `最优阈值 ${b.threshold.toFixed(3)}`,
+        `Youden ${(b.recall - b.fpr).toFixed(3)}`
+      ]
+    }
+    case 'fig10': {
+      const b = bestF1.value
+      return [
+        `PR-AUC ${metricPrAuc.value.toFixed(3)}`,
+        `最佳F1 ${b.f1.toFixed(3)}`,
+        `阈值 ${b.threshold.toFixed(3)}`
+      ]
+    }
+    case 'fig11': {
+      const m = diagnosticMetrics.value
+      return [
+        `准确率 ${(m.accuracy * 100).toFixed(1)}%`,
+        `精确率 ${(m.precision * 100).toFixed(1)}%`,
+        `召回率 ${(m.recall * 100).toFixed(1)}%`
+      ]
+    }
+    default:
+      return [validationNotation.value.sampleLabel, validationNotation.value.bootstrapLabel]
+  }
+}
+
+const buildFigureFooter = (figureId) => {
+  const detailBits = [
+    validationNotation.value.sampleLabel,
+    validationNotation.value.bootstrapLabel,
+    `评估源 ${evalModeLabel.value}`
+  ]
+  if (figureId === 'fig9') detailBits.push(`最优Youden阈值 ${bestYouden.value.threshold.toFixed(3)}`)
+  if (figureId === 'fig10') detailBits.push(`最佳F1 ${bestF1.value.f1.toFixed(3)}`)
+  if (figureId === 'fig11') detailBits.push('支持点击 TP/TN/FP/FN 单元格下钻')
+  return `方法注：${detailBits.join('；')}。`
+}
+
+const buildFigureContextBadge = (figureId) => {
+  if (figureId === 'fig8') return validationNotation.value.eceLabel
+  if (figureId === 'fig9') return validationNotation.value.aucLabel
+  if (figureId === 'fig10') return validationNotation.value.prAucLabel
+  if (figureId === 'fig11') return '诊断指标'
+  return validationNotation.value.ciLabel
+}
 
 const onFig11Click = (params) => {
   const raw = String(params?.data?.label || params?.name || '').toUpperCase()
@@ -728,93 +840,143 @@ const handleCardChartClick = (card, params) => {
 const figureCards = computed(() => ([
   {
     id: 'fig2',
-    title: 'Figure 2 | RSI stratigraphic stability profile',
+    kicker: '图2',
+    title: '图2 | RSI 层位稳定性剖面',
     option: fig2Option.value,
-    interpretation: 'A higher stability trace and a narrower uncertainty ribbon indicate a more coherent roof response, while the damage bars highlight weakened layers.',
+    interpretation: '稳定度曲线越高且不确定性带越窄，说明顶板响应越一致；损伤柱则突出显示薄弱层位。',
     result: fig2Insight.value,
-    notes: `Stability, damage, and uncertainty are reported in ${validationNotation.value.percentageUnit}. Ribbon denotes ${validationNotation.value.ciLabel}.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: `稳定度、损伤和不确定性均以 ${validationNotation.value.percentageUnit} 表示；色带表示 ${validationNotation.value.ciLabel}。`,
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig2'),
+    methodsFooter: buildFigureFooter('fig2'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig2')
   },
   {
     id: 'fig3',
-    title: 'Figure 3 | BRI microseismic release and cumulative risk',
+    kicker: '图3',
+    title: '图3 | BRI 微震释放与累积风险',
     option: fig3Option.value,
-    interpretation: 'Energy bars and event-frequency lines identify burst windows, and the cumulative-risk trajectory shows whether hazard is accelerating through time.',
+    interpretation: '能量柱和事件频率线用于识别冲击时窗，累积风险轨迹则显示危险是否随时间加速抬升。',
     result: fig3Insight.value,
-    notes: `Event energy is plotted in relative units and interpreted together with cumulative risk; use ${validationNotation.value.sampleLabel} only as evaluation context, not as a temporal count.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: `事件能量以相对单位表示，应结合累积风险共同解读；${validationNotation.value.sampleLabel} 仅表示评估背景，不表示时间计数。`,
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig3'),
+    methodsFooter: buildFigureFooter('fig3'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig3')
   },
   {
     id: 'fig4',
-    title: 'Figure 4 | ASI radial-tangential stress transect',
+    kicker: '图4',
+    title: '图4 | ASI 径向-切向应力剖线',
     option: fig4Option.value,
-    interpretation: `Tangential stress peaks and Kt > 2 zones indicate the dominant concentration ring, while radial stress tracks post-relief decay with distance in ${validationNotation.value.distanceUnit}.`,
+    interpretation: `切向应力峰值与 Kt > 2 区域指示主要集中环，径向应力则刻画卸压后随距离变化的衰减。`,
     result: fig4Insight.value,
-    notes: `Stress is expressed in ${validationNotation.value.stressUnit}; distance is reported in ${validationNotation.value.distanceUnit}. The high-risk ring is interpreted where Kt remains above 2.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: `应力单位为 ${validationNotation.value.stressUnit}，距离单位为 ${validationNotation.value.distanceUnit}；Kt 持续高于 2 的区域可视为高风险环带。`,
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig4'),
+    methodsFooter: buildFigureFooter('fig4'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig4')
   },
   {
     id: 'fig5',
-    title: 'Figure 5 | DBN posterior probability sequence',
+    kicker: '图5',
+    title: '图5 | DBN 后验概率序列',
     option: fig5Option.value,
-    interpretation: 'When the posterior trace crosses the alarm threshold, the forecast should trigger intensified inspection; narrower ribbons support stronger confidence in the warning.',
+    interpretation: '当后验轨迹穿越报警阈值时，应触发强化巡检；置信带越窄，说明预警可信度越高。',
     result: fig5Insight.value,
-    notes: `Posterior probability is unitless and accompanied by ${validationNotation.value.ciLabel}. Threshold decisions should be read together with the declared evaluation mode ${evalModeLabel.value}.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: `后验概率无量纲，并伴随 ${validationNotation.value.ciLabel}；阈值决策应结合当前评估模式 ${evalModeLabel.value} 一起解读。`,
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig5'),
+    methodsFooter: buildFigureFooter('fig5'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig5')
   },
   {
     id: 'fig6',
-    title: 'Figure 6 | Multi-metric comparison against the baseline model',
+    kicker: '图6',
+    title: '图6 | 多指标对比基线模型',
     option: fig6Option.value,
-    interpretation: 'Bars report absolute model scores, whereas the gain line shows the net benefit of replacing the legacy workflow with the fusion model.',
+    interpretation: '柱形表示模型绝对得分，增益折线则突出融合模型替代旧流程后的净收益。',
     result: fig6Insight.value,
-    notes: `MPI, ${validationNotation.value.aucLabel}, and ${validationNotation.value.prAucLabel} are shown on a comparable 0-100 scale for plate-level comparison; Brier is reported as (1 - Brier) × 100.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: `MPI、${validationNotation.value.aucLabel} 与 ${validationNotation.value.prAucLabel} 统一映射到 0-100 标度以便图版对比；Brier 采用 (1 - Brier) × 100 表达。`,
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig6'),
+    methodsFooter: buildFigureFooter('fig6'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig6')
   },
   {
     id: 'fig7',
-    title: 'Figure 7 | Ablation study of module contribution',
+    kicker: '图7',
+    title: '图7 | 模块贡献消融研究',
     option: fig7Option.value,
-    interpretation: 'A larger score drop after removing one module indicates a stronger contribution of that module to the full-model validation performance.',
+    interpretation: '移除某个模块后得分下降越大，说明该模块对完整模型验证性能的贡献越强。',
     result: fig7Insight.value,
-    notes: `Contribution and score-drop diagnostics are derived from dynamic module weights and summarized against the full-model reference score.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: '贡献度和降分诊断由动态模块权重推导，并相对完整模型参考分数进行汇总。',
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig7'),
+    methodsFooter: buildFigureFooter('fig7'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig7')
   },
   {
     id: 'fig8',
-    title: 'Figure 8 | Probability calibration with histogram support',
+    kicker: '图8',
+    title: '图8 | 概率校准与直方支撑',
     option: fig8Option.value,
-    interpretation: `Calibration improves as the response approaches the diagonal and ${validationNotation.value.eceLabel} decreases, indicating that predicted probabilities can be used more directly for threshold decisions.`,
+    interpretation: `响应越接近对角线且 ${validationNotation.value.eceLabel} 越低，说明预测概率越可直接用于阈值决策。`,
     result: fig8Insight.value,
-    notes: `Bars show bin support, the ribbon denotes ${validationNotation.value.ciLabel}, and calibration quality is summarized by ${validationNotation.value.eceLabel}.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: `柱形表示分箱支撑，色带表示 ${validationNotation.value.ciLabel}，校准质量由 ${validationNotation.value.eceLabel} 概括。`,
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig8'),
+    methodsFooter: buildFigureFooter('fig8'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig8')
   },
   {
     id: 'fig9',
-    title: 'Figure 9 | ROC curve with Youden operating point',
+    kicker: '图9',
+    title: '图9 | 带 Youden 最优点的 ROC 曲线',
     option: fig9Option.value,
-    interpretation: `Curves closer to the upper-left corner indicate better discrimination; the highlighted operating point marks the Youden-optimal threshold with ${validationNotation.value.ciLabel} context.`,
+    interpretation: `曲线越靠近左上角，区分能力越强；高亮点表示结合 ${validationNotation.value.ciLabel} 背景得到的 Youden 最优阈值。`,
     result: fig9Insight.value,
-    notes: `${validationNotation.value.aucLabel} is reported together with ${validationNotation.value.bootstrapLabel}; the operating point is defined on the empirical threshold grid.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: `${validationNotation.value.aucLabel} 与 ${validationNotation.value.bootstrapLabel} 同时报告；操作点定义在经验阈值网格上。`,
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig9'),
+    methodsFooter: buildFigureFooter('fig9'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig9')
   },
   {
     id: 'fig10',
-    title: 'Figure 10 | PR curve with F1 iso-lines and best-F1 point',
+    kicker: '图10',
+    title: '图10 | 带 F1 等值线与最佳点的 PR 曲线',
     option: fig10Option.value,
-    interpretation: 'Higher PR trajectories indicate better positive-case retrieval, and the highlighted point marks the best F1 operating point under the current label stream.',
+    interpretation: 'PR 轨迹越高，说明正类检出能力越强；高亮点表示当前标签流下的最佳 F1 工作点。',
     result: fig10Insight.value,
-    notes: `${validationNotation.value.prAucLabel} is reported with ${validationNotation.value.ciLabel}; the baseline line corresponds to the positive-class prevalence.`,
-    abbreviations: validationNotation.value.abbreviations
+    notes: `${validationNotation.value.prAucLabel} 与 ${validationNotation.value.ciLabel} 同时报告；基线线条对应正类样本占比。`,
+    abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig10'),
+    methodsFooter: buildFigureFooter('fig10'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig10')
   },
   {
     id: 'fig11',
-    title: 'Figure 11 | Confusion-matrix heatmap with diagnostic metrics',
+    kicker: '图11',
+    title: '图11 | 带诊断指标的混淆矩阵热图',
     option: fig11Option.value,
-    interpretation: 'High diagonal cells and suppressed off-diagonal cells indicate a better operating point; the side metrics support false-alarm versus miss-cost tradeoffs.',
+    interpretation: '对角线单元越高且非对角线越低，说明工作点越优；侧边指标可辅助权衡误报与漏报成本。',
     result: fig11Insight.value,
-    notes: `Cells report count and share simultaneously. Click TP, TN, FP, or FN cells to drill into the corresponding validation subset when available.`,
+    notes: '单元格同时报告数量和占比；在可用时可点击 TP、TN、FP、FN 单元格下钻对应验证子集。',
     abbreviations: validationNotation.value.abbreviations,
+    highlights: buildFigureHighlights('fig11'),
+    methodsFooter: buildFigureFooter('fig11'),
+    metricBadge: validationNotation.value.sampleLabel,
+    contextBadge: buildFigureContextBadge('fig11'),
     onChartClick: onFig11Click
   }
 ]))
@@ -1239,50 +1401,72 @@ const fig11Option = computed(() => {
   color: #9a3412;
 }
 
-.figure-card {
-  border: 1px solid #d9e0e8;
-  border-radius: 12px;
-  background: #ffffff;
-  padding: var(--science-card-padding, 12px);
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+.science-figure-shell {
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
-.figure-card h4 {
-  margin: 0 0 8px;
-  font-size: 15px;
-  line-height: 1.35;
-  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Times New Roman', serif;
-  color: #0f172a;
+.science-figure-shell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
 }
 
-.caption {
-  margin: 8px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #334155;
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
+.figure-panel-topline {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  align-items: start;
+  margin-bottom: 10px;
 }
 
-.caption.meta {
-  color: #0f172a;
-  font-weight: 600;
+.figure-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  color: #0c4a6e;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: 'Source Han Sans SC', 'Noto Sans SC', 'Segoe UI', sans-serif;
 }
 
-.figure-caption-block {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #e2e8f0;
+.figure-badge.subtle {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.figure-detail-grid {
+  margin-top: 12px;
   display: grid;
-  gap: 2px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.caption-label {
+.detail-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fbfdff;
+}
+
+.detail-card.primary {
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+  border-color: #bfdbfe;
+}
+
+.detail-card.full {
+  grid-column: 1 / -1;
+}
+
+.detail-label {
   display: inline-flex;
   align-items: center;
   min-height: 18px;
+  margin-bottom: 6px;
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1290,8 +1474,11 @@ const fig11Option = computed(() => {
   font-family: 'Source Han Sans SC', 'Noto Sans SC', 'Segoe UI', sans-serif;
 }
 
-.caption-note-row {
-  color: #475569;
+.detail-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #334155;
 }
 
 @media (max-width: 980px) {
@@ -1303,9 +1490,8 @@ const fig11Option = computed(() => {
     flex-direction: column;
   }
 
-  .caption {
+  .figure-detail-grid {
     grid-template-columns: 1fr;
-    gap: 2px;
   }
 }
 </style>

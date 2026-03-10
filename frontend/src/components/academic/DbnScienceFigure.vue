@@ -1,9 +1,12 @@
 <template>
-  <figure class="nature-figure" role="img" :aria-label="aa('dbnFigureAria')">
-    <figcaption class="nature-caption">
-      <span class="fig-label">{{ aa('dbnFigureTag') }}</span> {{ aa('dbnFigureCaption') }}
-    </figcaption>
-
+  <PublicationFigureShell
+    :figure-label="aa('dbnFigureTag')"
+    :caption="aa('dbnFigureCaption')"
+    :summary="shellSummary"
+    :chips="shellChips"
+    :note="shellNote"
+    :aria-label="aa('dbnFigureAria')"
+  >
     <div class="nature-grid">
       <!-- Panel A: Network Architecture -->
       <article class="nature-panel">
@@ -263,11 +266,12 @@
         </div>
       </article>
     </div>
-  </figure>
+  </PublicationFigureShell>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import PublicationFigureShell from '../common/PublicationFigureShell.vue'
 
 const props = defineProps({
   aa: {
@@ -275,6 +279,16 @@ const props = defineProps({
     required: true
   }
 })
+
+const aa = (...args) => props.aa(...args)
+
+const shellSummary = '动态贝叶斯拓扑、条件转移结构、证据传播与后验风险演化被整合为一张可直接用于论文的概率预测图。'
+const shellChips = [
+  '时序依赖图',
+  '转移概率热图',
+  '后验预警轨迹'
+]
+const shellNote = '方法注：子图从模型结构排布到推理输出，读者无需回到正文即可重建完整概率推断路径。'
 
 // Heatmap data for transition matrix P(H_t | H_{t-1})
 const heatmapData = computed(() => [
@@ -293,74 +307,53 @@ function getHeatColor(value) {
 </script>
 
 <style scoped>
-.nature-figure {
-  background: #FFFFFF;
-  border: 1px solid #E5E8E8;
-  border-radius: 4px;
-  padding: 24px;
-  margin: 20px 0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-
-.nature-caption {
-  font-size: 11px;
-  color: #34495E;
-  line-height: 1.7;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #ECF0F1;
-  font-family: "Helvetica", "Arial", sans-serif;
-}
-
-.fig-label {
-  color: #2C3E50;
-  font-weight: 700;
-  margin-right: 4px;
-  font-size: 11px;
-}
-
 .nature-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
 }
 
 .nature-panel {
-  background: #FFFFFF;
-  border: none;
-  padding: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 246, 238, 0.98) 100%);
+  border: 1px solid rgba(215, 208, 195, 0.82);
+  border-radius: 18px;
+  padding: 14px;
   position: relative;
+  box-shadow: 0 14px 30px rgba(29, 39, 51, 0.06);
 }
 
 .panel-annotation {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .nature-label {
-  font-family: "Helvetica", "Arial", sans-serif;
+  font-family: "Aptos", "Segoe UI", Arial, sans-serif;
   font-size: 14px;
   font-weight: 700;
-  color: #2C3E50;
+  color: #1D2733;
   line-height: 1;
 }
 
 .nature-title {
   margin: 0;
-  font-family: "Helvetica", "Arial", sans-serif;
+  font-family: "Source Han Sans SC", "Noto Sans SC", "Aptos", "Segoe UI", Arial, sans-serif;
   font-size: 10px;
-  font-weight: 500;
-  color: #5D6D7E;
-  text-transform: capitalize;
-  letter-spacing: 0.3px;
+  font-weight: 700;
+  color: #607081;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .panel-svg {
-  background: #FAFAFA;
-  border-radius: 2px;
+  background: linear-gradient(180deg, #FCFBF8 0%, #F5EFE6 100%);
+  border: 1px solid rgba(215, 208, 195, 0.72);
+  border-radius: 14px;
   overflow: hidden;
+  padding: 6px;
 }
 
 .panel-svg svg {
@@ -372,13 +365,17 @@ function getHeatColor(value) {
 @media (max-width: 960px) {
   .nature-grid {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 20px;
   }
 }
 
 @media (max-width: 480px) {
-  .nature-figure {
-    padding: 16px;
+  .nature-panel {
+    padding: 12px;
+  }
+
+  .panel-svg {
+    padding: 4px;
   }
 }
 </style>

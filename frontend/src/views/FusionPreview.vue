@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="fusion-page">
     <header class="page-header">
       <div>
@@ -116,6 +116,21 @@
         <strong>{{ seamName || '--' }}</strong>
         <small>{{ fp('focusLabel', { value: focusLabel }) }}</small>
       </article>
+    </section>
+
+    <section class="publication-frame">
+      <div class="publication-frame-head">
+        <span class="publication-kicker">{{ fusionFigureFrame.heading }}</span>
+        <h2>{{ fusionFigureFrame.title }}</h2>
+        <p>{{ fusionFigureFrame.summary }}</p>
+      </div>
+      <div class="publication-card-grid">
+        <article v-for="item in fusionFigureFrame.cards" :key="item.label" class="publication-card">
+          <span class="label">{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </article>
+      </div>
+      <p class="publication-footer">{{ fusionFigureFrame.methodsFooter }}</p>
     </section>
 
     <div v-if="!fusionSceneRequested" class="fusion-lazy-card">
@@ -252,6 +267,29 @@ const fusionContextMeta = computed(() => ({
   focus: profileFocus.value || '',
   mode: figureMode.value || '',
   jobId: fusionJobId.value || ''
+}))
+
+const fusionFigureFrame = computed(() => ({
+  heading: '图版 | 三维融合诊断',
+  title: '论文导向三维地质-应力融合图',
+  summary: `面向煤层 ${seamName.value || '--'} 的论文级三维融合画布，在同一图版中联合呈现 ${metric.value.toUpperCase()} 响应、地质层位与应力剖面锚点。`,
+  cards: [
+    { label: '煤层', value: seamName.value || '--' },
+    { label: '指标', value: metric.value.toUpperCase() },
+    { label: '均值', value: fmt(metricStats.value.mean) },
+    { label: '分辨率', value: `${resolution.value} m` }
+  ],
+  methodsFooter: buildPublicationMethodsFooter({
+    subject: '三维地质-应力融合图',
+    source: '融合预览渲染器',
+    seam: seamName.value || '',
+    details: [
+      `指标 ${metric.value.toUpperCase()}`,
+      `方法 ${String(method.value || '--').toUpperCase()}`,
+      `焦点 ${profileFocus.value}`,
+      `分辨率 ${resolution.value} m`
+    ]
+  })
 }))
 
 const fmt = (value, digits = 3) => {
@@ -793,6 +831,75 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.publication-frame {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #dbe4ea;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbfc 0%, #ffffff 100%);
+}
+
+.publication-frame-head {
+  display: grid;
+  gap: 4px;
+}
+
+.publication-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.publication-frame-head h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+  color: #0f172a;
+  font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
+}
+
+.publication-frame-head p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.publication-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.publication-card {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #dbe4ea;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.publication-card .label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.publication-card strong {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.publication-footer {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #526071;
+}
+
 .summary-card {
   border: 1px solid #d8e6e3;
   border-radius: 10px;
@@ -876,3 +983,4 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+

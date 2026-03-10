@@ -140,43 +140,43 @@ export function buildPublicationRows(rows = []) {
 
 export function buildPublicationLabelSet(overrides = {}) {
   const defaults = {
-    figure: 'Figure',
-    summary: 'Summary',
-    caption: 'Caption',
-    notes: 'Notes',
-    methodsFooter: 'Methods footer',
-    methodsPanel: 'Methods and provenance',
-    unit: 'Unit',
-    abbrev: 'Abbrev.',
-    interpretation: 'Interpretation',
-    result: 'Result',
-    metric: 'Metric',
-    title: 'Title',
-    finding: 'Finding',
-    support: 'Support',
-    data: 'Data',
-    frame: 'Frame',
-    seam: 'Seam',
-    fusion: 'Fusion',
-    resolution: 'Resolution',
-    stressPrior: 'Stress prior',
-    section: 'Section',
-    control: 'Control',
-    fabric: 'Fabric',
-    hotspot: 'Hotspot',
-    sampling: 'Sampling',
-    depthGuideTitle: 'Stratigraphic depth guide',
-    insetTitle: 'Plan-view MPI inset',
-    insetCaption: 'Line = section, circles = hotspots',
-    distributionTitle: 'MPI distribution',
-    sectionTransectTitle: 'Section transect',
-    xSectionTransectTitle: 'X-direction section transect',
-    ySectionTransectTitle: 'Y-direction section transect',
-    representativeTransectTitle: 'Representative lateral transect',
-    peakFallback: 'Peak --',
-    spreadFallback: 'Band = local interquartile envelope.',
-    captionBlock: 'Figure caption',
-    notesBlock: 'Notes and abbreviations',
+    figure: '图',
+    summary: '摘要',
+    caption: '图注',
+    notes: '注释',
+    methodsFooter: '方法注脚',
+    methodsPanel: '方法与溯源',
+    unit: '单位',
+    abbrev: '缩写',
+    interpretation: '解释',
+    result: '结果',
+    metric: '指标',
+    title: '标题',
+    finding: '发现',
+    support: '支撑证据',
+    data: '数据',
+    frame: '框架',
+    seam: '煤层',
+    fusion: '融合',
+    resolution: '分辨率',
+    stressPrior: '应力先验',
+    section: '剖面',
+    control: '控制条件',
+    fabric: '构造纹理',
+    hotspot: '热点',
+    sampling: '采样',
+    depthGuideTitle: '地层深度导引',
+    insetTitle: 'MPI 平面插图',
+    insetCaption: '线表示剖面，圆表示热点',
+    distributionTitle: 'MPI 分布',
+    sectionTransectTitle: '剖面切线',
+    xSectionTransectTitle: 'X 方向剖面切线',
+    ySectionTransectTitle: 'Y 方向剖面切线',
+    representativeTransectTitle: '代表性横向切线',
+    peakFallback: '峰值 --',
+    spreadFallback: '带状区表示局部四分位包络。',
+    captionBlock: '图注块',
+    notesBlock: '注释与缩写',
   }
 
   return Object.keys(defaults).reduce((acc, key) => {
@@ -186,17 +186,32 @@ export function buildPublicationLabelSet(overrides = {}) {
 }
 
 export function buildPublicationMethodsFooter({
-  subject = 'Figure',
-  source = 'publication export',
+  subject = '图件',
+  source = '论文导出',
   seam = '',
-  details = []
+  details = [],
+  locale = 'zh-CN'
 } = {}) {
-  const subjectText = toSafeString(subject) || 'Figure'
-  const sourceText = toSafeString(source) || 'publication export'
+  const subjectText = toSafeString(subject) || '图件'
+  const sourceText = toSafeString(source) || '论文导出'
   const seamText = toSafeString(seam)
   const detailText = toSafeArray(details)
     .map((item) => toSafeString(item))
     .filter(Boolean)
+
+  const normalizedLocale = toSafeString(locale) || 'zh-CN'
+  const useChinese = normalizedLocale.startsWith('zh')
+
+  if (useChinese) {
+    let sentence = `方法注：${subjectText}导出自${sourceText}`
+    if (seamText) {
+      sentence += `，对应煤层 ${seamText}`
+    }
+    if (detailText.length) {
+      sentence += `；关键参数包括 ${detailText.join('、')}`
+    }
+    return `${sentence}。`
+  }
 
   let sentence = `Methods footer: ${subjectText} is exported from the ${sourceText}`
   if (seamText) {
@@ -591,11 +606,11 @@ export function buildPaperManifest({
 }
 
 export function buildCaptionsMarkdown({
-  title = 'Figure Captions',
+  title = '图注汇总',
   intro = '',
   figures = []
 }) {
-  const lines = [`# ${String(title || 'Figure Captions')}`, '']
+  const lines = [`# ${String(title || '图注汇总')}`, '']
   if (intro) {
     lines.push(String(intro))
     lines.push('')
@@ -604,7 +619,7 @@ export function buildCaptionsMarkdown({
   toSafeArray(figures).forEach((figure, index) => {
     const id = String(figure?.id || `Fig.${index + 1}`)
     const figureTitle = String(figure?.title || '')
-    const caption = String(figure?.caption || '').trim() || 'No caption provided.'
+    const caption = String(figure?.caption || '').trim() || '未提供图注。'
     lines.push(`## ${id}${figureTitle ? ` ${figureTitle}` : ''}`)
     lines.push(caption)
     lines.push('')
@@ -614,11 +629,11 @@ export function buildCaptionsMarkdown({
 }
 
 export function buildPublicationCaptionsMarkdown({
-  title = 'Figure Captions',
+  title = '图注汇总',
   intro = '',
   figures = []
 }) {
-  const lines = [`# ${String(title || 'Figure Captions')}`, '']
+  const lines = [`# ${String(title || '图注汇总')}`, '']
   if (intro) {
     lines.push(String(intro))
     lines.push('')
@@ -629,21 +644,21 @@ export function buildPublicationCaptionsMarkdown({
     const figureTitle = String(figure?.title || '')
     const captionRows = toSafeArray(figure?.meta?.caption_rows)
     const noteRows = toSafeArray(figure?.meta?.note_rows)
-    const fallbackCaption = String(figure?.caption || '').trim() || 'No caption provided.'
+    const fallbackCaption = String(figure?.caption || '').trim() || '未提供图注。'
     lines.push(`## ${id}${figureTitle ? ` ${figureTitle}` : ''}`)
 
     if (captionRows.length) {
       captionRows.forEach((row) => {
-        lines.push(`**${String(row?.label || 'Caption')}:** ${String(row?.value || '--')}`)
+        lines.push(`**${String(row?.label || '图注')}:** ${String(row?.value || '--')}`)
       })
     } else {
-      lines.push(`**Caption:** ${fallbackCaption}`)
+      lines.push(`**图注：** ${fallbackCaption}`)
     }
 
     if (noteRows.length) {
       lines.push('')
       noteRows.forEach((row) => {
-        lines.push(`**${String(row?.label || 'Note')}:** ${String(row?.value || '--')}`)
+        lines.push(`**${String(row?.label || '注释')}:** ${String(row?.value || '--')}`)
       })
     }
 
@@ -654,11 +669,11 @@ export function buildPublicationCaptionsMarkdown({
 }
 
 export function buildPublicationNotesMarkdown({
-  title = 'Publication Notes',
+  title = '出版注释',
   intro = '',
   figures = []
 }) {
-  const lines = [`# ${String(title || 'Publication Notes')}`, '']
+  const lines = [`# ${String(title || '出版注释')}`, '']
   if (intro) {
     lines.push(String(intro))
     lines.push('')
@@ -672,10 +687,10 @@ export function buildPublicationNotesMarkdown({
 
     if (noteRows.length) {
       noteRows.forEach((row) => {
-        lines.push(`- ${String(row?.label || 'Note')}: ${String(row?.value || '--')}`)
+        lines.push(`- ${String(row?.label || '注释')}: ${String(row?.value || '--')}`)
       })
     } else {
-      lines.push('- Note: No notes provided.')
+      lines.push('- 注释：未提供说明。')
     }
 
     lines.push('')
@@ -685,7 +700,7 @@ export function buildPublicationNotesMarkdown({
 }
 
 export function buildPublicationReadmeMarkdown({
-  title = 'Publication Supplement',
+  title = '论文补充材料',
   intro = '',
   sourcePage = '',
   manifestPath = buildPaperRootPath({ name: 'manifest', ext: 'json' }),
@@ -695,23 +710,23 @@ export function buildPublicationReadmeMarkdown({
   figures = [],
   tables = []
 } = {}) {
-  const lines = [`# ${String(title || 'Publication Supplement')}`, '']
+  const lines = [`# ${String(title || '论文补充材料')}`, '']
   if (intro) {
     lines.push(String(intro))
     lines.push('')
   }
 
-  lines.push('## Package Structure')
+  lines.push('## 文件结构')
   if (toSafeString(sourcePage)) {
-    lines.push(`- \`Source page\`: \`${toSafeString(sourcePage)}\``)
+    lines.push(`- \`来源页面\`: \`${toSafeString(sourcePage)}\``)
   }
-  lines.push(`- \`${String(manifestPath || 'manifest.json')}\`: normalized package manifest.`)
-  lines.push(`- \`${String(indexPath || 'index.json')}\`: lightweight machine-readable file index.`)
-  lines.push(`- \`${String(captionsPath || 'captions.md')}\`: structured figure captions.`)
-  lines.push(`- \`${String(notesPath || 'publication-notes.md')}\`: supporting notes and abbreviations.`)
+  lines.push(`- \`${String(manifestPath || 'manifest.json')}\`: 规范化导出清单。`)
+  lines.push(`- \`${String(indexPath || 'index.json')}\`: 轻量级机器可读文件索引。`)
+  lines.push(`- \`${String(captionsPath || 'captions.md')}\`: 结构化图注。`)
+  lines.push(`- \`${String(notesPath || 'publication-notes.md')}\`: 补充注释与缩写说明。`)
   lines.push('')
 
-  lines.push('## Figures')
+  lines.push('## 图件')
   if (toSafeArray(figures).length) {
     toSafeArray(figures).forEach((figure, index) => {
       const id = String(figure?.id || `Fig.${index + 1}`)
@@ -720,11 +735,11 @@ export function buildPublicationReadmeMarkdown({
       lines.push(`- \`${id}\`${titleText ? ` ${titleText}` : ''}: ${files}`)
     })
   } else {
-    lines.push('- No figure files included.')
+    lines.push('- 未包含图件文件。')
   }
   lines.push('')
 
-  lines.push('## Tables')
+  lines.push('## 表格')
   if (toSafeArray(tables).length) {
     toSafeArray(tables).forEach((table) => {
       const name = String(table?.name || inferArtifactName(table?.path || 'table'))
@@ -732,20 +747,20 @@ export function buildPublicationReadmeMarkdown({
       lines.push(`- \`${name}\`: \`${tablePath}\``)
     })
   } else {
-    lines.push('- No table files included.')
+    lines.push('- 未包含表格文件。')
   }
   lines.push('')
 
-  lines.push('## Usage')
-  lines.push('- Use `manifest.json` for machine-readable metadata and file inventory.')
-  lines.push('- Use `index.json` for quick programmatic discovery of root files, figures, and tables.')
-  lines.push('- Use `captions.md` and `publication-notes.md` when assembling figure legends or supplementary text.')
+  lines.push('## 使用说明')
+  lines.push('- 使用 `manifest.json` 查看机器可读的元数据与文件清单。')
+  lines.push('- 使用 `index.json` 快速定位根目录文件、图件与表格。')
+  lines.push('- 组装图例或补充说明时，优先引用 `captions.md` 和 `publication-notes.md`。')
 
   return lines.join('\n')
 }
 
 export function buildPublicationIndexDocument({
-  title = 'Publication Supplement',
+  title = '论文补充材料',
   generatedAt = new Date().toISOString(),
   sourcePage = '',
   manifestPath = buildPaperRootPath({ name: 'manifest', ext: 'json' }),
@@ -759,7 +774,7 @@ export function buildPublicationIndexDocument({
     schema_version: PAPER_EXPORT_SCHEMA_VERSION,
     generated_at: String(generatedAt || new Date().toISOString()),
     source_page: String(sourcePage || ''),
-    title: String(title || 'Publication Supplement'),
+    title: String(title || '论文补充材料'),
     files: {
       manifest: String(manifestPath || 'manifest.json'),
       captions: String(captionsPath || 'captions.md'),

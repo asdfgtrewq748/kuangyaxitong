@@ -5,6 +5,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { echarts } from '../../lib/echarts-science'
+import { mergePublicationChartOption } from '@/utils/publicationFigureTheme'
 
 const props = defineProps({
   option: {
@@ -33,7 +34,7 @@ const normalizedHeight = computed(() => {
 
 const render = () => {
   if (!chart) return
-  chart.setOption(props.option || {}, {
+  chart.setOption(mergePublicationChartOption(props.option || {}), {
     notMerge: true,
     lazyUpdate: true,
     silent: true
@@ -44,7 +45,8 @@ const createChart = () => {
   if (!container.value) return
   chart = echarts.init(container.value, null, {
     renderer: props.renderer === 'canvas' ? 'canvas' : 'svg',
-    useDirtyRect: true
+    useDirtyRect: true,
+    devicePixelRatio: Math.max(window.devicePixelRatio || 1, props.renderer === 'canvas' ? 2 : 1)
   })
   chart.on('click', onChartClick)
   render()
@@ -135,5 +137,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .science-chart {
   width: 100%;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 250, 0.92) 0%, rgba(255, 251, 245, 0.92) 100%);
 }
 </style>

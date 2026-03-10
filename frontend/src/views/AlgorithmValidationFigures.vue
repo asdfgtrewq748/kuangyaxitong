@@ -178,7 +178,7 @@ const columnModes = [
 const densityModes = [
   { value: 'compact', label: 'Compact' },
   { value: 'balanced', label: 'Balanced' },
-  { value: 'focus', label: 'Focus' }
+  { value: 'focus', label: '聚焦' }
 ]
 
 const snapshotUpdatedLabel = computed(() => {
@@ -199,22 +199,22 @@ const paperFrame = computed(() => {
   const auc = Number(snapshot.value?.evaluation?.auc ?? snapshot.value?.result?.kpi?.auc)
   const prAuc = Number(snapshot.value?.evaluation?.pr_auc)
   return {
-    heading: 'Figure Set | Algorithm validation',
-    title: 'Validation science plates for fusion-model assessment',
-    summary: `A figure-ready validation set for seam ${snapshot.value?.seam || '--'}, aligning ROC, PR, calibration, and mechanistic evidence into a single publication workspace.`,
+    heading: '图组 | 算法验证',
+    title: '融合模型评估验证图版',
+    summary: `面向煤层 ${snapshot.value?.seam || '--'} 的论文级验证图组，将 ROC、PR、校准与机理证据统一整理到一个出版工作区。`,
     cards: [
-      { label: 'Seam', value: String(snapshot.value?.seam || '--') },
+      { label: '煤层', value: String(snapshot.value?.seam || '--') },
       { label: 'ROC AUC', value: Number.isFinite(auc) ? auc.toFixed(3) : '--' },
       { label: 'PR AUC', value: Number.isFinite(prAuc) ? prAuc.toFixed(3) : '--' },
     ],
     methodsFooter: buildPublicationMethodsFooter({
-      subject: 'Validation science plates',
-      source: 'cached validation snapshot',
+      subject: '验证科研图版',
+      source: '缓存验证快照',
       seam: snapshot.value?.seam || '',
       details: [
-        `threshold mode ${thresholdMode.value}`,
-        'local layout controls',
-        'publication-oriented multi-panel rendering'
+        `阈值模式 ${thresholdMode.value}`,
+        '本地布局控制',
+        '论文导向多图版渲染'
       ]
     }),
   }
@@ -232,17 +232,17 @@ const activeFigureMeta = computed(() => {
 
 const activeFigureMethodsFooter = computed(() => {
   if (!activeFigureMeta.value?.id) {
-    return 'Methods footer: validation figure metadata will appear after the gallery initializes.'
+    return '方法注：图廊初始化完成后，这里会显示当前验证图的元数据。'
   }
   return buildPublicationMethodsFooter({
     subject: activeFigureMeta.value.title,
-    source: 'cached validation snapshot',
+    source: '缓存验证快照',
     seam: snapshot.value?.seam || '',
     details: [
-      `threshold mode ${thresholdMode.value}`,
-      `layout ${String(layoutColumns.value)}`,
-      `density ${density.value}`,
-      `chart scale ${chartScale.value}%`
+      `阈值模式 ${thresholdMode.value}`,
+      `布局 ${String(layoutColumns.value)}`,
+      `密度 ${density.value}`,
+      `图表缩放 ${chartScale.value}%`
     ]
   })
 })
@@ -303,13 +303,13 @@ const buildPublicationNoteRows = (meta) => {
       label: publicationLabels.methodsFooter,
       value: buildPublicationMethodsFooter({
         subject: meta.title,
-        source: 'cached validation snapshot',
+        source: '缓存验证快照',
         seam: snapshot.value?.seam || '',
         details: [
-          `threshold mode ${thresholdMode.value}`,
-          `layout ${String(layoutColumns.value)}`,
-          `density ${density.value}`,
-          `chart scale ${chartScale.value}%`
+          `阈值模式 ${thresholdMode.value}`,
+          `布局 ${String(layoutColumns.value)}`,
+          `密度 ${density.value}`,
+          `图表缩放 ${chartScale.value}%`
         ]
       })
     }
@@ -317,8 +317,8 @@ const buildPublicationNoteRows = (meta) => {
 }
 
 const buildFigureCaption = (meta) => {
-  if (!meta) return 'No caption available.'
-  return `${meta.interpretation || ''} ${meta.result || ''}`.trim() || 'No caption available.'
+  if (!meta) return '暂无图注。'
+  return `${meta.interpretation || ''} ${meta.result || ''}`.trim() || '暂无图注。'
 }
 
 const loadSnapshot = () => {
@@ -493,13 +493,13 @@ async function exportSupplementPackage() {
           abbreviations: meta.abbreviations || '',
           methods_footer: buildPublicationMethodsFooter({
             subject: meta.title,
-            source: 'cached validation snapshot',
+            source: '缓存验证快照',
             seam: snapshot.value?.seam || '',
             details: [
-              `threshold mode ${thresholdMode.value}`,
-              `layout ${String(layoutColumns.value)}`,
-              `density ${density.value}`,
-              `chart scale ${chartScale.value}%`
+              `阈值模式 ${thresholdMode.value}`,
+              `布局 ${String(layoutColumns.value)}`,
+              `密度 ${density.value}`,
+              `图表缩放 ${chartScale.value}%`
             ]
           })
         }
@@ -515,8 +515,8 @@ async function exportSupplementPackage() {
     const generatedAt = new Date().toISOString()
 
     zip.file(captionsPath, buildPublicationCaptionsMarkdown({
-      title: 'Validation Figure Supplement',
-      intro: `Seam: ${snapshot.value?.seam || '--'}; updated at ${snapshotUpdatedLabel.value}; threshold mode ${thresholdMode.value}.`,
+      title: '验证图补充材料',
+      intro: `煤层：${snapshot.value?.seam || '--'}；更新时间：${snapshotUpdatedLabel.value}；阈值模式：${thresholdMode.value}。`,
       figures
     }))
     zip.file(notesPath, buildPublicationNotesMarkdown({
@@ -524,8 +524,8 @@ async function exportSupplementPackage() {
       figures
     }))
     zip.file(readmePath, buildPublicationReadmeMarkdown({
-      title: 'Algorithm Validation Supplement Export',
-      intro: 'This archive contains publication-ready validation figures and supporting metadata.',
+      title: '算法验证补充图导出',
+      intro: '该压缩包包含论文级验证图件及其支撑元数据。',
       sourcePage: 'algorithm-validation-figures',
       manifestPath,
       indexPath,
@@ -534,7 +534,7 @@ async function exportSupplementPackage() {
       figures
     }))
     zip.file(indexPath, JSON.stringify(buildPublicationIndexDocument({
-      title: 'Algorithm Validation Supplement Export',
+      title: '算法验证补充图导出',
       generatedAt,
       sourcePage: 'algorithm-validation-figures',
       manifestPath,
@@ -546,7 +546,7 @@ async function exportSupplementPackage() {
 
     zip.file(manifestPath, JSON.stringify(buildPaperManifest({
       sourcePage: 'algorithm-validation-figures',
-      title: 'Algorithm Validation Supplement Export',
+      title: '算法验证补充图导出',
       locale: 'zh-CN',
       context: {
         seam: snapshot.value?.seam || '',

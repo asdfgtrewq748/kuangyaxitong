@@ -1,0 +1,70 @@
+{
+  "report": {
+    "title": "Mining Pressure Evaluation System",
+    "navKicker": "Validation workspace | publication mode",
+    "toolbarSummary": "Seven navigation actions keep the validation workspace in publication mode, linking export, evidence review, and downstream figure pages.",
+    "topPanelTitle": null,
+    "topPanelSummary": null,
+    "topCards": [],
+    "toolbarChips": [],
+    "metricPanelTitle": null,
+    "metricPanelSummary": "Four seam-specific KPI cards expose the current pressure indicators; abnormal diagnostics are highlighted inline for immediate panel selection.",
+    "metricCards": [
+      "MPI综合指标--最低 --最高 --",
+      "RSI顶板稳定--最低 --最高 --",
+      "BRI冲击风险--最低 --最高 --",
+      "ASI支承应力--最低 --最高 --"
+    ],
+    "visibleButtons": [
+      "中切换语言",
+      "前往推荐步骤",
+      "重置流程",
+      "数据导入",
+      "插值分析",
+      "新算法原理",
+      "新算法实证",
+      "矿压数据分析",
+      "前往前置步骤",
+      "权重",
+      "地质感知对照",
+      "评估",
+      "导出高清图",
+      "打开科研图子页面",
+      "下一步：矿压数据分析",
+      "全屏",
+      "MPI综合指标--最低 --最高 --",
+      "RSI顶板稳定--最低 --最高 --",
+      "BRI冲击风险--最低 --最高 --",
+      "ASI支承应力--最低 --最高 --",
+      "收起",
+      "MPI均值 0.00Std 0.00",
+      "RSI均值 0.00Std 0.00",
+      "BRI均值 0.00Std 0.00",
+      "ASI均值 0.00Std 0.00",
+      "导出数据",
+      "×",
+      "AI 助手",
+      "如何导入钻孔数据？",
+      "什么是MPI指标？",
+      "如何生成等值线图？"
+    ],
+    "loadingTip": null,
+    "errorText": null,
+    "navRect": {
+      "x": 124,
+      "y": 187,
+      "width": 1440,
+      "height": 134
+    },
+    "topPanelRect": null,
+    "metricPanelRect": {
+      "x": 124,
+      "y": 333,
+      "width": 1440,
+      "height": 271
+    }
+  },
+  "consoleMessages": [
+    "[error] Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ]
+}
