@@ -114,7 +114,8 @@ describe('bundle guards', () => {
     expect(content.includes('publicationLabels.insetTitle')).toBe(true)
     expect(content.includes('publicationLabels.insetCaption')).toBe(true)
     expect(content.includes('publicationLabels.distributionTitle')).toBe(true)
-    expect(content.includes('publicationLabels.sectionTransectTitle')).toBe(true)
+    expect(content.includes('buildPublicationSectionProfileDiagnostics')).toBe(true)
+    expect(content.includes('sectionProfileModeLabel')).toBe(true)
     expect(content.includes('depthAxisTicks')).toBe(true)
     expect(content.includes('depth-strip-wrap')).toBe(true)
   })
@@ -291,6 +292,15 @@ describe('bundle guards', () => {
     expect(content.includes('coverLine: `Q3 cover')).toBe(false)
     expect(content.includes('distributionLine: `Entropy')).toBe(false)
     expect(content.includes('supportLine: `Heterogeneity')).toBe(false)
+  })
+
+  it('routes 3D fusion section profile diagnostics through the shared publication schema helper', () => {
+    const content = fs.readFileSync(path.resolve(geoFusionComponent), 'utf8')
+
+    expect(content.includes('buildPublicationSectionProfileDiagnostics')).toBe(true)
+    expect(content.includes('const sectionProfileDiagnostics = computed(() => buildPublicationSectionProfileDiagnostics({')).toBe(true)
+    expect(content.includes('const focusCol = Math.max(0, Math.min(cols - 1, Math.round(sectionRetainedRatio.value * (cols - 1))))')).toBe(false)
+    expect(content.includes('Band = local interquartile envelope, mean width')).toBe(false)
   })
 
   it('routes 3D fusion caption and note rows through the shared publication row helper', () => {

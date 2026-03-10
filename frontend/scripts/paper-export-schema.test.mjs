@@ -22,6 +22,7 @@ import {
   buildPublicationFigureHeaderCopy,
   buildPublicationHeroCopy,
   buildPublicationLegendCopy,
+  buildPublicationSectionProfileDiagnostics,
   buildPublicationSummaryCopy,
   buildPublicationStatisticCopy,
   buildPublicationRows,
@@ -252,6 +253,35 @@ describe('paper export schema', () => {
       coverLine: 'Q3 cover 25.0% | P90 cover 10.0% | Section retained 58.0%',
       distributionLine: 'Entropy 0.84 | Skewness 0.42 | n = 128',
       supportLine: 'Heterogeneity 0.48 | Borehole density 4.30 boreholes km^-2 | n = 128'
+    })
+  })
+
+  it('builds normalized section profile diagnostics for representative transects', () => {
+    expect(buildPublicationSectionProfileDiagnostics({
+      grid: [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+      ],
+      sectionAxis: 'z',
+      sectionRetainedRatio: 0.58,
+      labels: {
+        sectionTransectTitle: 'Section transect',
+        xSectionTransectTitle: 'X-section transect',
+        ySectionTransectTitle: 'Y-section transect',
+        representativeTransectTitle: 'Representative transect',
+        peakFallback: 'No resolved peak',
+        spreadFallback: 'Insufficient spread'
+      },
+      formatValue: (value) => Number(value).toFixed(2)
+    })).toEqual({
+      path: 'M 0.000,25.400 L 50.000,19.000 L 100.000,12.600',
+      bandPath: 'M 0.000,15.800 L 50.000,9.400 L 100.000,3.000 L 100.000,22.200 L 50.000,28.600 L 0.000,35.000 Z',
+      guideX: null,
+      modeLabel: 'Representative transect',
+      peakLabel: 'Peak X3 | 6.00 MPa',
+      spreadLabel: 'Band = local interquartile envelope, mean width 3.00 MPa.',
+      rangeLabel: '2.50 to 7.50 MPa'
     })
   })
 

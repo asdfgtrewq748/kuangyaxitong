@@ -299,7 +299,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { loadOrbitControls, three } from '@/lib/three-fusion'
-import { buildPublicationDiagnosticCopy, buildPublicationFigureHeaderCopy, buildPublicationHeroCopy, buildPublicationLabelSet, buildPublicationLegendCopy, buildPublicationMethodsFooter, buildPublicationNarrativeSentence, buildPublicationRows, buildPublicationStatisticCopy, buildPublicationSummaryCopy } from '@/utils/paperExportSchema'
+import { buildPublicationDiagnosticCopy, buildPublicationFigureHeaderCopy, buildPublicationHeroCopy, buildPublicationLabelSet, buildPublicationLegendCopy, buildPublicationMethodsFooter, buildPublicationNarrativeSentence, buildPublicationRows, buildPublicationSectionProfileDiagnostics, buildPublicationStatisticCopy, buildPublicationSummaryCopy } from '@/utils/paperExportSchema'
 import AsyncState from './AsyncState.vue'
 
 const props = defineProps({
@@ -1025,145 +1025,14 @@ const histogramQuantileLines = computed(() => {
     })
 })
 
-const sectionProfileDiagnostics = computed(() => {
-  const grid = props.mpiGrid
-  if (!Array.isArray(grid) || !Array.isArray(grid[0])) {
-    return {
-      path: '',
-      bandPath: '',
-      guideX: null,
-      modeLabel: publicationLabels.sectionTransectTitle,
-      peakLabel: publicationLabels.peakFallback,
-      spreadLabel: publicationLabels.spreadFallback,
-      rangeLabel: '-- to -- MPa',
-    }
-  }
-
-  const rows = grid.length
-  const cols = grid[0].length
-  if (rows < 2 || cols < 2) {
-    return {
-      path: '',
-      bandPath: '',
-      guideX: null,
-      modeLabel: publicationLabels.sectionTransectTitle,
-      peakLabel: publicationLabels.peakFallback,
-      spreadLabel: publicationLabels.spreadFallback,
-      rangeLabel: '-- to -- MPa',
-    }
-  }
-
-  const samples = []
-  let guideX = null
-  let modeLabel = publicationLabels.sectionTransectTitle
-  let axisDescriptor = 'track'
-
-  if (sectionAxis.value === 'x') {
-    const focusCol = Math.max(0, Math.min(cols - 1, Math.round(sectionRetainedRatio.value * (cols - 1))))
-    guideX = ((focusCol / Math.max(cols - 1, 1)) * 100).toFixed(3)
-    modeLabel = publicationLabels.ySectionTransectTitle
-    axisDescriptor = 'Y'
-    for (let r = 0; r < rows; r += 1) {
-      const local = []
-      for (let dc = -1; dc <= 1; dc += 1) {
-        const value = Number(grid[r]?.[focusCol + dc])
-        if (Number.isFinite(value)) local.push(value)
-      }
-      if (!local.length) continue
-      local.sort((a, b) => a - b)
-      samples.push({
-        index: r,
-        pos: rows > 1 ? r / (rows - 1) : 0,
-        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
-        low: quantileFromSorted(local, 0.25),
-        high: quantileFromSorted(local, 0.75),
-      })
-    }
-  } else if (sectionAxis.value === 'y') {
-    const focusRow = Math.max(0, Math.min(rows - 1, Math.round(sectionRetainedRatio.value * (rows - 1))))
-    guideX = ((focusRow / Math.max(rows - 1, 1)) * 100).toFixed(3)
-    modeLabel = publicationLabels.xSectionTransectTitle
-    axisDescriptor = 'X'
-    for (let c = 0; c < cols; c += 1) {
-      const local = []
-      for (let dr = -1; dr <= 1; dr += 1) {
-        const value = Number(grid[focusRow + dr]?.[c])
-        if (Number.isFinite(value)) local.push(value)
-      }
-      if (!local.length) continue
-      local.sort((a, b) => a - b)
-      samples.push({
-        index: c,
-        pos: cols > 1 ? c / (cols - 1) : 0,
-        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
-        low: quantileFromSorted(local, 0.25),
-        high: quantileFromSorted(local, 0.75),
-      })
-    }
-  } else {
-    modeLabel = publicationLabels.representativeTransectTitle
-    axisDescriptor = 'X'
-    for (let c = 0; c < cols; c += 1) {
-      const local = []
-      for (let r = 0; r < rows; r += 1) {
-        const value = Number(grid[r]?.[c])
-        if (Number.isFinite(value)) local.push(value)
-      }
-      if (!local.length) continue
-      local.sort((a, b) => a - b)
-      samples.push({
-        index: c,
-        pos: cols > 1 ? c / (cols - 1) : 0,
-        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
-        low: quantileFromSorted(local, 0.25),
-        high: quantileFromSorted(local, 0.75),
-      })
-    }
-  }
-
-  if (samples.length < 2) {
-    return {
-      path: '',
-      bandPath: '',
-      guideX,
-      modeLabel,
-      peakLabel: publicationLabels.peakFallback,
-      spreadLabel: publicationLabels.spreadFallback,
-      rangeLabel: '-- to -- MPa',
-    }
-  }
-
-  let minValue = Number.POSITIVE_INFINITY
-  let maxValue = Number.NEGATIVE_INFINITY
-  samples.forEach((sample) => {
-    minValue = Math.min(minValue, sample.low, sample.mean)
-    maxValue = Math.max(maxValue, sample.high, sample.mean)
-  })
-  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || maxValue <= minValue) {
-    minValue = 0
-    maxValue = 1
-  }
-  const span = Math.max(maxValue - minValue, 1e-6)
-  const scaleY = (value) => (35 - ((value - minValue) / span) * 32).toFixed(3)
-  const scaleX = (pos) => (pos * 100).toFixed(3)
-
-  const upper = samples.map((sample) => `${scaleX(sample.pos)},${scaleY(sample.high)}`)
-  const lower = [...samples].reverse().map((sample) => `${scaleX(sample.pos)},${scaleY(sample.low)}`)
-  const meanLine = samples.map((sample) => `${scaleX(sample.pos)},${scaleY(sample.mean)}`)
-
-  const peak = samples.reduce((best, sample) => (sample.mean > best.mean ? sample : best), samples[0])
-  const averageBandWidth = samples.reduce((acc, sample) => acc + Math.max(0, sample.high - sample.low), 0) / samples.length
-
-  return {
-    path: `M ${meanLine.join(' L ')}`,
-    bandPath: `M ${upper.join(' L ')} L ${lower.join(' L ')} Z`,
-    guideX,
-    modeLabel,
-    peakLabel: `Peak ${axisDescriptor}${peak.index + 1} | ${formatValue(peak.mean)} MPa`,
-    spreadLabel: `Band = local interquartile envelope, mean width ${formatValue(averageBandWidth)} MPa.`,
-    rangeLabel: `${formatValue(minValue)} to ${formatValue(maxValue)} MPa`,
-  }
-})
+const sectionProfileDiagnostics = computed(() => buildPublicationSectionProfileDiagnostics({
+  grid: props.mpiGrid,
+  sectionAxis: sectionAxis.value,
+  sectionRetainedRatio: sectionRetainedRatio.value,
+  labels: publicationLabels,
+  formatValue,
+  unit: paperNotation.value.metricUnit,
+}))
 const sectionProfilePath = computed(() => sectionProfileDiagnostics.value.path)
 const sectionUncertaintyBandPath = computed(() => sectionProfileDiagnostics.value.bandPath)
 const sectionProfileGuideX = computed(() => sectionProfileDiagnostics.value.guideX)

@@ -2,6 +2,10 @@ export const PAPER_EXPORT_SCHEMA_VERSION = 'paper-export/v1'
 
 const toSafeArray = (value) => (Array.isArray(value) ? value : [])
 const toSafeString = (value) => String(value || '').trim()
+const toFiniteNumber = (value, fallback = 0) => {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : fallback
+}
 const toPositiveInt = (value, fallback = 1) => {
   const num = Number(value)
   return Number.isFinite(num) && num > 0 ? Math.floor(num) : fallback
@@ -384,6 +388,160 @@ export function buildPublicationSummaryCopy({
     coverLine: `Q3 cover ${toSafeString(p75Cover) || '--'} | P90 cover ${toSafeString(p90Cover) || '--'} | Section retained ${toSafeString(sectionRetained) || '--'}`,
     distributionLine: `Entropy ${toSafeString(entropy) || '--'} | Skewness ${toSafeString(skewness) || '--'} | ${sampleSize}`,
     supportLine: `Heterogeneity ${toSafeString(heterogeneity) || '--'} | Borehole density ${toSafeString(boreholeDensity) || '--'} ${density} | ${sampleSize}`
+  }
+}
+
+const quantileFromSortedValues = (sortedValues, q) => {
+  if (!Array.isArray(sortedValues) || !sortedValues.length) return 0
+  const ratio = Math.max(0, Math.min(1, toFiniteNumber(q, 0)))
+  if (sortedValues.length === 1) return sortedValues[0]
+  const index = (sortedValues.length - 1) * ratio
+  const lower = Math.floor(index)
+  const upper = Math.min(sortedValues.length - 1, Math.ceil(index))
+  const weight = index - lower
+  return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight
+}
+
+export function buildPublicationSectionProfileDiagnostics({
+  grid = [],
+  sectionAxis = 'z',
+  sectionRetainedRatio = 0,
+  labels = {},
+  formatValue = (value) => String(value ?? '--'),
+  unit = 'MPa',
+} = {}) {
+  const safeLabels = buildPublicationLabelSet(labels)
+  const formatMetricValue = typeof formatValue === 'function'
+    ? formatValue
+    : (value) => String(value ?? '--')
+  const fallback = {
+    path: '',
+    bandPath: '',
+    guideX: null,
+    modeLabel: safeLabels.sectionTransectTitle,
+    peakLabel: safeLabels.peakFallback,
+    spreadLabel: safeLabels.spreadFallback,
+    rangeLabel: `-- to -- ${toSafeString(unit) || 'MPa'}`,
+  }
+
+  if (!Array.isArray(grid) || !Array.isArray(grid[0])) {
+    return fallback
+  }
+
+  const rows = grid.length
+  const cols = grid[0].length
+  if (rows < 2 || cols < 2) {
+    return fallback
+  }
+
+  const samples = []
+  const retainedRatio = Math.max(0, Math.min(1, toFiniteNumber(sectionRetainedRatio, 0)))
+  let guideX = null
+  let modeLabel = safeLabels.sectionTransectTitle
+  let axisDescriptor = 'track'
+
+  if (sectionAxis === 'x') {
+    const focusCol = Math.max(0, Math.min(cols - 1, Math.round(retainedRatio * (cols - 1))))
+    guideX = ((focusCol / Math.max(cols - 1, 1)) * 100).toFixed(3)
+    modeLabel = safeLabels.ySectionTransectTitle
+    axisDescriptor = 'Y'
+    for (let r = 0; r < rows; r += 1) {
+      const local = []
+      for (let dc = -1; dc <= 1; dc += 1) {
+        const value = Number(grid[r]?.[focusCol + dc])
+        if (Number.isFinite(value)) local.push(value)
+      }
+      if (!local.length) continue
+      local.sort((a, b) => a - b)
+      samples.push({
+        index: r,
+        pos: rows > 1 ? r / (rows - 1) : 0,
+        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
+        low: quantileFromSortedValues(local, 0.25),
+        high: quantileFromSortedValues(local, 0.75),
+      })
+    }
+  } else if (sectionAxis === 'y') {
+    const focusRow = Math.max(0, Math.min(rows - 1, Math.round(retainedRatio * (rows - 1))))
+    guideX = ((focusRow / Math.max(rows - 1, 1)) * 100).toFixed(3)
+    modeLabel = safeLabels.xSectionTransectTitle
+    axisDescriptor = 'X'
+    for (let c = 0; c < cols; c += 1) {
+      const local = []
+      for (let dr = -1; dr <= 1; dr += 1) {
+        const value = Number(grid[focusRow + dr]?.[c])
+        if (Number.isFinite(value)) local.push(value)
+      }
+      if (!local.length) continue
+      local.sort((a, b) => a - b)
+      samples.push({
+        index: c,
+        pos: cols > 1 ? c / (cols - 1) : 0,
+        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
+        low: quantileFromSortedValues(local, 0.25),
+        high: quantileFromSortedValues(local, 0.75),
+      })
+    }
+  } else {
+    modeLabel = safeLabels.representativeTransectTitle
+    axisDescriptor = 'X'
+    for (let c = 0; c < cols; c += 1) {
+      const local = []
+      for (let r = 0; r < rows; r += 1) {
+        const value = Number(grid[r]?.[c])
+        if (Number.isFinite(value)) local.push(value)
+      }
+      if (!local.length) continue
+      local.sort((a, b) => a - b)
+      samples.push({
+        index: c,
+        pos: cols > 1 ? c / (cols - 1) : 0,
+        mean: local.reduce((acc, value) => acc + value, 0) / local.length,
+        low: quantileFromSortedValues(local, 0.25),
+        high: quantileFromSortedValues(local, 0.75),
+      })
+    }
+  }
+
+  if (samples.length < 2) {
+    return {
+      ...fallback,
+      guideX,
+      modeLabel,
+    }
+  }
+
+  let minValue = Number.POSITIVE_INFINITY
+  let maxValue = Number.NEGATIVE_INFINITY
+  samples.forEach((sample) => {
+    minValue = Math.min(minValue, sample.low, sample.mean)
+    maxValue = Math.max(maxValue, sample.high, sample.mean)
+  })
+
+  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || maxValue <= minValue) {
+    minValue = 0
+    maxValue = 1
+  }
+
+  const span = Math.max(maxValue - minValue, 1e-6)
+  const scaleY = (value) => (35 - ((value - minValue) / span) * 32).toFixed(3)
+  const scaleX = (pos) => (pos * 100).toFixed(3)
+
+  const upper = samples.map((sample) => `${scaleX(sample.pos)},${scaleY(sample.high)}`)
+  const lower = [...samples].reverse().map((sample) => `${scaleX(sample.pos)},${scaleY(sample.low)}`)
+  const meanLine = samples.map((sample) => `${scaleX(sample.pos)},${scaleY(sample.mean)}`)
+  const peak = samples.reduce((best, sample) => (sample.mean > best.mean ? sample : best), samples[0])
+  const averageBandWidth = samples.reduce((acc, sample) => acc + Math.max(0, sample.high - sample.low), 0) / samples.length
+  const unitLabel = toSafeString(unit) || 'MPa'
+
+  return {
+    path: `M ${meanLine.join(' L ')}`,
+    bandPath: `M ${upper.join(' L ')} L ${lower.join(' L ')} Z`,
+    guideX,
+    modeLabel,
+    peakLabel: `Peak ${axisDescriptor}${peak.index + 1} | ${formatMetricValue(peak.mean)} ${unitLabel}`,
+    spreadLabel: `Band = local interquartile envelope, mean width ${formatMetricValue(averageBandWidth)} ${unitLabel}.`,
+    rangeLabel: `${formatMetricValue(minValue)} to ${formatMetricValue(maxValue)} ${unitLabel}`,
   }
 }
 
