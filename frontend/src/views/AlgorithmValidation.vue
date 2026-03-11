@@ -360,6 +360,51 @@
       </div>
     </section>
 
+    <section v-if="hasSpatialData && scienceResult" ref="sciencePanelsSectionRef" class="science-panels-section publication-entry">
+      <div class="publication-entry-head">
+        <span class="publication-kicker">论文图版工作区 | 主页面恢复</span>
+        <h3>新算法实证图组</h3>
+        <p>主页面恢复显示 KPI 总览、机制对比、DBN 后验、证据摘要与图2至图11，保留独立图组页用于单图导出与补充材料整理。</p>
+      </div>
+      <div class="publication-entry-grid science-panels-meta-grid">
+        <article v-for="item in sciencePanelsCards" :key="item.label" class="publication-entry-card">
+          <span class="label">{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </article>
+      </div>
+      <p class="publication-footer">{{ sciencePanelsFooter }}</p>
+      <div class="science-panels-blocks">
+        <ValidationKpiCards
+          :result="scienceResult"
+          @jump="scrollToScienceBlock"
+        />
+        <ValidationDbnPanel
+          :result="scienceResult"
+        />
+        <ValidationMechanismPanel
+          :result="scienceResult"
+        />
+        <ValidationEvidencePanel
+          :result="scienceResult"
+          :evaluation="evalData"
+          :evaluating="evalLoading"
+          :eval-message="evalMessage"
+        />
+      </div>
+      <ValidationScienceFigures
+        :result="scienceResult"
+        :evaluation="evalData"
+        :columns="2"
+        density="balanced"
+        :chart-scale="100"
+        @matrix-select="onMatrixSelect"
+      />
+      <div class="publication-entry-actions science-panels-actions">
+        <p class="data-note">如需逐图高清导出或整理补充材料，继续进入独立图组页处理；主页面现在保留完整证据链浏览。</p>
+        <button type="button" class="tool-btn small" @click="goScienceFigures">{{ av('openSciencePage') }}</button>
+      </div>
+    </section>
+
     <section v-if="hasSpatialData" class="fusion-section publication-entry">
       <div class="publication-entry-head">
         <span class="publication-kicker">图1 | 三维融合诊断</span>
@@ -453,6 +498,11 @@ import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import { useI18n } from '../composables/useI18n'
 import { LRUCache } from '../lib/lruCache'
 import { SkeletonPanel } from '../components/library'
+import ValidationDbnPanel from '../components/validation/ValidationDbnPanel.vue'
+import ValidationEvidencePanel from '../components/validation/ValidationEvidencePanel.vue'
+import ValidationKpiCards from '../components/validation/ValidationKpiCards.vue'
+import ValidationMechanismPanel from '../components/validation/ValidationMechanismPanel.vue'
+import ValidationScienceFigures from '../components/validation/ValidationScienceFigures.vue'
 import { buildPublicationMethodsFooter } from '../utils/paperExportSchema'
 
 const GeoMpiFusion3D = defineAsyncComponent(() => import('../components/GeoMpiFusion3D.vue'))
@@ -478,6 +528,7 @@ const matrixRoleMeta = {
 const pageRoot = ref(null)
 const stageContainer = ref(null)
 const thumbPanelRef = ref(null)
+const sciencePanelsSectionRef = ref(null)
 const heatmapCanvas = ref(null)
 const overlayCanvas = ref(null)
 const seamOptions = ref([])
@@ -856,6 +907,13 @@ const metricStats = computed(() => {
   return result
 })
 const thumbHoverStats = computed(() => metricStats.value[thumbHover.metric] || null)
+const deriveFusionRiskLabel = (mpiValue) => {
+  const value = Number(mpiValue)
+  if (!Number.isFinite(value)) return '未知'
+  if (value < 50) return '高风险'
+  if (value < 70) return '中风险'
+  return '低风险'
+}
 const scienceResult = computed(() => {
   if (!hasSpatialData.value) return null
   const stats = metricStats.value
@@ -881,6 +939,7 @@ const scienceResult = computed(() => {
     fusion: {
       mpi: mpiMean,
       baseline: { mpi: baseMpi },
+      risk_label: deriveFusionRiskLabel(mpiMean),
       dynamic_weights: normalizedWeights.value
     },
     kpi: {
@@ -891,11 +950,34 @@ const scienceResult = computed(() => {
       improvement_vs_baseline_pct: improvementPct
     },
     figures: {
+      fig1_overview: {
+        borehole_count: Number(spatialData.value?.borehole_count || boreholes.length || 0),
+        microseismic_count: Number(spatialData.value?.microseismic_count || boreholes.length || 0),
+        label_samples: Array.isArray(evalInputs?.y_true) ? evalInputs.y_true.length : 0,
+        label_source: evalInputs?.sourceFile || '伪标签估计'
+      },
       fig5_dbn: { posterior }
     },
     evaluation_inputs: evalInputs
   }
 })
+const sciencePanelsCards = computed(() => ([
+  { label: '煤层', value: seamName.value || '--' },
+  { label: '恢复图块', value: '5 组' },
+  { label: '评估状态', value: evalData.value ? '已联动' : (evalLoading.value ? '计算中' : '待生成') },
+  { label: '独立图页', value: '保留' }
+]))
+const sciencePanelsFooter = computed(() => buildPublicationMethodsFooter({
+  subject: '主页面恢复图组',
+  source: '新算法实证页底部图版区',
+  seam: seamName.value || '',
+  details: [
+    `图块 5 组`,
+    `AUC ${fmt(evalData.value?.auc, 3)}`,
+    `Brier ${fmt(evalData.value?.brier, 3)}`,
+    `缩略指标 ${metricDefs.length}`
+  ]
+}))
 
 const matrixRoleLabel = (role) => {
   const key = String(role || '').toLowerCase()
@@ -1469,6 +1551,15 @@ const goPressureAnalysis = () => {
   })
 }
 
+const scrollToScienceBlock = async (targetId) => {
+  await nextTick()
+  const root = sciencePanelsSectionRef.value
+  if (!root) return
+  const target = targetId ? root.querySelector(`#${targetId}`) : null
+  const node = target || root
+  node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 const goScienceFigures = () => {
   router.push({
     name: 'AlgorithmValidationFigures',
@@ -1895,6 +1986,10 @@ onBeforeUnmount(() => {
 .science-entry { border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: var(--bg-elevated); box-shadow: var(--shadow-sm); padding: 12px; }
 .science-entry .data-note { color: #92400e; }
 .science-entry .export-note { color: #065f46; font-weight: 600; }
+.science-panels-section { border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(246,249,248,.96) 100%); box-shadow: var(--shadow-sm); padding: 12px; }
+.science-panels-meta-grid { margin-bottom: 2px; }
+.science-panels-blocks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.science-panels-actions { margin-top: 2px; }
 .fusion-section { border-radius: var(--border-radius-md); border: 1px solid var(--border-color-light); background: var(--bg-elevated); box-shadow: var(--shadow-sm); padding: 12px; }
 .publication-entry { display: grid; gap: 10px; }
 .publication-entry-head { display: grid; gap: 4px; }
@@ -1924,6 +2019,6 @@ onBeforeUnmount(() => {
 .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(6px); }
 .drawer-up-enter-from, .drawer-up-leave-to { opacity: 0; transform: translateY(20px); }
 @media (max-width: 1400px) { .top-figure-band { grid-template-columns: 1fr; } .main-layout { grid-template-columns: 1fr; } .thumb-list { flex-direction: row; overflow-x: auto; } .thumb-item { min-width: 220px; } }
-@media (max-width: 1080px) { .validation-page { height: auto; min-height: calc(100vh - 18px); } .metric-dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thumb-panel { display: none; } .floating-panel { position: fixed; left: 12px; right: 12px; top: 88px; width: auto; } .geo-panel { top: 88px; } .eval-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .eval-content { grid-template-columns: 1fr; } .publication-entry-grid, .stage-publication-grid, .legend-publication-grid, .top-publication-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) { .top-nav { flex-direction: column; align-items: flex-start; } .nav-summary { max-width: none; } .nav-right { width: 100%; flex-wrap: wrap; } .nav-toolbar-actions { width: 100%; justify-content: flex-start; } .stage { min-height: 320px; } .publication-entry-grid, .stage-publication-grid, .legend-publication-grid, .floating-publication-grid, .top-publication-grid { grid-template-columns: 1fr; } .publication-entry-actions, .fusion-controls-row, .fusion-placeholder, .eval-head, .legend-publication-head, .thumb-head, .floating-head { flex-direction: column; align-items: flex-start; } .eval-drawer .actions { width: 100%; flex-wrap: wrap; } }
+@media (max-width: 1080px) { .validation-page { height: auto; min-height: calc(100vh - 18px); } .metric-dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); } .thumb-panel { display: none; } .floating-panel { position: fixed; left: 12px; right: 12px; top: 88px; width: auto; } .geo-panel { top: 88px; } .eval-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .eval-content { grid-template-columns: 1fr; } .publication-entry-grid, .stage-publication-grid, .legend-publication-grid, .top-publication-grid, .science-panels-blocks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .top-nav { flex-direction: column; align-items: flex-start; } .nav-summary { max-width: none; } .nav-right { width: 100%; flex-wrap: wrap; } .nav-toolbar-actions { width: 100%; justify-content: flex-start; } .stage { min-height: 320px; } .publication-entry-grid, .stage-publication-grid, .legend-publication-grid, .floating-publication-grid, .top-publication-grid, .science-panels-blocks { grid-template-columns: 1fr; } .publication-entry-actions, .fusion-controls-row, .fusion-placeholder, .eval-head, .legend-publication-head, .thumb-head, .floating-head { flex-direction: column; align-items: flex-start; } .eval-drawer .actions { width: 100%; flex-wrap: wrap; } }
 </style>
