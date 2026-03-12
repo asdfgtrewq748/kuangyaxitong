@@ -1,7 +1,7 @@
 ﻿<template>
-  <section class="geo-mpi-fusion" :class="{ paper: paperMode }">
+  <section class="geo-mpi-fusion" :class="{ paper: paperMode, guided: guidedMode }">
     <header class="fusion-header">
-      <div v-if="paperMode && hasRenderableData && !errorText" class="paper-frame">
+      <div v-if="showFullPublicationChrome && hasRenderableData && !errorText" class="paper-frame">
         <div class="paper-frame-head">
           <span class="paper-frame-kicker">{{ paperNotation.figureHeading }}</span>
           <p class="paper-frame-summary">{{ paperNotation.summaryLead }}</p>
@@ -17,294 +17,451 @@
           <p v-if="subtitle">{{ subtitle }}</p>
         </div>
         <div class="toolbar">
-          <span class="toolbar-label">Scene controls</span>
-          <label class="toggle"><input v-model="showLayers" type="checkbox">Layers</label>
-          <label class="toggle"><input v-model="showMpiSurface" type="checkbox">MPI Surface</label>
-          <label class="toggle"><input v-model="showMpiContours" type="checkbox">Contours</label>
-          <label class="toggle"><input v-model="showHotspots" type="checkbox">Hotspots</label>
-          <label class="toggle"><input v-model="showStressCloud" type="checkbox">Stress Cloud</label>
-          <label class="toggle"><input v-model="showStressAnchors" type="checkbox" :disabled="!hasStressAnchors">Anchors</label>
-          <label class="toggle"><input v-model="showBoreholes" type="checkbox">Boreholes</label>
-          <label class="toggle"><input v-model="autoRotate" type="checkbox">Auto-Rotate</label>
-          <label class="toggle"><input v-model="sectionEnabled" type="checkbox">Section</label>
-          <label class="axis">
-            <span>Axis</span>
-            <select v-model="sectionAxis" :disabled="!sectionEnabled">
-              <option value="x">X</option>
-              <option value="y">Y</option>
-              <option value="z">Z</option>
-            </select>
-          </label>
-          <label class="slider" :class="{ disabled: !sectionEnabled }">
-            <span>{{ sectionDisplay }}</span>
-            <input
-              v-model.number="sectionRatio"
-              type="range"
-              min="0.05"
-              max="0.95"
-              step="0.01"
-              :disabled="!sectionEnabled"
+          <span class="toolbar-label">{{ guidedMode ? uiText.guidedView : uiText.sceneControls }}</span>
+          <div v-if="guidedMode" class="scene-preset-row">
+            <button
+              v-for="preset in scenePresetOptions"
+              :key="preset.id"
+              type="button"
+              class="scene-preset-btn"
+              :class="{ 'is-active': activeScenePreset === preset.id }"
+              :data-preset="preset.id"
+              @click="applyScenePreset(preset.id)"
             >
-          </label>
-          <label class="slider density">
-            <span>Cloud {{ Math.round(cloudDensity * 100) }}%</span>
-            <input
-              v-model.number="cloudDensity"
-              type="range"
-              min="0.25"
-              max="1"
-              step="0.05"
-            >
-          </label>
-          <button type="button" class="ghost-btn" @click="resetView">Reset View</button>
-          <button type="button" class="ghost-btn export-btn" :disabled="isExporting || !hasRenderableData || loading" @click="exportFigure">
-            {{ isExporting ? 'Exporting...' : 'Export Figure' }}
+              <strong>{{ preset.label }}</strong>
+            </button>
+          </div>
+          <p v-if="guidedMode" class="scene-guided-note">{{ activeScenePresetMeta.summary }}</p>
+          <button
+            v-if="guidedMode"
+            type="button"
+            class="ghost-btn scene-advanced-toggle"
+            @click="showAdvancedControls = !showAdvancedControls"
+          >
+            {{ showAdvancedControls ? uiText.hideAdvancedControls : uiText.advancedControls }}
           </button>
-          <button type="button" class="refresh-btn" @click="$emit('refresh')">Refresh</button>
+          <div v-if="!guidedMode || showAdvancedControls" class="scene-advanced-panel">
+            <label class="toggle"><input v-model="showLayers" data-control="showLayers" type="checkbox">{{ uiText.layers }}</label>
+            <label class="toggle"><input v-model="showMpiSurface" data-control="showMpiSurface" type="checkbox">{{ uiText.mpiSurface }}</label>
+            <label class="toggle"><input v-model="showMpiContours" data-control="showMpiContours" type="checkbox">{{ uiText.contours }}</label>
+            <label class="toggle"><input v-model="showHotspots" data-control="showHotspots" type="checkbox">{{ uiText.hotspots }}</label>
+            <label class="toggle"><input v-model="showStressCloud" data-control="showStressCloud" type="checkbox">{{ uiText.stressCloud }}</label>
+            <label class="toggle"><input v-model="showStressAnchors" data-control="showStressAnchors" type="checkbox" :disabled="!hasStressAnchors">{{ uiText.anchors }}</label>
+            <label class="toggle"><input v-model="showBoreholes" data-control="showBoreholes" type="checkbox">{{ uiText.boreholes }}</label>
+            <label class="toggle"><input v-model="autoRotate" data-control="autoRotate" type="checkbox">{{ uiText.autoRotate }}</label>
+            <label class="toggle"><input v-model="sectionEnabled" data-control="sectionEnabled" type="checkbox">{{ uiText.section }}</label>
+            <label class="axis">
+              <span>{{ uiText.axis }}</span>
+              <select v-model="sectionAxis" :disabled="!sectionEnabled">
+                <option value="x">X</option>
+                <option value="y">Y</option>
+                <option value="z">Z</option>
+              </select>
+            </label>
+            <label class="slider" :class="{ disabled: !sectionEnabled }">
+              <span>{{ sectionDisplay }}</span>
+              <input
+                v-model.number="sectionRatio"
+                type="range"
+                min="0.05"
+                max="0.95"
+                step="0.01"
+                :disabled="!sectionEnabled"
+              >
+            </label>
+            <label class="slider density">
+              <span>{{ uiText.cloudDensity }} {{ Math.round(cloudDensity * 100) }}%</span>
+              <input
+                v-model.number="cloudDensity"
+                type="range"
+                min="0.25"
+                max="1"
+                step="0.05"
+              >
+            </label>
+          </div>
+          <div class="scene-action-row">
+            <button type="button" class="ghost-btn" @click="resetView">{{ uiText.resetView }}</button>
+            <button type="button" class="ghost-btn export-btn" :disabled="isExporting || !hasRenderableData || loading" @click="exportFigure">
+              {{ isExporting ? uiText.exporting : uiText.exportFigure }}
+            </button>
+            <button type="button" class="refresh-btn" @click="$emit('refresh')">{{ uiText.refresh }}</button>
+          </div>
         </div>
       </div>
     </header>
 
-    <div class="viewer-body" ref="hostRef">
+    <div class="viewer-body" :class="{ 'is-guided': guidedMode }">
       <AsyncState
         v-if="loading || !hasRenderableData || !!errorText"
         :loading="loading"
         :hasData="hasRenderableData"
         :errorText="errorText"
-        :loadingText="loadingText || 'Loading fusion scene...'"
-        :emptyText="emptyText || 'No fusion data available yet.'"
-        :action="{ label: 'Retry', onClick: () => $emit('refresh') }"
+        :loadingText="loadingText || uiText.loadingScene"
+        :emptyText="emptyText || uiText.emptyScene"
+        :action="{ label: uiText.retry, onClick: () => $emit('refresh') }"
       />
+      <template v-else>
+        <div class="canvas-stage" ref="hostRef">
+          <canvas ref="canvasRef" class="fusion-canvas"></canvas>
 
-      <canvas v-show="!loading && hasRenderableData && !errorText" ref="canvasRef" class="fusion-canvas"></canvas>
+          <div class="figure-overlay" :class="{ compact: guidedMode }">
+            <div class="figure-topline">
+              <span class="panel-tag">{{ panelLabel }}</span>
+              <span class="figure-topic">{{ guidedMode ? activeScenePresetMeta.label : heroCopy.topic }}</span>
+            </div>
+            <h4 class="figure-headline">{{ guidedMode ? guidedHeadline : heroCopy.headline }}</h4>
+            <p class="figure-meta">{{ guidedMode ? guidedMetaLine : figureHeaderCopy.metaLine }}</p>
+            <div v-if="guidedMode" class="guided-stat-strip">
+              <div v-for="item in guidedHudStats" :key="item.label" class="guided-stat-card">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.value }}</strong>
+              </div>
+            </div>
+            <div v-else class="figure-kpis">
+              <span v-for="line in figureHeaderCopy.kpiLines" :key="line">{{ line }}</span>
+            </div>
+            <div v-if="guidedMode" class="guided-summary-lines">
+              <p v-for="line in guidedSummaryLines" :key="line">{{ line }}</p>
+            </div>
+            <div v-else class="content-metrics">
+              <p v-for="line in heroCopy.metricRows" :key="line">{{ line }}</p>
+            </div>
+            <div v-if="!guidedMode" class="diagnostic-badges">
+              <span
+                v-for="badge in diagnosticBadges"
+                :key="`${badge.label}-${badge.value}`"
+                class="diagnostic-badge"
+                :class="`tone-${badge.tone}`"
+              >
+                <strong>{{ badge.label }}</strong>
+                <em>{{ badge.value }}</em>
+              </span>
+            </div>
+            <div v-if="!guidedMode" class="methods-panel">
+              <p class="methods-title">{{ publicationLabels.methodsPanel }}</p>
+              <p v-for="row in methodProvenanceRows" :key="row.label" class="methods-row">
+                <span class="methods-key">{{ row.label }}</span>
+                <span class="methods-value">{{ row.value }}</span>
+              </p>
+            </div>
+            <p v-if="!guidedMode" class="figure-note">{{ statisticCopy.figureNote }}</p>
+          </div>
 
-      <div v-if="!loading && hasRenderableData && !errorText" class="figure-overlay">
-        <div class="figure-topline">
-          <span class="panel-tag">{{ panelLabel }}</span>
-          <span class="figure-topic">{{ heroCopy.topic }}</span>
-        </div>
-        <h4 class="figure-headline">{{ heroCopy.headline }}</h4>
-        <p class="figure-meta">{{ figureHeaderCopy.metaLine }}</p>
-        <div class="figure-kpis">
-          <span v-for="line in figureHeaderCopy.kpiLines" :key="line">{{ line }}</span>
-        </div>
-        <div class="content-metrics">
-          <p v-for="line in heroCopy.metricRows" :key="line">{{ line }}</p>
-        </div>
-        <div class="diagnostic-badges">
-          <span
-            v-for="badge in diagnosticBadges"
-            :key="`${badge.label}-${badge.value}`"
-            class="diagnostic-badge"
-            :class="`tone-${badge.tone}`"
-          >
-            <strong>{{ badge.label }}</strong>
-            <em>{{ badge.value }}</em>
-          </span>
-        </div>
-        <div class="methods-panel">
-          <p class="methods-title">{{ publicationLabels.methodsPanel }}</p>
-          <p v-for="row in methodProvenanceRows" :key="row.label" class="methods-row">
-            <span class="methods-key">{{ row.label }}</span>
-            <span class="methods-value">{{ row.value }}</span>
-          </p>
-        </div>
-        <p class="figure-note">{{ statisticCopy.figureNote }}</p>
-      </div>
+          <div class="legend-overlay" :class="{ compact: guidedMode }">
+            <div class="legend-title">{{ guidedMode ? metricLabel : legendCopy.legendTitle }}</div>
+            <div class="legend-bar">
+              <span class="legend-tick"></span>
+              <span class="legend-tick"></span>
+              <span class="legend-tick"></span>
+            </div>
+            <div class="legend-range">
+              <span>{{ formatValue(metricStats?.min) }}</span>
+              <span>{{ formatValue(metricStats?.mean) }}</span>
+              <span>{{ formatValue(metricStats?.max) }}</span>
+            </div>
+            <p class="section-hint">
+              {{ legendCopy.depthSpanLine }}
+            </p>
+            <p v-if="sectionEnabled" class="section-hint">
+              {{ legendCopy.sectionLine }}
+            </p>
+            <p v-if="showStressCloud" class="section-hint cloud-hint">
+              {{ legendCopy.cloudLine }}
+            </p>
+            <div v-if="!guidedMode && profileCurvePoints" class="profile-curve-wrap">
+              <p class="profile-title">{{ statisticCopy.profileTitle }}</p>
+              <svg class="profile-curve" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
+                <line x1="0" y1="35" x2="100" y2="35" class="profile-axis" />
+                <line x1="0" y1="1" x2="0" y2="35" class="profile-axis" />
+                <polyline :points="profileCurvePoints" class="profile-line" />
+              </svg>
+            </div>
+            <div v-if="!guidedMode && showStressCloud && showStressAnchors && stressAnchorItems.length" class="anchor-list">
+              <p class="anchor-title">{{ statisticCopy.anchorTitle }}</p>
+              <p v-for="item in stressAnchorItems.slice(0, 4)" :key="`anchor-${item.name}-${item.zNorm}`" class="anchor-item">
+                <span class="anchor-name">{{ item.name }}</span>
+                <span class="anchor-meta">z={{ formatValue(item.zWorld) }} | w={{ formatValue(item.importance) }}</span>
+              </p>
+            </div>
+            <div v-if="!guidedMode" class="depth-strip-wrap">
+              <span class="subfigure-label">d</span>
+              <p class="depth-strip-title">{{ publicationLabels.depthGuideTitle }}</p>
+              <div class="depth-strip-layout">
+                <svg class="depth-strip" viewBox="0 0 88 220" preserveAspectRatio="none" aria-hidden="true">
+                  <rect x="28" y="8" width="18" height="204" rx="9" class="depth-strip-bg" />
+                  <rect
+                    v-if="depthFocusBand"
+                    :x="depthFocusBand.x"
+                    :y="depthFocusBand.y"
+                    :width="depthFocusBand.w"
+                    :height="depthFocusBand.h"
+                    rx="8"
+                    class="depth-focus-band"
+                  />
+                  <line x1="37" y1="8" x2="37" y2="212" class="depth-axis-line" />
+                  <g v-for="tick in depthAxisTicks" :key="`tick-${tick.id}`">
+                    <line x1="24" :y1="tick.y" x2="50" :y2="tick.y" class="depth-tick-line" />
+                    <text x="4" :y="tick.y + 3" class="depth-tick-label">{{ tick.label }}</text>
+                  </g>
+                  <g v-for="item in depthAnchorTrack" :key="`track-${item.name}-${item.zNorm}`">
+                    <line x1="46" :y1="item.y" x2="58" :y2="item.y" class="depth-anchor-line" />
+                    <circle cx="37" :cy="item.y" :r="item.r" class="depth-anchor-dot" />
+                    <text x="61" :y="item.y + 3" class="depth-anchor-label">{{ item.shortLabel }}</text>
+                  </g>
+                </svg>
+                <div class="depth-strip-notes">
+                  <p v-for="line in diagnosticCopy.depthNotes" :key="line">{{ line }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <div v-if="!loading && hasRenderableData && !errorText" class="legend-overlay">
-        <div class="legend-title">{{ legendCopy.legendTitle }}</div>
-        <div class="legend-bar">
-          <span class="legend-tick"></span>
-          <span class="legend-tick"></span>
-          <span class="legend-tick"></span>
+          <div class="orientation-overlay" :class="{ compact: guidedMode }">
+            <div class="north-block">
+              <span class="north-label">{{ legendCopy.northLabel }}</span>
+              <span class="north-arrow">^</span>
+            </div>
+            <div class="scale-block">
+              <div class="scale-bar-line"></div>
+              <p>{{ scaleBarLabel }}</p>
+            </div>
+            <p class="orientation-meta">{{ guidedMode ? compactOrientationMeta : legendCopy.orientationMeta }}</p>
+          </div>
         </div>
-        <div class="legend-range">
-          <span>{{ formatValue(metricStats?.min) }}</span>
-          <span>{{ formatValue(metricStats?.mean) }}</span>
-          <span>{{ formatValue(metricStats?.max) }}</span>
-        </div>
-        <p class="section-hint">
-          {{ legendCopy.depthSpanLine }}
-        </p>
-        <p v-if="sectionEnabled" class="section-hint">
-          {{ legendCopy.sectionLine }}
-        </p>
-        <p v-if="showStressCloud" class="section-hint cloud-hint">
-          {{ legendCopy.cloudLine }}
-        </p>
-        <div v-if="profileCurvePoints" class="profile-curve-wrap">
-          <p class="profile-title">{{ statisticCopy.profileTitle }}</p>
-          <svg class="profile-curve" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
-            <line x1="0" y1="35" x2="100" y2="35" class="profile-axis" />
-            <line x1="0" y1="1" x2="0" y2="35" class="profile-axis" />
-            <polyline :points="profileCurvePoints" class="profile-line" />
-          </svg>
-        </div>
-        <div v-if="showStressCloud && showStressAnchors && stressAnchorItems.length" class="anchor-list">
-          <p class="anchor-title">{{ statisticCopy.anchorTitle }}</p>
-          <p v-for="item in stressAnchorItems.slice(0, 4)" :key="`anchor-${item.name}-${item.zNorm}`" class="anchor-item">
-            <span class="anchor-name">{{ item.name }}</span>
-            <span class="anchor-meta">z={{ formatValue(item.zWorld) }} | w={{ formatValue(item.importance) }}</span>
-          </p>
-        </div>
-        <div class="depth-strip-wrap">
-          <span class="subfigure-label">d</span>
-          <p class="depth-strip-title">{{ publicationLabels.depthGuideTitle }}</p>
-          <div class="depth-strip-layout">
-            <svg class="depth-strip" viewBox="0 0 88 220" preserveAspectRatio="none" aria-hidden="true">
-              <rect x="28" y="8" width="18" height="204" rx="9" class="depth-strip-bg" />
+
+        <aside v-if="guidedMode" class="analysis-side-rail">
+          <div class="rail-head">
+            <span class="rail-kicker">{{ uiText.insightRail }}</span>
+            <h4>{{ activeScenePresetMeta.label }}{{ uiText.focusSuffix }}</h4>
+            <p>{{ activeScenePresetMeta.summary }}</p>
+          </div>
+
+          <div class="rail-stat-grid">
+            <div v-for="item in guidedRailStats" :key="item.label" class="rail-stat-card">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+
+          <div class="rail-card-stack">
+            <div class="rail-card">
+              <div class="rail-card-head">
+                <strong>{{ publicationLabels.insetTitle }}</strong>
+                <span class="subfigure-label">a</span>
+              </div>
+              <svg class="inset-map" :viewBox="insetViewBox" preserveAspectRatio="none" aria-hidden="true">
+                <rect
+                  v-for="cell in insetHeatmapCells"
+                  :key="`cell-${cell.id}`"
+                  :x="cell.x"
+                  :y="cell.y"
+                  :width="cell.w"
+                  :height="cell.h"
+                  :fill="cell.color"
+                />
+                <line
+                  v-if="insetSectionLine"
+                  :x1="insetSectionLine.x1"
+                  :y1="insetSectionLine.y1"
+                  :x2="insetSectionLine.x2"
+                  :y2="insetSectionLine.y2"
+                  class="inset-section-line"
+                />
+                <circle
+                  v-for="spot in insetHotspotPoints"
+                  :key="`spot-${spot.id}`"
+                  :cx="spot.x"
+                  :cy="spot.y"
+                  :r="spot.r"
+                  class="inset-hotspot"
+                />
+              </svg>
+              <p class="rail-card-note">{{ publicationLabels.insetCaption }}</p>
+            </div>
+
+            <div class="rail-card">
+              <div class="rail-card-head">
+                <strong>{{ publicationLabels.distributionTitle }}</strong>
+                <span class="subfigure-label">b</span>
+              </div>
+              <svg class="dist-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
+                <rect
+                  v-for="bar in histogramBars"
+                  :key="`bar-${bar.id}`"
+                  :x="bar.x"
+                  :y="bar.y"
+                  :width="bar.w"
+                  :height="bar.h"
+                  class="dist-bar"
+                />
+                <line
+                  v-for="line in histogramQuantileLines"
+                  :key="`qline-${line.id}`"
+                  :x1="line.x"
+                  y1="1"
+                  :x2="line.x"
+                  y2="37"
+                  class="dist-qline"
+                />
+              </svg>
+              <p class="rail-card-note">{{ statisticCopy.distributionCaption }}</p>
+            </div>
+
+            <div class="rail-card">
+              <div class="rail-card-head">
+                <strong>{{ sectionProfileModeLabel }}</strong>
+                <span class="subfigure-label">c</span>
+              </div>
+              <svg class="section-profile-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
+                <line x1="0" y1="37" x2="100" y2="37" class="section-axis-line" />
+                <line x1="0" y1="1" x2="0" y2="37" class="section-axis-line" />
+                <line
+                  v-if="sectionProfileGuideX !== null"
+                  :x1="sectionProfileGuideX"
+                  y1="1"
+                  :x2="sectionProfileGuideX"
+                  y2="37"
+                  class="section-guide-line"
+                />
+                <path
+                  v-if="sectionUncertaintyBandPath"
+                  :d="sectionUncertaintyBandPath"
+                  class="section-band-path"
+                />
+                <path
+                  v-if="sectionProfilePath"
+                  :d="sectionProfilePath"
+                  class="section-profile-path"
+                />
+              </svg>
+              <div class="section-profile-meta">
+                <span>{{ sectionProfileRangeLabel }}</span>
+                <span>{{ sectionProfilePeakLabel }}</span>
+              </div>
+              <p class="rail-card-note">{{ sectionProfileSpreadLabel }}</p>
+            </div>
+          </div>
+
+          <div class="rail-summary">
+            <p v-for="line in guidedSummaryLines" :key="`summary-${line}`">{{ line }}</p>
+            <p v-for="item in hotspotTopList.slice(0, 3)" :key="`hotspot-${item}`" class="hotspot-line">{{ item }}</p>
+          </div>
+        </aside>
+
+        <div v-else class="analysis-overlay">
+          <p class="analysis-title">{{ statisticCopy.analysisTitle }}</p>
+          <div class="inset-map-wrap">
+            <span class="subfigure-label">a</span>
+            <p class="inset-title">{{ publicationLabels.insetTitle }}</p>
+            <svg class="inset-map" :viewBox="insetViewBox" preserveAspectRatio="none" aria-hidden="true">
               <rect
-                v-if="depthFocusBand"
-                :x="depthFocusBand.x"
-                :y="depthFocusBand.y"
-                :width="depthFocusBand.w"
-                :height="depthFocusBand.h"
-                rx="8"
-                class="depth-focus-band"
+                v-for="cell in insetHeatmapCells"
+                :key="`cell-${cell.id}`"
+                :x="cell.x"
+                :y="cell.y"
+                :width="cell.w"
+                :height="cell.h"
+                :fill="cell.color"
               />
-              <line x1="37" y1="8" x2="37" y2="212" class="depth-axis-line" />
-              <g v-for="tick in depthAxisTicks" :key="`tick-${tick.id}`">
-                <line x1="24" :y1="tick.y" x2="50" :y2="tick.y" class="depth-tick-line" />
-                <text x="4" :y="tick.y + 3" class="depth-tick-label">{{ tick.label }}</text>
-              </g>
-              <g v-for="item in depthAnchorTrack" :key="`track-${item.name}-${item.zNorm}`">
-                <line x1="46" :y1="item.y" x2="58" :y2="item.y" class="depth-anchor-line" />
-                <circle cx="37" :cy="item.y" :r="item.r" class="depth-anchor-dot" />
-                <text x="61" :y="item.y + 3" class="depth-anchor-label">{{ item.shortLabel }}</text>
-              </g>
+              <line
+                v-if="insetSectionLine"
+                :x1="insetSectionLine.x1"
+                :y1="insetSectionLine.y1"
+                :x2="insetSectionLine.x2"
+                :y2="insetSectionLine.y2"
+                class="inset-section-line"
+              />
+              <circle
+                v-for="spot in insetHotspotPoints"
+                :key="`spot-${spot.id}`"
+                :cx="spot.x"
+                :cy="spot.y"
+                :r="spot.r"
+                class="inset-hotspot"
+              />
             </svg>
-            <div class="depth-strip-notes">
-              <p v-for="line in diagnosticCopy.depthNotes" :key="line">{{ line }}</p>
+            <p class="inset-caption">{{ publicationLabels.insetCaption }}</p>
+          </div>
+          <div class="dist-wrap">
+            <span class="subfigure-label">b</span>
+            <p class="dist-title">{{ publicationLabels.distributionTitle }}</p>
+            <svg class="dist-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
+              <rect
+                v-for="bar in histogramBars"
+                :key="`bar-${bar.id}`"
+                :x="bar.x"
+                :y="bar.y"
+                :width="bar.w"
+                :height="bar.h"
+                class="dist-bar"
+              />
+              <line
+                v-for="line in histogramQuantileLines"
+                :key="`qline-${line.id}`"
+                :x1="line.x"
+                y1="1"
+                :x2="line.x"
+                y2="37"
+                class="dist-qline"
+              />
+            </svg>
+            <p class="dist-caption">{{ statisticCopy.distributionCaption }}</p>
+          </div>
+          <div class="section-profile-wrap">
+            <span class="subfigure-label">c</span>
+            <p class="section-profile-title">{{ sectionProfileModeLabel }}</p>
+            <svg class="section-profile-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
+              <line x1="0" y1="37" x2="100" y2="37" class="section-axis-line" />
+              <line x1="0" y1="1" x2="0" y2="37" class="section-axis-line" />
+              <line
+                v-if="sectionProfileGuideX !== null"
+                :x1="sectionProfileGuideX"
+                y1="1"
+                :x2="sectionProfileGuideX"
+                y2="37"
+                class="section-guide-line"
+              />
+              <path
+                v-if="sectionUncertaintyBandPath"
+                :d="sectionUncertaintyBandPath"
+                class="section-band-path"
+              />
+              <path
+                v-if="sectionProfilePath"
+                :d="sectionProfilePath"
+                class="section-profile-path"
+              />
+            </svg>
+            <div class="section-profile-meta">
+              <span>{{ sectionProfileRangeLabel }}</span>
+              <span>{{ sectionProfilePeakLabel }}</span>
+            </div>
+            <p class="section-profile-note">{{ sectionProfileSpreadLabel }}</p>
+          </div>
+          <p v-for="line in statisticCopy.summaryLines" :key="line">{{ line }}</p>
+          <p v-for="item in hotspotTopList.slice(0, 3)" :key="`hline-${item}`" class="hotspot-line">{{ item }}</p>
+        </div>
+
+        <div v-if="showFullPublicationChrome" class="caption-overlay">
+          <div class="caption-grid">
+            <div class="caption-block">
+              <p class="caption-title">{{ publicationLabels.captionBlock }}</p>
+              <p v-for="row in publicationCaptionRows" :key="row.label" class="caption-row">
+                <span class="caption-key">{{ row.label }}</span>
+                <span class="caption-value">{{ row.value }}</span>
+              </p>
+            </div>
+            <div class="caption-block caption-block-notes">
+              <p class="caption-title">{{ publicationLabels.notesBlock }}</p>
+              <p v-for="row in publicationNoteRows" :key="row.label" class="caption-row">
+                <span class="caption-key">{{ row.label }}</span>
+                <span class="caption-value">{{ row.value }}</span>
+              </p>
             </div>
           </div>
         </div>
-      </div>
-
-      <div v-if="!loading && hasRenderableData && !errorText" class="orientation-overlay">
-        <div class="north-block">
-          <span class="north-label">{{ legendCopy.northLabel }}</span>
-          <span class="north-arrow">^</span>
-        </div>
-        <div class="scale-block">
-          <div class="scale-bar-line"></div>
-          <p>{{ scaleBarLabel }}</p>
-        </div>
-        <p class="orientation-meta">{{ legendCopy.orientationMeta }}</p>
-      </div>
-
-      <div v-if="!loading && hasRenderableData && !errorText" class="analysis-overlay">
-        <p class="analysis-title">{{ statisticCopy.analysisTitle }}</p>
-        <div class="inset-map-wrap">
-          <span class="subfigure-label">a</span>
-          <p class="inset-title">{{ publicationLabels.insetTitle }}</p>
-          <svg class="inset-map" :viewBox="insetViewBox" preserveAspectRatio="none" aria-hidden="true">
-            <rect
-              v-for="cell in insetHeatmapCells"
-              :key="`cell-${cell.id}`"
-              :x="cell.x"
-              :y="cell.y"
-              :width="cell.w"
-              :height="cell.h"
-              :fill="cell.color"
-            />
-            <line
-              v-if="insetSectionLine"
-              :x1="insetSectionLine.x1"
-              :y1="insetSectionLine.y1"
-              :x2="insetSectionLine.x2"
-              :y2="insetSectionLine.y2"
-              class="inset-section-line"
-            />
-            <circle
-              v-for="spot in insetHotspotPoints"
-              :key="`spot-${spot.id}`"
-              :cx="spot.x"
-              :cy="spot.y"
-              :r="spot.r"
-              class="inset-hotspot"
-            />
-          </svg>
-          <p class="inset-caption">{{ publicationLabels.insetCaption }}</p>
-        </div>
-        <div class="dist-wrap">
-          <span class="subfigure-label">b</span>
-          <p class="dist-title">{{ publicationLabels.distributionTitle }}</p>
-          <svg class="dist-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
-            <rect
-              v-for="bar in histogramBars"
-              :key="`bar-${bar.id}`"
-              :x="bar.x"
-              :y="bar.y"
-              :width="bar.w"
-              :height="bar.h"
-              class="dist-bar"
-            />
-            <line
-              v-for="line in histogramQuantileLines"
-              :key="`qline-${line.id}`"
-              :x1="line.x"
-              y1="1"
-              :x2="line.x"
-              y2="37"
-              class="dist-qline"
-            />
-          </svg>
-          <p class="dist-caption">{{ statisticCopy.distributionCaption }}</p>
-        </div>
-        <div class="section-profile-wrap">
-          <span class="subfigure-label">c</span>
-          <p class="section-profile-title">{{ sectionProfileModeLabel }}</p>
-          <svg class="section-profile-chart" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true">
-            <line x1="0" y1="37" x2="100" y2="37" class="section-axis-line" />
-            <line x1="0" y1="1" x2="0" y2="37" class="section-axis-line" />
-            <line
-              v-if="sectionProfileGuideX !== null"
-              :x1="sectionProfileGuideX"
-              y1="1"
-              :x2="sectionProfileGuideX"
-              y2="37"
-              class="section-guide-line"
-            />
-            <path
-              v-if="sectionUncertaintyBandPath"
-              :d="sectionUncertaintyBandPath"
-              class="section-band-path"
-            />
-            <path
-              v-if="sectionProfilePath"
-              :d="sectionProfilePath"
-              class="section-profile-path"
-            />
-          </svg>
-          <div class="section-profile-meta">
-            <span>{{ sectionProfileRangeLabel }}</span>
-            <span>{{ sectionProfilePeakLabel }}</span>
-          </div>
-          <p class="section-profile-note">{{ sectionProfileSpreadLabel }}</p>
-        </div>
-        <p v-for="line in statisticCopy.summaryLines" :key="line">{{ line }}</p>
-        <p v-for="item in hotspotTopList.slice(0, 3)" :key="`hline-${item}`" class="hotspot-line">{{ item }}</p>
-      </div>
-
-      <div v-if="!loading && hasRenderableData && !errorText" class="caption-overlay">
-        <div class="caption-grid">
-          <div class="caption-block">
-            <p class="caption-title">{{ publicationLabels.captionBlock }}</p>
-            <p v-for="row in publicationCaptionRows" :key="row.label" class="caption-row">
-              <span class="caption-key">{{ row.label }}</span>
-              <span class="caption-value">{{ row.value }}</span>
-            </p>
-          </div>
-          <div class="caption-block caption-block-notes">
-            <p class="caption-title">{{ publicationLabels.notesBlock }}</p>
-            <p v-for="row in publicationNoteRows" :key="row.label" class="caption-row">
-              <span class="caption-key">{{ row.label }}</span>
-              <span class="caption-value">{{ row.value }}</span>
-            </p>
-          </div>
-        </div>
-      </div>
+      </template>
     </div>
   </section>
 </template>
@@ -316,9 +473,9 @@ import { buildPublicationDiagnosticCopy, buildPublicationFigureHeaderCopy, build
 import AsyncState from './AsyncState.vue'
 
 const props = defineProps({
-  title: { type: String, default: '3D Geology-MPI Fusion Preview' },
+  title: { type: String, default: '三维地质-MPI-矿压融合预览' },
   subtitle: { type: String, default: '' },
-  panelLabel: { type: String, default: 'Fig. 1' },
+  panelLabel: { type: String, default: '图1' },
   contextMeta: { type: Object, default: () => ({}) },
   geomodel: { type: Object, default: null },
   stressProfile: { type: Object, default: null },
@@ -331,6 +488,8 @@ const props = defineProps({
   emptyText: { type: String, default: '' },
   errorText: { type: String, default: '' },
   paperMode: { type: Boolean, default: false },
+  guidedMode: { type: Boolean, default: false },
+  guidedPreset: { type: String, default: 'overview' },
 })
 
 defineEmits(['refresh'])
@@ -351,6 +510,8 @@ const sectionAxis = ref('z')
 const sectionRatio = ref(0.58)
 const cloudDensity = ref(0.7)
 const isExporting = ref(false)
+const activeScenePreset = ref('overview')
+const showAdvancedControls = ref(false)
 const dataBounds = ref({
   min_x: -10,
   max_x: 10,
@@ -360,11 +521,164 @@ const dataBounds = ref({
   max_z: 10,
 })
 
+const uiText = Object.freeze({
+  guidedView: '引导视图',
+  sceneControls: '场景控制',
+  advancedControls: '高级控制',
+  hideAdvancedControls: '收起高级控制',
+  layers: '地层',
+  mpiSurface: 'MPI曲面',
+  contours: '等值线',
+  hotspots: '热点',
+  stressCloud: '应力云',
+  anchors: '锚点',
+  boreholes: '钻孔',
+  autoRotate: '自动旋转',
+  section: '剖切',
+  axis: '轴向',
+  cloudDensity: '云体密度',
+  resetView: '重置视角',
+  exportFigure: '导出图件',
+  exporting: '导出中...',
+  refresh: '刷新',
+  loadingScene: '正在加载三维融合场景...',
+  emptyScene: '当前还没有可展示的融合数据。',
+  retry: '重试',
+  insightRail: '洞察侧栏',
+  focusSuffix: '重点',
+  mean: '均值',
+  p90Cover: 'P90覆盖',
+  sectionKept: '剖切保留',
+  depthSpan: '深度跨度',
+  metricRange: '指标范围',
+  primaryAnomaly: '主异常',
+  noDominantHotspot: '当前未识别出超过 P90 阈值的主导热点。',
+  seamChip: '煤层',
+  gridChip: '网格',
+  methodChip: '方法',
+  focusChip: '焦点',
+})
+
+const focusCopyMap = Object.freeze({
+  balanced: '平衡模式',
+  shallow: '浅层强化',
+  deep: '深层强化',
+})
+
+const heterogeneityCopyMap = Object.freeze({
+  undetermined: '暂无法判定',
+  'strongly heterogeneous': '强异质',
+  'moderately heterogeneous': '中等异质',
+  'weakly heterogeneous': '弱异质',
+  'internally uniform': '内部均匀',
+})
+
+const hotspotRegimeCopyMap = Object.freeze({
+  'no resolved hotspot': '未识别明显热点',
+  'multi-core hotspot field': '多核心热点场',
+  'clustered hotspot belt': '带状聚集热点',
+  'isolated hotspot core': '孤立热点核',
+})
+
+const samplingCopyMap = Object.freeze({
+  'dense control': '高密度控制',
+  'moderate control': '中等控制',
+  'anchor-limited control': '锚点受限控制',
+  'low control': '低控制度',
+})
+
+const scenePresetOptions = Object.freeze([
+  {
+    id: 'overview',
+    label: '总览',
+    summary: '保留地层、MPI曲面、热点、锚点和钻孔，适合作为进入场景后的第一眼研判。',
+    values: {
+      showLayers: true,
+      showMpiSurface: true,
+      showMpiContours: true,
+      showHotspots: true,
+      showStressCloud: true,
+      showStressAnchors: true,
+      showBoreholes: true,
+      autoRotate: true,
+      sectionEnabled: false,
+      sectionAxis: 'z',
+      sectionRatio: 0.58,
+      cloudDensity: 0.7
+    }
+  },
+  {
+    id: 'strata',
+    label: '地层',
+    summary: '收起应力表达，突出地层关系和钻孔位置，让构造轮廓更容易直接读取。',
+    values: {
+      showLayers: true,
+      showMpiSurface: false,
+      showMpiContours: false,
+      showHotspots: false,
+      showStressCloud: false,
+      showStressAnchors: false,
+      showBoreholes: true,
+      autoRotate: false,
+      sectionEnabled: false,
+      sectionAxis: 'z',
+      sectionRatio: 0.58,
+      cloudDensity: 0.35
+    }
+  },
+  {
+    id: 'stress',
+    label: '应力',
+    summary: '突出应力云和热点分布，同时弱化钻孔干扰，便于快速判断风险集中区。',
+    values: {
+      showLayers: true,
+      showMpiSurface: true,
+      showMpiContours: false,
+      showHotspots: true,
+      showStressCloud: true,
+      showStressAnchors: true,
+      showBoreholes: false,
+      autoRotate: false,
+      sectionEnabled: false,
+      sectionAxis: 'z',
+      sectionRatio: 0.62,
+      cloudDensity: 0.82
+    }
+  },
+  {
+    id: 'section',
+    label: '剖切',
+    summary: '直接打开深度剖切，便于查看内部层位关系和 MPI 场在纵向上的对应。',
+    values: {
+      showLayers: true,
+      showMpiSurface: true,
+      showMpiContours: true,
+      showHotspots: false,
+      showStressCloud: false,
+      showStressAnchors: false,
+      showBoreholes: true,
+      autoRotate: false,
+      sectionEnabled: true,
+      sectionAxis: 'z',
+      sectionRatio: 0.62,
+      cloudDensity: 0.45
+    }
+  }
+])
+
+const scenePresetMap = Object.fromEntries(scenePresetOptions.map((preset) => [preset.id, preset]))
+const PAPER_NOTATION_DEFAULTS = Object.freeze({
+  metricUnit: 'MPa',
+  depthUnit: 'm',
+  densityUnit: '钻孔/km^2',
+  spatialFrameLabel: 'X向东 / Y向北'
+})
+
 const metricLabel = computed(() => String(props.metric || 'mpi').toUpperCase())
 const stressProfileLabel = computed(() => {
   const source = String(props.stressProfile?.source || '')
   if (source) return source
-  return 'default profile'
+  return '默认剖面'
 })
 const stressFocusLabel = computed(() => {
   const mode = Number(props.stressProfile?.meta?.focus_mode)
@@ -372,6 +686,7 @@ const stressFocusLabel = computed(() => {
   if (mode === 2) return 'deep'
   return 'balanced'
 })
+const focusDisplayLabel = computed(() => focusCopyMap[stressFocusLabel.value] || stressFocusLabel.value)
 
 const hasStressProfileSamples = computed(() => {
   const bins = props.stressProfile?.bins
@@ -385,6 +700,10 @@ const hasRenderableData = computed(() => {
   const grid = props.mpiGrid || []
   return layers.length > 0 || boreholes.length > 0 || (Array.isArray(grid) && grid.length > 1)
 })
+
+const describeHeterogeneity = (value) => heterogeneityCopyMap[value] || value
+const describeHotspotRegime = (value) => hotspotRegimeCopyMap[value] || value
+const describeSampling = (value) => samplingCopyMap[value] || value
 
 const layerCount = computed(() => (props.geomodel?.layers || []).length)
 const boreholeCount = computed(() => (props.geomodel?.boreholes || []).length)
@@ -403,7 +722,7 @@ const stressAnchorItems = computed(() => {
   const spanZ = Math.max(toFinite(b.max_z - b.min_z, 0), 1)
   const normalized = []
   for (const entry of raw) {
-    const name = String(entry?.name || '').trim() || 'anchor'
+    const name = String(entry?.name || '').trim() || '锚点'
     const zNorm = Math.max(0, Math.min(1, toFinite(entry?.z_norm, NaN)))
     const importance = Math.max(0, Math.min(1, toFinite(entry?.importance, 0)))
     if (!Number.isFinite(zNorm)) continue
@@ -416,11 +735,31 @@ const stressAnchorItems = computed(() => {
 })
 
 const hasStressAnchors = computed(() => stressAnchorItems.value.length > 0)
+const activeScenePresetMeta = computed(() => scenePresetMap[activeScenePreset.value] || scenePresetOptions[0])
+const showFullPublicationChrome = computed(() => props.paperMode && !props.guidedMode)
+const sampleSizeLabel = computed(() => `n = ${mpiSummary.value.count || 0}`)
 const exportAnchorRows = computed(() => {
   return stressAnchorItems.value.slice(0, 3).map((item, idx) => {
-    return `${idx + 1}. ${item.name}  z=${formatValue(item.zWorld)}  w=${formatValue(item.importance)}`
+    return `${idx + 1}. ${item.name}  深度=${formatValue(item.zWorld)}  权重=${formatValue(item.importance)}`
   })
 })
+
+const applyScenePreset = (presetId = 'overview') => {
+  const preset = scenePresetMap[presetId] || scenePresetOptions[0]
+  activeScenePreset.value = preset.id
+  showLayers.value = preset.values.showLayers
+  showMpiSurface.value = preset.values.showMpiSurface
+  showMpiContours.value = preset.values.showMpiContours
+  showHotspots.value = preset.values.showHotspots
+  showStressCloud.value = preset.values.showStressCloud
+  showStressAnchors.value = preset.values.showStressCloud && hasStressAnchors.value ? preset.values.showStressAnchors : false
+  showBoreholes.value = preset.values.showBoreholes
+  autoRotate.value = preset.values.autoRotate
+  sectionEnabled.value = preset.values.sectionEnabled
+  sectionAxis.value = preset.values.sectionAxis
+  sectionRatio.value = preset.values.sectionRatio
+  cloudDensity.value = preset.values.cloudDensity
+}
 
 const formatValue = (val) => {
   const num = Number(val)
@@ -570,7 +909,7 @@ const sectionRetainedRatio = computed(() => (sectionEnabled.value ? Math.max(0.0
 const hotspotCandidates = computed(() => detectHotspots(props.mpiGrid, mpiSummary.value.p90, 14))
 const hotspotTopList = computed(() => {
   return hotspotCandidates.value.slice(0, 3).map((item, index) => {
-    return `#${index + 1} r${item.row}, c${item.col}, ${formatValue(item.value)} MPa`
+    return `#${index + 1} 行${item.row}，列${item.col}，${formatValue(item.value)} MPa`
   })
 })
 const boreholeDensityKm2 = computed(() => {
@@ -617,113 +956,109 @@ const samplingClass = computed(() => {
 const diagnosticBadges = computed(() => ([
   {
     label: publicationLabels.fabric,
-    value: heterogeneityClass.value,
+    value: describeHeterogeneity(heterogeneityClass.value),
     tone: heterogeneityScore.value >= 0.48 ? 'warn' : 'calm',
   },
   {
     label: publicationLabels.hotspot,
-    value: hotspotRegime.value,
+    value: describeHotspotRegime(hotspotRegime.value),
     tone: hotspotCandidates.value.length >= 3 ? 'risk' : 'calm',
   },
   {
     label: publicationLabels.sampling,
-    value: samplingClass.value,
+    value: describeSampling(samplingClass.value),
     tone: samplingClass.value === 'low control' ? 'risk' : samplingClass.value === 'anchor-limited control' ? 'warn' : 'calm',
   },
 ]))
 const publicationLabels = buildPublicationLabelSet({
-  title: 'Title',
-  finding: 'Finding',
-  support: 'Support',
-  data: 'Data',
-  frame: 'Frame',
-  abbrev: 'Abbrev.',
-  seam: 'Seam',
-  fusion: 'Fusion',
-  resolution: 'Resolution',
-  stressPrior: 'Stress prior',
-  section: 'Section',
-  control: 'Control',
-  fabric: 'Fabric',
-  hotspot: 'Hotspot',
-  sampling: 'Sampling',
-  methodsPanel: 'Methods and provenance',
-  depthGuideTitle: 'Stratigraphic depth guide',
-  insetTitle: 'Plan-view MPI inset',
-  insetCaption: 'Line = section, circles = hotspots',
-  distributionTitle: 'MPI distribution',
-  sectionTransectTitle: 'Section transect',
-  xSectionTransectTitle: 'X-direction section transect',
-  ySectionTransectTitle: 'Y-direction section transect',
-  representativeTransectTitle: 'Representative lateral transect',
-  peakFallback: 'Peak --',
-  spreadFallback: 'Band = local interquartile envelope.',
+  title: '标题',
+  finding: '结论',
+  support: '支撑',
+  data: '数据',
+  frame: '坐标框架',
+  abbrev: '缩写',
+  seam: '煤层',
+  fusion: '融合方式',
+  resolution: '分辨率',
+  stressPrior: '应力先验',
+  section: '剖切',
+  control: '控制信息',
+  fabric: '结构纹理',
+  hotspot: '热点格局',
+  sampling: '采样控制',
+  methodsPanel: '方法与来源',
+  depthGuideTitle: '地层深度导引',
+  insetTitle: '平面 MPI 缩略图',
+  insetCaption: '线为剖切位置，圆点为热点',
+  distributionTitle: 'MPI 分布',
+  sectionTransectTitle: '剖切剖面',
+  xSectionTransectTitle: 'X向剖切剖面',
+  ySectionTransectTitle: 'Y向剖切剖面',
+  representativeTransectTitle: '代表性横向剖面',
+  peakFallback: '峰值 --',
+  spreadFallback: '带状区表示局部四分位包络。',
 })
 const methodProvenanceRows = computed(() => {
   const resolution = Number(props.contextMeta?.resolution)
-  const method = String(props.contextMeta?.method || '').trim().toUpperCase() || 'UNSPECIFIED'
+  const method = String(props.contextMeta?.method || '').trim().toUpperCase() || '未注明'
   const source = stressProfileLabel.value
   const seam = String(props.contextMeta?.seam || '--')
   const anchorCount = stressAnchorItems.value.length
   const sectionMode = sectionEnabled.value
     ? `${sectionAxis.value.toUpperCase()} @ ${formatValue(sectionThreshold.value)}`
-    : 'not applied'
+    : '未启用'
 
   return buildPublicationRows([
     { label: publicationLabels.seam, value: seam },
-    { label: publicationLabels.fusion, value: `${method} on ${gridShapeText.value} grid` },
-    { label: publicationLabels.resolution, value: Number.isFinite(resolution) ? `${formatValue(resolution)} m` : 'not reported' },
-    { label: publicationLabels.stressPrior, value: `${source} | focus ${stressFocusLabel.value}` },
+    { label: publicationLabels.fusion, value: `${method}，${gridShapeText.value} 网格` },
+    { label: publicationLabels.resolution, value: Number.isFinite(resolution) ? `${formatValue(resolution)} m` : '未注明' },
+    { label: publicationLabels.stressPrior, value: `${source} | 焦点 ${focusDisplayLabel.value}` },
     { label: publicationLabels.section, value: sectionMode },
-    { label: publicationLabels.control, value: `${boreholeCount.value} boreholes, ${anchorCount} anchors` },
+    { label: publicationLabels.control, value: `${boreholeCount.value} 个钻孔，${anchorCount} 个锚点` },
   ])
 })
-const paperNotation = computed(() => {
-  const rawPanelLabel = String(props.panelLabel || 'Fig. 1').trim()
-  const normalizedFigureLabel = rawPanelLabel
-    ? rawPanelLabel.replace(/^fig\.?\s*/i, 'Figure ').replace(/^figure\s*/i, 'Figure ')
-    : 'Figure 1'
-  const figureTitle = props.title || '3D geology-stress fusion figure'
-
-  return {
-    metricUnit: 'MPa',
-    depthUnit: 'm',
-    densityUnit: 'boreholes km^-2',
-    spatialFrameLabel: 'X east / Y north',
-    sampleSizeLabel: `n = ${mpiSummary.value.count || 0}`,
-    figureHeading: `${normalizedFigureLabel} | Geological-stress fusion diagnostics`,
-    captionTitle: `${normalizedFigureLabel}. ${figureTitle}`,
-    summaryLead: summaryCopy.value.summaryLead,
-    metricLine: summaryCopy.value.metricLine,
-    quantileLine: summaryCopy.value.quantileLine,
-    coverLine: summaryCopy.value.coverLine,
-    distributionLine: summaryCopy.value.distributionLine,
-    supportLine: summaryCopy.value.supportLine,
-    methodsFooter: buildPublicationMethodsFooter({
-      subject: `${metricLabel.value}-geology fusion figure`,
-      source: `${String(props.contextMeta?.method || '--').toUpperCase()} fusion`,
-      seam: String(props.contextMeta?.seam || ''),
-      details: [
-        `${gridShapeText.value} grid`,
-        `resolution ${formatValue(props.contextMeta?.resolution)} m`,
-        `frame X east / Y north`,
-        `scale ${scaleBarLabel.value}`,
-      ],
-    }),
-    abbreviationsLine: 'MPI, mining pressure index; CV, coefficient of variation; IQR, interquartile range; Q1/Q2/Q3, 25th/50th/75th percentiles; P90, 90th percentile.',
-  }
-})
 const publicationHeaderChips = computed(() => ([
-  `seam ${String(props.contextMeta?.seam || '--')}`,
-  `grid ${gridShapeText.value}`,
-  `mean ${formatValue(mpiSummary.value.mean)}`,
-  `P90 cover ${formatPercent(mpiSummary.value.p90Cover)}`,
-  `anchors ${stressAnchorItems.value.length}`,
-  `method ${String(props.contextMeta?.method || '--').toUpperCase()}`
+  `${uiText.seamChip} ${String(props.contextMeta?.seam || '--')}`,
+  `${uiText.gridChip} ${gridShapeText.value}`,
+  `${uiText.mean} ${formatValue(mpiSummary.value.mean)}`,
+  `${uiText.p90Cover} ${formatPercent(mpiSummary.value.p90Cover)}`,
+  `${uiText.anchors} ${stressAnchorItems.value.length}`,
+  `${uiText.methodChip} ${String(props.contextMeta?.method || '--').toUpperCase()}`
 ]))
+const guidedHeadline = computed(() => `${metricLabel.value} ${activeScenePresetMeta.value.label}视图`)
+const guidedMetaLine = computed(() => {
+  return [
+    String(props.contextMeta?.seam || '--'),
+    gridShapeText.value,
+    String(props.contextMeta?.method || '--').toUpperCase(),
+    `${uiText.focusChip} ${focusDisplayLabel.value}`,
+  ].filter(Boolean).join(' | ')
+})
+const guidedHudStats = computed(() => ([
+  { label: uiText.mean, value: `${formatValue(mpiSummary.value.mean)} ${PAPER_NOTATION_DEFAULTS.metricUnit}` },
+  { label: uiText.hotspots, value: String(hotspotCandidates.value.length) },
+  { label: uiText.anchors, value: String(stressAnchorItems.value.length) },
+]))
+const guidedRailStats = computed(() => ([
+  { label: uiText.p90Cover, value: formatPercent(mpiSummary.value.p90Cover) },
+  { label: uiText.sectionKept, value: formatPercent(sectionRetainedRatio.value) },
+  { label: uiText.depthSpan, value: `${formatValue(dataBounds.value.min_z)} 至 ${formatValue(dataBounds.value.max_z)} m` },
+]))
+const guidedSummaryLines = computed(() => {
+  const lines = [
+    `${uiText.metricRange} ${formatValue(props.metricStats?.min)} 至 ${formatValue(props.metricStats?.max)} ${PAPER_NOTATION_DEFAULTS.metricUnit}。`,
+    `采样控制为${describeSampling(samplingClass.value)}，结构纹理表现为${describeHeterogeneity(heterogeneityClass.value)}。`,
+  ]
+  if (hotspotTopList.value.length) {
+    lines.push(`${uiText.primaryAnomaly} ${hotspotTopList.value[0]}。`)
+  } else {
+    lines.push(uiText.noDominantHotspot)
+  }
+  return lines
+})
 const diagnosticCopy = computed(() => buildPublicationDiagnosticCopy({
   profileSource: stressProfileLabel.value,
-  focus: stressFocusLabel.value,
+  focus: focusDisplayLabel.value,
   seam: String(props.contextMeta?.seam || '--'),
   grid: gridShapeText.value,
   method: String(props.contextMeta?.method || '--'),
@@ -733,7 +1068,7 @@ const diagnosticCopy = computed(() => buildPublicationDiagnosticCopy({
   anchorCount: stressAnchorItems.value.length,
   depthMax: formatValue(dataBounds.value.max_z),
   depthMin: formatValue(dataBounds.value.min_z),
-  depthUnit: paperNotation.value.depthUnit,
+  depthUnit: PAPER_NOTATION_DEFAULTS.depthUnit,
 }))
 const figureHeaderCopy = computed(() => buildPublicationFigureHeaderCopy({
   seam: String(props.contextMeta?.seam || '--'),
@@ -742,11 +1077,11 @@ const figureHeaderCopy = computed(() => buildPublicationFigureHeaderCopy({
   layerCount: layerCount.value,
   boreholeCount: boreholeCount.value,
   anchorCount: stressAnchorItems.value.length,
-  focus: stressFocusLabel.value,
+  focus: focusDisplayLabel.value,
 }))
 const heroCopy = computed(() => buildPublicationHeroCopy({
   metricLabel: metricLabel.value,
-  metricUnit: paperNotation.value.metricUnit,
+  metricUnit: PAPER_NOTATION_DEFAULTS.metricUnit,
   mean: formatValue(mpiSummary.value.mean),
   cv: formatValue(mpiSummary.value.cv),
   p90Cover: formatPercent(mpiSummary.value.p90Cover),
@@ -756,24 +1091,27 @@ const heroCopy = computed(() => buildPublicationHeroCopy({
 }))
 const legendCopy = computed(() => buildPublicationLegendCopy({
   metricLabel: metricLabel.value,
-  metricUnit: paperNotation.value.metricUnit,
+  metricUnit: PAPER_NOTATION_DEFAULTS.metricUnit,
   depthMin: formatValue(dataBounds.value.min_z),
   depthMax: formatValue(dataBounds.value.max_z),
-  depthUnit: paperNotation.value.depthUnit,
+  depthUnit: PAPER_NOTATION_DEFAULTS.depthUnit,
   sectionAxis: sectionAxis.value,
   sectionThreshold: formatValue(sectionThreshold.value),
   stressProfileLabel: stressProfileLabel.value,
-  spatialFrameLabel: paperNotation.value.spatialFrameLabel,
+  spatialFrameLabel: PAPER_NOTATION_DEFAULTS.spatialFrameLabel,
 }))
+const compactOrientationMeta = computed(() => {
+  return `坐标框架 ${PAPER_NOTATION_DEFAULTS.spatialFrameLabel} | ${scaleBarLabel.value}`
+})
 const summaryCopy = computed(() => buildPublicationSummaryCopy({
   figureNarrative: figureNarrative.value,
   metricLabel: metricLabel.value,
-  metricKind: metricLabel.value.includes('index') ? 'index' : 'proxy',
-  metricUnit: paperNotation.value.metricUnit,
+  metricKind: metricLabel.value.includes('index') ? '指数' : '代理量',
+  metricUnit: PAPER_NOTATION_DEFAULTS.metricUnit,
   metricMin: formatValue(props.metricStats?.min),
   metricMean: formatValue(props.metricStats?.mean),
   metricMax: formatValue(props.metricStats?.max),
-  sampleSizeLabel: paperNotation.value.sampleSizeLabel,
+  sampleSizeLabel: sampleSizeLabel.value,
   p25: formatValue(mpiSummary.value.p25),
   p50: formatValue(mpiSummary.value.p50),
   p75: formatValue(mpiSummary.value.p75),
@@ -785,14 +1123,46 @@ const summaryCopy = computed(() => buildPublicationSummaryCopy({
   skewness: formatValue(mpiSummary.value.skewness),
   heterogeneity: formatValue(heterogeneityScore.value),
   boreholeDensity: formatValue(boreholeDensityKm2.value),
-  densityUnit: paperNotation.value.densityUnit,
+  densityUnit: PAPER_NOTATION_DEFAULTS.densityUnit,
 }))
+const paperNotation = computed(() => {
+  const rawPanelLabel = String(props.panelLabel || '图1').trim()
+  const normalizedFigureLabel = rawPanelLabel
+    ? rawPanelLabel.replace(/^fig\.?\s*/i, '图').replace(/^figure\s*/i, '图')
+    : '图1'
+  const figureTitle = props.title || '三维地质-矿压融合图件'
+
+  return {
+    ...PAPER_NOTATION_DEFAULTS,
+    sampleSizeLabel: sampleSizeLabel.value,
+    figureHeading: `${normalizedFigureLabel} | 地质-矿压融合诊断`,
+    captionTitle: `${normalizedFigureLabel} ${figureTitle}`,
+    summaryLead: summaryCopy.value.summaryLead,
+    metricLine: summaryCopy.value.metricLine,
+    quantileLine: summaryCopy.value.quantileLine,
+    coverLine: summaryCopy.value.coverLine,
+    distributionLine: summaryCopy.value.distributionLine,
+    supportLine: summaryCopy.value.supportLine,
+    methodsFooter: buildPublicationMethodsFooter({
+      subject: `${metricLabel.value} 地质融合图件`,
+      source: `${String(props.contextMeta?.method || '--').toUpperCase()} 融合`,
+      seam: String(props.contextMeta?.seam || ''),
+      details: [
+        `${gridShapeText.value} 网格`,
+        `分辨率 ${formatValue(props.contextMeta?.resolution)} m`,
+        `坐标框架 ${PAPER_NOTATION_DEFAULTS.spatialFrameLabel}`,
+        `比例 ${scaleBarLabel.value}`,
+      ],
+    }),
+    abbreviationsLine: 'MPI，矿压指标；CV，变异系数；IQR，四分位距；Q1/Q2/Q3，25%/50%/75% 分位；P90，90% 分位。',
+  }
+})
 const statisticCopy = computed(() => buildPublicationStatisticCopy({
-  analysisTitle: 'Quantitative Highlights',
-  profileTitle: 'Depth transfer profile',
-  anchorTitle: 'Depth anchors',
-  figureNote: 'Nature-style content panel: structure + statistics + depth coupling.',
-  distributionCaption: 'Q1/Q2/Q3 markers',
+  analysisTitle: '定量要点',
+  profileTitle: '深度传递曲线',
+  anchorTitle: '深度锚点',
+  figureNote: '论文图版内容面板：结构、统计与深度耦合联合展示。',
+  distributionCaption: 'Q1/Q2/Q3 分位标记',
   sectionRetained: formatPercent(sectionRetainedRatio.value),
   hotspotCount: hotspotCandidates.value.length,
   p25: formatValue(mpiSummary.value.p25),
@@ -816,11 +1186,11 @@ const publicationCaptionRows = computed(() => buildPublicationRows([
 const publicationNoteRows = computed(() => buildPublicationRows([
   {
     label: publicationLabels.data,
-    value: `${layerCount.value} layers + ${boreholeCount.value} boreholes + ${gridShapeText.value} metric grid`,
+    value: `${layerCount.value} 个地层 + ${boreholeCount.value} 个钻孔 + ${gridShapeText.value} 指标网格`,
   },
   {
     label: publicationLabels.frame,
-    value: `${paperNotation.value.spatialFrameLabel}; depth ${formatValue(dataBounds.value.max_z)} to ${formatValue(dataBounds.value.min_z)} ${paperNotation.value.depthUnit}; scale ${scaleBarLabel.value}`,
+    value: `${paperNotation.value.spatialFrameLabel}；深度 ${formatValue(dataBounds.value.max_z)} 至 ${formatValue(dataBounds.value.min_z)} ${paperNotation.value.depthUnit}；比例 ${scaleBarLabel.value}`,
   },
   {
     label: publicationLabels.abbrev,
@@ -830,10 +1200,10 @@ const publicationNoteRows = computed(() => buildPublicationRows([
 const figureNarrative = computed(() => buildPublicationNarrativeSentence({
   clauses: mpiSummary.value.count
     ? [
-        `${metricLabel.value} shows ${toFinite(mpiSummary.value.skewness, 0) > 0.3 ? 'right-tailed stress amplification' : toFinite(mpiSummary.value.skewness, 0) < -0.3 ? 'left-tailed attenuation' : 'near-symmetric distribution'}; strongest anomaly at ${hotspotTopList.value.length ? hotspotTopList.value[0] : 'No dominant hotspot'}`,
-        `Section keeps ${formatPercent(sectionRetainedRatio.value)} of the volume, with ${heterogeneityClass.value} fabric under ${samplingClass.value}`
+        `${metricLabel.value}${toFinite(mpiSummary.value.skewness, 0) > 0.3 ? '呈右偏增强分布' : toFinite(mpiSummary.value.skewness, 0) < -0.3 ? '呈左偏衰减分布' : '整体近似对称分布'}；最强异常位于${hotspotTopList.value.length ? hotspotTopList.value[0] : '未识别明显热点'}`,
+        `当前剖切保留 ${formatPercent(sectionRetainedRatio.value)} 体量，结构纹理为${describeHeterogeneity(heterogeneityClass.value)}，采样控制为${describeSampling(samplingClass.value)}`
       ]
-    : ['Metric distribution is unavailable for current selection']
+    : ['当前选择下暂无可用指标分布。']
 }))
 const profileCurvePoints = computed(() => {
   const bins = Array.isArray(props.stressProfile?.bins) ? props.stressProfile.bins : []
@@ -1854,6 +2224,14 @@ const updateSectionState = () => {
   markSceneDirty(2)
 }
 
+const updateSceneFogRange = (maxDim, cameraDistance) => {
+  if (!scene?.fog || !three) return
+  const safeDim = Math.max(1, toFinite(maxDim, 1))
+  const safeDistance = Math.max(safeDim, toFinite(cameraDistance, safeDim * 2))
+  scene.fog.near = Math.max(60, Math.min(safeDistance * 0.72, safeDim * 2.2))
+  scene.fog.far = Math.max(scene.fog.near + 120, safeDistance * 1.9)
+}
+
 const fitCamera = () => {
   if (!rootGroup || !camera || !controls || !three) return
   const box = new three.Box3().setFromObject(rootGroup)
@@ -1870,6 +2248,7 @@ const fitCamera = () => {
   camera.updateProjectionMatrix()
   controls.target.copy(center)
   controls.update()
+  updateSceneFogRange(maxDim, distance)
   markSceneDirty(12)
 }
 
@@ -1902,6 +2281,7 @@ const applyPaperViewPose = () => {
   camera.updateProjectionMatrix()
   controls.target.copy(center)
   controls.update()
+  updateSceneFogRange(maxDim, radius)
   markSceneDirty(12)
 }
 
@@ -1919,9 +2299,9 @@ const buildExportSnapshot = () => {
 
   return {
     metric: String(props.metric || 'mpi').toLowerCase(),
-    panelLabel: String(props.panelLabel || 'Fig. 1'),
-    title: props.title || '3D Geology-MPI Fusion',
-    subtitle: props.subtitle || 'Preview',
+    panelLabel: String(props.panelLabel || '图1'),
+    title: props.title || '三维地质-MPI 融合图件',
+    subtitle: props.subtitle || '预览图',
     figureHeading: paperNotation.value.figureHeading,
     captionTitle: paperNotation.value.captionTitle,
     summaryLead: paperNotation.value.summaryLead,
@@ -1958,7 +2338,7 @@ const buildExportSnapshot = () => {
     },
     methodsFooter: paperNotation.value.methodsFooter,
     scaleBarLabel: scaleBarLabel.value,
-    distributionTitle: `${metricLabel.value} distribution`,
+    distributionTitle: `${metricLabel.value} 分布`,
     histogramBars: histogramBars.value,
     histogramQuantileLines: histogramQuantileLines.value,
     histogramFooter: paperNotation.value.distributionLine
@@ -1993,7 +2373,7 @@ const exportFigure = async () => {
     link.click()
     URL.revokeObjectURL(url)
   } catch (error) {
-    console.error('Export fusion figure failed:', error)
+    console.error('GeoMpiFusion3D 导出图件失败:', error)
   } finally {
     isExporting.value = false
   }
@@ -2117,6 +2497,7 @@ const buildScene = async () => {
   const width = hostRef.value?.clientWidth || 960
   const height = hostRef.value?.clientHeight || 520
   camera = new three.PerspectiveCamera(49, width / Math.max(height, 1), 0.1, 5000)
+  camera.up.set(0, 0, 1)
   renderer = new three.WebGLRenderer({
     canvas: canvasRef.value,
     antialias: true,
@@ -2207,6 +2588,15 @@ watch([showLayers, showMpiSurface, showMpiContours, showHotspots, showStressClou
   dirtyFlags.material = false
   markSceneDirty(1)
 })
+
+watch(
+  () => [props.guidedMode, props.guidedPreset],
+  ([guidedMode, guidedPreset]) => {
+    if (!guidedMode) return
+    applyScenePreset(guidedPreset || 'overview')
+  },
+  { immediate: true },
+)
 
 watch([sectionEnabled, sectionAxis, sectionRatio], async () => {
   await nextTick()
@@ -2340,9 +2730,9 @@ onBeforeUnmount(() => {
 
 .toolbar {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
 
 .toolbar-label {
@@ -2457,6 +2847,34 @@ onBeforeUnmount(() => {
   height: 540px;
 }
 
+.canvas-stage {
+  position: relative;
+  height: 100%;
+  min-width: 0;
+}
+
+.viewer-body.is-guided {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  gap: 16px;
+  height: auto;
+  min-height: 612px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 32%),
+    linear-gradient(180deg, #f6fbfa 0%, #f1f6f5 100%);
+}
+
+.viewer-body.is-guided .canvas-stage {
+  min-height: 584px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.35), transparent 24%),
+    linear-gradient(180deg, #dfe8e7 0%, #d4dfde 100%);
+}
+
 .fusion-canvas {
   width: 100%;
   height: 100%;
@@ -2474,6 +2892,14 @@ onBeforeUnmount(() => {
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
   padding: 10px 12px;
   pointer-events: none;
+}
+
+.figure-overlay.compact {
+  max-width: 332px;
+  border-color: rgba(226, 232, 240, 0.18);
+  background: rgba(12, 18, 28, 0.76);
+  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(18px);
 }
 
 .figure-topline {
@@ -2585,6 +3011,72 @@ onBeforeUnmount(() => {
   color: #475569;
 }
 
+.scene-preset-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.geo-mpi-fusion.guided .scene-preset-row {
+  grid-template-columns: repeat(4, minmax(0, max-content));
+  gap: 8px;
+}
+
+.scene-preset-btn {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: #1e293b;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.geo-mpi-fusion.guided .scene-preset-btn {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.scene-preset-btn strong {
+  font-size: 12px;
+}
+
+.scene-preset-btn span {
+  font-size: 10px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.scene-preset-btn.is-active {
+  border-color: rgba(15, 118, 110, 0.45);
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.12);
+  background: linear-gradient(180deg, rgba(240, 253, 250, 0.96) 0%, #ffffff 100%);
+}
+
+.scene-guided-note {
+  margin: 0;
+  font-size: 11px;
+  color: #526071;
+  line-height: 1.5;
+}
+
+.scene-advanced-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scene-action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .methods-value {
   color: #1e293b;
 }
@@ -2635,6 +3127,58 @@ onBeforeUnmount(() => {
   color: #64748b;
 }
 
+.figure-overlay.compact .figure-topic,
+.figure-overlay.compact .figure-meta,
+.figure-overlay.compact .guided-summary-lines p {
+  color: rgba(226, 232, 240, 0.84);
+}
+
+.figure-overlay.compact .figure-headline {
+  color: #f8fafc;
+  font-size: 16px;
+}
+
+.guided-stat-strip {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.guided-stat-card {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 8px 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.guided-stat-card span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(226, 232, 240, 0.66);
+}
+
+.guided-stat-card strong {
+  font-size: 13px;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+
+.guided-summary-lines {
+  margin-top: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.guided-summary-lines p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .legend-overlay {
   position: absolute;
   left: 12px;
@@ -2646,6 +3190,13 @@ onBeforeUnmount(() => {
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
   padding: 10px 12px;
   pointer-events: none;
+}
+
+.legend-overlay.compact {
+  min-width: 228px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
 }
 
 .legend-title {
@@ -2888,6 +3439,13 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+.orientation-overlay.compact {
+  min-width: 124px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+}
+
 .north-block {
   display: flex;
   align-items: center;
@@ -2944,6 +3502,123 @@ onBeforeUnmount(() => {
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
   padding: 10px 12px;
   pointer-events: none;
+}
+
+.analysis-side-rail {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.rail-head,
+.rail-card,
+.rail-summary,
+.rail-stat-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(14px);
+}
+
+.rail-head {
+  padding: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.rail-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #0f766e;
+}
+
+.rail-head h4 {
+  margin: 0;
+  font-size: 19px;
+  color: #0f172a;
+}
+
+.rail-head p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #526071;
+}
+
+.rail-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rail-stat-card {
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.rail-stat-card span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.rail-stat-card strong {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.rail-card-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.rail-card {
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.rail-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rail-card-head strong {
+  font-size: 13px;
+  color: #334155;
+}
+
+.rail-card-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #526071;
+}
+
+.rail-summary {
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.rail-summary p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: #334155;
 }
 
 .analysis-overlay p {
@@ -3177,6 +3852,9 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 980px) {
+  .scene-preset-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .viewer-body {
     height: 440px;
   }
@@ -3192,9 +3870,27 @@ onBeforeUnmount(() => {
   .caption-overlay {
     width: min(72%, 620px);
   }
+  .viewer-body.is-guided {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .analysis-side-rail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .viewer-body.is-guided .canvas-stage {
+    min-height: 520px;
+  }
+  .rail-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
+  .scene-preset-row {
+    grid-template-columns: 1fr;
+  }
   .paper-frame {
     padding: 10px 11px;
   }
@@ -3208,6 +3904,18 @@ onBeforeUnmount(() => {
   .viewer-body {
     height: 360px;
   }
+  .viewer-body.is-guided {
+    padding: 10px;
+    height: auto;
+  }
+  .analysis-side-rail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .viewer-body.is-guided .canvas-stage {
+    min-height: 420px;
+  }
   .slider input {
     width: 84px;
   }
@@ -3220,6 +3928,10 @@ onBeforeUnmount(() => {
   }
   .figure-kpis {
     gap: 6px;
+  }
+  .guided-stat-strip,
+  .rail-stat-grid {
+    grid-template-columns: 1fr;
   }
   .content-metrics {
     grid-template-columns: 1fr;
@@ -3235,6 +3947,9 @@ onBeforeUnmount(() => {
     min-width: 180px;
     max-width: 60%;
     padding: 8px 9px;
+  }
+  .geo-mpi-fusion.guided .scene-preset-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .caption-overlay {
     width: min(84%, 520px);

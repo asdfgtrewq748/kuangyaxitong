@@ -1,19 +1,167 @@
-﻿<template>
+<template>
   <div class="fusion-page">
-    <header class="page-header">
-      <div>
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <span class="hero-kicker">{{ fp('heroKicker') }}</span>
         <h1>{{ fp('title') }}</h1>
         <p>{{ fp('subtitle') }}</p>
       </div>
-      <div class="header-actions">
+
+      <div class="hero-actions">
         <button class="tool-btn" type="button" :disabled="loadingSpatial || loadingFusion" @click="reloadAll">
           {{ loadingSpatial || loadingFusion ? fp('loading') : fp('reloadAll') }}
         </button>
-        <button class="tool-btn" type="button" @click="goValidation">{{ fp('goValidation') }}</button>
+        <button class="tool-btn secondary" type="button" @click="advancedOpen = !advancedOpen">
+          {{ advancedOpen ? fp('hideAdvanced') : fp('showAdvanced') }}
+        </button>
+        <button class="tool-btn secondary" type="button" @click="goValidation">{{ fp('goValidation') }}</button>
+        <PaperExportMenu
+          :trigger-label="fp('exportTrigger')"
+          :main-label="fp('exportMain')"
+          :pack-label="fp('exportSupplement')"
+          :loading-main-label="fp('exportingMain')"
+          :loading-pack-label="fp('exportingPack')"
+          :main-hint="fp('exportMainHint')"
+          :pack-hint="fp('exportPackHint')"
+          :disabled-main="!fusionReady"
+          :disabled-pack="!fusionReady"
+          :loading-main="exportingMain"
+          :loading-pack="exportingPack"
+          @export-main="exportMainFigure"
+          @export-pack="exportSupplementPackage"
+        />
       </div>
-    </header>
 
-    <section class="control-panel">
+      <div class="summary-grid">
+        <article class="summary-card">
+          <span class="label">{{ fp('seam') }}</span>
+          <strong>{{ seamName || '--' }}</strong>
+          <small>{{ fp('focusLabel', { value: focusLabel }) }}</small>
+        </article>
+        <article class="summary-card">
+          <span class="label">{{ fp('currentMetric') }}</span>
+          <strong>{{ metric.toUpperCase() }}</strong>
+          <small>{{ fp('metricRange', { min: fmt(metricStats.min), max: fmt(metricStats.max) }) }}</small>
+        </article>
+        <article class="summary-card">
+          <span class="label">{{ fp('viewerStatusLabel') }}</span>
+          <strong>{{ viewerStatusTitle }}</strong>
+          <small>{{ viewerStatusDetail }}</small>
+        </article>
+      </div>
+
+      <div class="status-stack">
+        <p v-if="pageError" class="error">{{ pageError }}</p>
+        <p v-if="fusionError" class="error">{{ fusionError }}</p>
+        <p v-if="exportNote" class="export-note">{{ exportNote }}</p>
+        <p v-if="fusionJobId" class="hint">{{ fp('currentJob', { jobId: fusionJobId }) }}</p>
+        <p class="hint">{{ fp('exportHint') }}</p>
+      </div>
+
+      <section class="geomodel-inline" :class="{ active: needsGeomodelAction }">
+        <div class="geomodel-inline-copy">
+          <span class="preset-kicker">{{ fp('geomodelBuilderKicker') }}</span>
+          <strong>{{ fp('geomodelBuilderTitle') }}</strong>
+          <p>{{ geomodelBuilderSubtitle }}</p>
+        </div>
+
+        <div class="geomodel-inline-controls">
+          <label>
+            <span>{{ fp('geomodelMethod') }}</span>
+            <select v-model="geomodelMethod">
+              <option
+                v-for="option in geomodelMethodOptions"
+                :key="option.key"
+                :value="option.key"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+
+          <label>
+            <span>{{ fp('geomodelResolution') }}</span>
+            <input v-model.number="geomodelResolution" type="number" min="1" max="500" step="1">
+          </label>
+
+          <button
+            class="tool-btn"
+            type="button"
+            data-testid="start-geomodel-job"
+            :disabled="geomodelSubmitting || !seamName"
+            @click="startGeomodelJob"
+          >
+            {{ geomodelSubmitting ? fp('geomodelSubmitting') : fp('geomodelSubmit') }}
+          </button>
+        </div>
+
+        <div v-if="geomodelJob || geomodelError || geomodelQualitySummary" class="geomodel-inline-status">
+          <span v-if="geomodelJob">{{ fp('geomodelStatus') }}: {{ geomodelJob.status }}</span>
+          <span v-if="geomodelPolling">{{ fp('geomodelPolling') }}</span>
+          <span v-if="geomodelJob?.message">{{ geomodelJob.message }}</span>
+          <span v-if="geomodelQualitySummary">{{ fp('geomodelReadyHint') }}</span>
+          <span v-if="geomodelError" class="error">{{ geomodelError }}</span>
+        </div>
+      </section>
+    </section>
+
+    <section class="preset-section">
+      <div class="preset-head">
+        <div>
+          <span class="preset-kicker">{{ fp('presetKicker') }}</span>
+          <h2>{{ fp('presetTitle') }}</h2>
+        </div>
+        <p>{{ fp('presetSubtitle') }}</p>
+      </div>
+      <div class="preset-grid">
+        <button
+          v-for="preset in scenePresetCards"
+          :key="preset.id"
+          type="button"
+          class="effect-card"
+          :class="{ active: selectedScenePreset === preset.id }"
+          :data-preset="preset.id"
+          @click="applyScenePreset(preset.id)"
+        >
+          <span class="effect-chip">{{ preset.badge }}</span>
+          <strong>{{ preset.title }}</strong>
+          <p>{{ preset.description }}</p>
+          <small>{{ preset.footnote }}</small>
+        </button>
+      </div>
+    </section>
+
+    <GeoMpiFusion3D
+      ref="fusionViewerRef"
+      panel-label="图1"
+      :context-meta="fusionContextMeta"
+      :title="fp('viewerTitle')"
+      :subtitle="fp('viewerSubtitle', { seam: seamName || '--', metric: metric.toUpperCase() })"
+      :geomodel="fusionGeomodel"
+      :stress-profile="fusionStressProfile"
+      :mpi-grid="activeMetricGrid"
+      :mpi-bounds="spatialData?.bounds || null"
+      :metric="metric"
+      :metric-stats="metricStats"
+      :loading="loadingFusion"
+      :loading-text="fp('viewerLoading')"
+      :empty-text="fp('viewerEmpty')"
+      :error-text="fusionError"
+      :paper-mode="figureMode === 'nature'"
+      :guided-mode="true"
+      :guided-preset="selectedScenePreset"
+      @refresh="loadFusionPreview"
+    />
+
+    <section v-if="advancedOpen" class="control-panel">
+      <div class="control-head">
+        <div>
+          <span class="preset-kicker">{{ fp('advancedKicker') }}</span>
+          <h2>{{ fp('advancedTitle') }}</h2>
+        </div>
+        <p>{{ fp('advancedSubtitle') }}</p>
+      </div>
+
       <div class="control-grid">
         <label>
           <span>{{ fp('seam') }}</span>
@@ -47,11 +195,6 @@
           </select>
         </label>
 
-        <label class="wide">
-          <span>{{ fp('geomodelJobId') }}</span>
-          <input v-model.trim="geoModelJobId" type="text" :placeholder="fp('geomodelJobPlaceholder')">
-        </label>
-
         <label>
           <span>{{ fp('focus') }}</span>
           <select v-model="profileFocus" :disabled="loadingFusion || !fusionJobId">
@@ -68,105 +211,24 @@
             <option value="nature">{{ fp('figureModeNature') }}</option>
           </select>
         </label>
+
+        <label class="wide">
+          <span>{{ fp('geomodelJobId') }}</span>
+          <input v-model.trim="geoModelJobId" type="text" :placeholder="fp('geomodelJobPlaceholder')">
+        </label>
       </div>
 
       <div class="control-actions">
-        <button class="tool-btn" type="button" :disabled="loadingSpatial || !seamName" @click="loadSpatial">
-          {{ loadingSpatial ? fp('loadingSpatial') : fp('runSpatial') }}
+        <button class="tool-btn" type="button" :disabled="loadingSpatial || loadingFusion || !seamName" @click="reloadAll">
+          {{ loadingSpatial || loadingFusion ? fp('loading') : fp('applyAdvanced') }}
         </button>
-        <button class="tool-btn" type="button" :disabled="loadingFusion || !seamName" @click="loadFusionPreview">
-          {{ loadingFusion ? fp('loadingFusion') : fp('loadFusion') }}
-        </button>
-        <PaperExportMenu
-          :trigger-label="fp('exportTrigger')"
-          :main-label="fp('exportMain')"
-          :pack-label="fp('exportSupplement')"
-          :loading-main-label="fp('exportingMain')"
-          :loading-pack-label="fp('exportingPack')"
-          :main-hint="fp('exportMainHint')"
-          :pack-hint="fp('exportPackHint')"
-          :disabled-main="!fusionReady"
-          :disabled-pack="!fusionReady"
-          :loading-main="exportingMain"
-          :loading-pack="exportingPack"
-          @export-main="exportMainFigure"
-          @export-pack="exportSupplementPackage"
-        />
       </div>
-
-      <p v-if="pageError" class="error">{{ pageError }}</p>
-      <p v-if="exportNote" class="export-note">{{ exportNote }}</p>
-      <p v-if="fusionJobId" class="hint">{{ fp('currentJob', { jobId: fusionJobId }) }}</p>
-      <p class="hint">{{ fp('exportHint') }}</p>
     </section>
-
-    <section class="summary-grid">
-      <article class="summary-card">
-        <span class="label">{{ fp('currentMetric') }}</span>
-        <strong>{{ metric.toUpperCase() }}</strong>
-        <small>{{ fp('metricRange', { min: fmt(metricStats.min), max: fmt(metricStats.max) }) }}</small>
-      </article>
-      <article class="summary-card">
-        <span class="label">{{ fp('metricMeanLabel') }}</span>
-        <strong>{{ fmt(metricStats.mean) }}</strong>
-        <small>{{ fp('resolutionLabel', { value: resolution }) }}</small>
-      </article>
-      <article class="summary-card">
-        <span class="label">{{ fp('seam') }}</span>
-        <strong>{{ seamName || '--' }}</strong>
-        <small>{{ fp('focusLabel', { value: focusLabel }) }}</small>
-      </article>
-    </section>
-
-    <section class="publication-frame">
-      <div class="publication-frame-head">
-        <span class="publication-kicker">{{ fusionFigureFrame.heading }}</span>
-        <h2>{{ fusionFigureFrame.title }}</h2>
-        <p>{{ fusionFigureFrame.summary }}</p>
-      </div>
-      <div class="publication-card-grid">
-        <article v-for="item in fusionFigureFrame.cards" :key="item.label" class="publication-card">
-          <span class="label">{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-        </article>
-      </div>
-      <p class="publication-footer">{{ fusionFigureFrame.methodsFooter }}</p>
-    </section>
-
-    <div v-if="!fusionSceneRequested" class="fusion-lazy-card">
-      <div class="fusion-lazy-copy">
-        <h2>{{ fp('viewerTitle') }}</h2>
-        <p>{{ fp('lazyDescription') }}</p>
-      </div>
-      <button class="tool-btn" type="button" :disabled="loadingSpatial || loadingFusion || !seamName" @click="activateFusionScene()">
-        {{ loadingFusion ? fp('loadingFusion') : fp('loadFusion') }}
-      </button>
-    </div>
-    <GeoMpiFusion3D
-      v-else
-      ref="fusionViewerRef"
-      panel-label="Fig. 1"
-      :context-meta="fusionContextMeta"
-      :title="fp('viewerTitle')"
-      :subtitle="fp('viewerSubtitle', { seam: seamName || '--', metric: metric.toUpperCase() })"
-      :geomodel="fusionGeomodel"
-      :stress-profile="fusionStressProfile"
-      :mpi-grid="activeMetricGrid"
-      :mpi-bounds="spatialData?.bounds || null"
-      :metric="metric"
-      :metric-stats="metricStats"
-      :loading="loadingFusion"
-      :loading-text="fp('viewerLoading')"
-      :empty-text="fp('viewerEmpty')"
-      :error-text="fusionError"
-      :paper-mode="figureMode === 'nature'"
-      @refresh="loadFusionPreview"
-    />
   </div>
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getApiErrorMessage,
@@ -177,6 +239,7 @@ import {
   validationSpatialOverview
 } from '../api'
 import PaperExportMenu from '../components/common/PaperExportMenu.vue'
+import { useGeomodelJob } from '../composables/useGeomodelJob'
 import { useI18n } from '../composables/useI18n'
 import { useWorkspaceFlow } from '../composables/useWorkspaceFlow'
 import {
@@ -198,8 +261,7 @@ import {
   buildPublicationReadmeMarkdown
 } from '../utils/paperExportSchema'
 
-const loadGeoMpiFusion3D = () => import('../components/GeoMpiFusion3D.vue')
-const GeoMpiFusion3D = defineAsyncComponent(loadGeoMpiFusion3D)
+const GeoMpiFusion3D = defineAsyncComponent(() => import('../components/GeoMpiFusion3D.vue'))
 
 const route = useRoute()
 const router = useRouter()
@@ -222,8 +284,13 @@ const metric = ref('mpi')
 const resolution = ref(50)
 const method = ref('idw')
 const geoModelJobId = ref('')
+const geomodelMethod = ref('thickness')
+const geomodelResolution = ref(20)
 const profileFocus = ref('balanced')
 const figureMode = ref('nature')
+const selectedScenePreset = ref('overview')
+const advancedOpen = ref(false)
+const hasInitialized = ref(false)
 
 const loadingSpatial = ref(false)
 const loadingFusion = ref(false)
@@ -234,30 +301,77 @@ const exportNote = ref('')
 const exportingMain = ref(false)
 const exportingPack = ref(false)
 const isSwitchingProfile = ref(false)
-const fusionSceneRequested = ref(false)
 
 const spatialData = shallowRef(null)
 const fusionGeomodel = shallowRef(null)
 const fusionStressProfile = shallowRef(null)
 const fusionViewerRef = ref(null)
 let jsZipCtor = null
-let fusionWarmupTimer = null
-let fusionWarmupIdleId = null
 
 const FIGURE_EXPORT_PROFILE = Object.freeze({
   standard: { main: { width: 3200, height: 2000 }, supplement: { width: 2800, height: 1800 } },
   nature: { main: { width: 4800, height: 3000 }, supplement: { width: 4200, height: 2600 } }
 })
 
+const SCENE_PRESET_META = Object.freeze({
+  overview: { focus: 'balanced', figureMode: 'nature' },
+  strata: { focus: 'balanced', figureMode: 'standard' },
+  stress: { focus: 'deep', figureMode: 'nature' },
+  section: { focus: 'shallow', figureMode: 'standard' }
+})
+
+const {
+  jobId: activeGeomodelJobId,
+  job: geomodelJob,
+  loading: geomodelSubmitting,
+  polling: geomodelPolling,
+  error: geomodelError,
+  submit: submitGeomodelJob,
+  clear: clearGeomodelJob
+} = useGeomodelJob()
+
 const activeMetricGrid = computed(() => spatialData.value?.grids?.[metric.value] || [])
 const metricStats = computed(() => spatialData.value?.statistics?.[metric.value] || { min: 0, mean: 0, max: 0 })
-const fusionReady = computed(() => {
-  return Boolean(fusionGeomodel.value && fusionStressProfile.value && activeMetricGrid.value.length > 0)
+const fusionReady = computed(() => Boolean(fusionGeomodel.value && fusionStressProfile.value && activeMetricGrid.value.length > 0))
+const geomodelMethodOptions = computed(() => [
+  { key: 'thickness', label: fp('geomodelMethodThickness') },
+  { key: 'hybrid', label: fp('geomodelMethodHybrid') },
+  { key: 'regression_kriging', label: fp('geomodelMethodRegressionKriging') },
+  { key: 'smart_pinchout', label: fp('geomodelMethodSmartPinchout') }
+])
+const geomodelQualitySummary = computed(() => geomodelJob.value?.result_manifest?.quality_summary || null)
+const geomodelStatus = computed(() => String(geomodelJob.value?.status || '').toLowerCase())
+const needsGeomodelAction = computed(() => !fusionReady.value || geomodelStatus.value === 'pending' || geomodelStatus.value === 'running')
+const geomodelBuilderSubtitle = computed(() => {
+  if (geomodelStatus.value === 'completed') return fp('geomodelBuilderReady')
+  if (geomodelStatus.value === 'failed') return fp('geomodelBuilderFailed')
+  if (geomodelStatus.value === 'pending' || geomodelStatus.value === 'running') {
+    return fp('geomodelBuilderPending', { status: geomodelJob.value?.status || '--' })
+  }
+  return fp('geomodelBuilderSubtitle')
 })
 const focusLabel = computed(() => {
   if (profileFocus.value === 'shallow') return fp('focusShallow')
   if (profileFocus.value === 'deep') return fp('focusDeep')
   return fp('focusBalanced')
+})
+
+const viewerStatusTitle = computed(() => {
+  if (loadingFusion.value) return fp('statusLoading')
+  if (geomodelStatus.value === 'pending' || geomodelStatus.value === 'running') return fp('statusGeomodeling')
+  if (fusionError.value) return fp('statusError')
+  if (fusionReady.value) return fp('statusReady')
+  return fp('statusPreparing')
+})
+
+const viewerStatusDetail = computed(() => {
+  if (geomodelStatus.value === 'pending' || geomodelStatus.value === 'running') {
+    return fp('statusGeomodelingDetail', { status: geomodelJob.value?.status || '--' })
+  }
+  if (fusionError.value) return fusionError.value
+  if (fusionReady.value) return fp('statusReadyDetail', { preset: scenePresetCards.value.find((item) => item.id === selectedScenePreset.value)?.title || '--' })
+  if (loadingSpatial.value || loadingFusion.value) return fp('statusLoadingDetail')
+  return fp('statusPreparingDetail')
 })
 
 const fusionContextMeta = computed(() => ({
@@ -266,31 +380,40 @@ const fusionContextMeta = computed(() => ({
   resolution: resolution.value || 0,
   focus: profileFocus.value || '',
   mode: figureMode.value || '',
-  jobId: fusionJobId.value || ''
+  jobId: fusionJobId.value || '',
+  preset: selectedScenePreset.value
 }))
 
-const fusionFigureFrame = computed(() => ({
-  heading: '图版 | 三维融合诊断',
-  title: '论文导向三维地质-应力融合图',
-  summary: `面向煤层 ${seamName.value || '--'} 的论文级三维融合画布，在同一图版中联合呈现 ${metric.value.toUpperCase()} 响应、地质层位与应力剖面锚点。`,
-  cards: [
-    { label: '煤层', value: seamName.value || '--' },
-    { label: '指标', value: metric.value.toUpperCase() },
-    { label: '均值', value: fmt(metricStats.value.mean) },
-    { label: '分辨率', value: `${resolution.value} m` }
-  ],
-  methodsFooter: buildPublicationMethodsFooter({
-    subject: '三维地质-应力融合图',
-    source: '融合预览渲染器',
-    seam: seamName.value || '',
-    details: [
-      `指标 ${metric.value.toUpperCase()}`,
-      `方法 ${String(method.value || '--').toUpperCase()}`,
-      `焦点 ${profileFocus.value}`,
-      `分辨率 ${resolution.value} m`
-    ]
-  })
-}))
+const scenePresetCards = computed(() => [
+  {
+    id: 'overview',
+    badge: fp('presetOverviewBadge'),
+    title: fp('presetOverviewTitle'),
+    description: fp('presetOverviewDesc'),
+    footnote: fp('presetOverviewFoot')
+  },
+  {
+    id: 'strata',
+    badge: fp('presetStrataBadge'),
+    title: fp('presetStrataTitle'),
+    description: fp('presetStrataDesc'),
+    footnote: fp('presetStrataFoot')
+  },
+  {
+    id: 'stress',
+    badge: fp('presetStressBadge'),
+    title: fp('presetStressTitle'),
+    description: fp('presetStressDesc'),
+    footnote: fp('presetStressFoot')
+  },
+  {
+    id: 'section',
+    badge: fp('presetSectionBadge'),
+    title: fp('presetSectionTitle'),
+    description: fp('presetSectionDesc'),
+    footnote: fp('presetSectionFoot')
+  }
+])
 
 const fmt = (value, digits = 3) => {
   const num = Number(value)
@@ -339,7 +462,10 @@ const toUnixTs = (raw) => {
 
 const resolveGeomodelJobId = async () => {
   const manual = String(geoModelJobId.value || '').trim()
-  if (manual) return manual
+  if (manual) {
+    const isPendingInlineJob = manual === activeGeomodelJobId.value && geomodelStatus.value && geomodelStatus.value !== 'completed'
+    return isPendingInlineJob ? '' : manual
+  }
   const { data } = await getGeomodelIntegrationJobs()
   const jobs = Array.isArray(data) ? data : []
   const completed = jobs
@@ -375,7 +501,9 @@ const loadFusionPreview = async () => {
       fusionGeomodel.value = null
       fusionStressProfile.value = null
       fusionJobId.value = ''
-      fusionError.value = fp('errorNoGeomodelJob')
+      fusionError.value = geomodelStatus.value === 'pending' || geomodelStatus.value === 'running'
+        ? fp('geomodelScenePending', { status: geomodelJob.value?.status || '--' })
+        : fp('errorNoGeomodelJob')
       return
     }
     const { data } = await getGeomodelIntegrationVisualization(jobId, { include_mesh: true })
@@ -392,57 +520,43 @@ const loadFusionPreview = async () => {
   }
 }
 
-const activateFusionScene = async ({ preload = false } = {}) => {
-  fusionSceneRequested.value = true
-  if (loadingFusion.value || fusionReady.value || !seamName.value) return
-  if (!spatialData.value && !loadingSpatial.value) {
-    await loadSpatial()
-  }
-  if (!spatialData.value) return
-  await loadFusionPreview()
-  if (!preload) exportNote.value = ''
-}
-
-const cancelFusionWarmup = () => {
-  if (fusionWarmupTimer) {
-    window.clearTimeout(fusionWarmupTimer)
-    fusionWarmupTimer = null
-  }
-  if (fusionWarmupIdleId !== null && typeof window.cancelIdleCallback === 'function') {
-    window.cancelIdleCallback(fusionWarmupIdleId)
-    fusionWarmupIdleId = null
-  }
-}
-
-const prefetchFusionScene = async () => {
-  try {
-    await loadGeoMpiFusion3D()
-  } catch {
-    // Keep the route responsive if prefetch fails.
-  }
-}
-
-const scheduleFusionWarmup = () => {
-  cancelFusionWarmup()
-  if (!seamName.value || fusionSceneRequested.value) return
-
-  const warmup = () => {
-    fusionWarmupTimer = null
-    fusionWarmupIdleId = null
-    prefetchFusionScene().catch(() => {})
-  }
-
-  if (typeof window.requestIdleCallback === 'function') {
-    fusionWarmupIdleId = window.requestIdleCallback(warmup, { timeout: 1500 })
+const startGeomodelJob = async () => {
+  if (!seamName.value) {
+    pageError.value = fp('errorNeedSeam')
     return
   }
 
-  fusionWarmupTimer = window.setTimeout(warmup, 900)
+  pageError.value = ''
+  fusionError.value = ''
+  exportNote.value = ''
+
+  try {
+    const data = await submitGeomodelJob({
+      method: geomodelMethod.value,
+      seam_name: seamName.value,
+      resolution: geomodelResolution.value,
+      output_formats: ['vtk', 'vtp', 'summary', 'quality']
+    })
+    geoModelJobId.value = data?.job_id || ''
+    fusionJobId.value = ''
+    fusionGeomodel.value = null
+    fusionStressProfile.value = null
+  } catch (error) {
+    fusionError.value = getApiErrorMessage(error, fp('errorGeomodelSubmit'))
+  }
+}
+
+const applyScenePreset = (presetId) => {
+  const preset = SCENE_PRESET_META[presetId] || SCENE_PRESET_META.overview
+  selectedScenePreset.value = presetId in SCENE_PRESET_META ? presetId : 'overview'
+  profileFocus.value = preset.focus
+  figureMode.value = preset.figureMode
 }
 
 const reloadAll = async () => {
+  exportNote.value = ''
   await loadSpatial()
-  await activateFusionScene()
+  await loadFusionPreview()
 }
 
 const waitNextFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve))
@@ -469,7 +583,7 @@ const getExportPreset = () => {
 }
 
 const ensureFusionReadyForExport = async () => {
-  if (!fusionReady.value) await activateFusionScene()
+  if (!fusionReady.value) await reloadAll()
   if (!fusionReady.value || !fusionViewerRef.value?.exportFigureBlob) {
     throw new Error(fp('errorFusionUnavailable'))
   }
@@ -557,12 +671,12 @@ const exportSupplementPackage = async () => {
         ext: 'png'
       })
       zip.file(figurePath, payload.blob)
-      const focusLabel = fp(`focus${focus.charAt(0).toUpperCase()}${focus.slice(1)}`)
+      const focusName = fp(`focus${focus.charAt(0).toUpperCase()}${focus.slice(1)}`)
       figureRecords.push(buildPaperFigure({
         id: tag,
         panel: String.fromCharCode(65 + index),
-        title: fp('focusFigureTitle', { focus: focusLabel }),
-        caption: fp('focusFigureSummary', { focus: focusLabel }),
+        title: fp('focusFigureTitle', { focus: focusName }),
+        caption: fp('focusFigureSummary', { focus: focusName }),
         files: [figurePath],
         tags: ['fusion', 'geomodel', focus],
         meta: {
@@ -571,8 +685,8 @@ const exportSupplementPackage = async () => {
           seam: seamName.value,
           width: payload.width || preset.supplement.width,
           height: payload.height || preset.supplement.height,
-          figure_heading: fp('focusFigureTitle', { focus: focusLabel }),
-          caption_title: fp('focusFigureTitle', { focus: focusLabel }),
+          figure_heading: fp('focusFigureTitle', { focus: focusName }),
+          caption_title: fp('focusFigureTitle', { focus: focusName }),
           caption_rows: buildFusionCaptionRows(focus),
           note_rows: buildFusionNoteRows(focus, payload)
         }
@@ -676,16 +790,29 @@ const goValidation = () => {
   })
 }
 
-watch(seamName, (value) => {
+watch(seamName, async (value, oldValue) => {
   setSelectedSeam(value || '')
   spatialData.value = null
-  fusionSceneRequested.value = false
   fusionGeomodel.value = null
   fusionStressProfile.value = null
   fusionError.value = ''
   fusionJobId.value = ''
-  cancelFusionWarmup()
+  exportNote.value = ''
+  geoModelJobId.value = ''
+  clearGeomodelJob()
+  if (!hasInitialized.value || !value || value === oldValue) return
+  await reloadAll()
 })
+
+watch(
+  [activeGeomodelJobId, geomodelStatus],
+  async ([jobId, status]) => {
+    if (!jobId || status !== 'completed' || loadingFusion.value || fusionJobId.value === jobId) return
+    geoModelJobId.value = jobId
+    fusionError.value = ''
+    await loadFusionPreview()
+  }
+)
 
 watch(profileFocus, async () => {
   if (isSwitchingProfile.value || !fusionJobId.value || loadingFusion.value) return
@@ -698,60 +825,252 @@ watch(profileFocus, async () => {
 })
 
 onMounted(async () => {
+  applyScenePreset(selectedScenePreset.value)
   await loadSeams()
   if (!seamName.value) return
-  await loadSpatial()
-  scheduleFusionWarmup()
-})
-
-onBeforeUnmount(() => {
-  cancelFusionWarmup()
+  await reloadAll()
+  hasInitialized.value = true
 })
 </script>
 
 <style scoped>
 .fusion-page {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
-.page-header {
+.hero-panel,
+.preset-section,
+.control-panel {
   border: 1px solid #d8e6e3;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #ffffff 0%, #f6faf9 100%);
-  padding: 14px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfb 100%);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
 }
 
-.page-header h1 {
+.hero-panel {
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f3f9f8 100%);
+}
+
+.hero-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.hero-kicker,
+.preset-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.hero-copy h1,
+.preset-head h2,
+.control-head h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 28px;
+  line-height: 1.1;
   font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
   color: #0f172a;
 }
 
-.page-header p {
-  margin: 6px 0 0;
-  color: #475569;
-  font-size: 12px;
+.hero-copy p,
+.preset-head p,
+.control-head p {
+  margin: 0;
+  max-width: 920px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #526071;
 }
 
-.header-actions {
+.hero-actions,
+.control-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.control-panel {
-  border: 1px solid #d8e6e3;
-  border-radius: 12px;
-  background: #fff;
-  padding: 12px;
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summary-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.summary-card .label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.summary-card strong {
+  font-size: 22px;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.summary-card small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #526071;
+}
+
+.status-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.geomodel-inline {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.geomodel-inline.active {
+  border-color: rgba(15, 118, 110, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.06);
+}
+
+.geomodel-inline-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.geomodel-inline-copy strong {
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.geomodel-inline-copy p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #526071;
+}
+
+.geomodel-inline-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(140px, 0.8fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.geomodel-inline-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.geomodel-inline-controls select,
+.geomodel-inline-controls input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+.geomodel-inline-controls select:focus-visible,
+.geomodel-inline-controls input:focus-visible {
+  outline: none;
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
+}
+
+.geomodel-inline-status {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #526071;
+}
+
+.preset-head,
+.control-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.effect-card {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  padding: 14px;
   display: grid;
   gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.effect-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.effect-card.active {
+  border-color: rgba(15, 118, 110, 0.4);
+  background: linear-gradient(180deg, rgba(240, 253, 250, 0.96) 0%, #ffffff 100%);
+  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.12);
+}
+
+.effect-chip {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.effect-card strong {
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.effect-card p,
+.effect-card small {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.effect-card p {
+  font-size: 13px;
+  color: #334155;
+}
+
+.effect-card small {
+  font-size: 11px;
+  color: #64748b;
 }
 
 .control-grid {
@@ -774,10 +1093,10 @@ onBeforeUnmount(() => {
 .control-grid select,
 .control-grid input {
   border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 10px;
+  background: #ffffff;
   color: #0f172a;
-  padding: 8px 10px;
+  padding: 9px 10px;
   font-size: 12px;
 }
 
@@ -785,13 +1104,7 @@ onBeforeUnmount(() => {
 .control-grid input:focus-visible {
   outline: none;
   border-color: #0f766e;
-  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.18);
-}
-
-.control-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
 }
 
 .tool-btn.secondary {
@@ -808,7 +1121,7 @@ onBeforeUnmount(() => {
 .hint {
   margin: 0;
   font-size: 12px;
-  color: #475569;
+  color: #526071;
 }
 
 .error {
@@ -825,162 +1138,57 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.publication-frame {
-  display: grid;
-  gap: 10px;
-  padding: 14px 16px;
-  border: 1px solid #dbe4ea;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #f8fbfc 0%, #ffffff 100%);
-}
-
-.publication-frame-head {
-  display: grid;
-  gap: 4px;
-}
-
-.publication-kicker {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #0f766e;
-}
-
-.publication-frame-head h2 {
-  margin: 0;
-  font-size: 22px;
-  line-height: 1.15;
-  color: #0f172a;
-  font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
-}
-
-.publication-frame-head p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #475569;
-}
-
-.publication-card-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.publication-card {
-  display: grid;
-  gap: 5px;
-  padding: 10px 12px;
-  border: 1px solid #dbe4ea;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.88);
-}
-
-.publication-card .label {
-  font-size: 11px;
-  color: #64748b;
-}
-
-.publication-card strong {
-  font-size: 14px;
-  color: #0f172a;
-}
-
-.publication-footer {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #526071;
-}
-
-.summary-card {
-  border: 1px solid #d8e6e3;
-  border-radius: 10px;
-  background: #fff;
-  padding: 10px 12px;
-  display: grid;
-  gap: 6px;
-}
-
-.summary-card .label {
-  font-size: 11px;
-  color: #64748b;
-}
-
-.summary-card strong {
-  font-size: 20px;
-  color: #0f172a;
-  line-height: 1.1;
-}
-
-.summary-card small {
-  font-size: 11px;
-  color: #475569;
-}
-
-.fusion-lazy-card {
-  border: 1px dashed #94a3b8;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f8fafc 0%, #eef6f4 100%);
-  padding: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.fusion-lazy-copy h2 {
-  margin: 0;
-  font-size: 18px;
-  color: #0f172a;
-  font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Times New Roman', serif;
-}
-
-.fusion-lazy-copy p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: #475569;
-  max-width: 560px;
-}
-
 @media (max-width: 1080px) {
+  .summary-grid,
+  .preset-grid,
   .control-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .summary-grid {
+  .geomodel-inline-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .geomodel-inline-controls .tool-btn {
+    grid-column: span 2;
   }
 }
 
 @media (max-width: 760px) {
-  .page-header {
-    flex-direction: column;
+  .hero-panel,
+  .preset-section,
+  .control-panel {
+    padding: 14px;
   }
 
+  .hero-copy h1,
+  .preset-head h2,
+  .control-head h2 {
+    font-size: 22px;
+  }
+
+  .preset-head,
+  .control-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summary-grid,
+  .preset-grid,
   .control-grid {
     grid-template-columns: 1fr;
+  }
+
+  .geomodel-inline-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .geomodel-inline-controls .tool-btn {
+    grid-column: span 1;
   }
 
   .control-grid label.wide {
     grid-column: span 1;
   }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .fusion-lazy-card {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 </style>
-

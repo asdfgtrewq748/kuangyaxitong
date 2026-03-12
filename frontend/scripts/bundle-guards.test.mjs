@@ -62,13 +62,12 @@ describe('bundle guards', () => {
     expect(staticImports).toEqual([])
   })
 
-  it('gates heavy fusion viewer mounting behind an activation flag', () => {
-    const ungatedViews = asyncFusionViewTargets.filter((file) => {
-      const content = fs.readFileSync(path.resolve(file), 'utf8')
-      return !content.includes('fusionSceneRequested')
-    })
+  it('auto mounts the async fusion viewer on the dedicated preview page', () => {
+    const content = fs.readFileSync(path.resolve(fusionPreviewView), 'utf8')
 
-    expect(ungatedViews).toEqual([])
+    expect(content.includes(':guided-mode="true"')).toBe(true)
+    expect(content.includes(':guided-preset="selectedScenePreset"')).toBe(true)
+    expect(content.includes('await reloadAll()')).toBe(true)
   })
 
   it('loads fusion export implementation on demand', () => {
@@ -89,10 +88,11 @@ describe('bundle guards', () => {
     ).toBe(true)
   })
 
-  it('prefetches fusion component code without auto-mounting the scene', () => {
+  it('keeps the fusion component async while driving it from preset cards', () => {
     const content = fs.readFileSync(path.resolve(fusionPreviewView), 'utf8')
 
-    expect(content.includes('prefetchFusionScene')).toBe(true)
+    expect(content.includes('defineAsyncComponent(() => import(\'../components/GeoMpiFusion3D.vue\'))')).toBe(true)
+    expect(content.includes('const SCENE_PRESET_META = Object.freeze')).toBe(true)
   })
 
   it('renders the fusion scene on demand instead of relying on a perpetual loop', () => {
@@ -187,9 +187,12 @@ describe('bundle guards', () => {
       content.includes('const paperNotation = computed(() => ({') ||
       content.includes('const paperNotation = computed(() => {')
     ).toBe(true)
-    expect(content.includes("densityUnit: 'boreholes km^-2'")).toBe(true)
-    expect(content.includes("sampleSizeLabel: `n = ${mpiSummary.value.count || 0}`")).toBe(true)
-    expect(content.includes("Q1/Q2/Q3, 25th/50th/75th percentiles")).toBe(true)
+    expect(content.includes("densityUnit: '钻孔/km^2'")).toBe(true)
+    expect(
+      content.includes('const sampleSizeLabel = computed(() => `n = ${mpiSummary.value.count || 0}`)') ||
+      content.includes('sampleSizeLabel: sampleSizeLabel.value')
+    ).toBe(true)
+    expect(content.includes("Q1/Q2/Q3，25%/50%/75% 分位")).toBe(true)
   })
 
   it('passes a normalized figure heading and caption title into the export snapshot', () => {
@@ -383,9 +386,9 @@ describe('bundle guards', () => {
       content.includes('const figureCards = computed(() => ([') ||
       content.includes('const figureCards = computed(() => {')
     ).toBe(true)
-    expect(content.includes('figure-caption-block')).toBe(true)
-    expect(content.includes('caption-label')).toBe(true)
-    expect(content.includes('caption-note-row')).toBe(true)
+    expect(content.includes('figure-detail-grid')).toBe(true)
+    expect(content.includes('detail-label')).toBe(true)
+    expect(content.includes('缩写说明')).toBe(true)
   })
 
   it('exposes validation figure metadata and chart instances for publication exports', () => {

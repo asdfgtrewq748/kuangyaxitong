@@ -231,7 +231,7 @@ export function buildPublicationNarrativeSentence({
     .filter(Boolean)
 
   if (!normalizedClauses.length) return ''
-  return `${normalizedClauses.join('. ')}.`
+  return `${normalizedClauses.join('。')}。`
 }
 
 export function buildPublicationDiagnosticCopy({
@@ -259,14 +259,14 @@ export function buildPublicationDiagnosticCopy({
   const unitText = toSafeString(depthUnit) || 'm'
 
   return {
-    profileLine: `Profile source: ${profileSourceText} | Focus: ${focusText}`,
-    metaLine: `Seam ${seamText} | Grid ${gridText} | Method ${methodText} | Resolution ${resolutionText}`,
-    structureLine: `Layers ${layerCount} | Boreholes ${boreholeCount} | Anchors ${anchorCount}`,
-    methodsLine: `Data fusion: mesh layers + boreholes + ${gridText} metric grid`,
+    profileLine: `剖面来源：${profileSourceText} | 焦点：${focusText}`,
+    metaLine: `煤层 ${seamText} | 网格 ${gridText} | 方法 ${methodText} | 分辨率 ${resolutionText}`,
+    structureLine: `地层 ${layerCount} | 钻孔 ${boreholeCount} | 锚点 ${anchorCount}`,
+    methodsLine: `数据融合：地层网格 + 钻孔 + ${gridText} 指标网格`,
     depthNotes: [
-      `Focus band: ${focusText}`,
-      'Anchors ranked by transfer weight.',
-      `Depth frame: ${depthMaxText} to ${depthMinText} ${unitText}.`
+      `焦点带：${focusText}`,
+      '锚点按传递权重排序。',
+      `深度框架：${depthMaxText} 至 ${depthMinText} ${unitText}。`
     ]
   }
 }
@@ -290,8 +290,8 @@ export function buildPublicationStatisticCopy({
     figureNote: toSafeString(figureNote),
     distributionCaption: toSafeString(distributionCaption),
     summaryLines: [
-      `Section retained: ${toSafeString(sectionRetained) || '--'}`,
-      `Hotspots (P90+): ${String(hotspotCount ?? '').trim() || '--'}`,
+      `剖切保留：${toSafeString(sectionRetained) || '--'}`,
+      `热点数（P90+）：${String(hotspotCount ?? '').trim() || '--'}`,
       `Q1/Q2/Q3: ${(toSafeString(p25) || '--')} / ${(toSafeString(p50) || '--')} / ${(toSafeString(p75) || '--')}`,
     ]
   }
@@ -307,12 +307,12 @@ export function buildPublicationFigureHeaderCopy({
   focus = '',
 } = {}) {
   return {
-    metaLine: `Seam ${toSafeString(seam) || '--'} | Grid ${toSafeString(grid) || '--'} | Method ${toSafeString(method).toUpperCase() || '--'}`,
+    metaLine: `煤层 ${toSafeString(seam) || '--'} | 网格 ${toSafeString(grid) || '--'} | 方法 ${toSafeString(method).toUpperCase() || '--'}`,
     kpiLines: [
-      `Layers ${String(layerCount ?? '').trim() || '--'}`,
-      `Boreholes ${String(boreholeCount ?? '').trim() || '--'}`,
-      `Anchors ${String(anchorCount ?? '').trim() || '--'}`,
-      `Focus ${toSafeString(focus) || '--'}`
+      `地层 ${String(layerCount ?? '').trim() || '--'}`,
+      `钻孔 ${String(boreholeCount ?? '').trim() || '--'}`,
+      `锚点 ${String(anchorCount ?? '').trim() || '--'}`,
+      `焦点 ${toSafeString(focus) || '--'}`
     ]
   }
 }
@@ -327,18 +327,18 @@ export function buildPublicationHeroCopy({
   entropy = '',
   skew = '',
 } = {}) {
-  const label = toSafeString(metricLabel) || 'Metric'
+  const label = toSafeString(metricLabel) || '指标'
   const unit = toSafeString(metricUnit) || 'MPa'
   return {
-    topic: `${label}-Geology Coupled View`,
-    headline: 'Integrated Multi-source Structure-Stress Interpretation',
+    topic: `${label}-地质耦合视图`,
+    headline: '多源结构-应力综合解译',
     metricRows: [
-      `Mean ${toSafeString(mean) || '--'} ${unit}`,
+      `均值 ${toSafeString(mean) || '--'} ${unit}`,
       `CV ${toSafeString(cv) || '--'}`,
-      `P90 cover ${toSafeString(p90Cover) || '--'}`,
+      `P90覆盖 ${toSafeString(p90Cover) || '--'}`,
       `IQR ${toSafeString(iqr) || '--'}`,
-      `Entropy ${toSafeString(entropy) || '--'}`,
-      `Skew ${toSafeString(skew) || '--'}`
+      `熵值 ${toSafeString(entropy) || '--'}`,
+      `偏度 ${toSafeString(skew) || '--'}`
     ]
   }
 }
@@ -352,26 +352,26 @@ export function buildPublicationLegendCopy({
   sectionAxis = '',
   sectionThreshold = '',
   stressProfileLabel = '',
-  spatialFrameLabel = 'X east / Y north',
+  spatialFrameLabel = 'X向东 / Y向北',
 } = {}) {
-  const label = toSafeString(metricLabel) || 'Metric'
+  const label = toSafeString(metricLabel) || '指标'
   const unit = toSafeString(metricUnit) || 'MPa'
   const depthUnitText = toSafeString(depthUnit) || 'm'
   const axis = toSafeString(sectionAxis).toUpperCase() || '--'
   return {
     legendTitle: `${label} (${unit})`,
-    depthSpanLine: `Depth span ${toSafeString(depthMin) || '--'} to ${toSafeString(depthMax) || '--'} ${depthUnitText}`,
-    sectionLine: `Section ${axis} = ${toSafeString(sectionThreshold) || '--'}`,
-    cloudLine: `Stress cloud = MPI field x depth transfer (${toSafeString(stressProfileLabel) || '--'})`,
-    orientationMeta: toSafeString(spatialFrameLabel) || 'X east / Y north',
-    northLabel: 'N'
+    depthSpanLine: `深度跨度 ${toSafeString(depthMin) || '--'} 至 ${toSafeString(depthMax) || '--'} ${depthUnitText}`,
+    sectionLine: `剖切 ${axis} = ${toSafeString(sectionThreshold) || '--'}`,
+    cloudLine: `应力云 = MPI 场 × 深度传递（${toSafeString(stressProfileLabel) || '--'}）`,
+    orientationMeta: toSafeString(spatialFrameLabel) || 'X向东 / Y向北',
+    northLabel: '北'
   }
 }
 
 export function buildPublicationSummaryCopy({
   figureNarrative = '',
   metricLabel = '',
-  metricKind = 'proxy',
+  metricKind = '代理量',
   metricUnit = 'MPa',
   metricMin = '',
   metricMean = '',
@@ -388,21 +388,21 @@ export function buildPublicationSummaryCopy({
   skewness = '',
   heterogeneity = '',
   boreholeDensity = '',
-  densityUnit = 'boreholes km^-2',
+  densityUnit = '钻孔/km^2',
 } = {}) {
-  const metric = toSafeString(metricLabel) || 'Metric'
-  const kind = toSafeString(metricKind) || 'proxy'
+  const metric = toSafeString(metricLabel) || '指标'
+  const kind = toSafeString(metricKind) || '代理量'
   const unit = toSafeString(metricUnit) || 'MPa'
   const sampleSize = toSafeString(sampleSizeLabel) || 'n = --'
-  const density = toSafeString(densityUnit) || 'boreholes km^-2'
+  const density = toSafeString(densityUnit) || '钻孔/km^2'
 
   return {
-    summaryLead: `${toSafeString(figureNarrative) || 'Metric distribution is unavailable.'} ${metric} evidence spans ${toSafeString(metricMin) || '--'} to ${toSafeString(metricMax) || '--'} ${unit} with ${sampleSize}.`,
-    metricLine: `${metric} (${kind}) min ${toSafeString(metricMin) || '--'} mean ${toSafeString(metricMean) || '--'} max ${toSafeString(metricMax) || '--'}`,
-    quantileLine: `Q1 / Q2 / Q3 ${toSafeString(p25) || '--'} / ${toSafeString(p50) || '--'} / ${toSafeString(p75) || '--'} ${unit} | CV ${toSafeString(cv) || '--'}`,
-    coverLine: `Q3 cover ${toSafeString(p75Cover) || '--'} | P90 cover ${toSafeString(p90Cover) || '--'} | Section retained ${toSafeString(sectionRetained) || '--'}`,
-    distributionLine: `Entropy ${toSafeString(entropy) || '--'} | Skewness ${toSafeString(skewness) || '--'} | ${sampleSize}`,
-    supportLine: `Heterogeneity ${toSafeString(heterogeneity) || '--'} | Borehole density ${toSafeString(boreholeDensity) || '--'} ${density} | ${sampleSize}`
+    summaryLead: `${toSafeString(figureNarrative) || '当前暂无可用指标分布。'} ${metric} 取值跨度为 ${toSafeString(metricMin) || '--'} 至 ${toSafeString(metricMax) || '--'} ${unit}，样本量 ${sampleSize}。`,
+    metricLine: `${metric}（${kind}）最小值 ${toSafeString(metricMin) || '--'}，均值 ${toSafeString(metricMean) || '--'}，最大值 ${toSafeString(metricMax) || '--'}`,
+    quantileLine: `Q1 / Q2 / Q3：${toSafeString(p25) || '--'} / ${toSafeString(p50) || '--'} / ${toSafeString(p75) || '--'} ${unit} | CV ${toSafeString(cv) || '--'}`,
+    coverLine: `Q3覆盖 ${toSafeString(p75Cover) || '--'} | P90覆盖 ${toSafeString(p90Cover) || '--'} | 剖切保留 ${toSafeString(sectionRetained) || '--'}`,
+    distributionLine: `熵值 ${toSafeString(entropy) || '--'} | 偏度 ${toSafeString(skewness) || '--'} | ${sampleSize}`,
+    supportLine: `异质性 ${toSafeString(heterogeneity) || '--'} | 钻孔密度 ${toSafeString(boreholeDensity) || '--'} ${density} | ${sampleSize}`
   }
 }
 
@@ -436,7 +436,7 @@ export function buildPublicationSectionProfileDiagnostics({
     modeLabel: safeLabels.sectionTransectTitle,
     peakLabel: safeLabels.peakFallback,
     spreadLabel: safeLabels.spreadFallback,
-    rangeLabel: `-- to -- ${toSafeString(unit) || 'MPa'}`,
+    rangeLabel: `-- 至 -- ${toSafeString(unit) || 'MPa'}`,
   }
 
   if (!Array.isArray(grid) || !Array.isArray(grid[0])) {
@@ -453,7 +453,7 @@ export function buildPublicationSectionProfileDiagnostics({
   const retainedRatio = Math.max(0, Math.min(1, toFiniteNumber(sectionRetainedRatio, 0)))
   let guideX = null
   let modeLabel = safeLabels.sectionTransectTitle
-  let axisDescriptor = 'track'
+  let axisDescriptor = '剖面'
 
   if (sectionAxis === 'x') {
     const focusCol = Math.max(0, Math.min(cols - 1, Math.round(retainedRatio * (cols - 1))))
@@ -554,9 +554,9 @@ export function buildPublicationSectionProfileDiagnostics({
     bandPath: `M ${upper.join(' L ')} L ${lower.join(' L ')} Z`,
     guideX,
     modeLabel,
-    peakLabel: `Peak ${axisDescriptor}${peak.index + 1} | ${formatMetricValue(peak.mean)} ${unitLabel}`,
-    spreadLabel: `Band = local interquartile envelope, mean width ${formatMetricValue(averageBandWidth)} ${unitLabel}.`,
-    rangeLabel: `${formatMetricValue(minValue)} to ${formatMetricValue(maxValue)} ${unitLabel}`,
+    peakLabel: `峰值 ${axisDescriptor}${peak.index + 1} | ${formatMetricValue(peak.mean)} ${unitLabel}`,
+    spreadLabel: `带状区表示局部四分位包络，平均宽度 ${formatMetricValue(averageBandWidth)} ${unitLabel}。`,
+    rangeLabel: `${formatMetricValue(minValue)} 至 ${formatMetricValue(maxValue)} ${unitLabel}`,
   }
 }
 

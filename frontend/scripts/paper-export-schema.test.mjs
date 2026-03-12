@@ -90,7 +90,8 @@ describe('paper export schema', () => {
       subject: 'Figure 9 | ROC curve with Youden operating point',
       source: 'cached validation snapshot',
       seam: '3-1',
-      details: ['threshold mode real_label_stream', 'layout 2', 'density balanced']
+      details: ['threshold mode real_label_stream', 'layout 2', 'density balanced'],
+      locale: 'en-US'
     })
 
     expect(text).toBe('Methods footer: Figure 9 | ROC curve with Youden operating point is exported from the cached validation snapshot for seam 3-1, using threshold mode real_label_stream, layout 2, density balanced.')
@@ -104,7 +105,7 @@ describe('paper export schema', () => {
       ]
     })
 
-    expect(text).toBe('MPI shows right-tailed stress amplification; strongest anomaly at #1 r3, c4, 12.40 MPa. Section keeps 58.0% of the volume, with moderately heterogeneous fabric under dense control.')
+    expect(text).toBe('MPI shows right-tailed stress amplification; strongest anomaly at #1 r3, c4, 12.40 MPa。Section keeps 58.0% of the volume, with moderately heterogeneous fabric under dense control。')
   })
 
   it('builds normalized diagnostic copy for fusion figure summaries and depth notes', () => {
@@ -121,14 +122,14 @@ describe('paper export schema', () => {
       depthMax: '1280.00',
       depthMin: '920.00'
     })).toEqual({
-      profileLine: 'Profile source: Stress anchoring | Focus: roof transfer window',
-      metaLine: 'Seam 3-1 | Grid 46 x 42 x 18 | Method KRIGING | Resolution 40.00 m',
-      structureLine: 'Layers 6 | Boreholes 18 | Anchors 7',
-      methodsLine: 'Data fusion: mesh layers + boreholes + 46 x 42 x 18 metric grid',
+      profileLine: '剖面来源：Stress anchoring | 焦点：roof transfer window',
+      metaLine: '煤层 3-1 | 网格 46 x 42 x 18 | 方法 KRIGING | 分辨率 40.00 m',
+      structureLine: '地层 6 | 钻孔 18 | 锚点 7',
+      methodsLine: '数据融合：地层网格 + 钻孔 + 46 x 42 x 18 指标网格',
       depthNotes: [
-        'Focus band: roof transfer window',
-        'Anchors ranked by transfer weight.',
-        'Depth frame: 1280.00 to 920.00 m.'
+        '焦点带：roof transfer window',
+        '锚点按传递权重排序。',
+        '深度框架：1280.00 至 920.00 m。'
       ]
     })
   })
@@ -152,8 +153,8 @@ describe('paper export schema', () => {
       figureNote: 'Nature-style content panel: structure + statistics + depth coupling.',
       distributionCaption: 'Q1/Q2/Q3 markers',
       summaryLines: [
-        'Section retained: 58.0%',
-        'Hotspots (P90+): 4',
+        '剖切保留：58.0%',
+        '热点数（P90+）：4',
         'Q1/Q2/Q3: 8.10 / 9.25 / 11.40'
       ]
     })
@@ -169,12 +170,12 @@ describe('paper export schema', () => {
       anchorCount: 7,
       focus: 'roof transfer window'
     })).toEqual({
-      metaLine: 'Seam 3-1 | Grid 46 x 42 x 18 | Method KRIGING',
+      metaLine: '煤层 3-1 | 网格 46 x 42 x 18 | 方法 KRIGING',
       kpiLines: [
-        'Layers 6',
-        'Boreholes 18',
-        'Anchors 7',
-        'Focus roof transfer window'
+        '地层 6',
+        '钻孔 18',
+        '锚点 7',
+        '焦点 roof transfer window'
       ]
     })
   })
@@ -190,15 +191,15 @@ describe('paper export schema', () => {
       entropy: '0.84',
       skew: '0.42'
     })).toEqual({
-      topic: 'MPI-Geology Coupled View',
-      headline: 'Integrated Multi-source Structure-Stress Interpretation',
+      topic: 'MPI-地质耦合视图',
+      headline: '多源结构-应力综合解译',
       metricRows: [
-        'Mean 9.21 MPa',
+        '均值 9.21 MPa',
         'CV 0.31',
-        'P90 cover 12.0%',
+        'P90覆盖 12.0%',
         'IQR 2.18',
-        'Entropy 0.84',
-        'Skew 0.42'
+        '熵值 0.84',
+        '偏度 0.42'
       ]
     })
   })
@@ -216,11 +217,11 @@ describe('paper export schema', () => {
       spatialFrameLabel: 'X east / Y north'
     })).toEqual({
       legendTitle: 'MPI (MPa)',
-      depthSpanLine: 'Depth span 920.00 to 1280.00 m',
-      sectionLine: 'Section Z = 1085.00',
-      cloudLine: 'Stress cloud = MPI field x depth transfer (roof transfer)',
+      depthSpanLine: '深度跨度 920.00 至 1280.00 m',
+      sectionLine: '剖切 Z = 1085.00',
+      cloudLine: '应力云 = MPI 场 × 深度传递（roof transfer）',
       orientationMeta: 'X east / Y north',
-      northLabel: 'N'
+      northLabel: '北'
     })
   })
 
@@ -247,12 +248,12 @@ describe('paper export schema', () => {
       boreholeDensity: '4.30',
       densityUnit: 'boreholes km^-2'
     })).toEqual({
-      summaryLead: 'MPI shows right-tailed stress amplification. MPI evidence spans 6.20 to 12.40 MPa with n = 128.',
-      metricLine: 'MPI (proxy) min 6.20 mean 9.21 max 12.40',
-      quantileLine: 'Q1 / Q2 / Q3 8.10 / 9.25 / 11.40 MPa | CV 0.31',
-      coverLine: 'Q3 cover 25.0% | P90 cover 10.0% | Section retained 58.0%',
-      distributionLine: 'Entropy 0.84 | Skewness 0.42 | n = 128',
-      supportLine: 'Heterogeneity 0.48 | Borehole density 4.30 boreholes km^-2 | n = 128'
+      summaryLead: 'MPI shows right-tailed stress amplification. MPI 取值跨度为 6.20 至 12.40 MPa，样本量 n = 128。',
+      metricLine: 'MPI（proxy）最小值 6.20，均值 9.21，最大值 12.40',
+      quantileLine: 'Q1 / Q2 / Q3：8.10 / 9.25 / 11.40 MPa | CV 0.31',
+      coverLine: 'Q3覆盖 25.0% | P90覆盖 10.0% | 剖切保留 58.0%',
+      distributionLine: '熵值 0.84 | 偏度 0.42 | n = 128',
+      supportLine: '异质性 0.48 | 钻孔密度 4.30 boreholes km^-2 | n = 128'
     })
   })
 
@@ -279,9 +280,9 @@ describe('paper export schema', () => {
       bandPath: 'M 0.000,15.800 L 50.000,9.400 L 100.000,3.000 L 100.000,22.200 L 50.000,28.600 L 0.000,35.000 Z',
       guideX: null,
       modeLabel: 'Representative transect',
-      peakLabel: 'Peak X3 | 6.00 MPa',
-      spreadLabel: 'Band = local interquartile envelope, mean width 3.00 MPa.',
-      rangeLabel: '2.50 to 7.50 MPa'
+      peakLabel: '峰值 X3 | 6.00 MPa',
+      spreadLabel: '带状区表示局部四分位包络，平均宽度 3.00 MPa。',
+      rangeLabel: '2.50 至 7.50 MPa'
     })
   })
 
@@ -305,42 +306,42 @@ describe('paper export schema', () => {
       methodsFooter: 'Methods'
     })).toEqual({
       figure: 'Figure',
-      summary: 'Summary',
-      caption: 'Caption',
+      summary: '摘要',
+      caption: '图注',
       notes: 'Notes',
       methodsFooter: 'Methods',
-      unit: 'Unit',
-      abbrev: 'Abbrev.',
-      interpretation: 'Interpretation',
-      result: 'Result',
-      metric: 'Metric',
-      title: 'Title',
-      finding: 'Finding',
-      support: 'Support',
-      data: 'Data',
-      frame: 'Frame',
-      seam: 'Seam',
-      fusion: 'Fusion',
-      resolution: 'Resolution',
-      stressPrior: 'Stress prior',
-      section: 'Section',
-      control: 'Control',
-      fabric: 'Fabric',
-      hotspot: 'Hotspot',
-      sampling: 'Sampling',
-      methodsPanel: 'Methods and provenance',
-      depthGuideTitle: 'Stratigraphic depth guide',
-      insetTitle: 'Plan-view MPI inset',
-      insetCaption: 'Line = section, circles = hotspots',
-      distributionTitle: 'MPI distribution',
-      sectionTransectTitle: 'Section transect',
-      xSectionTransectTitle: 'X-direction section transect',
-      ySectionTransectTitle: 'Y-direction section transect',
-      representativeTransectTitle: 'Representative lateral transect',
-      peakFallback: 'Peak --',
-      spreadFallback: 'Band = local interquartile envelope.',
-      captionBlock: 'Figure caption',
-      notesBlock: 'Notes and abbreviations',
+      unit: '单位',
+      abbrev: '缩写',
+      interpretation: '解释',
+      result: '结果',
+      metric: '指标',
+      title: '标题',
+      finding: '发现',
+      support: '支撑证据',
+      data: '数据',
+      frame: '框架',
+      seam: '煤层',
+      fusion: '融合',
+      resolution: '分辨率',
+      stressPrior: '应力先验',
+      section: '剖面',
+      control: '控制条件',
+      fabric: '构造纹理',
+      hotspot: '热点',
+      sampling: '采样',
+      methodsPanel: '方法与溯源',
+      depthGuideTitle: '地层深度导引',
+      insetTitle: 'MPI 平面插图',
+      insetCaption: '线表示剖面，圆表示热点',
+      distributionTitle: 'MPI 分布',
+      sectionTransectTitle: '剖面切线',
+      xSectionTransectTitle: 'X 方向剖面切线',
+      ySectionTransectTitle: 'Y 方向剖面切线',
+      representativeTransectTitle: '代表性横向切线',
+      peakFallback: '峰值 --',
+      spreadFallback: '带状区表示局部四分位包络。',
+      captionBlock: '图注块',
+      notesBlock: '注释与缩写',
     })
   })
 
@@ -469,10 +470,10 @@ describe('paper export schema', () => {
 
     expect(markdown).toContain('# Fusion Supplement Export')
     expect(markdown).toContain('This archive contains the publication-ready supplement package.')
-    expect(markdown).toContain('- `Source page`: `fusion-preview`')
-    expect(markdown).toContain('- `manifest.json`: normalized package manifest.')
-    expect(markdown).toContain('- `captions.md`: structured figure captions.')
-    expect(markdown).toContain('- `publication-notes.md`: supporting notes and abbreviations.')
+    expect(markdown).toContain('- `来源页面`: `fusion-preview`')
+    expect(markdown).toContain('- `manifest.json`: 规范化导出清单。')
+    expect(markdown).toContain('- `captions.md`: 结构化图注。')
+    expect(markdown).toContain('- `publication-notes.md`: 补充注释与缩写说明。')
     expect(markdown).toContain('- `FigS1` Fusion balanced: `figures/FigS1_fusion_balanced.png`')
     expect(markdown).toContain('- `metric_summary`: `tables/metric_summary.csv`')
   })
